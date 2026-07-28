@@ -1,3 +1,5 @@
+import { createWorker } from "tesseract.js";
+
 const DATE_PATTERNS = [
   /validade[:\s]*(\d{2})\/(\d{2})\/(\d{4})/i,
   /v[aá]lido at[eé][:\s]*(\d{2})\/(\d{2})\/(\d{4})/i,
@@ -32,13 +34,12 @@ export async function extractFromBuffer(buffer: Buffer, ext: string) {
   let text = "";
 
   try {
-    const { createWorker } = await import("tesseract.js");
     const worker = await createWorker("por");
     const { data } = await worker.recognize(buffer);
     await worker.terminate();
     text = data.text;
   } catch (err) {
-    console.error("OCR failed, returning empty fields:", err);
+    console.error("OCR failed, falling back to empty text:", err);
   }
 
   return extractFields(text);
