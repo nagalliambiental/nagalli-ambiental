@@ -30,12 +30,12 @@ const CONDICIONANTE_MARKERS = [
   /exig[eê]ncias?\s*(?:t[eé]cnicas?)?[:\s]*/i,
 ];
 
-export async function extractFromFile(filePath: string) {
+export async function extractFromBuffer(buffer: Buffer, ext: string) {
   let text = "";
 
   try {
     const worker = await createWorker("por");
-    const { data } = await worker.recognize(filePath);
+    const { data } = await worker.recognize(buffer);
     await worker.terminate();
     text = data.text;
   } catch (err) {

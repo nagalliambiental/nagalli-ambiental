@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
-import { extractFromFile } from "@/lib/extract-license";
+import { tmpdir } from "os";
+import { extractFromBuffer } from "@/lib/extract-license";
 import { auth } from "@/lib/auth";
 
 export async function POST(request: Request) {
@@ -18,15 +19,15 @@ export async function POST(request: Request) {
     }
 
     const ext = file.name.split(".").pop() || "jpg";
-    const uploadDir = join(process.cwd(), "public", "uploads");
-    await mkdir(uploadDir, { recursive: true });
+    const buffer = Buffer.from(await file.arrayBuffer());
 
+    const uploadDir = join(tmpdir(), "uploads");
+    await mkdir(uploadDir, { recursive: true });
     const filename = `licenca_${Date.now()}.${ext}`;
     const filePath = join(uploadDir, filename);
-    const buffer = Buffer.from(await file.arrayBuffer());
     await writeFile(filePath, buffer);
 
-    const extracted = await extractFromFile(filePath);
+    const extracted = await extractFromBuffer(buffer, ext);
 
     return NextResponse.json({
       filename,
