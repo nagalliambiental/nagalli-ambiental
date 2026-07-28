@@ -27,7 +27,9 @@ export async function POST(request: Request) {
     const filePath = join(uploadDir, filename);
     await writeFile(filePath, buffer);
 
-    const extracted = await extractFromBuffer(buffer, ext);
+    const extracted = await extractFromBuffer(buffer, ext).catch(() => ({
+      validade: null, numLicenca: null, numProtocolo: null, condicionantes: null,
+    }));
 
     return NextResponse.json({
       filename,
