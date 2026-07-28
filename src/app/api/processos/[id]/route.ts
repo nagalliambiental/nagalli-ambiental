@@ -85,13 +85,28 @@ export async function DELETE(
     return NextResponse.json({ error: "Processo não encontrado" }, { status: 404 });
   }
 
-  await prisma.$transaction([
-    prisma.timelineProcesso.deleteMany({ where: { processoId: Number(id) } }),
-    prisma.documento.deleteMany({ where: { processoId: Number(id) } }),
-    prisma.exigencia.deleteMany({ where: { processoId: Number(id) } }),
-    prisma.processo.delete({ where: { id: Number(id) } }),
-  ]);
+  try {
+    const pId = Number(id);
 
-  await logAuditoria("EXCLUIR", "processo", Number(id), { numProtocolo: proc.numProtocolo }, Number((session.user as { id: string }).id));
-  return NextResponse.json({ mensagem: "Processo excluído" });
+    const exigenciaIds = (await prisma.exigencia.findMany({
+      where: { processoId: pId },
+      select: { id: true },
+    })).map((e) => e.id);
+
+    await prisma.$transaction([
+      prisma.documento.deleteMany({ where: { OR: [{ processoId: pId }, { exigenciaId: { in: exigenciaIds } }] } }),
+      prisma.timelineProcesso.deleteMany({ where: { processoId: pId } }),
+      prisma.alerta.deleteMany({ where: { processoId: pId } }),
+      prisma.financeiro.deleteMany({ where: { processoId: pId } }),
+      prisma.exigencia.deleteMany({ where: { id: { in: exigenciaIds } } }),
+      prisma.processo.delete({ where: { id: pId } }),
+    ]);
+
+    await logAuditoria("EXCLUIR", "processo", Number(id), { numProtocolo: proc.numProtocolo }, Number((session.user as { id: string }).id)).catch(() => {});
+    return NextResponse.json({ mensagem: "Processo excluído" });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Erro desconhecido";
+    console.error("Erro ao excluir processo:", message);
+    return NextResponse.json({ error: `Erro ao excluir processo: ${message}` }, { status: 500 });
+  }
 }
