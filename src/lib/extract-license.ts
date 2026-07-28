@@ -34,7 +34,7 @@ export async function extractFromBuffer(buffer: Buffer, ext: string) {
   let text = "";
 
   try {
-    const blob = new Blob([buffer], { type: `image/${ext === "png" ? "png" : "jpeg"}` });
+    const blob = new Blob([new Uint8Array(buffer)], { type: `image/${ext === "png" ? "png" : "jpeg"}` });
     const formData = new FormData();
     formData.append("file", blob, `image.${ext}`);
     formData.append("language", "por");
