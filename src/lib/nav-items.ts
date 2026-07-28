@@ -8,7 +8,6 @@ import {
   FileCheck2,
   Users,
   DollarSign,
-  BookOpen,
   ClipboardList,
   type LucideIcon,
 } from "lucide-react";
@@ -28,7 +27,6 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Exigências", href: "/exigencias", icon: ClipboardList },
   { label: "Documentos", href: "/documentos", icon: FileStack },
   { label: "Financeiro", href: "/financeiro", icon: DollarSign, adminOnly: true },
-  { label: "Legislação", href: "/legislacao", icon: BookOpen },
   { label: "Prazos", href: "/prazos", icon: CalendarClock },
   { label: "Tarefas", href: "/tarefas", icon: ClipboardList },
   { label: "Usuários", href: "/usuarios", icon: Users, adminOnly: true },

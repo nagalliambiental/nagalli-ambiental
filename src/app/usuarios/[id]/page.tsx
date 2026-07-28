@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 import { Topbar } from "@/components/Topbar";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Mail, Shield, Check, X, Calendar, ClipboardList, UserCheck, Award, Save, Loader2 } from "lucide-react";
+import { Mail, Shield, Check, Calendar, ClipboardList, UserCheck, Award, Save, Loader2, Trash2, AlertTriangle, X } from "lucide-react";
 import Link from "next/link";
 
 const perfilLabels: Record<string, string> = {
@@ -42,6 +42,8 @@ export default function UsuarioDetailPage() {
   const [cpf, setCpf] = useState("");
   const [conselho, setConselho] = useState("");
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -67,6 +69,24 @@ export default function UsuarioDetailPage() {
     });
     setSaving(false);
     router.refresh();
+  }
+
+  async function handleDelete() {
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/usuarios/${params.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || "Erro ao excluir usuário");
+        setDeleting(false);
+        return;
+      }
+      router.push("/usuarios");
+      router.refresh();
+    } catch {
+      alert("Erro ao excluir usuário");
+      setDeleting(false);
+    }
   }
 
   if (!loaded) return null;
@@ -121,9 +141,18 @@ export default function UsuarioDetailPage() {
             </div>
           </div>
 
-          <Link href="/usuarios" className="focus-ring transition-brand block rounded-lg border border-[var(--color-paper-200)] bg-white px-4 py-2.5 text-center text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]">
-            Voltar
-          </Link>
+          <div className="flex gap-3">
+            <Link href="/usuarios" className="focus-ring transition-brand flex-1 rounded-lg border border-[var(--color-paper-200)] bg-white px-4 py-2.5 text-center text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]">
+              Voltar
+            </Link>
+            <button
+              onClick={() => setConfirmDelete(true)}
+              className="focus-ring transition-brand flex items-center gap-2 rounded-lg border border-red-200 bg-white px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50"
+            >
+              <Trash2 size={16} />
+              Excluir
+            </button>
+          </div>
         </div>
       </div>
 
@@ -162,6 +191,34 @@ export default function UsuarioDetailPage() {
           </div>
         )}
       </div>
+
+      {confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="mx-4 w-full max-w-sm rounded-xl bg-white p-6 shadow-lg">
+            <div className="flex items-start gap-4">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100">
+                <AlertTriangle size={20} className="text-red-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-[var(--color-ink-900)]">Excluir Usuário</h3>
+                <p className="mt-1 text-sm text-[var(--color-ink-500)]">Tem certeza? Esta ação não pode ser desfeita.</p>
+              </div>
+              <button onClick={() => setConfirmDelete(false)} className="shrink-0 text-[var(--color-ink-400)] hover:text-[var(--color-ink-600)]">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="mt-6 flex justify-end gap-3">
+              <button onClick={() => setConfirmDelete(false)} className="rounded-lg border border-[var(--color-paper-200)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]" disabled={deleting}>
+                Cancelar
+              </button>
+              <button onClick={handleDelete} disabled={deleting} className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50">
+                {deleting && <Loader2 size={14} className="animate-spin" />}
+                {deleting ? "Excluindo..." : "Excluir"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

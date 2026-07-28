@@ -6,6 +6,7 @@ import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { AlertTriangle, Check, Clock, FileText, Calendar } from "lucide-react";
 import Link from "next/link";
+import EntityActions from "@/components/EntityActions";
 
 export const dynamic = "force-dynamic";
 
@@ -97,6 +98,28 @@ export default async function ExigenciaDetailPage(props: { params: Promise<{ id:
           <Link href="/exigencias" className="focus-ring transition-brand block rounded-lg border border-[var(--color-paper-200)] bg-white px-4 py-2.5 text-center text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]">
             Voltar
           </Link>
+
+          <EntityActions
+            entity="exigencia"
+            entityName="Exigência"
+            endpoint={`/api/exigencias/${exigencia.id}`}
+            redirectTo="/exigencias"
+            fields={[
+              { name: "descricao", label: "Descrição", type: "textarea", required: true },
+              { name: "prazo", label: "Prazo", type: "date", required: true },
+              { name: "antecedenciaDias", label: "Antecedência (dias)", type: "number", required: true },
+              { name: "cumprida", label: "Cumprida", type: "select", options: [
+                { value: "true", label: "Sim" },
+                { value: "false", label: "Não" },
+              ] },
+            ]}
+            data={{
+              descricao: exigencia.descricao,
+              prazo: exigencia.prazo.toISOString(),
+              antecedenciaDias: exigencia.antecedenciaDias,
+              cumprida: exigencia.cumprida ? "true" : "false",
+            }}
+          />
         </div>
       </div>
     </div>

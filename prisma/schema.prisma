@@ -80,6 +80,8 @@ model Processo {
   empreendimentoId Int
   responsavelId   Int?
   observacoes     String?
+  numLicenca      String?
+  condicionantes  String?
   criadoEm        DateTime @default(now())
   atualizadoEm    DateTime @updatedAt
 
@@ -89,7 +91,6 @@ model Processo {
   exigencias    Exigencia[]
   documentos    Documento[]
   timeline      TimelineProcesso[]
-  legislacoes   ProcessoLegislacao[]
 }
 
 model Exigencia {
@@ -177,29 +178,6 @@ model Financeiro {
   atualizadoEm    DateTime @updatedAt
 
   cliente Cliente   @relation(fields: [clienteId], references: [id])
-}
-
-model Legislacao {
-  id          Int      @id @default(autoincrement())
-  nome        String
-  descricao   String?
-  tipo        String
-  numero      String
-  data        DateTime?
-  url         String?
-  criadoEm    DateTime @default(now())
-
-  processos ProcessoLegislacao[]
-}
-
-model ProcessoLegislacao {
-  processoId   Int
-  legislacaoId Int
-
-  processo   Processo   @relation(fields: [processoId], references: [id])
-  legislacao Legislacao @relation(fields: [legislacaoId], references: [id])
-
-  @@id([processoId, legislacaoId])
 }
 
 model LogAuditoria {

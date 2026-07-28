@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ClipboardList, User, Users, Calendar, Clock, AlertTriangle } from "lucide-react";
 import Link from "next/link";
+import EntityActions from "@/components/EntityActions";
 
 export const dynamic = "force-dynamic";
 
@@ -107,6 +108,37 @@ export default async function TarefaDetailPage(props: { params: Promise<{ id: st
           <Link href="/tarefas" className="focus-ring transition-brand block rounded-lg border border-[var(--color-paper-200)] bg-white px-4 py-2.5 text-center text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]">
             Voltar
           </Link>
+
+          <EntityActions
+            entity="tarefa"
+            entityName="Tarefa"
+            endpoint={`/api/tarefas/${tarefa.id}`}
+            redirectTo="/tarefas"
+            fields={[
+              { name: "titulo", label: "Título", type: "text", required: true },
+              { name: "descricao", label: "Descrição", type: "textarea" },
+              { name: "status", label: "Status", type: "select", required: true, options: [
+                { value: "pendente", label: "Pendente" },
+                { value: "em_andamento", label: "Em Andamento" },
+                { value: "concluida", label: "Concluída" },
+                { value: "cancelada", label: "Cancelada" },
+              ] },
+              { name: "prioridade", label: "Prioridade", type: "select", required: true, options: [
+                { value: "baixa", label: "Baixa" },
+                { value: "media", label: "Média" },
+                { value: "alta", label: "Alta" },
+                { value: "urgente", label: "Urgente" },
+              ] },
+              { name: "dataVencimento", label: "Data de Vencimento", type: "date" },
+            ]}
+            data={{
+              titulo: tarefa.titulo,
+              descricao: tarefa.descricao,
+              status: tarefa.status,
+              prioridade: tarefa.prioridade,
+              dataVencimento: tarefa.dataVencimento?.toISOString(),
+            }}
+          />
         </div>
       </div>
     </div>

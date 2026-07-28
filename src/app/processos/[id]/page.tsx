@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { FileText, Building2, Map, Calendar, Users, ClipboardList, FileCheck2, Clock } from "lucide-react";
 import Link from "next/link";
+import EntityActions from "@/components/EntityActions";
 
 export const dynamic = "force-dynamic";
 
@@ -76,7 +77,19 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
                 <FileCheck2 size={16} />
                 <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${statusColors[processo.status] || ""}`}>{statusLabels[processo.status] || processo.status}</span>
               </div>
+              {processo.numLicenca && (
+                <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
+                  <FileText size={16} />
+                  <span>Licença: {processo.numLicenca}</span>
+                </div>
+              )}
             </div>
+            {processo.condicionantes && (
+              <div className="mt-4 border-t border-[var(--color-paper-200)] pt-4">
+                <h3 className="text-sm font-medium text-[var(--color-ink-900)] mb-1">Condicionantes</h3>
+                <p className="text-sm text-[var(--color-ink-700)] whitespace-pre-wrap">{processo.condicionantes}</p>
+              </div>
+            )}
           </div>
 
           {processo.observacoes && (
@@ -123,6 +136,40 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
           <Link href="/processos" className="focus-ring transition-brand block rounded-lg border border-[var(--color-paper-200)] bg-white px-4 py-2.5 text-center text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]">
             Voltar
           </Link>
+
+          <EntityActions
+            entity="processo"
+            entityName="Processo"
+            endpoint={`/api/processos/${processo.id}`}
+            redirectTo="/processos"
+            fields={[
+              { name: "tipo", label: "Tipo", type: "text", required: true },
+              { name: "numProtocolo", label: "Nº Protocolo", type: "text", required: true },
+              { name: "numLicenca", label: "Nº Licença", type: "text" },
+              { name: "sistema", label: "Sistema", type: "text", required: true },
+              { name: "status", label: "Status", type: "select", required: true, options: [
+                { value: "protocolado", label: "Protocolado" },
+                { value: "em_andamento", label: "Em Andamento" },
+                { value: "exigencia_recebida", label: "Exigência Recebida" },
+                { value: "deferido", label: "Deferido" },
+                { value: "indeferido", label: "Indeferido" },
+                { value: "arquivado", label: "Arquivado" },
+              ] },
+              { name: "validade", label: "Validade", type: "date" },
+              { name: "condicionantes", label: "Condicionantes", type: "textarea" },
+              { name: "observacoes", label: "Observações", type: "textarea" },
+            ]}
+            data={{
+              tipo: processo.tipo,
+              numProtocolo: processo.numProtocolo,
+              numLicenca: processo.numLicenca,
+              sistema: processo.sistema,
+              status: processo.status,
+              validade: processo.validade?.toISOString(),
+              condicionantes: processo.condicionantes,
+              observacoes: processo.observacoes,
+            }}
+          />
         </div>
       </div>
     </div>

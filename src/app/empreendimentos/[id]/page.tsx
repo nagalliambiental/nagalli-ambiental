@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Map, MapPin, Building2, Calendar, FileText } from "lucide-react";
 import Link from "next/link";
+import EntityActions from "@/components/EntityActions";
 
 export const dynamic = "force-dynamic";
 
@@ -82,6 +83,27 @@ export default async function EmpreendimentoDetailPage(props: { params: Promise<
               Voltar
             </Link>
           </div>
+
+          <EntityActions
+            entity="empreendimento"
+            entityName="Empreendimento"
+            endpoint={`/api/empreendimentos/${emp.id}`}
+            redirectTo="/empreendimentos"
+            fields={[
+              { name: "apelido", label: "Apelido", type: "text", required: true },
+              { name: "descricao", label: "Descrição", type: "textarea" },
+              { name: "endereco", label: "Endereço", type: "text", required: true },
+              { name: "latitude", label: "Latitude", type: "number" },
+              { name: "longitude", label: "Longitude", type: "number" },
+            ]}
+            data={{
+              apelido: emp.apelido,
+              descricao: emp.descricao,
+              endereco: emp.endereco,
+              latitude: emp.latitude,
+              longitude: emp.longitude,
+            }}
+          />
         </div>
       </div>
     </div>

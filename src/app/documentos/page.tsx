@@ -66,7 +66,11 @@ export default async function DocumentosPage() {
             <tbody>
               {documentos.map((d) => (
                 <tr key={d.id} className="border-t border-[var(--color-paper-200)] text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]">
-                  <td className="p-4 font-medium max-w-xs truncate text-[var(--color-ink-900)]">{d.nome}</td>
+                  <td className="p-4 font-medium max-w-xs truncate">
+                    <Link href={`/documentos/${d.id}`} className="text-[var(--color-ink-900)] hover:text-[var(--color-brand-600)] hover:underline">
+                      {d.nome}
+                    </Link>
+                  </td>
                   <td className="p-4">
                     <span className={`inline-block rounded px-2 py-1 text-xs font-medium ${tipoColors[d.tipo] || "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]"}`}>
                       {d.tipo.charAt(0).toUpperCase() + d.tipo.slice(1)}

@@ -71,30 +71,6 @@ async function seed() {
     },
   });
 
-  await prisma.legislacao.upsert({
-    where: { id: 1 },
-    update: {},
-    create: {
-      nome: "Lei 12.651/2012",
-      descricao: "Código Florestal Brasileiro",
-      tipo: "federal",
-      numero: "12.651/2012",
-      data: new Date("2012-05-25"),
-    },
-  });
-
-  await prisma.legislacao.upsert({
-    where: { id: 2 },
-    update: {},
-    create: {
-      nome: "Resolução CONAMA 237/97",
-      descricao: "Licenciamento Ambiental",
-      tipo: "federal",
-      numero: "237/97",
-      data: new Date("1997-12-19"),
-    },
-  });
-
   const processo = await prisma.processo.create({
     data: {
       tipo: "Licença Prévia",

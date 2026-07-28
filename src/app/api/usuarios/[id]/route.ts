@@ -73,3 +73,29 @@ export async function PUT(
     return NextResponse.json({ error: "Erro ao atualizar usuário" }, { status: 400 });
   }
 }
+
+export async function DELETE(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  }
+
+  const perfilLogado = (session.user as { perfil?: string }).perfil;
+  if (perfilLogado !== "socio") {
+    return NextResponse.json({ error: "Apenas sócios podem excluir usuários" }, { status: 403 });
+  }
+
+  const { id } = await params;
+  const usuario = await prisma.usuario.findUnique({ where: { id: Number(id) } });
+  if (!usuario) {
+    return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 });
+  }
+
+  await prisma.usuario.delete({ where: { id: Number(id) } });
+
+  await logAuditoria("EXCLUIR", "usuario", Number(id), { email: usuario.email }, Number((session.user as { id: string }).id));
+  return NextResponse.json({ mensagem: "Usuário excluído" });
+}
