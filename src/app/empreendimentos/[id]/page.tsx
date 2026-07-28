@@ -30,24 +30,43 @@ export default async function EmpreendimentoDetailPage(props: { params: Promise<
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
-          <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
-            <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-4">Informações</h2>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
-                <Building2 size={16} />
-                <span className="text-[var(--color-ink-900)]">{emp.cliente.apelido}</span>
+            <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
+              <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-4">Informações</h2>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
+                  <Building2 size={16} />
+                  <span className="text-[var(--color-ink-900)]">{emp.cliente.apelido}</span>
+                </div>
+                {emp.cnpj && <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
+                  <FileText size={16} />
+                  <span className="font-mono">{emp.cnpj}</span>
+                </div>}
+                <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
+                  <Calendar size={16} />
+                  <span>Cadastro em {format(emp.criadoEm, "dd/MM/yyyy", { locale: ptBR })}</span>
+                </div>
               </div>
-              <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
-                <MapPin size={16} />
-                <span>{emp.endereco}</span>
-              </div>
-              <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
-                <Calendar size={16} />
-                <span>Cadastro em {format(emp.criadoEm, "dd/MM/yyyy", { locale: ptBR })}</span>
-              </div>
+              <p className="mt-4 text-sm text-[var(--color-ink-700)]">{emp.descricao}</p>
             </div>
-            <p className="mt-4 text-sm text-[var(--color-ink-700)]">{emp.descricao}</p>
-          </div>
+
+            {(emp.rua || emp.cep || emp.municipio || emp.uf) && (
+              <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <MapPin size={18} className="text-[var(--color-ink-500)]" />
+                  <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Endereço</h2>
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  {emp.rua && <div className="col-span-2 text-[var(--color-ink-700)]">
+                    {emp.rua}{emp.numero ? `, ${emp.numero}` : ""}
+                  </div>}
+                  {emp.bairro && <div className="text-[var(--color-ink-500)]">Bairro: {emp.bairro}</div>}
+                  {emp.complemento && <div className="text-[var(--color-ink-500)]">Complemento: {emp.complemento}</div>}
+                  {emp.cep && <div className="text-[var(--color-ink-500)]">CEP: {emp.cep}</div>}
+                  {emp.municipio && <div className="flex items-center gap-1 text-[var(--color-ink-500)]"><Map size={14} />{emp.municipio}</div>}
+                  {emp.uf && <div className="flex items-center gap-1 text-[var(--color-ink-500)]">{emp.uf}</div>}
+                </div>
+              </div>
+            )}
 
           {emp.latitude && emp.longitude && (
             <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
@@ -91,15 +110,29 @@ export default async function EmpreendimentoDetailPage(props: { params: Promise<
             redirectTo="/empreendimentos"
             fields={[
               { name: "apelido", label: "Apelido", type: "text", required: true },
+              { name: "cnpj", label: "CNPJ", type: "text" },
+              { name: "cep", label: "CEP", type: "text" },
+              { name: "municipio", label: "Município", type: "text" },
+              { name: "uf", label: "UF", type: "text" },
+              { name: "rua", label: "Rua", type: "text" },
+              { name: "numero", label: "Número", type: "text" },
+              { name: "bairro", label: "Bairro", type: "text" },
+              { name: "complemento", label: "Complemento", type: "text" },
               { name: "descricao", label: "Descrição", type: "textarea" },
-              { name: "endereco", label: "Endereço", type: "text", required: true },
               { name: "latitude", label: "Latitude", type: "number" },
               { name: "longitude", label: "Longitude", type: "number" },
             ]}
             data={{
               apelido: emp.apelido,
+              cnpj: emp.cnpj,
+              cep: emp.cep,
+              municipio: emp.municipio,
+              uf: emp.uf,
+              rua: emp.rua,
+              numero: emp.numero,
+              bairro: emp.bairro,
+              complemento: emp.complemento,
               descricao: emp.descricao,
-              endereco: emp.endereco,
               latitude: emp.latitude,
               longitude: emp.longitude,
             }}

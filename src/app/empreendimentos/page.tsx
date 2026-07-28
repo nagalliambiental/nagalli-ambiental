@@ -47,7 +47,7 @@ export default async function EmpreendimentosPage() {
                 <tr key={e.id} className="border-t border-[var(--color-paper-200)] text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]">
                   <td className="p-4 font-medium text-[var(--color-ink-900)]">{e.apelido}</td>
                   <td className="p-4">{e.cliente.apelido}</td>
-                  <td className="p-4 max-w-xs truncate">{e.endereco}</td>
+                  <td className="p-4 max-w-xs truncate">{[e.rua, e.numero, e.bairro].filter(Boolean).join(", ") || e.municipio || "-"}</td>
                   <td className="p-4 text-center">{e._count.processos}</td>
                   <td className="p-4">
                     <RowActions detailUrl={`/empreendimentos/${e.id}`} entity="empreendimento" entityName="Empreendimento" endpoint={`/api/empreendimentos/${e.id}`} />

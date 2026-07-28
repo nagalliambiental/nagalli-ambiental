@@ -46,7 +46,7 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
-    const { apelido, razaoSocial, cnpj, telefone, email, respLegal } = body;
+    const { apelido, razaoSocial, cnpj, rua, numero, bairro, complemento, cep, municipio, uf, telefone, email, respLegal } = body;
 
     if (!apelido || !razaoSocial || !cnpj || !telefone || !email || !respLegal) {
       return NextResponse.json(
@@ -57,14 +57,14 @@ export async function PUT(
 
     const cliente = await prisma.cliente.update({
       where: { id: Number(id) },
-      data: { apelido, razaoSocial, cnpj, telefone, email, respLegal },
+      data: { apelido, razaoSocial, cnpj, rua, numero, bairro, complemento, cep, municipio, uf, telefone, email, respLegal },
     });
 
     await logAuditoria(
       "ATUALIZAR",
       "Cliente",
       cliente.id,
-      { apelido, razaoSocial, cnpj, telefone, email, respLegal },
+      { apelido, razaoSocial, cnpj, rua, numero, bairro, complemento, cep, municipio, uf, telefone, email, respLegal },
       session.user?.id ? Number(session.user.id) : undefined
     );
 

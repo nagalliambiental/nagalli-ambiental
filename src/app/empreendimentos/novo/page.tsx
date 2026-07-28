@@ -14,7 +14,14 @@ export default function NovoEmpreendimentoPage() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [form, setForm] = useState({
     apelido: "",
-    endereco: "",
+    cnpj: "",
+    cep: "",
+    municipio: "",
+    uf: "",
+    rua: "",
+    numero: "",
+    bairro: "",
+    complemento: "",
     descricao: "",
     clienteId: "",
   });
@@ -57,9 +64,45 @@ export default function NovoEmpreendimentoPage() {
               </select>
             </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Endereço</label>
-            <input value={form.endereco} onChange={(e) => setForm({ ...form, endereco: e.target.value })} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" required />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">CNPJ</label>
+              <input value={form.cnpj} onChange={(e) => setForm({ ...form, cnpj: e.target.value })} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">CEP</label>
+              <input value={form.cep} onChange={(e) => setForm({ ...form, cep: e.target.value })} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Município</label>
+              <input value={form.municipio} onChange={(e) => setForm({ ...form, municipio: e.target.value })} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">UF</label>
+              <input value={form.uf} onChange={(e) => setForm({ ...form, uf: e.target.value })} maxLength={2} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Rua</label>
+              <input value={form.rua} onChange={(e) => setForm({ ...form, rua: e.target.value })} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Número</label>
+              <input value={form.numero} onChange={(e) => setForm({ ...form, numero: e.target.value })} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Bairro</label>
+              <input value={form.bairro} onChange={(e) => setForm({ ...form, bairro: e.target.value })} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Complemento</label>
+              <input value={form.complemento} onChange={(e) => setForm({ ...form, complemento: e.target.value })} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Descrição</label>

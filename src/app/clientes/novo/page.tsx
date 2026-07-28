@@ -13,7 +13,10 @@ export default function NovoClientePage() {
     razaoSocial: "",
     nomeFantasia: "",
     cnpj: "",
-    endereco: "",
+    rua: "",
+    numero: "",
+    bairro: "",
+    complemento: "",
     cep: "",
     municipio: "",
     uf: "",
@@ -43,12 +46,14 @@ export default function NovoClientePage() {
       }
       const data = await res.json();
       setForm((prev) => {
-        const parts = [data.enderecoRua, data.enderecoNumero, data.enderecoComplemento, data.bairro].filter(Boolean);
         return {
           ...prev,
           razaoSocial: data.razaoSocial || prev.razaoSocial,
           nomeFantasia: data.nomeFantasia || prev.nomeFantasia,
-          endereco: parts.length > 0 ? parts.join(", ") : prev.endereco,
+          rua: data.enderecoRua || prev.rua,
+          numero: data.enderecoNumero || prev.numero,
+          bairro: data.bairro || prev.bairro,
+          complemento: data.enderecoComplemento || prev.complemento,
           cep: data.cep || prev.cep,
           municipio: data.municipio || prev.municipio,
           uf: data.uf || prev.uf,
@@ -115,8 +120,22 @@ export default function NovoClientePage() {
           </div>
           <div className="grid grid-cols-3 gap-4">
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Endereço</label>
-              <input value={form.endereco} onChange={(e) => setField("endereco", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] placeholder:text-[var(--color-ink-500)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+              <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Rua</label>
+              <input value={form.rua} onChange={(e) => setField("rua", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] placeholder:text-[var(--color-ink-500)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Número</label>
+              <input value={form.numero} onChange={(e) => setField("numero", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] placeholder:text-[var(--color-ink-500)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Bairro</label>
+              <input value={form.bairro} onChange={(e) => setField("bairro", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] placeholder:text-[var(--color-ink-500)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Complemento</label>
+              <input value={form.complemento} onChange={(e) => setField("complemento", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] placeholder:text-[var(--color-ink-500)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
             </div>
             <div>
               <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">CEP</label>

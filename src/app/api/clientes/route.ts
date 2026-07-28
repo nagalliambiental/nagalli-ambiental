@@ -31,7 +31,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { apelido, razaoSocial, nomeFantasia, cnpj, endereco, cep, municipio, uf, telefone, email, respLegal } = body;
+    const { apelido, razaoSocial, nomeFantasia, cnpj, rua, numero, bairro, complemento, cep, municipio, uf, telefone, email, respLegal } = body;
 
     if (!apelido || !razaoSocial || !cnpj || !telefone || !email || !respLegal) {
       return NextResponse.json(
@@ -41,14 +41,14 @@ export async function POST(request: Request) {
     }
 
     const cliente = await prisma.cliente.create({
-      data: { apelido, razaoSocial, nomeFantasia, cnpj, endereco, cep, municipio, uf, telefone, email, respLegal },
+      data: { apelido, razaoSocial, nomeFantasia, cnpj, rua, numero, bairro, complemento, cep, municipio, uf, telefone, email, respLegal },
     });
 
     await logAuditoria(
       "CRIAR",
       "Cliente",
       cliente.id,
-      { apelido, razaoSocial, nomeFantasia, cnpj, endereco, cep, municipio, uf, telefone, email, respLegal },
+      { apelido, razaoSocial, nomeFantasia, cnpj, rua, numero, bairro, complemento, cep, municipio, uf, telefone, email, respLegal },
       session.user?.id ? Number(session.user.id) : undefined
     );
 

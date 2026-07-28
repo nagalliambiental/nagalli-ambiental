@@ -59,14 +59,18 @@ export default async function ClienteDetailPage(props: { params: Promise<{ id: s
             </div>
           </div>
 
-          {(cliente.endereco || cliente.cep || cliente.municipio || cliente.uf) && (
+          {(cliente.rua || cliente.cep || cliente.municipio || cliente.uf) && (
             <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
               <div className="flex items-center gap-2 mb-4">
                 <MapPin size={18} className="text-[var(--color-ink-500)]" />
                 <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Endereço</h2>
               </div>
               <div className="grid grid-cols-2 gap-3 text-sm">
-                {cliente.endereco && <div className="col-span-2 text-[var(--color-ink-700)]">{cliente.endereco}</div>}
+                {cliente.rua && <div className="col-span-2 text-[var(--color-ink-700)]">
+                  {cliente.rua}{cliente.numero ? `, ${cliente.numero}` : ""}
+                </div>}
+                {cliente.bairro && <div className="text-[var(--color-ink-500)]">Bairro: {cliente.bairro}</div>}
+                {cliente.complemento && <div className="text-[var(--color-ink-500)]">Complemento: {cliente.complemento}</div>}
                 {cliente.cep && <div className="text-[var(--color-ink-500)]">CEP: {cliente.cep}</div>}
                 {cliente.municipio && <div className="flex items-center gap-1 text-[var(--color-ink-500)]"><Map size={14} />{cliente.municipio}</div>}
                 {cliente.uf && <div className="flex items-center gap-1 text-[var(--color-ink-500)]"><Globe size={14} />{cliente.uf}</div>}
@@ -113,7 +117,10 @@ export default async function ClienteDetailPage(props: { params: Promise<{ id: s
               { name: "cnpj", label: "CNPJ", type: "text", required: true },
               { name: "telefone", label: "Telefone", type: "text", required: true },
               { name: "email", label: "Email", type: "text", required: true },
-              { name: "endereco", label: "Endereço", type: "text" },
+              { name: "rua", label: "Rua", type: "text" },
+              { name: "numero", label: "Número", type: "text" },
+              { name: "bairro", label: "Bairro", type: "text" },
+              { name: "complemento", label: "Complemento", type: "text" },
               { name: "cep", label: "CEP", type: "text" },
               { name: "municipio", label: "Município", type: "text" },
               { name: "uf", label: "UF", type: "text" },
@@ -126,7 +133,10 @@ export default async function ClienteDetailPage(props: { params: Promise<{ id: s
               cnpj: cliente.cnpj,
               telefone: cliente.telefone,
               email: cliente.email,
-              endereco: cliente.endereco,
+              rua: cliente.rua,
+              numero: cliente.numero,
+              bairro: cliente.bairro,
+              complemento: cliente.complemento,
               cep: cliente.cep,
               municipio: cliente.municipio,
               uf: cliente.uf,

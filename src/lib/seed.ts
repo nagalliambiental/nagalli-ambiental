@@ -62,7 +62,12 @@ async function seed() {
     update: {},
     create: {
       apelido: "Residencial Verde",
-      endereco: "Rua das Flores, 123 - Curitiba/PR",
+      cnpj: "00.000.000/0001-91",
+      rua: "Rua das Flores",
+      numero: "123",
+      bairro: "Centro",
+      municipio: "Curitiba",
+      uf: "PR",
       descricao: "Residencial com 4 torres",
       latitude: -25.4284,
       longitude: -49.2733,

@@ -31,7 +31,10 @@ model Cliente {
   razaoSocial String
   nomeFantasia String?
   cnpj        String   @unique
-  endereco    String?
+  rua         String?
+  numero      String?
+  bairro      String?
+  complemento String?
   cep         String?
   municipio   String?
   uf          String?
@@ -48,7 +51,14 @@ model Cliente {
 model Empreendimento {
   id          Int      @id @default(autoincrement())
   apelido     String
-  endereco    String
+  cnpj        String?
+  cep         String?
+  municipio   String?
+  uf          String?
+  rua         String?
+  numero      String?
+  bairro      String?
+  complemento String?
   descricao   String
   latitude    Float?
   longitude   Float?
