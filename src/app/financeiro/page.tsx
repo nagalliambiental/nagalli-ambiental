@@ -2,6 +2,8 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Topbar } from "@/components/Topbar";
+import { Plus, Inbox, Eye, DollarSign } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -13,10 +15,10 @@ const statusPagamentoLabels: Record<string, string> = {
 };
 
 const statusPagamentoColors: Record<string, string> = {
-  pendente: "bg-yellow-100 text-yellow-800",
-  pago: "bg-green-100 text-green-800",
-  atrasado: "bg-red-100 text-red-800",
-  cancelado: "bg-gray-100 text-gray-800",
+  pendente: "bg-[var(--color-river-100)] text-[var(--color-river-700)]",
+  pago: "bg-[var(--color-brand-50)] text-[var(--color-brand-600)]",
+  atrasado: "bg-[var(--color-river-100)] text-[var(--color-river-700)]",
+  cancelado: "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]",
 };
 
 export default async function FinanceiroPage() {
@@ -28,61 +30,71 @@ export default async function FinanceiroPage() {
   });
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Financeiro</h1>
-        <Link
-          href="/financeiro/novo"
-          className="bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-800"
-        >
-          + Nova Cobrança
-        </Link>
-      </div>
+    <div>
+      <Topbar
+        title="Financeiro"
+        actions={
+          <Link
+            href="/financeiro/novo"
+            className="focus-ring transition-brand flex items-center gap-2 rounded-[var(--radius-card)] bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)]"
+          >
+            <Plus size={16} />
+            Nova Cobrança
+          </Link>
+        }
+      />
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-gray-50 text-gray-600">
-              <th className="text-left p-4 font-medium">Cliente</th>
-              <th className="text-left p-4 font-medium">Tipo</th>
-              <th className="text-right p-4 font-medium">Valor</th>
-              <th className="text-left p-4 font-medium">Pagamento</th>
-              <th className="text-left p-4 font-medium">Status</th>
-              <th className="text-left p-4 font-medium">Vencimento</th>
-              <th className="text-left p-4 font-medium">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {registros.map((r) => (
-              <tr key={r.id} className="border-t border-gray-50 hover:bg-gray-50">
-                <td className="p-4 font-medium">{r.cliente.apelido}</td>
-                <td className="p-4 text-gray-600">{r.tipoCobranca}</td>
-                <td className="p-4 text-right font-medium">
-                  {r.valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                </td>
-                <td className="p-4 text-gray-600">{r.formaPagamento || "—"}</td>
-                <td className="p-4">
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${statusPagamentoColors[r.statusPagamento] || "bg-gray-100 text-gray-800"}`}>
-                    {statusPagamentoLabels[r.statusPagamento] || r.statusPagamento}
-                  </span>
-                </td>
-                <td className="p-4 text-gray-600">
-                  {r.dataVencimento ? format(r.dataVencimento, "dd/MM/yyyy", { locale: ptBR }) : "—"}
-                </td>
-                <td className="p-4">
-                  <Link
-                    href={`/financeiro/${r.id}`}
-                    className="text-emerald-700 hover:text-emerald-800 text-sm"
-                  >
-                    Detalhes
-                  </Link>
-                </td>
+      <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">
+        {registros.length > 0 ? (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-[var(--color-paper-200)] text-[var(--color-ink-500)]">
+                <th className="text-left p-4 font-medium">Cliente</th>
+                <th className="text-left p-4 font-medium">Tipo</th>
+                <th className="text-right p-4 font-medium">Valor</th>
+                <th className="text-left p-4 font-medium">Pagamento</th>
+                <th className="text-left p-4 font-medium">Status</th>
+                <th className="text-left p-4 font-medium">Vencimento</th>
+                <th className="text-left p-4 font-medium">Ações</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-        {registros.length === 0 && (
-          <p className="text-center text-gray-400 py-8">Nenhum registro financeiro encontrado</p>
+            </thead>
+            <tbody>
+              {registros.map((r) => (
+                <tr key={r.id} className="border-t border-[var(--color-paper-200)] text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]">
+                  <td className="p-4 font-medium text-[var(--color-ink-900)]">{r.cliente.apelido}</td>
+                  <td className="p-4">{r.tipoCobranca}</td>
+                  <td className="p-4 text-right font-medium">
+                    {r.valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                  </td>
+                  <td className="p-4">{r.formaPagamento || "—"}</td>
+                  <td className="p-4">
+                    <span className={`inline-block rounded px-2 py-1 text-xs font-medium ${statusPagamentoColors[r.statusPagamento] || "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]"}`}>
+                      {statusPagamentoLabels[r.statusPagamento] || r.statusPagamento}
+                    </span>
+                  </td>
+                  <td className="p-4">
+                    {r.dataVencimento ? format(r.dataVencimento, "dd/MM/yyyy", { locale: ptBR }) : "—"}
+                  </td>
+                  <td className="p-4">
+                    <Link
+                      href={`/financeiro/${r.id}`}
+                      className="inline-flex items-center gap-1 text-sm text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)]"
+                    >
+                      <Eye size={14} />
+                      Detalhes
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <div className="flex flex-col items-center gap-3 py-12 text-[var(--color-ink-500)]">
+            <div className="rounded-lg bg-[var(--color-paper-100)] p-3">
+              <DollarSign size={24} />
+            </div>
+            <p className="text-sm">Nenhum registro financeiro encontrado</p>
+          </div>
         )}
       </div>
     </div>

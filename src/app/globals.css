@@ -1,26 +1,75 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-brand-50: #EEF3E7;
+  --color-brand-100: #D8E4C7;
+  --color-brand-200: #B4CB94;
+  --color-brand-400: #6B9A46;
+  --color-brand-500: #538136;
+  --color-brand-600: #446B2C;
+  --color-brand-700: #365623;
+  --color-brand-900: #1F3213;
+
+  --color-river-100: #E7EEF9;
+  --color-river-300: #B7C9E8;
+  --color-river-500: #8EAADA;
+  --color-river-700: #4C6CA0;
+
+  --color-paper-0: #FBFAF7;
+  --color-paper-50: #F5F3EE;
+  --color-paper-100: #ECE9E1;
+  --color-paper-200: #DFDBCF;
+
+  --color-ink-900: #1E2418;
+  --color-ink-700: #3D4536;
+  --color-ink-500: #6B7362;
+  --color-ink-300: #A3A896;
+
+  --font-display: "Sora", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  --radius-card: 0.875rem;
+  --sidebar-width: 17rem;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+.shadow-card {
+  box-shadow: 0 1px 2px rgba(30, 36, 24, 0.04), 0 8px 24px -12px rgba(30, 36, 24, 0.10);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-paper-50);
+  color: var(--color-ink-900);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, .font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+.river-divider {
+  height: 5px;
+  width: 100%;
+  background: linear-gradient(
+    90deg,
+    var(--color-brand-500) 0%,
+    var(--color-river-500) 45%,
+    var(--color-brand-500) 100%
+  );
+  opacity: 0.95;
+}
+
+.focus-ring {
+  outline: 2px solid transparent;
+}
+.focus-ring:focus-visible {
+  outline: 2px solid var(--color-river-500);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .transition-brand {
+    transition: all 160ms ease;
+  }
 }

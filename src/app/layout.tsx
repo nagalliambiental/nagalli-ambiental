@@ -1,19 +1,20 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
+import { Inter, Sora } from "next/font/google";
+import { AppChrome } from "@/components/AppChrome";
 import SessionProvider from "@/components/SessionProvider";
-import Sidebar from "@/components/Sidebar";
-import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
+import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
   subsets: ["latin"],
+  variable: "--font-sans",
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const sora = Sora({
   subsets: ["latin"],
+  variable: "--font-display",
+  weight: ["600", "700"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -21,34 +22,14 @@ export const metadata: Metadata = {
   description: "Sistema de controle de processos de consultoria ambiental",
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  const session = await auth();
-  const isLoginPage =
-    typeof children !== "string" &&
-    (children as { props?: { pathname?: string } })?.props?.pathname ===
-      "/login";
-
+}: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html
-      lang="pt-BR"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex">
+    <html lang="pt-BR" className={`${inter.variable} ${sora.variable}`}>
+      <body>
         <SessionProvider>
-          {session ? (
-            <div className="flex w-full">
-              <Sidebar />
-              <main className="flex-1 bg-gray-50 overflow-auto p-6">
-                {children}
-              </main>
-            </div>
-          ) : (
-            <div className="w-full">{children}</div>
-          )}
+          <AppChrome>{children}</AppChrome>
         </SessionProvider>
       </body>
     </html>

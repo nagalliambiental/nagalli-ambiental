@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Topbar } from "@/components/Topbar";
 
 export default function NovoClientePage() {
   const router = useRouter();
@@ -28,48 +29,51 @@ export default function NovoClientePage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Novo Cliente</h1>
-      <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Apelido</label>
-            <input value={form.apelido} onChange={(e) => setForm({ ...form, apelido: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" required />
+    <div>
+      <Topbar title="Novo Cliente" subtitle="Cadastre um novo cliente no sistema" />
+
+      <div className="mx-auto max-w-2xl">
+        <form onSubmit={handleSubmit} className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Apelido</label>
+              <input value={form.apelido} onChange={(e) => setForm({ ...form, apelido: e.target.value })} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] placeholder:text-[var(--color-ink-500)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" required />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Razão Social</label>
+              <input value={form.razaoSocial} onChange={(e) => setForm({ ...form, razaoSocial: e.target.value })} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] placeholder:text-[var(--color-ink-500)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" required />
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Razão Social</label>
-            <input value={form.razaoSocial} onChange={(e) => setForm({ ...form, razaoSocial: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" required />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">CNPJ</label>
+              <input value={form.cnpj} onChange={(e) => setForm({ ...form, cnpj: e.target.value })} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] placeholder:text-[var(--color-ink-500)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" required />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Telefone</label>
+              <input value={form.telefone} onChange={(e) => setForm({ ...form, telefone: e.target.value })} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] placeholder:text-[var(--color-ink-500)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+            </div>
           </div>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">CNPJ</label>
-            <input value={form.cnpj} onChange={(e) => setForm({ ...form, cnpj: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" required />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Email</label>
+              <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] placeholder:text-[var(--color-ink-500)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" required />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Responsável Legal</label>
+              <input value={form.respLegal} onChange={(e) => setForm({ ...form, respLegal: e.target.value })} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] placeholder:text-[var(--color-ink-500)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Telefone</label>
-            <input value={form.telefone} onChange={(e) => setForm({ ...form, telefone: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+          <div className="flex gap-3 pt-4">
+            <button type="submit" disabled={saving} className="focus-ring transition-brand flex items-center gap-2 rounded-[var(--radius-card)] bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">
+              {saving ? "Salvando..." : "Salvar"}
+            </button>
+            <button type="button" onClick={() => router.back()} className="focus-ring transition-brand rounded-lg border border-[var(--color-paper-200)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]">
+              Cancelar
+            </button>
           </div>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" required />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Responsável Legal</label>
-            <input value={form.respLegal} onChange={(e) => setForm({ ...form, respLegal: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
-          </div>
-        </div>
-        <div className="flex gap-3 pt-4">
-          <button type="submit" disabled={saving} className="bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-800 disabled:opacity-50">
-            {saving ? "Salvando..." : "Salvar"}
-          </button>
-          <button type="button" onClick={() => router.back()} className="text-gray-600 px-4 py-2 rounded-lg text-sm border border-gray-300 hover:bg-gray-50">
-            Cancelar
-          </button>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
   );
 }

@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import { Topbar } from "@/components/Topbar";
+import { Plus, Inbox, Eye, Users, Check, X } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -10,9 +12,9 @@ const perfilLabels: Record<string, string> = {
 };
 
 const perfilColors: Record<string, string> = {
-  socio: "bg-purple-100 text-purple-800",
-  tecnico: "bg-blue-100 text-blue-800",
-  admin: "bg-emerald-100 text-emerald-800",
+  socio: "bg-[var(--color-brand-50)] text-[var(--color-brand-600)]",
+  tecnico: "bg-[var(--color-river-100)] text-[var(--color-river-700)]",
+  admin: "bg-[var(--color-brand-50)] text-[var(--color-brand-600)]",
 };
 
 export default async function UsuariosPage() {
@@ -24,61 +26,71 @@ export default async function UsuariosPage() {
   });
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Usuários</h1>
-        <Link
-          href="/usuarios/novo"
-          className="bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-800"
-        >
-          + Novo Usuário
-        </Link>
-      </div>
+    <div>
+      <Topbar
+        title="Usuários"
+        actions={
+          <Link
+            href="/usuarios/novo"
+            className="focus-ring transition-brand flex items-center gap-2 rounded-[var(--radius-card)] bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)]"
+          >
+            <Plus size={16} />
+            Novo Usuário
+          </Link>
+        }
+      />
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-gray-50 text-gray-600">
-              <th className="text-left p-4 font-medium">Nome</th>
-              <th className="text-left p-4 font-medium">Email</th>
-              <th className="text-left p-4 font-medium">Perfil</th>
-              <th className="text-center p-4 font-medium">Tarefas</th>
-              <th className="text-center p-4 font-medium">Ativo</th>
-              <th className="text-left p-4 font-medium">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {usuarios.map((u) => (
-              <tr key={u.id} className="border-t border-gray-50 hover:bg-gray-50">
-                <td className="p-4 font-medium">{u.nome}</td>
-                <td className="p-4 text-gray-600">{u.email}</td>
-                <td className="p-4">
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${perfilColors[u.perfil] || "bg-gray-100 text-gray-800"}`}>
-                    {perfilLabels[u.perfil] || u.perfil}
-                  </span>
-                </td>
-                <td className="p-4 text-center">{u._count.tarefas}</td>
-                <td className="p-4 text-center">
-                  {u.ativo ? (
-                    <span className="text-emerald-600 text-lg">✓</span>
-                  ) : (
-                    <span className="text-red-400 text-lg">✕</span>
-                  )}
-                </td>
-                <td className="p-4">
-                  <Link
-                    href={`/usuarios/${u.id}`}
-                    className="text-emerald-700 hover:text-emerald-800 text-sm"
-                  >
-                    Detalhes
-                  </Link>
-                </td>
+      <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">
+        {usuarios.length > 0 ? (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-[var(--color-paper-200)] text-[var(--color-ink-500)]">
+                <th className="text-left p-4 font-medium">Nome</th>
+                <th className="text-left p-4 font-medium">Email</th>
+                <th className="text-left p-4 font-medium">Perfil</th>
+                <th className="text-center p-4 font-medium">Tarefas</th>
+                <th className="text-center p-4 font-medium">Ativo</th>
+                <th className="text-left p-4 font-medium">Ações</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-        {usuarios.length === 0 && (
-          <p className="text-center text-gray-400 py-8">Nenhum usuário cadastrado</p>
+            </thead>
+            <tbody>
+              {usuarios.map((u) => (
+                <tr key={u.id} className="border-t border-[var(--color-paper-200)] text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]">
+                  <td className="p-4 font-medium text-[var(--color-ink-900)]">{u.nome}</td>
+                  <td className="p-4">{u.email}</td>
+                  <td className="p-4">
+                    <span className={`inline-block rounded px-2 py-1 text-xs font-medium ${perfilColors[u.perfil] || "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]"}`}>
+                      {perfilLabels[u.perfil] || u.perfil}
+                    </span>
+                  </td>
+                  <td className="p-4 text-center">{u._count.tarefas}</td>
+                  <td className="p-4 text-center">
+                    {u.ativo ? (
+                      <Check size={18} className="text-[var(--color-brand-600)]" />
+                    ) : (
+                      <X size={18} className="text-[var(--color-river-700)]" />
+                    )}
+                  </td>
+                  <td className="p-4">
+                    <Link
+                      href={`/usuarios/${u.id}`}
+                      className="inline-flex items-center gap-1 text-sm text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)]"
+                    >
+                      <Eye size={14} />
+                      Detalhes
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <div className="flex flex-col items-center gap-3 py-12 text-[var(--color-ink-500)]">
+            <div className="rounded-lg bg-[var(--color-paper-100)] p-3">
+              <Users size={24} />
+            </div>
+            <p className="text-sm">Nenhum usuário cadastrado</p>
+          </div>
         )}
       </div>
     </div>
