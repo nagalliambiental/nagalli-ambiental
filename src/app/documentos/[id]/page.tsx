@@ -92,7 +92,7 @@ export default async function DocumentoDetailPage(props: { params: Promise<{ id:
           <EntityActions
             entity="documento"
             entityName="Documento"
-            endpoint={`/api/documentos/${documento.id}`}
+            endpoint={`/api/documentos/${doc.id}`}
             redirectTo="/documentos"
             fields={[
               { name: "nome", label: "Nome", type: "text", required: true },
