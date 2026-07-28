@@ -23,6 +23,7 @@ export default function NovoClientePage() {
   });
   const [saving, setSaving] = useState(false);
   const [searching, setSearching] = useState(false);
+  const [error, setError] = useState("");
 
   function setField(field: string, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -65,11 +66,18 @@ export default function NovoClientePage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
-    await fetch("/api/clientes", {
+    setError("");
+    const res = await fetch("/api/clientes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
     });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.erro || "Erro ao salvar cliente");
+      setSaving(false);
+      return;
+    }
     router.push("/clientes");
     router.refresh();
   }
@@ -128,7 +136,7 @@ export default function NovoClientePage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Telefone</label>
-              <input value={form.telefone} onChange={(e) => setField("telefone", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] placeholder:text-[var(--color-ink-500)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+              <input value={form.telefone} onChange={(e) => setField("telefone", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] placeholder:text-[var(--color-ink-500)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" required />
             </div>
             <div>
               <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Email</label>
@@ -137,8 +145,13 @@ export default function NovoClientePage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Responsável Legal</label>
-            <input value={form.respLegal} onChange={(e) => setField("respLegal", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] placeholder:text-[var(--color-ink-500)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+            <input value={form.respLegal} onChange={(e) => setField("respLegal", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] placeholder:text-[var(--color-ink-500)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" required />
           </div>
+          {error && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
           <div className="flex gap-3 pt-4">
             <button type="submit" disabled={saving} className="focus-ring transition-brand flex items-center gap-2 rounded-[var(--radius-card)] bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">
               {saving ? "Salvando..." : "Salvar"}
