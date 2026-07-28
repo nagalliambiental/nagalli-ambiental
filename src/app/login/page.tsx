@@ -91,7 +91,14 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className="text-xs text-gray-400 text-center mt-6">
+        <p className="text-center text-sm text-gray-500 mt-4">
+          Primeiro acesso?{" "}
+          <a href="/register" className="text-emerald-700 font-medium hover:text-emerald-800">
+            Criar conta
+          </a>
+        </p>
+
+        <p className="text-xs text-gray-400 text-center mt-4">
           Nagalli Ambiental © {new Date().getFullYear()}
         </p>
       </div>
