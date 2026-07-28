@@ -91,6 +91,8 @@ export default function UsuarioDetailPage() {
     setNovaSenha("");
     setConfirmarSenha("");
   }
+
+  async function handleDelete() {
     setDeleting(true);
     try {
       const res = await fetch(`/api/usuarios/${params.id}`, { method: "DELETE" });
