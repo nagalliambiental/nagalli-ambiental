@@ -1,5 +1,7 @@
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Topbar } from "@/components/Topbar";
@@ -22,6 +24,11 @@ const statusPagamentoColors: Record<string, string> = {
 };
 
 export default async function FinanceiroPage() {
+  const session = await auth();
+  if (!session?.user) redirect("/login");
+  const perfil = (session.user as { perfil?: string }).perfil;
+  if (perfil !== "socio") redirect("/");
+
   const registros = await prisma.financeiro.findMany({
     include: {
       cliente: { select: { apelido: true } },

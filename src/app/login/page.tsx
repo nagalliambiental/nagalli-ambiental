@@ -32,7 +32,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#365623] to-[#1F3213]">
       <div className="bg-[var(--color-paper-0)] rounded-2xl shadow-2xl p-8 w-full max-w-md border border-[var(--color-paper-200)]">
         <div className="flex flex-col items-center mb-8">
-          <Image src="/Logo1.jpeg" alt="Nagalli Ambiental" width={80} height={80} className="rounded-xl mb-4" />
+          <Image src="/Logo.jpeg" alt="Nagalli Ambiental" width={80} height={80} className="rounded-xl mb-4" />
           <h1 className="font-display text-2xl font-semibold text-[var(--color-ink-900)]">Nagalli Ambiental</h1>
           <p className="text-sm text-[var(--color-ink-500)]">Sistema de Gestão Ambiental</p>
         </div>

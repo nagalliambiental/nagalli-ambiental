@@ -9,6 +9,11 @@ export async function GET() {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
 
+  const perfil = (session.user as { perfil?: string }).perfil;
+  if (perfil !== "socio") {
+    return NextResponse.json({ error: "Acesso restrito a sócios" }, { status: 403 });
+  }
+
   const financeiros = await prisma.financeiro.findMany({
     include: { cliente: true },
     orderBy: { criadoEm: "desc" },
@@ -21,6 +26,11 @@ export async function POST(request: Request) {
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  }
+
+  const perfil = (session.user as { perfil?: string }).perfil;
+  if (perfil !== "socio") {
+    return NextResponse.json({ error: "Acesso restrito a sócios" }, { status: 403 });
   }
 
   try {

@@ -22,7 +22,7 @@ export function MobileNav() {
     <div className="lg:hidden">
       <div className="flex items-center justify-between border-b border-[var(--color-paper-200)] bg-[var(--color-paper-0)] px-4 py-3">
         <div className="flex items-center gap-2">
-          <Image src="/Logo1.jpeg" alt="" width={28} height={28} className="rounded" />
+          <Image src="/Logo.jpeg" alt="" width={28} height={28} className="rounded" />
           <span className="font-display text-sm font-semibold text-[var(--color-ink-900)]">
             Nagalli Ambiental
           </span>

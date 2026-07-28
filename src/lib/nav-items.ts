@@ -27,7 +27,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Processos", href: "/processos", icon: FileCheck2 },
   { label: "Exigências", href: "/exigencias", icon: ClipboardList },
   { label: "Documentos", href: "/documentos", icon: FileStack },
-  { label: "Financeiro", href: "/financeiro", icon: DollarSign },
+  { label: "Financeiro", href: "/financeiro", icon: DollarSign, adminOnly: true },
   { label: "Legislação", href: "/legislacao", icon: BookOpen },
   { label: "Prazos", href: "/prazos", icon: CalendarClock },
   { label: "Tarefas", href: "/tarefas", icon: ClipboardList },

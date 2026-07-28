@@ -23,7 +23,7 @@ export default function Sidebar() {
       style={{ width: "var(--sidebar-width)" }}
     >
       <div className="flex items-center gap-3 px-6 py-6">
-        <Image src="/Logo1.jpeg" alt="" width={36} height={36} className="shrink-0 rounded" />
+        <Image src="/Logo.jpeg" alt="" width={36} height={36} className="shrink-0 rounded" />
         <div className="leading-tight">
           <p className="font-display text-sm font-semibold text-[var(--color-ink-900)]">
             Nagalli Ambiental
