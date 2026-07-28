@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     const buffer = Buffer.from(await file.arrayBuffer());
     const extracted = await extractFromBuffer(buffer, ext);
 
-    return NextResponse.json({ validade: null, numLicenca: null, numProtocolo: null, condicionantes: null, ...extracted });
+    return NextResponse.json(extracted);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erro desconhecido";
     console.error("Erro no extract:", message);
