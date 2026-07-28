@@ -8,6 +8,9 @@ interface DadosEmpresa {
   enderecoNumero: string;
   enderecoComplemento: string;
   bairro: string;
+  cep: string;
+  municipio: string;
+  uf: string;
   telefone: string;
   email: string;
 }
@@ -20,6 +23,9 @@ const CAMPOS_VAZIOS: DadosEmpresa = {
   enderecoNumero: "",
   enderecoComplemento: "",
   bairro: "",
+  cep: "",
+  municipio: "",
+  uf: "",
   telefone: "",
   email: "",
 };
@@ -50,6 +56,9 @@ async function tentarBrasilApi(cnpj: string): Promise<DadosEmpresa | null> {
     enderecoNumero: data.numero || "",
     enderecoComplemento: data.complemento || "",
     bairro: data.bairro || "",
+    cep: data.cep || "",
+    municipio: data.municipio || "",
+    uf: data.uf || "",
     telefone,
     email: data.email || "",
   };
@@ -76,6 +85,9 @@ async function tentarMinhaReceita(cnpj: string): Promise<DadosEmpresa | null> {
     enderecoNumero: data.numero || "",
     enderecoComplemento: data.complemento || "",
     bairro: data.bairro || "",
+    cep: data.cep || "",
+    municipio: data.municipio || "",
+    uf: data.uf || "",
     telefone,
     email: data.email || "",
   };
@@ -98,6 +110,9 @@ async function tentarReceitaWs(cnpj: string): Promise<DadosEmpresa | null> {
     enderecoNumero: data.numero || "",
     enderecoComplemento: data.complemento || "",
     bairro: data.bairro || "",
+    cep: data.cep || "",
+    municipio: data.municipio || "",
+    uf: data.uf || "",
     telefone: (data.telefone || "").split("/")[0].trim(),
     email: data.email || "",
   };

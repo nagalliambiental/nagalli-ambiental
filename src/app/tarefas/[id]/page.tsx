@@ -1,0 +1,114 @@
+import { notFound, redirect } from "next/navigation";
+import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { Topbar } from "@/components/Topbar";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { ClipboardList, User, Users, Calendar, Clock, AlertTriangle } from "lucide-react";
+import Link from "next/link";
+
+export const dynamic = "force-dynamic";
+
+const statusLabels: Record<string, string> = {
+  pendente: "Pendente",
+  em_andamento: "Em Andamento",
+  concluida: "Concluída",
+  cancelada: "Cancelada",
+};
+
+const statusColors: Record<string, string> = {
+  pendente: "bg-[var(--color-river-100)] text-[var(--color-river-700)]",
+  em_andamento: "bg-[var(--color-brand-50)] text-[var(--color-brand-600)]",
+  concluida: "bg-[var(--color-brand-50)] text-[var(--color-brand-600)]",
+  cancelada: "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]",
+};
+
+const prioridadeLabels: Record<string, string> = {
+  baixa: "Baixa",
+  media: "Média",
+  alta: "Alta",
+  urgente: "Urgente",
+};
+
+const prioridadeColors: Record<string, string> = {
+  baixa: "text-[var(--color-ink-500)]",
+  media: "text-[var(--color-brand-600)]",
+  alta: "text-[var(--color-river-700)]",
+  urgente: "text-[var(--color-river-700)]",
+};
+
+export default async function TarefaDetailPage(props: { params: Promise<{ id: string }> }) {
+  const session = await auth();
+  if (!session?.user) redirect("/login");
+
+  const { id } = await props.params;
+  const tarefa = await prisma.tarefa.findUnique({
+    where: { id: Number(id) },
+    include: {
+      responsavel: { select: { nome: true } },
+      usuario: { select: { nome: true } },
+    },
+  });
+  if (!tarefa) notFound();
+
+  return (
+    <div>
+      <Topbar title={tarefa.titulo} subtitle="Detalhes da tarefa" />
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2 space-y-6">
+          <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
+            <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-4">Informações</h2>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
+                <ClipboardList size={16} />
+                <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${statusColors[tarefa.status] || ""}`}>{statusLabels[tarefa.status] || tarefa.status}</span>
+              </div>
+              <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
+                <AlertTriangle size={16} />
+                <span className={prioridadeColors[tarefa.prioridade]}>{prioridadeLabels[tarefa.prioridade] || tarefa.prioridade}</span>
+              </div>
+              <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
+                <User size={16} />
+                <span>Resp.: {tarefa.responsavel.nome}</span>
+              </div>
+              <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
+                <Users size={16} />
+                <span>Criador: {tarefa.usuario.nome}</span>
+              </div>
+            </div>
+          </div>
+
+          {tarefa.descricao && (
+            <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
+              <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-2">Descrição</h2>
+              <p className="text-sm text-[var(--color-ink-700)] whitespace-pre-wrap">{tarefa.descricao}</p>
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-6">
+          <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
+            <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-3">Datas</h2>
+            <div className="space-y-3 text-sm">
+              <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
+                <Calendar size={14} />
+                <span>Criado em {format(tarefa.criadoEm, "dd/MM/yyyy", { locale: ptBR })}</span>
+              </div>
+              {tarefa.dataVencimento && (
+                <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
+                  <Clock size={14} />
+                  <span>Vence em {format(tarefa.dataVencimento, "dd/MM/yyyy", { locale: ptBR })}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <Link href="/tarefas" className="focus-ring transition-brand block rounded-lg border border-[var(--color-paper-200)] bg-white px-4 py-2.5 text-center text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]">
+            Voltar
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
