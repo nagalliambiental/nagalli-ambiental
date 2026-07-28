@@ -87,7 +87,7 @@ export default async function EmpreendimentoDetailPage(props: { params: Promise<
           <EntityActions
             entity="empreendimento"
             entityName="Empreendimento"
-            endpoint={`/api/empreendimentos/${empreendimento.id}`}
+            endpoint={`/api/empreendimentos/${emp.id}`}
             redirectTo="/empreendimentos"
             fields={[
               { name: "apelido", label: "Apelido", type: "text", required: true },
