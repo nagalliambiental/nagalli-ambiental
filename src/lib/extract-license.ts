@@ -37,6 +37,7 @@ export async function extractFromBuffer(buffer: Buffer, ext: string) {
     const blob = new Blob([new Uint8Array(buffer)], { type: `image/${ext === "png" ? "png" : "jpeg"}` });
     const formData = new FormData();
     formData.append("file", blob, `image.${ext}`);
+    formData.append("apikey", process.env.OCR_API_KEY || "helloworld");
     formData.append("language", "por");
     formData.append("isOverlayRequired", "false");
 
