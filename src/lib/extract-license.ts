@@ -1,4 +1,4 @@
-import { createWorker } from "tesseract.js";
+const OCR_API = "https://api.ocr.space/parse/image";
 
 const DATE_PATTERNS = [
   /validade[:\s]*(\d{2})\/(\d{2})\/(\d{4})/i,
@@ -34,10 +34,25 @@ export async function extractFromBuffer(buffer: Buffer, ext: string) {
   let text = "";
 
   try {
-    const worker = await createWorker("por");
-    const { data } = await worker.recognize(buffer);
-    await worker.terminate();
-    text = data.text;
+    const blob = new Blob([buffer], { type: `image/${ext === "png" ? "png" : "jpeg"}` });
+    const formData = new FormData();
+    formData.append("file", blob, `image.${ext}`);
+    formData.append("language", "por");
+    formData.append("isOverlayRequired", "false");
+
+    const res = await fetch(OCR_API, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!res.ok) {
+      console.error("OCR.space error:", res.status);
+    } else {
+      const json = await res.json();
+      if (json.ParsedResults?.[0]?.ParsedText) {
+        text = json.ParsedResults[0].ParsedText;
+      }
+    }
   } catch (err) {
     console.error("OCR failed, falling back to empty text:", err);
   }
