@@ -20,6 +20,7 @@ export default function NovaCobrancaPage() {
     descricao: "",
     clienteId: "",
   });
+  const [quitado, setQuitado] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -32,15 +33,20 @@ export default function NovaCobrancaPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
+    const body: Record<string, unknown> = {
+      ...form,
+      valor: parseFloat(form.valor),
+      clienteId: Number(form.clienteId),
+      dataVencimento: form.dataVencimento ? new Date(form.dataVencimento).toISOString() : undefined,
+    };
+    if (quitado) {
+      body.statusPagamento = "pago";
+      body.dataPagamento = new Date().toISOString();
+    }
     await fetch("/api/financeiro", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...form,
-        valor: parseFloat(form.valor),
-        clienteId: Number(form.clienteId),
-        dataVencimento: form.dataVencimento ? new Date(form.dataVencimento).toISOString() : undefined,
-      }),
+      body: JSON.stringify(body),
     });
     router.push("/financeiro");
     router.refresh();
@@ -89,6 +95,10 @@ export default function NovaCobrancaPage() {
               <input value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
             </div>
           </div>
+          <label className="flex items-center gap-2 text-sm text-[var(--color-ink-700)] cursor-pointer">
+            <input type="checkbox" checked={quitado} onChange={(e) => setQuitado(e.target.checked)} className="rounded border-[var(--color-paper-200)] text-[var(--color-brand-500)] focus:ring-[var(--color-brand-500)]" />
+            Marcar como quitado (status "pago" com data atual)
+          </label>
           <div className="flex gap-3 pt-4">
             <button type="submit" disabled={saving} className="focus-ring transition-brand flex items-center gap-2 rounded-[var(--radius-card)] bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">
               {saving ? "Salvando..." : "Salvar"}
