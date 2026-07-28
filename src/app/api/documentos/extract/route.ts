@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
+import { extractFromBuffer } from "@/lib/extract-license";
 import { auth } from "@/lib/auth";
+
+export const maxDuration = 30;
 
 export async function POST(request: Request) {
   const session = await auth();
@@ -26,13 +29,12 @@ export async function POST(request: Request) {
     const filePath = join(uploadDir, filename);
     await writeFile(filePath, buffer);
 
+    const extracted = await extractFromBuffer(buffer, ext);
+
     return NextResponse.json({
       filename,
       caminho: `/uploads/${filename}`,
-      validade: null,
-      numLicenca: null,
-      numProtocolo: null,
-      condicionantes: null,
+      ...extracted,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erro desconhecido";
