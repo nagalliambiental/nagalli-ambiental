@@ -36,13 +36,6 @@ const PROTOCOLO_PATTERNS = [
   /n[º°o]\s*\.?\s*([\d\/\.\-]{3,})\s*\/\s*\d{4}/i,
 ];
 
-const CONDICIONANTE_MARKERS = [
-  /condicionantes?\s*(?:ambientais?)?[:\s]*/i,
-  /condi[cç][oõ]es?\s*(?:ambientais?)?[:\s]*/i,
-  /restri[cç][oõ]es?\s*[:\s]*/i,
-  /exig[eê]ncias?\s*(?:t[eé]cnicas?)?[:\s]*/i,
-];
-
 function mimeType(ext: string): string {
   return MIME_TYPES[ext.toLowerCase()] || "image/jpeg";
 }
@@ -127,25 +120,27 @@ export function extractFields(text: string) {
   }
 
   let condicionantes: string | null = null;
-  for (const marker of CONDICIONANTE_MARKERS) {
-    const idx = text.search(marker);
-    if (idx >= 0) {
-      let slice = text.slice(idx + text.slice(idx).search(/[:\s]/) + 1).trim();
-      const lines: string[] = [];
-      for (const line of slice.split("\n")) {
-        const trimmed = line.trim();
-        if (!trimmed) {
-          if (lines.length > 0) break;
-          continue;
-        }
-        if (/^\d{1,2}[\)\.]\s*/.test(trimmed) || trimmed.startsWith("-") || trimmed.startsWith("•")) {
-          lines.push(trimmed.replace(/^\d{1,2}[\)\.]\s*/, "").replace(/^[-•]\s*/, "").trim());
-        }
+  const condIdx = text.search(/condicionan?t[ei]\s*(?:ambientais?)?[:\s]*/i);
+  if (condIdx >= 0) {
+    let slice = text.slice(condIdx);
+    slice = slice.replace(/^condicionan?t[ei]\s*(?:ambientais?)?[:\s]*/i, "").trim();
+    const lines: string[] = [];
+    let started = false;
+    for (const line of slice.split("\n")) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      if (/^\d{1,3}[\)\.][-\s]/.test(trimmed) || /^\d{1,3}[\)\.]\s/.test(trimmed)) {
+        lines.push(trimmed.replace(/^\d{1,3}[\)\.]\s*/, "").trim());
+        started = true;
+      } else if (trimmed.startsWith("-") || trimmed.startsWith("•")) {
+        lines.push(trimmed.replace(/^[-•]\s*/, "").trim());
+        started = true;
+      } else if (started && /^[A-ZÁÂÃÉÊÍÓÔÕÚÇ]/.test(trimmed) && trimmed.length > 10) {
+        lines.push(trimmed);
       }
-      if (lines.length > 0) {
-        condicionantes = lines.join("\n");
-      }
-      break;
+    }
+    if (lines.length > 0) {
+      condicionantes = lines.join("\n");
     }
   }
 
