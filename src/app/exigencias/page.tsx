@@ -4,6 +4,7 @@ import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Topbar } from "@/components/Topbar";
 import { Plus, Inbox, Eye, Check, AlertTriangle } from "lucide-react";
+import RowActions from "@/components/RowActions";
 
 export const dynamic = "force-dynamic";
 
@@ -84,13 +85,7 @@ export default async function ExigenciasPage() {
                       )}
                     </td>
                     <td className="p-4">
-                      <Link
-                        href={`/exigencias/${e.id}`}
-                        className="inline-flex items-center gap-1 text-sm text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)]"
-                      >
-                        <Eye size={14} />
-                        Detalhes
-                      </Link>
+                      <RowActions detailUrl={`/exigencias/${e.id}`} entity="exigencia" entityName="Exigência" endpoint={`/api/exigencias/${e.id}`} />
                     </td>
                   </tr>
                 );

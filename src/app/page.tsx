@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Building2, FileStack, CalendarClock, Plus, Inbox, ArrowUpRight, AlertTriangle, FileCheck2 } from "lucide-react";
+import { Building2, CalendarClock, Plus, Inbox, ArrowUpRight, AlertTriangle, FileCheck2 } from "lucide-react";
 import { Topbar } from "@/components/Topbar";
 import { StatCard } from "@/components/StatCard";
 import { prisma } from "@/lib/prisma";
@@ -7,6 +7,21 @@ import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 export const dynamic = "force-dynamic";
+
+const statusLabels: Record<string, string> = {
+  protocolado: "Protocolado", em_andamento: "Em Andamento",
+  exigencia_recebida: "Exigência Recebida", deferido: "Deferido",
+  indeferido: "Indeferido", arquivado: "Arquivado",
+};
+
+const statusColors: Record<string, string> = {
+  protocolado: "bg-[var(--color-river-100)] text-[var(--color-river-700)]",
+  em_andamento: "bg-amber-50 text-amber-800",
+  exigencia_recebida: "bg-orange-50 text-orange-800",
+  deferido: "bg-green-50 text-green-800",
+  indeferido: "bg-red-50 text-red-800",
+  arquivado: "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]",
+};
 
 export default async function DashboardPage() {
   const [
@@ -18,12 +33,13 @@ export default async function DashboardPage() {
     exigenciasPendentes,
     orgaos,
     clientesRecentes,
+    processosRecentes,
   ] = await Promise.all([
     prisma.processo.count(),
     prisma.processo.groupBy({ by: ["status"], _count: true }),
     prisma.processo.findMany({
       where: {
-        validade: { not: null, gte: new Date(), lte: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000) },
+        validade: { not: null, gte: new Date() },
       },
       include: { empreendimento: { select: { apelido: true } }, orgao: { select: { sigla: true } } },
       orderBy: { validade: "asc" },
@@ -33,22 +49,15 @@ export default async function DashboardPage() {
     prisma.exigencia.count({ where: { cumprida: false } }),
     prisma.orgao.findMany({ include: { _count: { select: { processos: true } } } }),
     prisma.cliente.findMany({ take: 5, orderBy: { criadoEm: "desc" }, include: { _count: { select: { empreendimentos: true } } } }),
+    prisma.processo.findMany({
+      take: 20,
+      orderBy: { criadoEm: "desc" },
+      include: {
+        empreendimento: { select: { apelido: true } },
+        orgao: { select: { sigla: true } },
+      },
+    }),
   ]);
-
-  const statusLabels: Record<string, string> = {
-    protocolado: "Protocolado", em_andamento: "Em Andamento",
-    exigencia_recebida: "Exigência Recebida", deferido: "Deferido",
-    indeferido: "Indeferido", arquivado: "Arquivado",
-  };
-
-  const statusColors: Record<string, string> = {
-    protocolado: "bg-[var(--color-river-100)] text-[var(--color-river-700)]",
-    em_andamento: "bg-amber-50 text-amber-800",
-    exigencia_recebida: "bg-orange-50 text-orange-800",
-    deferido: "bg-green-50 text-green-800",
-    indeferido: "bg-red-50 text-red-800",
-    arquivado: "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]",
-  };
 
   const totalVencendo = processosVencendo.length;
 
@@ -79,18 +88,50 @@ export default async function DashboardPage() {
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
-          <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-4">
-            Processos por Status
-          </h2>
-          <div className="space-y-3">
-            {processosPorStatus.map((s) => (
-              <div key={s.status} className="flex items-center justify-between">
-                <span className={`px-2 py-1 rounded text-xs font-medium ${statusColors[s.status] || "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]"}`}>
-                  {statusLabels[s.status] || s.status}
-                </span>
-                <span className="text-sm font-medium text-[var(--color-ink-700)]">{s._count}</span>
-              </div>
-            ))}
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">
+              Processos por Status
+            </h2>
+            <Link href="/processos" className="text-sm font-medium text-[var(--color-brand-600)] hover:underline">
+              Ver todos
+            </Link>
+          </div>
+          <div className="space-y-4">
+            {processosPorStatus.map((s) => {
+              const processosNoStatus = processosRecentes.filter((p) => p.status === s.status);
+              return (
+                <div key={s.status}>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${statusColors[s.status] || ""}`}>
+                        {statusLabels[s.status] || s.status}
+                      </span>
+                      <span className="text-xs text-[var(--color-ink-500)]">({s._count})</span>
+                    </div>
+                    {s._count > 0 && (
+                      <Link href={`/processos?status=${s.status}`} className="text-xs text-[var(--color-brand-600)] hover:underline">
+                        Filtrar
+                      </Link>
+                    )}
+                  </div>
+                  {processosNoStatus.length > 0 ? (
+                    <div className="space-y-1 ml-1">
+                      {processosNoStatus.slice(0, 3).map((p) => (
+                        <Link key={p.id} href={`/processos/${p.id}`} className="flex items-center justify-between rounded px-2 py-1.5 text-sm hover:bg-[var(--color-paper-50)] transition-colors">
+                          <span className="font-mono text-[var(--color-brand-600)]">{p.numProtocolo}</span>
+                          <span className="text-xs text-[var(--color-ink-500)]">{p.empreendimento.apelido}</span>
+                        </Link>
+                      ))}
+                      {s._count > 3 && (
+                        <p className="text-xs text-[var(--color-ink-400)] pl-2">+ {s._count - 3} mais</p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-[var(--color-ink-400)] pl-2">Nenhum</p>
+                  )}
+                </div>
+              );
+            })}
             {processosPorStatus.length === 0 && (
               <p className="text-sm text-[var(--color-ink-500)]">Nenhum processo cadastrado</p>
             )}
@@ -99,30 +140,43 @@ export default async function DashboardPage() {
 
         <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
           <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-4">
-            Prazos a Vencer (15 dias)
+            Prazos a Vencer
           </h2>
           <div className="space-y-3">
-            {processosVencendo.map((p) => (
-              <div key={p.id} className="flex items-center justify-between border-b border-[var(--color-paper-100)] pb-2 last:border-0">
-                <div>
-                  <Link href={`/processos/${p.id}`} className="text-sm font-medium text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)]">
-                    {p.numProtocolo}
-                  </Link>
-                  <p className="text-xs text-[var(--color-ink-500)]">{p.empreendimento.apelido} - {p.orgao.sigla}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium text-red-600">
-                    {p.validade ? format(p.validade, "dd/MM") : "—"}
-                  </p>
-                  <p className="text-xs text-[var(--color-ink-500)]">
-                    {p.validade ? `${differenceInDays(p.validade, new Date())} dias` : "—"}
-                  </p>
-                </div>
-              </div>
-            ))}
-            {processosVencendo.length === 0 && (
-              <p className="text-sm text-[var(--color-ink-500)]">Nenhum prazo próximo do vencimento</p>
-            )}
+            {(() => {
+              const now = new Date();
+              const vencendo = processosVencendo.filter((p) => {
+                if (!p.validade) return false;
+                const diasRestantes = differenceInDays(p.validade, now);
+                return diasRestantes <= p.alertaDias;
+              });
+              return vencendo.length > 0 ? (
+                vencendo.map((p) => {
+                  const diasRestantes = p.validade ? differenceInDays(p.validade, now) : 0;
+                  const isUrgente = diasRestantes <= 7;
+                  return (
+                    <div key={p.id} className="flex items-center justify-between border-b border-[var(--color-paper-100)] pb-2 last:border-0">
+                      <div>
+                        <Link href={`/processos/${p.id}`} className="text-sm font-medium text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)]">
+                          {p.numProtocolo}
+                        </Link>
+                        <p className="text-xs text-[var(--color-ink-500)]">{p.empreendimento.apelido} - {p.orgao.sigla}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className={`text-sm font-medium ${isUrgente ? "text-red-600" : "text-[var(--color-ink-700)]"}`}>
+                          {p.validade ? format(p.validade, "dd/MM") : "—"}
+                        </p>
+                        <p className="text-xs text-[var(--color-ink-500)]">
+                          {diasRestantes >= 0 ? `${diasRestantes} dias` : "Vencido"}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="text-sm text-[var(--color-ink-500)]">Nenhum prazo próximo do vencimento</p>
+              );
+            })()}
           </div>
         </div>
       </div>

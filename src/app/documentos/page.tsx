@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Topbar } from "@/components/Topbar";
 import { Plus, Inbox, Download, FileText } from "lucide-react";
+import RowActions from "@/components/RowActions";
 
 export const dynamic = "force-dynamic";
 
@@ -84,14 +85,12 @@ export default async function DocumentosPage() {
                     {format(d.criadoEm, "dd/MM/yyyy", { locale: ptBR })}
                   </td>
                   <td className="p-4">
-                    <a
-                      href={d.caminho}
-                      download
-                      className="inline-flex items-center gap-1 text-sm text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)]"
-                    >
-                      <Download size={14} />
-                      Download
-                    </a>
+                    <div className="flex items-center gap-2">
+                      <a href={d.caminho} download className="inline-flex items-center gap-1 text-sm text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)]" title="Download">
+                        <Download size={16} />
+                      </a>
+                      <RowActions detailUrl={`/documentos/${d.id}`} entity="documento" entityName="Documento" endpoint={`/api/documentos/${d.id}`} />
+                    </div>
                   </td>
                 </tr>
               ))}

@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Topbar } from "@/components/Topbar";
 import { Plus, Inbox, Eye, FileText } from "lucide-react";
+import RowActions from "@/components/RowActions";
 
 export const dynamic = "force-dynamic";
 
@@ -79,13 +80,7 @@ export default async function ProcessosPage() {
                     {p.validade ? format(p.validade, "dd/MM/yyyy", { locale: ptBR }) : "—"}
                   </td>
                   <td className="p-4">
-                    <Link
-                      href={`/processos/${p.id}`}
-                      className="inline-flex items-center gap-1 text-sm text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)]"
-                    >
-                      <Eye size={14} />
-                      Detalhes
-                    </Link>
+                    <RowActions detailUrl={`/processos/${p.id}`} entity="processo" entityName="Processo" endpoint={`/api/processos/${p.id}`} />
                   </td>
                 </tr>
               ))}

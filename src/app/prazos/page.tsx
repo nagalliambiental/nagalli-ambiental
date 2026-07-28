@@ -3,37 +3,123 @@ import Link from "next/link";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Topbar } from "@/components/Topbar";
-import { Inbox, Eye, AlertTriangle, Check, CalendarClock } from "lucide-react";
+import { Inbox, Eye, AlertTriangle, Check, CalendarClock, Clock, Settings2 } from "lucide-react";
+import { AlertaDiasEditor } from "@/components/AlertaDiasEditor";
 
 export const dynamic = "force-dynamic";
 
 export default async function PrazosPage() {
-  const exigencias = await prisma.exigencia.findMany({
-    where: { cumprida: false },
-    include: {
-      processo: {
-        select: {
-          id: true,
-          numProtocolo: true,
-          tipo: true,
-          orgao: { select: { sigla: true } },
-          empreendimento: {
-            select: { apelido: true, cliente: { select: { apelido: true } } },
+  const now = new Date();
+
+  const [exigencias, processosComValidade] = await Promise.all([
+    prisma.exigencia.findMany({
+      where: { cumprida: false },
+      include: {
+        processo: {
+          select: {
+            id: true,
+            numProtocolo: true,
+            tipo: true,
+            orgao: { select: { sigla: true } },
+            empreendimento: {
+              select: { apelido: true, cliente: { select: { apelido: true } } },
+            },
           },
         },
       },
-    },
-    orderBy: { prazo: "asc" },
-  });
-
-  const now = new Date();
+      orderBy: { prazo: "asc" },
+    }),
+    prisma.processo.findMany({
+      where: { validade: { not: null } },
+      include: {
+        orgao: { select: { sigla: true } },
+        empreendimento: { select: { apelido: true } },
+      },
+      orderBy: { validade: "asc" },
+    }),
+  ]);
 
   return (
     <div>
       <Topbar
         title="Prazos"
-        subtitle="Acompanhe os prazos de todas as exigências pendentes"
+        subtitle="Acompanhe os prazos de processos e exigências"
       />
+
+      {processosComValidade.length > 0 && (
+        <div className="mb-8">
+          <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-4 flex items-center gap-2">
+            <CalendarClock size={18} />
+            Prazos de Processos
+          </h2>
+          <div className="grid gap-3">
+            {processosComValidade.map((p) => {
+              if (!p.validade) return null;
+              const diasRestantes = differenceInDays(p.validade, now);
+              const isVencido = diasRestantes < 0;
+              const isAlert = !isVencido && diasRestantes <= p.alertaDias;
+
+              return (
+                <div
+                  key={p.id}
+                  className={`shadow-card rounded-[var(--radius-card)] border bg-white p-4 ${
+                    isVencido
+                      ? "border-[var(--color-river-700)] bg-[var(--color-river-100)]"
+                      : isAlert
+                        ? "border-amber-200 bg-amber-50"
+                        : "border-[var(--color-paper-200)]"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <Link href={`/processos/${p.id}`} className="font-mono text-sm font-semibold text-[var(--color-brand-600)] hover:underline">
+                          {p.numProtocolo}
+                        </Link>
+                        {isVencido && (
+                          <span className="inline-flex items-center gap-1 rounded bg-[var(--color-river-100)] px-2 py-0.5 text-xs font-medium text-[var(--color-river-700)]">
+                            <AlertTriangle size={12} />
+                            Vencido
+                          </span>
+                        )}
+                        {isAlert && !isVencido && (
+                          <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                            <Clock size={12} />
+                            Alerta
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-1 text-xs text-[var(--color-ink-500)]">
+                        {p.orgao.sigla} · {p.empreendimento.apelido}
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <div className={`text-right text-sm font-semibold ${isVencido ? "text-[var(--color-river-700)]" : isAlert ? "text-amber-700" : "text-[var(--color-ink-700)]"}`}>
+                        {format(p.validade, "dd/MM/yyyy", { locale: ptBR })}
+                      </div>
+                      <div className="text-xs text-[var(--color-ink-500)]">
+                        {isVencido
+                          ? `Vencido há ${Math.abs(diasRestantes)} dias`
+                          : `${diasRestantes} dias restantes`}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-center gap-2 border-t border-[var(--color-paper-100)] pt-3">
+                    <Settings2 size={14} className="text-[var(--color-ink-400)]" />
+                    <span className="text-xs text-[var(--color-ink-500)]">Alerta:</span>
+                    <AlertaDiasEditor processoId={p.id} currentValue={p.alertaDias} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-4 flex items-center gap-2">
+        <AlertTriangle size={18} />
+        Exigências Pendentes
+      </h2>
 
       {exigencias.length > 0 ? (
         <div className="grid gap-4">

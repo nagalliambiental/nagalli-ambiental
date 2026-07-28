@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Topbar } from "@/components/Topbar";
 import { Plus, Inbox, Eye, DollarSign } from "lucide-react";
+import RowActions from "@/components/RowActions";
 
 export const dynamic = "force-dynamic";
 
@@ -83,13 +84,7 @@ export default async function FinanceiroPage() {
                     {r.dataVencimento ? format(r.dataVencimento, "dd/MM/yyyy", { locale: ptBR }) : "—"}
                   </td>
                   <td className="p-4">
-                    <Link
-                      href={`/financeiro/${r.id}`}
-                      className="inline-flex items-center gap-1 text-sm text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)]"
-                    >
-                      <Eye size={14} />
-                      Detalhes
-                    </Link>
+                    <RowActions detailUrl={`/financeiro/${r.id}`} entity="financeiro" entityName="Registro Financeiro" endpoint={`/api/financeiro/${r.id}`} />
                   </td>
                 </tr>
               ))}

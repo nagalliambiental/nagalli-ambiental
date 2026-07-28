@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Topbar } from "@/components/Topbar";
 import { Plus, Inbox, Eye, Map } from "lucide-react";
+import RowActions from "@/components/RowActions";
 
 export const dynamic = "force-dynamic";
 
@@ -49,13 +50,7 @@ export default async function EmpreendimentosPage() {
                   <td className="p-4 max-w-xs truncate">{e.endereco}</td>
                   <td className="p-4 text-center">{e._count.processos}</td>
                   <td className="p-4">
-                    <Link
-                      href={`/empreendimentos/${e.id}`}
-                      className="inline-flex items-center gap-1 text-sm text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)]"
-                    >
-                      <Eye size={14} />
-                      Detalhes
-                    </Link>
+                    <RowActions detailUrl={`/empreendimentos/${e.id}`} entity="empreendimento" entityName="Empreendimento" endpoint={`/api/empreendimentos/${e.id}`} />
                   </td>
                 </tr>
               ))}

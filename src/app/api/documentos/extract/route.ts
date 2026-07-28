@@ -34,8 +34,10 @@ export async function POST(request: Request) {
       ...extracted,
     });
   } catch (error) {
+    const message = error instanceof Error ? error.message : "Erro desconhecido";
+    console.error("Erro no extract:", message);
     return NextResponse.json(
-      { error: "Erro ao processar documento" },
+      { error: `Erro ao processar documento: ${message}` },
       { status: 500 }
     );
   }

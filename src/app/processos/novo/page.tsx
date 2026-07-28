@@ -31,10 +31,16 @@ interface Empreendimento {
   apelido: string;
 }
 
+interface Responsavel {
+  id: number;
+  nome: string;
+}
+
 export default function NovoProcessoPage() {
   const router = useRouter();
   const [orgaos, setOrgaos] = useState<Orgao[]>([]);
   const [empreendimentos, setEmpreendimentos] = useState<Empreendimento[]>([]);
+  const [responsaveis, setResponsaveis] = useState<Responsavel[]>([]);
   const [tipo, setTipo] = useState("");
   const [tipoOutro, setTipoOutro] = useState("");
   const [sistema, setSistema] = useState("");
@@ -44,8 +50,12 @@ export default function NovoProcessoPage() {
     numProtocolo: "",
     numLicenca: "",
     validade: "",
+    dataProtocolo: "",
+    dataContato: "",
+    alertaDias: "30",
     condicionantes: "",
     empreendimentoId: "",
+    responsavelId: "",
     observacoes: "",
   });
   const [saving, setSaving] = useState(false);
@@ -61,6 +71,10 @@ export default function NovoProcessoPage() {
     fetch("/api/empreendimentos")
       .then((r) => r.json())
       .then(setEmpreendimentos)
+      .catch(() => {});
+    fetch("/api/responsaveis")
+      .then((r) => r.json())
+      .then(setResponsaveis)
       .catch(() => {});
   }, []);
 
@@ -131,8 +145,12 @@ export default function NovoProcessoPage() {
         numProtocolo: form.numProtocolo,
         numLicenca: form.numLicenca || undefined,
         validade: form.validade ? new Date(form.validade).toISOString() : undefined,
+        dataProtocolo: form.dataProtocolo ? new Date(form.dataProtocolo).toISOString() : undefined,
+        dataContato: form.dataContato ? new Date(form.dataContato).toISOString() : undefined,
+        alertaDias: Number(form.alertaDias) || 30,
         condicionantes: form.condicionantes || undefined,
         empreendimentoId: Number(form.empreendimentoId),
+        responsavelId: form.responsavelId ? Number(form.responsavelId) : undefined,
         observacoes: form.observacoes,
       }),
     });
@@ -200,6 +218,29 @@ export default function NovoProcessoPage() {
               <div>
                 <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Validade</label>
                 <input type="date" value={form.validade} onChange={(e) => setField("validade", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Data Protocolo</label>
+                <input type="date" value={form.dataProtocolo} onChange={(e) => setField("dataProtocolo", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Data Contato</label>
+                <input type="date" value={form.dataContato} onChange={(e) => setField("dataContato", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Alerta (dias antes do vencimento)</label>
+                <input type="number" min={1} value={form.alertaDias} onChange={(e) => setField("alertaDias", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Responsável Técnico</label>
+                <select value={form.responsavelId} onChange={(e) => setField("responsavelId", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]">
+                  <option value="">Selecione...</option>
+                  {responsaveis.map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
+                </select>
               </div>
             </div>
             <div>

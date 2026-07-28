@@ -76,7 +76,18 @@ export async function DELETE(
     return NextResponse.json({ error: "Empreendimento não encontrado" }, { status: 404 });
   }
 
-  await prisma.empreendimento.delete({ where: { id: Number(id) } });
+  const processoIds = (await prisma.processo.findMany({
+    where: { empreendimentoId: Number(id) },
+    select: { id: true },
+  })).map((p) => p.id);
+
+  await prisma.$transaction([
+    prisma.timelineProcesso.deleteMany({ where: { processoId: { in: processoIds } } }),
+    prisma.documento.deleteMany({ where: { processoId: { in: processoIds } } }),
+    prisma.exigencia.deleteMany({ where: { processoId: { in: processoIds } } }),
+    prisma.processo.deleteMany({ where: { id: { in: processoIds } } }),
+    prisma.empreendimento.delete({ where: { id: Number(id) } }),
+  ]);
 
   await logAuditoria("EXCLUIR", "empreendimento", Number(id), { apelido: emp.apelido }, Number((session.user as { id: string }).id));
   return NextResponse.json({ mensagem: "Empreendimento excluído" });

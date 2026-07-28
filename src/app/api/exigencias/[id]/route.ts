@@ -71,7 +71,10 @@ export async function DELETE(
     return NextResponse.json({ error: "Exigência não encontrada" }, { status: 404 });
   }
 
-  await prisma.exigencia.delete({ where: { id: Number(id) } });
+  await prisma.$transaction([
+    prisma.documento.deleteMany({ where: { exigenciaId: Number(id) } }),
+    prisma.exigencia.delete({ where: { id: Number(id) } }),
+  ]);
 
   await logAuditoria("EXCLUIR", "exigencia", Number(id), { descricao: exigencia.descricao }, Number((session.user as { id: string }).id));
   return NextResponse.json({ mensagem: "Exigência excluída" });

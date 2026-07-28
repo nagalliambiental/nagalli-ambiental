@@ -31,11 +31,16 @@ const CONDICIONANTE_MARKERS = [
 ];
 
 export async function extractFromFile(filePath: string) {
-  const worker = await createWorker("por");
-  const { data } = await worker.recognize(filePath);
-  await worker.terminate();
+  let text = "";
 
-  const text = data.text;
+  try {
+    const worker = await createWorker("por");
+    const { data } = await worker.recognize(filePath);
+    await worker.terminate();
+    text = data.text;
+  } catch (err) {
+    console.error("OCR failed, falling back to empty text:", err);
+  }
 
   return extractFields(text);
 }

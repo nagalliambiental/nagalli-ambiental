@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth";
 import { Topbar } from "@/components/Topbar";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { FileText, Building2, Map, Calendar, Users, ClipboardList, FileCheck2, Clock } from "lucide-react";
+import { FileText, Building2, Map, Calendar, Users, ClipboardList, FileCheck2, Clock, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import EntityActions from "@/components/EntityActions";
 
@@ -38,7 +38,7 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
     include: {
       orgao: true,
       empreendimento: { select: { apelido: true, id: true, cliente: { select: { apelido: true } } } },
-      responsavel: { select: { nome: true } },
+      responsavel: { select: { nome: true, email: true, telefone: true } },
       _count: { select: { exigencias: true, documentos: true } },
     },
   });
@@ -83,6 +83,18 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
                   <span>Licença: {processo.numLicenca}</span>
                 </div>
               )}
+              {processo.dataProtocolo && (
+                <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
+                  <Calendar size={16} />
+                  <span>Data Protocolo: {format(processo.dataProtocolo, "dd/MM/yyyy", { locale: ptBR })}</span>
+                </div>
+              )}
+              {processo.dataContato && (
+                <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
+                  <Calendar size={16} />
+                  <span>Data Contato: {format(processo.dataContato, "dd/MM/yyyy", { locale: ptBR })}</span>
+                </div>
+              )}
             </div>
             {processo.condicionantes && (
               <div className="mt-4 border-t border-[var(--color-paper-200)] pt-4">
@@ -122,14 +134,26 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
                   <span>Validade: {format(processo.validade, "dd/MM/yyyy", { locale: ptBR })}</span>
                 </div>
               )}
+              <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
+                <AlertTriangle size={14} />
+                <span>Alerta: {processo.alertaDias} dias antes do vencimento</span>
+              </div>
               <div className="flex justify-between"><span className="text-[var(--color-ink-500)]">Criado em</span><span>{format(processo.criadoEm, "dd/MM/yyyy", { locale: ptBR })}</span></div>
             </div>
           </div>
 
           {processo.responsavel && (
             <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
-              <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-2">Responsável</h2>
-              <p className="text-sm text-[var(--color-ink-700)]">{processo.responsavel.nome}</p>
+              <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-3">Responsável</h2>
+              <div className="space-y-2 text-sm">
+                <p className="font-medium text-[var(--color-ink-900)]">{processo.responsavel.nome}</p>
+                {processo.responsavel.email && (
+                  <p className="text-[var(--color-ink-500)]">Email: {processo.responsavel.email}</p>
+                )}
+                {processo.responsavel.telefone && (
+                  <p className="text-[var(--color-ink-500)]">Telefone: {processo.responsavel.telefone}</p>
+                )}
+              </div>
             </div>
           )}
 
@@ -156,6 +180,9 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
                 { value: "arquivado", label: "Arquivado" },
               ] },
               { name: "validade", label: "Validade", type: "date" },
+              { name: "dataProtocolo", label: "Data Protocolo", type: "date" },
+              { name: "dataContato", label: "Data Contato", type: "date" },
+              { name: "alertaDias", label: "Alerta (dias)", type: "number" },
               { name: "condicionantes", label: "Condicionantes", type: "textarea" },
               { name: "observacoes", label: "Observações", type: "textarea" },
             ]}
@@ -166,6 +193,9 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
               sistema: processo.sistema,
               status: processo.status,
               validade: processo.validade?.toISOString(),
+              dataProtocolo: processo.dataProtocolo?.toISOString(),
+              dataContato: processo.dataContato?.toISOString(),
+              alertaDias: processo.alertaDias,
               condicionantes: processo.condicionantes,
               observacoes: processo.observacoes,
             }}

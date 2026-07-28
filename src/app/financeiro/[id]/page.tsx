@@ -103,7 +103,7 @@ export default async function FinanceiroDetailPage(props: { params: Promise<{ id
           <EntityActions
             entity="financeiro"
             entityName="Registro Financeiro"
-            endpoint={`/api/financeiro/${reg.id}`}
+            endpoint={`/api/financeiro/${registro.id}`}
             redirectTo="/financeiro"
             fields={[
               { name: "tipoCobranca", label: "Tipo de Cobrança", type: "text", required: true },

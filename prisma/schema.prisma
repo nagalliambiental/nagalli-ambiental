@@ -82,6 +82,9 @@ model Processo {
   observacoes     String?
   numLicenca      String?
   condicionantes  String?
+  dataProtocolo   DateTime?
+  dataContato     DateTime?
+  alertaDias      Int         @default(30)
   criadoEm        DateTime @default(now())
   atualizadoEm    DateTime @updatedAt
 

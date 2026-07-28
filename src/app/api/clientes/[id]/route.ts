@@ -100,9 +100,24 @@ export async function DELETE(
       );
     }
 
-    await prisma.cliente.delete({
-      where: { id: Number(id) },
-    });
+    const empreendimentoIds = (await prisma.empreendimento.findMany({
+      where: { clienteId: Number(id) },
+      select: { id: true },
+    })).map((e) => e.id);
+
+    const processoIds = (await prisma.processo.findMany({
+      where: { empreendimentoId: { in: empreendimentoIds } },
+      select: { id: true },
+    })).map((p) => p.id);
+
+    await prisma.$transaction([
+      prisma.timelineProcesso.deleteMany({ where: { processoId: { in: processoIds } } }),
+      prisma.documento.deleteMany({ where: { processoId: { in: processoIds } } }),
+      prisma.exigencia.deleteMany({ where: { processoId: { in: processoIds } } }),
+      prisma.processo.deleteMany({ where: { id: { in: processoIds } } }),
+      prisma.empreendimento.deleteMany({ where: { id: { in: empreendimentoIds } } }),
+      prisma.cliente.delete({ where: { id: Number(id) } }),
+    ]);
 
     await logAuditoria(
       "EXCLUIR",

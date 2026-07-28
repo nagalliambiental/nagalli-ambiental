@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Topbar } from "@/components/Topbar";
 import { Plus, Inbox, Eye, Users, Check, X } from "lucide-react";
+import RowActions from "@/components/RowActions";
 
 export const dynamic = "force-dynamic";
 
@@ -72,13 +73,7 @@ export default async function UsuariosPage() {
                     )}
                   </td>
                   <td className="p-4">
-                    <Link
-                      href={`/usuarios/${u.id}`}
-                      className="inline-flex items-center gap-1 text-sm text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)]"
-                    >
-                      <Eye size={14} />
-                      Detalhes
-                    </Link>
+                    <RowActions detailUrl={`/usuarios/${u.id}`} entity="usuario" entityName="Usuário" endpoint={`/api/usuarios/${u.id}`} />
                   </td>
                 </tr>
               ))}
