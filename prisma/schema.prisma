@@ -1,0 +1,223 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id        Int      @id @default(autoincrement())
+  nome      String
+  email     String   @unique
+  senha     String
+  perfil    String   @default("tecnico")
+  ativo     Boolean  @default(true)
+  criadoEm  DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  tarefas        Tarefa[]
+  logs           LogAuditoria[]
+  responsaveis   Responsavel[]
+  alertas        Alerta[]
+}
+
+model Cliente {
+  id          Int      @id @default(autoincrement())
+  apelido     String
+  razaoSocial String
+  cnpj        String   @unique
+  telefone    String
+  email       String
+  respLegal   String
+  criadoEm    DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  empreendimentos Empreendimento[]
+  financeiros     Financeiro[]
+}
+
+model Empreendimento {
+  id          Int      @id @default(autoincrement())
+  apelido     String
+  endereco    String
+  descricao   String
+  latitude    Float?
+  longitude   Float?
+  poligono    String?
+  clienteId   Int
+  criadoEm    DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  cliente   Cliente    @relation(fields: [clienteId], references: [id])
+  processos Processo[]
+}
+
+model Orgao {
+  id     Int    @id @default(autoincrement())
+  nome   String
+  sigla  String @unique
+
+  processos Processo[]
+}
+
+model Processo {
+  id              Int      @id @default(autoincrement())
+  tipo            String
+  orgaoId         Int
+  sistema         String
+  numProtocolo    String
+  status          String   @default("protocolado")
+  validade        DateTime?
+  empreendimentoId Int
+  responsavelId   Int?
+  observacoes     String?
+  criadoEm        DateTime @default(now())
+  atualizadoEm    DateTime @updatedAt
+
+  orgao         Orgao          @relation(fields: [orgaoId], references: [id])
+  empreendimento Empreendimento @relation(fields: [empreendimentoId], references: [id])
+  responsavel   Responsavel?   @relation(fields: [responsavelId], references: [id])
+  exigencias    Exigencia[]
+  documentos    Documento[]
+  timeline      TimelineProcesso[]
+  legislacoes   ProcessoLegislacao[]
+}
+
+model Exigencia {
+  id               Int      @id @default(autoincrement())
+  descricao        String
+  prazo            DateTime
+  antecedenciaDias Int      @default(7)
+  cumprida         Boolean  @default(false)
+  processoId       Int
+  criadoEm         DateTime @default(now())
+  atualizadoEm     DateTime @updatedAt
+
+  processo   Processo    @relation(fields: [processoId], references: [id])
+  documentos Documento[]
+}
+
+model Documento {
+  id          Int      @id @default(autoincrement())
+  nome        String
+  tipo        String
+  caminho     String
+  tamanho     Int
+  processoId  Int?
+  exigenciaId Int?
+  criadoEm    DateTime @default(now())
+
+  processo  Processo?  @relation(fields: [processoId], references: [id])
+  exigencia Exigencia? @relation(fields: [exigenciaId], references: [id])
+}
+
+model TimelineProcesso {
+  id          Int      @id @default(autoincrement())
+  status      String
+  descricao   String?
+  criadoEm    DateTime @default(now())
+  processoId  Int
+  usuarioId   Int?
+
+  processo Processo @relation(fields: [processoId], references: [id])
+}
+
+model Responsavel {
+  id        Int      @id @default(autoincrement())
+  nome      String
+  email     String
+  telefone  String?
+  funcao    String
+  cargaHoras Int     @default(0)
+  usuarioId Int?
+  criadoEm  DateTime @default(now())
+
+  usuario   Usuario?  @relation(fields: [usuarioId], references: [id])
+  processos Processo[]
+  tarefas   Tarefa[]
+}
+
+model Tarefa {
+  id             Int      @id @default(autoincrement())
+  titulo         String
+  descricao      String?
+  status         String   @default("pendente")
+  prioridade     String   @default("media")
+  dataVencimento DateTime?
+  responsavelId  Int
+  usuarioId      Int
+  criadoEm       DateTime @default(now())
+  atualizadoEm   DateTime @updatedAt
+
+  responsavel Responsavel @relation(fields: [responsavelId], references: [id])
+  usuario     Usuario     @relation(fields: [usuarioId], references: [id])
+}
+
+model Financeiro {
+  id              Int      @id @default(autoincrement())
+  tipoCobranca    String
+  valor           Float
+  formaPagamento  String
+  statusPagamento String   @default("pendente")
+  dataVencimento  DateTime?
+  dataPagamento   DateTime?
+  descricao       String?
+  clienteId       Int
+  processoId      Int?
+  criadoEm        DateTime @default(now())
+  atualizadoEm    DateTime @updatedAt
+
+  cliente Cliente   @relation(fields: [clienteId], references: [id])
+}
+
+model Legislacao {
+  id          Int      @id @default(autoincrement())
+  nome        String
+  descricao   String?
+  tipo        String
+  numero      String
+  data        DateTime?
+  url         String?
+  criadoEm    DateTime @default(now())
+
+  processos ProcessoLegislacao[]
+}
+
+model ProcessoLegislacao {
+  processoId   Int
+  legislacaoId Int
+
+  processo   Processo   @relation(fields: [processoId], references: [id])
+  legislacao Legislacao @relation(fields: [legislacaoId], references: [id])
+
+  @@id([processoId, legislacaoId])
+}
+
+model LogAuditoria {
+  id        Int      @id @default(autoincrement())
+  acao      String
+  entidade  String
+  entidadeId Int
+  dados     String?
+  usuarioId Int?
+  criadoEm  DateTime @default(now())
+
+  usuario Usuario? @relation(fields: [usuarioId], references: [id])
+}
+
+model Alerta {
+  id          Int      @id @default(autoincrement())
+  titulo      String
+  mensagem    String
+  tipo        String
+  lido        Boolean  @default(false)
+  dataDisparo DateTime?
+  processoId  Int?
+  usuarioId   Int?
+  criadoEm    DateTime @default(now())
+
+  usuario Usuario? @relation(fields: [usuarioId], references: [id])
+}
