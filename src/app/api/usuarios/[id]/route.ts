@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAuditoria } from "@/lib/audit";
+import bcrypt from "bcryptjs";
 
 export async function GET(
   _req: Request,
@@ -59,6 +60,7 @@ export async function PUT(
   if (body.conselho !== undefined) data.conselho = body.conselho || null;
   if (body.nome !== undefined) data.nome = body.nome;
   if (body.email !== undefined) data.email = body.email;
+  if (body.senha) data.senha = await bcrypt.hash(body.senha, 10);
 
   try {
     const usuario = await prisma.usuario.update({

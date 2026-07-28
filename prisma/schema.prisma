@@ -218,3 +218,21 @@ model Alerta {
 
   usuario Usuario? @relation(fields: [usuarioId], references: [id])
 }
+
+model EmpresaConfig {
+  id          Int     @id @default(autoincrement())
+  razaoSocial String
+  nomeFantasia String?
+  cnpj        String?
+  rua         String?
+  numero      String?
+  bairro      String?
+  complemento String?
+  cep         String?
+  municipio   String?
+  uf          String?
+  telefone    String?
+  email       String?
+  website     String?
+  logo        String?
+}

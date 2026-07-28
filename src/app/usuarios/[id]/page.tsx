@@ -42,6 +42,10 @@ export default function UsuarioDetailPage() {
   const [cpf, setCpf] = useState("");
   const [conselho, setConselho] = useState("");
   const [saving, setSaving] = useState(false);
+  const [novaSenha, setNovaSenha] = useState("");
+  const [confirmarSenha, setConfirmarSenha] = useState("");
+  const [resettingPass, setResettingPass] = useState(false);
+  const [passMsg, setPassMsg] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -71,7 +75,22 @@ export default function UsuarioDetailPage() {
     router.refresh();
   }
 
-  async function handleDelete() {
+  async function handleResetPassword() {
+    if (novaSenha.length < 4) { setPassMsg("Mínimo 4 caracteres"); return; }
+    if (novaSenha !== confirmarSenha) { setPassMsg("Senhas não conferem"); return; }
+    setResettingPass(true);
+    setPassMsg("");
+    const res = await fetch(`/api/usuarios/${params.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ senha: novaSenha }),
+    });
+    setResettingPass(false);
+    if (!res.ok) { setPassMsg("Erro ao redefinir senha"); return; }
+    setPassMsg("Senha redefinida com sucesso!");
+    setNovaSenha("");
+    setConfirmarSenha("");
+  }
     setDeleting(true);
     try {
       const res = await fetch(`/api/usuarios/${params.id}`, { method: "DELETE" });
@@ -190,6 +209,30 @@ export default function UsuarioDetailPage() {
             </button>
           </div>
         )}
+      </div>
+
+      <div className="mt-6 shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
+        <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-4">Redefinir Senha</h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Nova Senha</label>
+            <input type="password" value={novaSenha} onChange={(e) => setNovaSenha(e.target.value)} minLength={4} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Confirmar Senha</label>
+            <input type="password" value={confirmarSenha} onChange={(e) => setConfirmarSenha(e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+          </div>
+        </div>
+        {passMsg && (
+          <div className={`mt-3 text-sm ${passMsg.includes("sucesso") ? "text-green-600" : "text-red-600"}`}>
+            {passMsg}
+          </div>
+        )}
+        <div className="mt-4">
+          <button onClick={handleResetPassword} disabled={resettingPass || !novaSenha} className="focus-ring transition-brand flex items-center gap-2 rounded-[var(--radius-card)] bg-[var(--color-river-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-river-600)] disabled:opacity-50">
+            {resettingPass ? <><Loader2 size={16} className="animate-spin" /> Redefinindo...</> : <>Redefinir Senha</>}
+          </button>
+        </div>
       </div>
 
       {confirmDelete && (
