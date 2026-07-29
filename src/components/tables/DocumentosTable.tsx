@@ -13,7 +13,7 @@ interface DocData {
   tipo: string;
   caminho: string;
   tamanho: number;
-  criadoEm: string;
+  criadoEm: Date;
   processo: { numProtocolo: string } | null;
 }
 

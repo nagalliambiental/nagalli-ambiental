@@ -10,7 +10,7 @@ interface ProcessoData {
   numProtocolo: string;
   tipo: string;
   status: string;
-  validade: string | null;
+  validade: Date | null;
   orgao: { sigla: string };
   empreendimento: { apelido: string };
 }

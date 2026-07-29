@@ -10,7 +10,7 @@ interface TarefaData {
   titulo: string;
   prioridade: string;
   status: string;
-  dataVencimento: string | null;
+  dataVencimento: Date | null;
   responsavel: { nome: string };
   usuario: { nome: string };
 }

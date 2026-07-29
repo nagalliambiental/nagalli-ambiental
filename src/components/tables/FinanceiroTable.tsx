@@ -11,7 +11,7 @@ interface FinanceiroData {
   valor: number;
   formaPagamento: string | null;
   statusPagamento: string;
-  dataVencimento: string | null;
+  dataVencimento: Date | null;
   cliente: { apelido: string };
 }
 

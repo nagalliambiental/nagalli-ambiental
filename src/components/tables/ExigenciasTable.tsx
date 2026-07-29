@@ -10,7 +10,7 @@ interface ExigenciaData {
   id: number;
   descricao: string;
   cumprida: boolean;
-  prazo: string;
+  prazo: Date;
   processo: {
     numProtocolo: string;
     orgao: { sigla: string };
