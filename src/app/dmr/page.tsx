@@ -1,163 +1,250 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Topbar } from "@/components/Topbar";
-import { Upload, FileSpreadsheet, CheckCircle2, XCircle, Clock } from "lucide-react";
-import { DmrRow } from "@/lib/dmr-parser";
+import { Plus, Trash2, Search, CheckCircle2, Clock, XCircle } from "lucide-react";
+
+interface Empreendimento {
+  id: number;
+  apelido: string;
+  cliente: { apelido: string };
+}
+
+interface ControleDmr {
+  id: number;
+  empreendimentoId: number;
+  ano: number;
+  t1Dmr: string;
+  t1Mtr: string;
+  t2Dmr: string;
+  t2Mtr: string;
+  t3Dmr: string;
+  t3Mtr: string;
+  t4Dmr: string;
+  t4Mtr: string;
+  empreendimento: Empreendimento;
+}
+
+const STATUS_OPTIONS = [
+  { value: "", label: "—" },
+  { value: "OK", label: "OK" },
+  { value: "Pendente", label: "Pendente" },
+];
+
+function statusIcon(val: string) {
+  const s = val.trim().toLowerCase();
+  if (s === "ok") return <CheckCircle2 size={13} className="text-green-600" />;
+  if (s === "pendente") return <Clock size={13} className="text-amber-500" />;
+  return null;
+}
 
 export default function DmrPage() {
-  const [rows, setRows] = useState<DmrRow[] | null>(null);
-  const [ano, setAno] = useState<number>(0);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [filename, setFilename] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [currentEmpresa, setCurrentEmpresa] = useState("");
+  const [registros, setRegistros] = useState<ControleDmr[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [disponiveis, setDisponiveis] = useState<Empreendimento[]>([]);
+  const [busca, setBusca] = useState("");
+  const [selectedId, setSelectedId] = useState("");
 
-  async function handleFile(file: File) {
-    if (!file.name.endsWith(".xlsx")) {
-      setError("Selecione um arquivo .xlsx");
+  async function carregar() {
+    setLoading(true);
+    const res = await fetch("/api/controle-dmr");
+    const data = await res.json();
+    setRegistros(data);
+    setLoading(false);
+  }
+
+  async function carregarDisponiveis() {
+    const resEmps = await fetch("/api/empreendimentos");
+    const emps: Empreendimento[] = await resEmps.json();
+    setDisponiveis(emps.filter((e) => !registros.some((r) => r.empreendimentoId === e.id)));
+  }
+
+  useEffect(() => {
+    carregar();
+  }, []);
+
+  useEffect(() => {
+    carregarDisponiveis();
+  }, [registros]);
+
+  async function adicionar() {
+    if (!selectedId) return;
+    const res = await fetch("/api/controle-dmr", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ empreendimentoId: Number(selectedId) }),
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      alert(data.error || "Erro ao adicionar");
       return;
     }
-    setLoading(true);
-    setError(null);
-    setFilename(file.name);
-
-    const form = new FormData();
-    form.set("file", file);
-
-    try {
-      const res = await fetch("/api/dmr/parse", { method: "POST", body: form });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Erro ao processar");
-      }
-      const data = await res.json();
-      setRows(data.linhas);
-      setAno(data.ano);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+    setSelectedId("");
+    setBusca("");
+    await carregar();
   }
 
-  function statusIcon(val: string) {
-    const s = val.trim().toLowerCase();
-    if (s === "ok" || s === "ok (0)") return <CheckCircle2 size={14} className="text-green-600" />;
-    if (s === "pendente") return <Clock size={14} className="text-amber-500" />;
-    if (s === "-" || !s) return <span className="text-[var(--color-ink-300)]">—</span>;
-    return <XCircle size={14} className="text-red-500" />;
+  async function atualizarStatus(id: number, campo: string, valor: string) {
+    await fetch(`/api/controle-dmr/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ [campo]: valor }),
+    });
+    setRegistros((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, [campo]: valor } : r))
+    );
   }
 
-  const empresas = rows ? [...new Set(rows.map((r) => r.empresa))].sort() : [];
-  const filtered = currentEmpresa
-    ? rows?.filter((r) => r.empresa === currentEmpresa)
-    : rows;
+  async function remover(id: number) {
+    if (!confirm("Remover este empreendimento do controle DMR?")) return;
+    await fetch(`/api/controle-dmr/${id}`, { method: "DELETE" });
+    setRegistros((prev) => prev.filter((r) => r.id !== id));
+  }
+
+  const filtrados = busca
+    ? disponiveis.filter(
+        (e) =>
+          e.apelido.toLowerCase().includes(busca.toLowerCase()) ||
+          e.cliente.apelido.toLowerCase().includes(busca.toLowerCase())
+      )
+    : disponiveis;
+
+  const trimestres = [
+    { key: "t1", label: "1º Trim" },
+    { key: "t2", label: "2º Trim" },
+    { key: "t3", label: "3º Trim" },
+    { key: "t4", label: "4º Trim" },
+  ];
 
   return (
     <div>
-      <Topbar title="DMR — Declaração Mensal de Resíduos" subtitle="Importe a planilha de conferência para acompanhar os trimestres" />
+      <Topbar title="DMR — Controle Trimestral" subtitle="Gerencie os empreendimentos que precisam de declaração DMR/MTR" />
 
-      <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-6 mb-6">
-        <div
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={(e) => { e.preventDefault(); handleFile(e.dataTransfer.files[0]); }}
-          className="flex flex-col items-center gap-3 rounded-lg border-2 border-dashed border-[var(--color-paper-200)] p-8"
-        >
-          <div className="rounded-full bg-[var(--color-brand-50)] p-3">
-            <Upload size={24} className="text-[var(--color-brand-600)]" />
+      <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5 mb-6">
+        <h2 className="font-display text-base font-semibold mb-3">Adicionar empreendimento</h2>
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-ink-400)]" />
+            <input
+              value={busca}
+              onChange={(e) => { setBusca(e.target.value); setSelectedId(""); }}
+              placeholder="Buscar empreendimento ou cliente..."
+              className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]"
+            />
           </div>
-          <p className="text-sm text-[var(--color-ink-700)]">
-            {filename || "Arraste a planilha ou clique para selecionar"}
-          </p>
-          <p className="text-xs text-[var(--color-ink-500)]">Apenas .xlsx (aba DMR)</p>
-          <input
-            ref={inputRef}
-            type="file"
-            accept=".xlsx"
-            className="hidden"
-            onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
-          />
+          <select
+            value={selectedId}
+            onChange={(e) => setSelectedId(e.target.value)}
+            className="flex-1 rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]"
+          >
+            <option value="">Selecione...</option>
+            {filtrados.map((e) => (
+              <option key={e.id} value={e.id}>
+                {e.cliente.apelido} — {e.apelido}
+              </option>
+            ))}
+          </select>
           <button
             type="button"
-            onClick={() => inputRef.current?.click()}
-            disabled={loading}
-            className="focus-ring transition-brand rounded-lg bg-[var(--color-brand-500)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
+            onClick={adicionar}
+            disabled={!selectedId}
+            className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
           >
-            {loading ? "Processando..." : "Selecionar arquivo"}
+            <Plus size={16} />
+            Adicionar
           </button>
-          {error && <p className="text-sm text-red-600">{error}</p>}
         </div>
       </div>
 
-      {rows && (
-        <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="font-display text-base font-semibold">
-              Situação por trimestre — {ano}
-              <span className="ml-2 text-sm font-normal text-[var(--color-ink-500)]">{rows.length} unidade(s)</span>
-            </h2>
-            <select
-              value={currentEmpresa}
-              onChange={(e) => setCurrentEmpresa(e.target.value)}
-              className="focus-ring rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-1.5 text-sm"
-            >
-              <option value="">Todas as empresas</option>
-              {empresas.map((e) => (
-                <option key={e} value={e}>{e}</option>
-              ))}
-            </select>
-          </div>
+      <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
+        <h2 className="font-display text-base font-semibold mb-4">
+          Situação — {new Date().getFullYear()}
+          <span className="ml-2 text-sm font-normal text-[var(--color-ink-500)]">{registros.length} empreendimento(s)</span>
+        </h2>
 
-          <table className="w-full table-fixed text-sm">
-            <colgroup>
-              <col className="w-[22%]" />
-              <col className="w-[28%]" />
-              <col className="w-[14%]" />
-              <col className="w-[9%]" />
-              <col className="w-[9%]" />
-              <col className="w-[9%]" />
-              <col className="w-[9%]" />
-            </colgroup>
-            <thead>
-              <tr className="border-b border-[var(--color-paper-200)] text-[var(--color-ink-500)]">
-                <th className="text-left p-2 font-medium">Empresa</th>
-                <th className="text-left p-2 font-medium">Identificação</th>
-                <th className="text-left p-2 font-medium">Unidade</th>
-                <th className="text-center p-2 font-medium">1º Trim</th>
-                <th className="text-center p-2 font-medium">2º Trim</th>
-                <th className="text-center p-2 font-medium">3º Trim</th>
-                <th className="text-center p-2 font-medium">4º Trim</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered?.map((row, i) => (
-                <tr key={i} className="border-b border-[var(--color-paper-50)] text-sm hover:bg-[var(--color-paper-50)]">
-                  <td className="p-2 font-medium text-[var(--color-ink-900)] truncate" title={row.empresa}>{row.empresa}</td>
-                  <td className="p-2 truncate" title={row.identificacao}>{row.identificacao}</td>
-                  <td className="p-2 text-[var(--color-ink-500)] truncate" title={row.unidade}>{row.unidade}</td>
-                  {row.trimestres.map((t, ti) => (
-                    <td key={ti} className="p-2 text-center text-xs leading-tight">
-                      <span className="inline-flex items-center justify-center gap-1" title={`${t.label}: DMR=${t.dmr}, MTR=${t.mtr}`}>
-                        <span className="inline-flex items-center gap-0.5">
-                          {statusIcon(t.dmr)}
-                          <span>{t.dmr || "—"}</span>
-                        </span>
-                        <span className="text-[var(--color-ink-300)]">/</span>
-                        <span className="inline-flex items-center gap-0.5">
-                          {statusIcon(t.mtr)}
-                          <span>{t.mtr || "—"}</span>
-                        </span>
-                      </span>
-                    </td>
+        {loading ? (
+          <p className="text-sm text-[var(--color-ink-500)]">Carregando...</p>
+        ) : registros.length === 0 ? (
+          <p className="text-sm text-[var(--color-ink-500)]">Nenhum empreendimento cadastrado. Adicione um acima.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full table-fixed text-sm">
+              <colgroup>
+                <col className="w-[20%]" />
+                <col className="w-[20%]" />
+                <col className="w-[13%]" />
+                <col className="w-[13%]" />
+                <col className="w-[13%]" />
+                <col className="w-[13%]" />
+                <col className="w-[8%]" />
+              </colgroup>
+              <thead>
+                <tr className="border-b border-[var(--color-paper-200)] text-[var(--color-ink-500)]">
+                  <th className="text-left p-2 font-medium">Empresa</th>
+                  <th className="text-left p-2 font-medium">Empreendimento</th>
+                  {trimestres.map((t) => (
+                    <th key={t.key} className="text-center p-2 font-medium">{t.label}</th>
                   ))}
+                  <th className="text-center p-2 font-medium"></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </thead>
+              <tbody>
+                {registros.map((r) => (
+                  <tr key={r.id} className="border-b border-[var(--color-paper-50)] hover:bg-[var(--color-paper-50)]">
+                    <td className="p-2 truncate text-[var(--color-ink-700)]" title={r.empreendimento.cliente.apelido}>
+                      {r.empreendimento.cliente.apelido}
+                    </td>
+                    <td className="p-2 truncate font-medium text-[var(--color-ink-900)]" title={r.empreendimento.apelido}>
+                      {r.empreendimento.apelido}
+                    </td>
+                    {trimestres.map((t) => {
+                      const campoDmr = `${t.key}Dmr` as keyof typeof r;
+                      const campoMtr = `${t.key}Mtr` as keyof typeof r;
+                      return (
+                        <td key={t.key} className="p-1.5 text-center">
+                          <div className="inline-flex items-center gap-1">
+                            <select
+                              value={r[campoDmr] as string}
+                              onChange={(e) => atualizarStatus(r.id, campoDmr as string, e.target.value)}
+                              className="w-20 rounded border border-[var(--color-paper-200)] bg-white px-1 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-500)]"
+                              title={`DMR ${t.label}`}
+                            >
+                              {STATUS_OPTIONS.map((opt) => (
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                              ))}
+                            </select>
+                            <span className="text-[var(--color-ink-300)] text-xs">/</span>
+                            <select
+                              value={r[campoMtr] as string}
+                              onChange={(e) => atualizarStatus(r.id, campoMtr as string, e.target.value)}
+                              className="w-20 rounded border border-[var(--color-paper-200)] bg-white px-1 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-500)]"
+                              title={`MTR ${t.label}`}
+                            >
+                              {STATUS_OPTIONS.map((opt) => (
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </td>
+                      );
+                    })}
+                    <td className="p-2 text-center">
+                      <button
+                        type="button"
+                        onClick={() => remover(r.id)}
+                        className="text-[var(--color-ink-400)] hover:text-red-500 transition-colors"
+                        title="Remover"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

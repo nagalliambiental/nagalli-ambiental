@@ -96,7 +96,7 @@ export default async function DashboardPage() {
                 DMR — {getTrimestreAtual().label} ({getTrimestreAtual().inicio} a {getTrimestreAtual().fim})
               </p>
               <p className="text-xs text-amber-700">
-                Período vigente. Importe a planilha de conferência para acompanhar.
+                Período vigente. Acompanhe os empreendimentos cadastrados.
               </p>
             </div>
           </div>
@@ -104,7 +104,7 @@ export default async function DashboardPage() {
             href="/dmr"
             className="focus-ring transition-brand rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700"
           >
-            Importar planilha
+            Ver controle
           </Link>
         </div>
       </div>
