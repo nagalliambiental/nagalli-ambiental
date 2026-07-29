@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
-import type { Empresa, Configuracao } from "@prisma/client";
+import type { Cliente, Configuracao } from "@prisma/client";
 import { PgrsPinhaisFormData } from "./config";
 
 function checkboxLine(condition: boolean, simLabel: string, naoLabel: string) {
@@ -12,7 +12,7 @@ function checkboxLine(condition: boolean, simLabel: string, naoLabel: string) {
 }
 
 export function buildDocxData(
-  empresa: Empresa,
+  empresa: Cliente,
   form: PgrsPinhaisFormData,
   configuracao: Configuracao | null
 ) {
@@ -21,9 +21,9 @@ export function buildDocxData(
     nome_fantasia: empresa.nomeFantasia || "",
     cnpj: empresa.cnpj || "",
     ramo_atividade: empresa.ramoAtividade || "",
-    endereco_rua: empresa.enderecoRua || "",
-    endereco_numero: empresa.enderecoNumero || "",
-    endereco_complemento: empresa.enderecoComplemento || "",
+    endereco_rua: empresa.rua || "",
+    endereco_numero: empresa.numero || "",
+    endereco_complemento: empresa.complemento || "",
     bairro: empresa.bairro || "",
     indicacao_fiscal: empresa.indicacaoFiscal || "",
     telefone: empresa.telefone || "",

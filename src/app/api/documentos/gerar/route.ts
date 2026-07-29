@@ -13,20 +13,20 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { empresaId, templateSlug, formData, dadosEstabelecimento } = body;
+  const { clienteId, templateSlug, formData, dadosEstabelecimento } = body;
 
-  if (!empresaId || !templateSlug || !formData) {
+  if (!clienteId || !templateSlug || !formData) {
     return NextResponse.json({ error: "Dados incompletos" }, { status: 400 });
   }
 
-  let empresa = await prisma.empresa.findUnique({ where: { id: Number(empresaId) } });
-  if (!empresa) {
-    return NextResponse.json({ error: "Empresa não encontrada" }, { status: 404 });
+  let cliente = await prisma.cliente.findUnique({ where: { id: Number(clienteId) } });
+  if (!cliente) {
+    return NextResponse.json({ error: "Cliente não encontrado" }, { status: 404 });
   }
 
   if (dadosEstabelecimento) {
-    empresa = await prisma.empresa.update({
-      where: { id: Number(empresaId) },
+    cliente = await prisma.cliente.update({
+      where: { id: Number(clienteId) },
       data: dadosEstabelecimento,
     });
   }
@@ -38,13 +38,13 @@ export async function POST(req: NextRequest) {
 
   try {
     if (templateSlug === "pgrs-pinhais") {
-      const data = buildPinhais(empresa, formData as PgrsPinhaisFormData, configuracao);
+      const data = buildPinhais(cliente, formData as PgrsPinhaisFormData, configuracao);
       buffer = renderPinhais(data);
-      filename = `PGRS_Pinhais_${empresa.razaoSocial.replace(/[^a-zA-Z0-9]/g, "_")}.docx`;
+      filename = `PGRS_Pinhais_${cliente.razaoSocial.replace(/[^a-zA-Z0-9]/g, "_")}.docx`;
     } else if (templateSlug === "pgrs-curitiba") {
-      const data = buildCuritiba(empresa, formData as PgrsCuritibaFormData, configuracao);
+      const data = buildCuritiba(cliente, formData as PgrsCuritibaFormData, configuracao);
       buffer = renderCuritiba(data);
-      filename = `PGRS_Curitiba_${empresa.razaoSocial.replace(/[^a-zA-Z0-9]/g, "_")}.docx`;
+      filename = `PGRS_Curitiba_${cliente.razaoSocial.replace(/[^a-zA-Z0-9]/g, "_")}.docx`;
     } else {
       return NextResponse.json({ error: "Modelo de documento desconhecido" }, { status: 400 });
     }
@@ -55,10 +55,10 @@ export async function POST(req: NextRequest) {
 
   await prisma.$transaction(async (tx) => {
     await tx.documentoGerado.create({
-      data: { empresaId: Number(empresaId), templateSlug, dadosSnapshot: formData },
+      data: { clienteId: Number(clienteId), templateSlug, dadosSnapshot: formData },
     });
 
-    await tx.residuoItem.deleteMany({ where: { empresaId: Number(empresaId) } });
+    await tx.residuoItem.deleteMany({ where: { clienteId: Number(clienteId) } });
     const residuosParaSalvar = [
       ...(formData.residuosPerigosos || []).map((r: any, i: number) => ({ ...r, categoria: "PERIGOSO", ordem: i })),
       ...(formData.residuosNaoReciclaveis || []).map((r: any, i: number) => ({ ...r, categoria: "NAO_RECICLAVEL", ordem: i })),
@@ -66,14 +66,14 @@ export async function POST(req: NextRequest) {
     ];
     if (residuosParaSalvar.length) {
       await tx.residuoItem.createMany({
-        data: residuosParaSalvar.map((r: any) => ({ ...r, empresaId: Number(empresaId) })),
+        data: residuosParaSalvar.map((r: any) => ({ ...r, clienteId: Number(clienteId) })),
       });
     }
 
-    await tx.empresaContratada.deleteMany({ where: { empresaId: Number(empresaId) } });
+    await tx.empresaContratada.deleteMany({ where: { clienteId: Number(clienteId) } });
     if (formData.empresasContratadas?.length) {
       await tx.empresaContratada.createMany({
-        data: formData.empresasContratadas.map((e: any, i: number) => ({ ...e, ordem: i, empresaId: Number(empresaId) })),
+        data: formData.empresasContratadas.map((e: any, i: number) => ({ ...e, ordem: i, clienteId: Number(clienteId) })),
       });
     }
   });

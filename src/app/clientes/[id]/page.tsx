@@ -4,9 +4,10 @@ import { auth } from "@/lib/auth";
 import { Topbar } from "@/components/Topbar";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Building2, Mail, Phone, User, FileText, MapPin, Map, Globe } from "lucide-react";
+import { Building2, Mail, Phone, User, FileText, MapPin, Map, Globe, FileSpreadsheet } from "lucide-react";
 import Link from "next/link";
 import EntityActions from "@/components/EntityActions";
+import { TEMPLATES } from "@/lib/templates";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,10 @@ export default async function ClienteDetailPage(props: { params: Promise<{ id: s
   const { id } = await props.params;
   const cliente = await prisma.cliente.findUnique({
     where: { id: Number(id) },
-    include: { _count: { select: { empreendimentos: true, financeiros: true } } },
+    include: {
+      _count: { select: { empreendimentos: true, financeiros: true } },
+      documentosGerados: { orderBy: { createdAt: "desc" }, take: 10 },
+    },
   });
   if (!cliente) notFound();
 
@@ -79,6 +83,28 @@ export default async function ClienteDetailPage(props: { params: Promise<{ id: s
           )}
 
           <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
+            <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-4">
+              <FileSpreadsheet size={18} className="inline mr-2 text-[var(--color-ink-500)]" />
+              Gerar PGRS
+            </h2>
+            <div className="space-y-2">
+              {TEMPLATES.map((t) => (
+                <Link
+                  key={t.slug}
+                  href={`/clientes/${id}/gerar/${t.slug}`}
+                  className="focus-ring transition-brand flex items-center justify-between border border-[var(--color-paper-200)] rounded-[var(--radius-card)] px-4 py-3 hover:bg-[var(--color-paper-100)]"
+                >
+                  <div>
+                    <p className="font-medium text-sm">{t.nome}</p>
+                    <p className="text-xs text-[var(--color-ink-500)]">{t.descricao}</p>
+                  </div>
+                  <span className="text-sm text-[var(--color-ink-300)]">Gerar →</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
             <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-3">Atividades</h2>
             <div className="space-y-2 text-sm">
               <Link href={`/empreendimentos?clienteId=${cliente.id}`} className="block text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)]">
@@ -97,6 +123,26 @@ export default async function ClienteDetailPage(props: { params: Promise<{ id: s
             <p className="text-sm text-[var(--color-ink-500)]">
               {format(cliente.criadoEm, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
             </p>
+          </div>
+
+          <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
+            <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-3">Documentos gerados</h2>
+            {cliente.documentosGerados.length === 0 ? (
+              <p className="text-sm text-[var(--color-ink-500)]">Nenhum documento gerado ainda.</p>
+            ) : (
+              <ul className="space-y-2 text-sm">
+                {cliente.documentosGerados.map((d) => (
+                  <li key={d.id} className="flex items-center justify-between border-b border-[var(--color-paper-200)] pb-2 last:border-0">
+                    <span className="text-[var(--color-ink-700)]">
+                      {d.templateSlug === "pgrs-pinhais" ? "PGRS Pinhais" : d.templateSlug === "pgrs-curitiba" ? "PGRS Curitiba" : d.templateSlug}
+                    </span>
+                    <span className="text-xs text-[var(--color-ink-500)]">
+                      {format(d.createdAt, "dd/MM/yyyy")}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
 
           <div className="flex gap-3">
@@ -125,6 +171,11 @@ export default async function ClienteDetailPage(props: { params: Promise<{ id: s
               { name: "municipio", label: "Município", type: "text" },
               { name: "uf", label: "UF", type: "text" },
               { name: "respLegal", label: "Resp. Legal", type: "text", required: true },
+              { name: "dirigenteNome", label: "Dirigente", type: "text" },
+              { name: "dirigenteCargo", label: "Cargo do dirigente", type: "text" },
+              { name: "responsavelPgrsNome", label: "Resp. implantação PGRS", type: "text" },
+              { name: "responsavelPgrsCargo", label: "Cargo resp. PGRS", type: "text" },
+              { name: "ramoAtividade", label: "Ramo de atividade", type: "text" },
             ]}
             data={{
               apelido: cliente.apelido,
@@ -141,6 +192,11 @@ export default async function ClienteDetailPage(props: { params: Promise<{ id: s
               municipio: cliente.municipio,
               uf: cliente.uf,
               respLegal: cliente.respLegal,
+              dirigenteNome: cliente.dirigenteNome || "",
+              dirigenteCargo: cliente.dirigenteCargo || "",
+              responsavelPgrsNome: cliente.responsavelPgrsNome || "",
+              responsavelPgrsCargo: cliente.responsavelPgrsCargo || "",
+              ramoAtividade: cliente.ramoAtividade || "",
             }}
           />
         </div>

@@ -32,7 +32,7 @@ export default function ModelosPage() {
               {modelo.descricao}
             </p>
             <Link
-              href="/empresas"
+              href="/clientes"
               className="focus-ring transition-brand mt-4 flex items-center gap-1.5 text-sm font-medium text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)]"
             >
               Gerar para uma empresa

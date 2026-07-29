@@ -16,6 +16,12 @@ export async function GET(
     const { id } = await params;
     const cliente = await prisma.cliente.findUnique({
       where: { id: Number(id) },
+      include: {
+        residuos: { orderBy: { ordem: "asc" } },
+        residuosAnuais: { orderBy: { ordem: "asc" } },
+        empresasContratadas: { orderBy: { ordem: "asc" } },
+        documentosGerados: { orderBy: { createdAt: "desc" } },
+      },
     });
 
     if (!cliente) {
@@ -46,9 +52,36 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
-    const { apelido, razaoSocial, cnpj, rua, numero, bairro, complemento, cep, municipio, uf, telefone, email, respLegal } = body;
 
-    if (!apelido || !razaoSocial || !cnpj || !telefone || !email || !respLegal) {
+    const scalarFields = [
+      "apelido", "razaoSocial", "nomeFantasia", "cnpj",
+      "rua", "numero", "bairro", "complemento", "cep", "municipio", "uf",
+      "telefone", "email", "respLegal",
+      "ramoAtividade", "indicacaoFiscal", "diasFuncionamento", "horariosFuncionamento",
+      "areaConstruida", "porteColaboradores", "possuiRefeitorio",
+      "refeicoesDiarias", "unidadesDia", "preparoRefeicoes",
+      "dirigenteNome", "dirigenteCargo",
+      "responsavelPgrsNome", "responsavelPgrsCargo",
+      "latitude", "longitude", "inscricaoEstadual", "numeroColaboradores",
+      "representanteLegalNome",
+      "responsavelGestao1Nome", "responsavelGestao1Telefone", "responsavelGestao1Email",
+      "responsavelGestao2Nome", "responsavelGestao2Telefone", "responsavelGestao2Email",
+      "representanteLegalCpf",
+      "responsavelTecnicoEstabelecimentoNome", "responsavelTecnicoEstabelecimentoEmail",
+      "responsavelTecnicoEstabelecimentoOrgao", "responsavelTecnicoEstabelecimentoRegistro",
+      "tipoServicosDescricao", "atendimentosDia",
+      "responsavelElaboracaoNome", "responsavelElaboracaoCpf",
+      "responsavelElaboracaoEndereco", "responsavelElaboracaoBairro",
+      "responsavelElaboracaoEmail", "responsavelElaboracaoTelefone",
+      "responsavelElaboracaoEmpresaNome", "responsavelElaboracaoEmpresaCnpj",
+      "responsavelElaboracaoRegistroCrq",
+    ];
+    const data: Record<string, unknown> = {};
+    for (const field of scalarFields) {
+      if (field in body) data[field] = body[field];
+    }
+
+    if (!data.apelido || !data.razaoSocial || !data.cnpj || !data.telefone || !data.email || !data.respLegal) {
       return NextResponse.json(
         { erro: "Todos os campos obrigatórios devem ser preenchidos" },
         { status: 400 }
@@ -57,7 +90,7 @@ export async function PUT(
 
     const cliente = await prisma.cliente.update({
       where: { id: Number(id) },
-      data: { apelido, razaoSocial, cnpj, rua, numero, bairro, complemento, cep, municipio, uf, telefone, email, respLegal },
+      data,
     });
 
     await logAuditoria(

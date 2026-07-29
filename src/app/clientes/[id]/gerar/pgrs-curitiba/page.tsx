@@ -16,9 +16,9 @@ const inputClass =
 
 export default function GerarPgrsCuritibaPage() {
   const params = useParams<{ id: string }>();
-  const empresaId = params.id;
+  const clienteId = params.id;
 
-  const [empresaNome, setEmpresaNome] = useState("");
+  const [clienteNome, setClienteNome] = useState("");
   const [loading, setLoading] = useState(true);
   const [gerando, setGerando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,13 +27,13 @@ export default function GerarPgrsCuritibaPage() {
 
   useEffect(() => {
     async function load() {
-      const res = await fetch(`/api/empresas/${empresaId}`);
+      const res = await fetch(`/api/clientes/${clienteId}`);
       if (!res.ok) { setLoading(false); return; }
-      const empresa = await res.json();
-      setEmpresaNome(empresa.razaoSocial);
+      const cliente = await res.json();
+      setClienteNome(cliente.razaoSocial);
 
       const porCategoria = (cat: string) =>
-        (empresa.residuos || [])
+        (cliente.residuos || [])
           .filter((r: any) => r.categoria === cat)
           .map((r: any) => ({
             pontoGeracao: r.pontoGeracao || "",
@@ -46,7 +46,7 @@ export default function GerarPgrsCuritibaPage() {
             empresaDisposicaoFinal: r.empresaDisposicaoFinal || "",
           }));
 
-      const empresasContratadas = (empresa.empresasContratadas || []).map((e: any) => ({
+      const empresasContratadas = (cliente.empresasContratadas || []).map((e: any) => ({
         nomeFantasia: e.nomeFantasia || "",
         razaoSocial: e.razaoSocial || "",
         cnpj: e.cnpj || "",
@@ -61,24 +61,24 @@ export default function GerarPgrsCuritibaPage() {
         empresasContratadas: empresasContratadas.length ? empresasContratadas : prev.empresasContratadas,
       }));
       setDadosEstab({
-        ramoAtividade: empresa.ramoAtividade || "",
-        diasFuncionamento: empresa.diasFuncionamento || "",
-        horariosFuncionamento: empresa.horariosFuncionamento || "",
-        areaConstruida: empresa.areaConstruida || "",
-        porteColaboradores: empresa.porteColaboradores || "",
-        possuiRefeitorio: !!empresa.possuiRefeitorio,
-        refeicoesDiarias: empresa.refeicoesDiarias || "",
-        unidadesDia: empresa.unidadesDia || "",
-        preparoRefeicoes: empresa.preparoRefeicoes || "NO_LOCAL",
-        dirigenteNome: empresa.dirigenteNome || "",
-        dirigenteCargo: empresa.dirigenteCargo || "",
-        responsavelPgrsNome: empresa.responsavelPgrsNome || "",
-        responsavelPgrsCargo: empresa.responsavelPgrsCargo || "",
+        ramoAtividade: cliente.ramoAtividade || "",
+        diasFuncionamento: cliente.diasFuncionamento || "",
+        horariosFuncionamento: cliente.horariosFuncionamento || "",
+        areaConstruida: cliente.areaConstruida || "",
+        porteColaboradores: cliente.porteColaboradores || "",
+        possuiRefeitorio: !!cliente.possuiRefeitorio,
+        refeicoesDiarias: cliente.refeicoesDiarias || "",
+        unidadesDia: cliente.unidadesDia || "",
+        preparoRefeicoes: cliente.preparoRefeicoes || "NO_LOCAL",
+        dirigenteNome: cliente.dirigenteNome || "",
+        dirigenteCargo: cliente.dirigenteCargo || "",
+        responsavelPgrsNome: cliente.responsavelPgrsNome || "",
+        responsavelPgrsCargo: cliente.responsavelPgrsCargo || "",
       });
       setLoading(false);
     }
     load();
-  }, [empresaId]);
+  }, [clienteId]);
 
   async function handleGerar() {
     setGerando(true);
@@ -87,7 +87,7 @@ export default function GerarPgrsCuritibaPage() {
       const res = await fetch("/api/documentos/gerar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ empresaId, templateSlug: "pgrs-curitiba", formData: form, dadosEstabelecimento: dadosEstab }),
+        body: JSON.stringify({ clienteId, templateSlug: "pgrs-curitiba", formData: form, dadosEstabelecimento: dadosEstab }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -97,7 +97,7 @@ export default function GerarPgrsCuritibaPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `PGRS_Curitiba_${empresaNome.replace(/[^a-zA-Z0-9]/g, "_")}.docx`;
+      a.download = `PGRS_Curitiba_${clienteNome.replace(/[^a-zA-Z0-9]/g, "_")}.docx`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (err: any) {
@@ -111,7 +111,7 @@ export default function GerarPgrsCuritibaPage() {
 
   return (
     <div className="space-y-8">
-      <Topbar title="PGRS Simplificado — Curitiba" subtitle={empresaNome} />
+      <Topbar title="PGRS Simplificado — Curitiba" subtitle={clienteNome} />
 
       {error && <p className="bg-red-50 text-red-700 text-sm px-3 py-2 rounded-lg">{error}</p>}
 

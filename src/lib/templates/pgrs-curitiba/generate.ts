@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
-import type { Empresa, Configuracao } from "@prisma/client";
+import type { Cliente, Configuracao } from "@prisma/client";
 import { PgrsCuritibaFormData } from "./config";
 
 function checkboxLine(condition: boolean, simLabel: string, naoLabel: string) {
@@ -12,16 +12,17 @@ function checkboxLine(condition: boolean, simLabel: string, naoLabel: string) {
 }
 
 export function buildDocxData(
-  empresa: Empresa,
+  empresa: Cliente,
   form: PgrsCuritibaFormData,
   configuracao: Configuracao | null
 ) {
   const enderecoCompleto = [
-    empresa.enderecoRua,
-    empresa.enderecoNumero && `nº ${empresa.enderecoNumero}`,
-    empresa.enderecoComplemento,
+    empresa.rua,
+    empresa.numero && `nº ${empresa.numero}`,
+    empresa.complemento,
     empresa.bairro,
-    empresa.municipioUf,
+    empresa.municipio,
+    empresa.uf,
   ]
     .filter(Boolean)
     .join(", ");
