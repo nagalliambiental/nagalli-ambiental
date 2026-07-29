@@ -119,30 +119,5 @@ export function extractFields(text: string) {
     }
   }
 
-  let condicionantes: string | null = null;
-  const condIdx = text.search(/condicionan?t[ei]\s*(?:ambientais?)?[:\s]*/i);
-  if (condIdx >= 0) {
-    let slice = text.slice(condIdx);
-    slice = slice.replace(/^condicionan?t[ei]\s*(?:ambientais?)?[:\s]*/i, "").trim();
-    const lines: string[] = [];
-    let started = false;
-    for (const line of slice.split("\n")) {
-      const trimmed = line.trim();
-      if (!trimmed) continue;
-      if (/^\d{1,3}[\)\.][-\s]/.test(trimmed) || /^\d{1,3}[\)\.]\s/.test(trimmed)) {
-        lines.push(trimmed.replace(/^\d{1,3}[\)\.]\s*/, "").trim());
-        started = true;
-      } else if (trimmed.startsWith("-") || trimmed.startsWith("•")) {
-        lines.push(trimmed.replace(/^[-•]\s*/, "").trim());
-        started = true;
-      } else if (started && /^[A-ZÁÂÃÉÊÍÓÔÕÚÇ]/.test(trimmed) && trimmed.length > 10) {
-        lines.push(trimmed);
-      }
-    }
-    if (lines.length > 0) {
-      condicionantes = lines.join("\n");
-    }
-  }
-
-  return { validade, numLicenca, numProtocolo, condicionantes };
+  return { validade, numLicenca, numProtocolo, condicionantes: null };
 }
