@@ -27,7 +27,6 @@ const statusColors: Record<string, string> = {
 export default async function DashboardPage() {
   const [
     totalProcessos,
-    processosPorStatus,
     processosVencendo,
     totalClientes,
     totalEmpreendimentos,
@@ -36,7 +35,6 @@ export default async function DashboardPage() {
     processosRecentes,
   ] = await Promise.all([
     prisma.processo.count(),
-    prisma.processo.groupBy({ by: ["status"], _count: true }),
     prisma.processo.findMany({
       where: {
         validade: { not: null, gte: new Date() },
@@ -49,7 +47,7 @@ export default async function DashboardPage() {
     prisma.exigencia.count({ where: { cumprida: false } }),
     prisma.cliente.findMany({ take: 5, orderBy: { criadoEm: "desc" }, include: { _count: { select: { empreendimentos: true } } } }),
     prisma.processo.findMany({
-      take: 20,
+      take: 5,
       orderBy: { criadoEm: "desc" },
       include: {
         empreendimento: { select: { apelido: true } },
@@ -110,55 +108,54 @@ export default async function DashboardPage() {
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
-          <div className="flex items-center justify-between mb-4">
+        <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">
+          <div className="flex items-center justify-between px-5 pt-5 pb-3">
             <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">
-              Processos por Status
+              Últimos Processos
             </h2>
             <Link href="/processos" className="text-sm font-medium text-[var(--color-brand-600)] hover:underline">
               Ver todos
             </Link>
           </div>
-          <div className="space-y-4">
-            {processosPorStatus.map((s) => {
-              const processosNoStatus = processosRecentes.filter((p) => p.status === s.status);
-              return (
-                <div key={s.status}>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${statusColors[s.status] || ""}`}>
-                        {statusLabels[s.status] || s.status}
-                      </span>
-                      <span className="text-xs text-[var(--color-ink-500)]">({s._count})</span>
-                    </div>
-                    {s._count > 0 && (
-                      <Link href={`/processos?status=${s.status}`} className="text-xs text-[var(--color-brand-600)] hover:underline">
-                        Filtrar
+          {processosRecentes.length > 0 ? (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-y border-[var(--color-paper-200)] text-[var(--color-ink-500)]">
+                  <th className="text-left px-5 py-2 font-medium">Tipo</th>
+                  <th className="text-left px-5 py-2 font-medium">Empreendimento</th>
+                  <th className="text-left px-5 py-2 font-medium">Status</th>
+                  <th className="text-left px-5 py-2 font-medium">Vencimento</th>
+                </tr>
+              </thead>
+              <tbody>
+                {processosRecentes.map((p) => (
+                  <tr key={p.id} className="border-b border-[var(--color-paper-50)] hover:bg-[var(--color-paper-50)]">
+                    <td className="px-5 py-3">
+                      <Link href={`/processos/${p.id}`} className="font-medium text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)]">
+                        {p.tipo}
                       </Link>
-                    )}
-                  </div>
-                  {processosNoStatus.length > 0 ? (
-                    <div className="space-y-1 ml-1">
-                      {processosNoStatus.slice(0, 3).map((p) => (
-                        <Link key={p.id} href={`/processos/${p.id}`} className="flex items-center justify-between rounded px-2 py-1.5 text-sm hover:bg-[var(--color-paper-50)] transition-colors">
-                          <span className="font-mono text-[var(--color-brand-600)]">{p.numProtocolo}</span>
-                          <span className="text-xs text-[var(--color-ink-500)]">{p.empreendimento.apelido}</span>
-                        </Link>
-                      ))}
-                      {s._count > 3 && (
-                        <p className="text-xs text-[var(--color-ink-400)] pl-2">+ {s._count - 3} mais</p>
-                      )}
-                    </div>
-                  ) : (
-                    <p className="text-xs text-[var(--color-ink-400)] pl-2">Nenhum</p>
-                  )}
-                </div>
-              );
-            })}
-            {processosPorStatus.length === 0 && (
+                    </td>
+                    <td className="px-5 py-3 text-[var(--color-ink-700)]">{p.empreendimento.apelido}</td>
+                    <td className="px-5 py-3">
+                      <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${statusColors[p.status] || ""}`}>
+                        {statusLabels[p.status] || p.status}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3 text-[var(--color-ink-500)]">
+                      {p.validade ? format(p.validade, "dd/MM/yyyy", { locale: ptBR }) : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div className="flex flex-col items-center gap-3 px-6 py-14 text-center">
+              <div className="rounded-full bg-[var(--color-paper-100)] p-3">
+                <FileCheck2 size={22} className="text-[var(--color-ink-500)]" />
+              </div>
               <p className="text-sm text-[var(--color-ink-500)]">Nenhum processo cadastrado</p>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">

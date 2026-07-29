@@ -57,7 +57,7 @@ export default async function ClientesPage({
                 <th className="text-left p-4 font-medium">Apelido</th>
                 <th className="text-left p-4 font-medium">Razão Social</th>
                 <th className="text-left p-4 font-medium">CNPJ</th>
-                <th className="text-left p-4 font-medium">Contato</th>
+                <th className="text-left p-4 font-medium">Telefone</th>
                 <th className="text-center p-4 font-medium">Empreendimentos</th>
                 <th className="text-left p-4 font-medium">Ações</th>
               </tr>
@@ -68,10 +68,7 @@ export default async function ClientesPage({
                   <td className="p-4 font-medium text-[var(--color-ink-900)]">{c.apelido}</td>
                   <td className="p-4">{c.razaoSocial}</td>
                   <td className="p-4">{c.cnpj}</td>
-                  <td className="p-4">
-                    <div>{c.email}</div>
-                    <div className="text-xs text-[var(--color-ink-500)]">{c.telefone}</div>
-                  </td>
+                  <td className="p-4">{c.telefone}</td>
                   <td className="p-4 text-center">{c._count.empreendimentos}</td>
                   <td className="p-4">
                     <RowActions detailUrl={`/clientes/${c.id}`} entity="cliente" entityName="Cliente" endpoint={`/api/clientes/${c.id}`} />
