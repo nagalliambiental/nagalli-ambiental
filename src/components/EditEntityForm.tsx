@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Topbar } from "@/components/Topbar";
-import { Loader2, Save, ArrowLeft } from "lucide-react";
+import { Loader2, Save, ArrowLeft, Search } from "lucide-react";
 
 interface FieldConfig {
   name: string;
@@ -11,6 +11,7 @@ interface FieldConfig {
   type: "text" | "select" | "textarea" | "date" | "number" | "checkbox";
   required?: boolean;
   options?: { value: string; label: string }[];
+  search?: "cep" | "cnpj";
 }
 
 interface EditEntityFormProps {
@@ -89,6 +90,36 @@ export default function EditEntityForm({
     setForm((prev) => ({ ...prev, [name]: value }));
   }
 
+  const CEP_MAP: Record<string, string> = { rua: "rua", bairro: "bairro", municipio: "municipio", uf: "uf", complemento: "complemento" };
+  const CNPJ_MAP: Record<string, string> = {
+    razaoSocial: "razaoSocial", nomeFantasia: "nomeFantasia", ramoAtividade: "ramoAtividade",
+    enderecoRua: "rua", enderecoNumero: "numero", enderecoComplemento: "complemento",
+    bairro: "bairro", cep: "cep", municipio: "municipio", uf: "uf", telefone: "telefone", email: "email",
+  };
+
+  async function handleSearch(field: FieldConfig) {
+    const raw = form[field.name];
+    if (!raw || typeof raw !== "string") return;
+    const clean = raw.replace(/\D/g, "");
+    if (field.search === "cep" && clean.length !== 8) return alert("CEP inválido (8 dígitos)");
+    if (field.search === "cnpj" && clean.length !== 14) return alert("CNPJ inválido (14 dígitos)");
+    try {
+      const res = await fetch(`/api/${field.search}/${clean}`);
+      if (!res.ok) return alert("Não encontrado");
+      const data = await res.json();
+      const map = field.search === "cep" ? CEP_MAP : CNPJ_MAP;
+      setForm((prev) => {
+        const next = { ...prev };
+        for (const [apiKey, formKey] of Object.entries(map)) {
+          if (data[apiKey] && formKey in next) next[formKey] = data[apiKey];
+        }
+        return next;
+      });
+    } catch {
+      alert("Erro ao consultar.");
+    }
+  }
+
   return (
     <div>
       <Topbar
@@ -143,13 +174,25 @@ export default function EditEntityForm({
                     className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]"
                   />
                 ) : (
-                  <input
-                    type={f.type === "date" ? "date" : f.type === "number" ? "number" : "text"}
-                    value={form[f.name] as string || ""}
-                    onChange={(e) => setField(f.name, e.target.value)}
-                    className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]"
-                    required={f.required}
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type={f.type === "date" ? "date" : f.type === "number" ? "number" : "text"}
+                      value={form[f.name] as string || ""}
+                      onChange={(e) => setField(f.name, e.target.value)}
+                      className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]"
+                      required={f.required}
+                    />
+                    {f.search && (
+                      <button
+                        type="button"
+                        onClick={() => handleSearch(f)}
+                        className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg bg-[var(--color-brand-500)] px-3 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] whitespace-nowrap"
+                      >
+                        <Search size={14} />
+                        Buscar
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             ))}

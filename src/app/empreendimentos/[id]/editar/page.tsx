@@ -22,7 +22,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
       fields={[
         { name: "apelido", label: "Apelido", type: "text", required: true },
         { name: "cnpj", label: "CNPJ", type: "text" },
-        { name: "cep", label: "CEP", type: "text" },
+        { name: "cep", label: "CEP", type: "text", search: "cep" },
         { name: "municipio", label: "Município", type: "text" },
         { name: "uf", label: "UF", type: "text" },
         { name: "rua", label: "Rua", type: "text" },
