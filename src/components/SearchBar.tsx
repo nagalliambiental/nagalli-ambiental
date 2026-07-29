@@ -18,7 +18,7 @@ export function SearchBar({
     const params = new URLSearchParams(searchParams.toString());
     if (value) params.set(paramName, value);
     else params.delete(paramName);
-    router.push(`?${params.toString()}`);
+    router.replace(`?${params.toString()}`);
   }
 
   return (
@@ -26,13 +26,7 @@ export function SearchBar({
       <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-ink-500)]" />
       <input
         value={currentValue}
-        onChange={(e) => {
-          const val = e.target.value;
-          if (!val) navigate("");
-        }}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") navigate(e.currentTarget.value);
-        }}
+        onChange={(e) => navigate(e.target.value)}
         placeholder={placeholder}
         className="focus-ring w-72 rounded-lg border border-[var(--color-paper-200)] bg-white px-9 py-2 text-sm text-[var(--color-ink-900)] placeholder:text-[var(--color-ink-500)]"
       />
