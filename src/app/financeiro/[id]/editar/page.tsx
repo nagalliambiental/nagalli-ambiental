@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { EditEntityForm } from "@/components/EditEntityForm";
+import EditEntityForm from "@/components/EditEntityForm";
 
 export const dynamic = "force-dynamic";
 
