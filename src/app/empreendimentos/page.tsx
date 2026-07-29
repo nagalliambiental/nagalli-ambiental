@@ -1,13 +1,31 @@
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 import Link from "next/link";
 import { Topbar } from "@/components/Topbar";
-import { Plus, Inbox, Eye, Map } from "lucide-react";
+import { Plus, Inbox, Map } from "lucide-react";
 import RowActions from "@/components/RowActions";
+import { SearchBar } from "@/components/SearchBar";
 
 export const dynamic = "force-dynamic";
 
-export default async function EmpreendimentosPage() {
+export default async function EmpreendimentosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const { q } = await searchParams;
+
+  const where: Prisma.EmpreendimentoWhereInput = {};
+  if (q) {
+    where.OR = [
+      { apelido: { contains: q, mode: "insensitive" } },
+      { descricao: { contains: q, mode: "insensitive" } },
+      { cliente: { apelido: { contains: q, mode: "insensitive" } } },
+    ];
+  }
+
   const empreendimentos = await prisma.empreendimento.findMany({
+    where,
     include: {
       cliente: { select: { apelido: true } },
       _count: { select: { processos: true } },
@@ -20,13 +38,16 @@ export default async function EmpreendimentosPage() {
       <Topbar
         title="Empreendimentos"
         actions={
-          <Link
-            href="/empreendimentos/novo"
-            className="focus-ring transition-brand flex items-center gap-2 rounded-[var(--radius-card)] bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)]"
-          >
-            <Plus size={16} />
-            Novo Empreendimento
-          </Link>
+          <div className="flex items-center gap-3">
+            <SearchBar placeholder="Buscar por nome, cliente ou descrição..." />
+            <Link
+              href="/empreendimentos/novo"
+              className="focus-ring transition-brand flex items-center gap-2 rounded-[var(--radius-card)] bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)]"
+            >
+              <Plus size={16} />
+              Novo Empreendimento
+            </Link>
+          </div>
         }
       />
 
@@ -61,7 +82,7 @@ export default async function EmpreendimentosPage() {
             <div className="rounded-lg bg-[var(--color-paper-100)] p-3">
               <Map size={24} />
             </div>
-            <p className="text-sm">Nenhum empreendimento cadastrado</p>
+            <p className="text-sm">{q ? "Nenhum empreendimento encontrado para essa busca" : "Nenhum empreendimento cadastrado"}</p>
           </div>
         )}
       </div>

@@ -1,13 +1,32 @@
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 import Link from "next/link";
 import { Topbar } from "@/components/Topbar";
-import { Plus, Inbox, Eye } from "lucide-react";
+import { Plus, Inbox } from "lucide-react";
 import RowActions from "@/components/RowActions";
+import { SearchBar } from "@/components/SearchBar";
 
 export const dynamic = "force-dynamic";
 
-export default async function ClientesPage() {
+export default async function ClientesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const { q } = await searchParams;
+
+  const where: Prisma.ClienteWhereInput = {};
+  if (q) {
+    where.OR = [
+      { apelido: { contains: q, mode: "insensitive" } },
+      { razaoSocial: { contains: q, mode: "insensitive" } },
+      { cnpj: { contains: q } },
+      { email: { contains: q, mode: "insensitive" } },
+    ];
+  }
+
   const clientes = await prisma.cliente.findMany({
+    where,
     include: { _count: { select: { empreendimentos: true } } },
     orderBy: { apelido: "asc" },
   });
@@ -17,13 +36,16 @@ export default async function ClientesPage() {
       <Topbar
         title="Clientes"
         actions={
-          <Link
-            href="/clientes/novo"
-            className="focus-ring transition-brand flex items-center gap-2 rounded-[var(--radius-card)] bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)]"
-          >
-            <Plus size={16} />
-            Novo Cliente
-          </Link>
+          <div className="flex items-center gap-3">
+            <SearchBar placeholder="Buscar por nome, CNPJ ou email..." />
+            <Link
+              href="/clientes/novo"
+              className="focus-ring transition-brand flex items-center gap-2 rounded-[var(--radius-card)] bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)]"
+            >
+              <Plus size={16} />
+              Novo Cliente
+            </Link>
+          </div>
         }
       />
 
@@ -63,7 +85,7 @@ export default async function ClientesPage() {
             <div className="rounded-lg bg-[var(--color-paper-100)] p-3">
               <Inbox size={24} />
             </div>
-            <p className="text-sm">Nenhum cliente cadastrado</p>
+            <p className="text-sm">{q ? "Nenhum cliente encontrado para essa busca" : "Nenhum cliente cadastrado"}</p>
           </div>
         )}
       </div>

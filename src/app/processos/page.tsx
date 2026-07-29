@@ -1,10 +1,13 @@
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 import Link from "next/link";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Topbar } from "@/components/Topbar";
-import { Plus, Inbox, Eye, FileText } from "lucide-react";
+import { Plus, Inbox, FileText } from "lucide-react";
 import RowActions from "@/components/RowActions";
+import { SearchBar } from "@/components/SearchBar";
+import { FilterSelect } from "@/components/FilterSelect";
 
 export const dynamic = "force-dynamic";
 
@@ -26,8 +29,27 @@ const statusColors: Record<string, string> = {
   arquivado: "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]",
 };
 
-export default async function ProcessosPage() {
+export default async function ProcessosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; status?: string }>;
+}) {
+  const { q, status } = await searchParams;
+
+  const where: Prisma.ProcessoWhereInput = {};
+  if (q) {
+    where.OR = [
+      { numProtocolo: { contains: q, mode: "insensitive" } },
+      { tipo: { contains: q, mode: "insensitive" } },
+      { empreendimento: { apelido: { contains: q, mode: "insensitive" } } },
+    ];
+  }
+  if (status) {
+    where.status = status;
+  }
+
   const processos = await prisma.processo.findMany({
+    where,
     include: {
       orgao: { select: { sigla: true } },
       empreendimento: { select: { apelido: true } },
@@ -40,13 +62,28 @@ export default async function ProcessosPage() {
       <Topbar
         title="Processos"
         actions={
-          <Link
-            href="/processos/novo"
-            className="focus-ring transition-brand flex items-center gap-2 rounded-[var(--radius-card)] bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)]"
-          >
-            <Plus size={16} />
-            Novo Processo
-          </Link>
+          <div className="flex items-center gap-3">
+            <SearchBar placeholder="Buscar por protocolo, tipo ou empreendimento..." />
+            <FilterSelect
+              paramName="status"
+              options={[
+                { value: "", label: "Todos os status" },
+                { value: "protocolado", label: "Protocolado" },
+                { value: "em_andamento", label: "Em Andamento" },
+                { value: "exigencia_recebida", label: "Exigência Recebida" },
+                { value: "deferido", label: "Deferido" },
+                { value: "indeferido", label: "Indeferido" },
+                { value: "arquivado", label: "Arquivado" },
+              ]}
+            />
+            <Link
+              href="/processos/novo"
+              className="focus-ring transition-brand flex items-center gap-2 rounded-[var(--radius-card)] bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)]"
+            >
+              <Plus size={16} />
+              Novo Processo
+            </Link>
+          </div>
         }
       />
 
@@ -91,7 +128,7 @@ export default async function ProcessosPage() {
             <div className="rounded-lg bg-[var(--color-paper-100)] p-3">
               <FileText size={24} />
             </div>
-            <p className="text-sm">Nenhum processo cadastrado</p>
+            <p className="text-sm">{q || status ? "Nenhum processo encontrado para essa busca" : "Nenhum processo cadastrado"}</p>
           </div>
         )}
       </div>
