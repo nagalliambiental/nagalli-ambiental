@@ -31,7 +31,6 @@ export default async function DashboardPage() {
     totalClientes,
     totalEmpreendimentos,
     exigenciasPendentes,
-    orgaos,
     clientesRecentes,
     processosRecentes,
   ] = await Promise.all([
@@ -47,7 +46,6 @@ export default async function DashboardPage() {
     prisma.cliente.count(),
     prisma.empreendimento.count(),
     prisma.exigencia.count({ where: { cumprida: false } }),
-    prisma.orgao.findMany({ include: { _count: { select: { processos: true } } } }),
     prisma.cliente.findMany({ take: 5, orderBy: { criadoEm: "desc" }, include: { _count: { select: { empreendimentos: true } } } }),
     prisma.processo.findMany({
       take: 20,
@@ -178,21 +176,6 @@ export default async function DashboardPage() {
               );
             })()}
           </div>
-        </div>
-      </div>
-
-      <div className="mt-6 shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
-        <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-4">
-          Órgãos Ambientais
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          {orgaos.map((o) => (
-            <div key={o.id} className="border border-[var(--color-paper-100)] rounded-lg p-4 text-center">
-              <div className="font-display text-lg font-bold text-[var(--color-brand-600)]">{o._count.processos}</div>
-              <div className="text-sm font-medium text-[var(--color-ink-700)]">{o.sigla}</div>
-              <div className="text-xs text-[var(--color-ink-500)]">{o.nome}</div>
-            </div>
-          ))}
         </div>
       </div>
 
