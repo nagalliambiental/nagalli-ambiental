@@ -46,6 +46,32 @@ export default function DmrPage() {
   const [selectedId, setSelectedId] = useState("");
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+
+  const toggleSelect = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const toggleSelectAll = () => {
+    if (selectedIds.size === registros.length) setSelectedIds(new Set());
+    else setSelectedIds(new Set(registros.map((r) => r.id)));
+  };
+  const removerSelecionados = async () => {
+    if (!confirm(`Remover ${selectedIds.size} empreendimento(s) do controle DMR?`)) return;
+    try {
+      const res = await fetch(`/api/controle-dmr?ids=${Array.from(selectedIds).join(",")}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Erro ao remover");
+      setRegistros((prev) => prev.filter((r) => !selectedIds.has(r.id)));
+      setSelectedIds(new Set());
+    } catch (err) {
+      alert("Erro ao remover registros.");
+    }
+  };
 
   async function carregar() {
     setLoading(true);
@@ -201,10 +227,25 @@ export default function DmrPage() {
       </div>
 
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
-        <h2 className="font-display text-base font-semibold mb-4">
-          Situação — {new Date().getFullYear()}
-          <span className="ml-2 text-sm font-normal text-[var(--color-ink-500)]">{registros.length} empreendimento(s)</span>
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-display text-base font-semibold">
+            Situação — {new Date().getFullYear()}
+            <span className="ml-2 text-sm font-normal text-[var(--color-ink-500)]">{registros.length} empreendimento(s)</span>
+          </h2>
+          {selectedIds.size > 0 && (
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-[var(--color-ink-500)]">{selectedIds.size} selecionado(s)</span>
+              <button
+                type="button"
+                onClick={removerSelecionados}
+                className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700"
+              >
+                <Trash2 size={14} />
+                Remover
+              </button>
+            </div>
+          )}
+        </div>
 
         {loading ? (
           <p className="text-sm text-[var(--color-ink-500)]">Carregando...</p>
@@ -214,16 +255,25 @@ export default function DmrPage() {
           <div className="overflow-x-auto">
             <table className="w-full table-fixed text-sm">
               <colgroup>
-                <col className="w-[20%]" />
-                <col className="w-[20%]" />
+                <col className="w-[3%]" />
+                <col className="w-[19%]" />
+                <col className="w-[19%]" />
                 <col className="w-[13%]" />
                 <col className="w-[13%]" />
                 <col className="w-[13%]" />
                 <col className="w-[13%]" />
-                <col className="w-[8%]" />
+                <col className="w-[7%]" />
               </colgroup>
               <thead>
                 <tr className="border-b border-[var(--color-paper-200)] text-[var(--color-ink-500)]">
+                  <th className="p-2 text-center">
+                    <input
+                      type="checkbox"
+                      checked={registros.length > 0 && selectedIds.size === registros.length}
+                      onChange={toggleSelectAll}
+                      className="accent-[var(--color-brand-500)]"
+                    />
+                  </th>
                   <th className="text-left p-2 font-medium">Empresa</th>
                   <th className="text-left p-2 font-medium">Empreendimento</th>
                   {trimestres.map((t) => (
@@ -233,8 +283,16 @@ export default function DmrPage() {
                 </tr>
               </thead>
               <tbody>
-                {registros.map((r) => (
+                  {registros.map((r) => (
                   <tr key={r.id} className="border-b border-[var(--color-paper-50)] hover:bg-[var(--color-paper-50)]">
+                    <td className="p-2 text-center">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(r.id)}
+                        onChange={() => toggleSelect(r.id)}
+                        className="accent-[var(--color-brand-500)]"
+                      />
+                    </td>
                     <td className="p-2 truncate text-[var(--color-ink-700)]" title={r.empreendimento.cliente.apelido}>
                       {r.empreendimento.cliente.apelido}
                     </td>

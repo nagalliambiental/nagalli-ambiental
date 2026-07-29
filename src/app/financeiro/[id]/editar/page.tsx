@@ -32,6 +32,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
         { name: "dataVencimento", label: "Data Vencimento", type: "date" },
         { name: "dataPagamento", label: "Data Pagamento", type: "date" },
         { name: "descricao", label: "Descrição", type: "textarea" },
+        { name: "ativo", label: "Ativo", type: "checkbox" },
       ]}
       data={{
         tipoCobranca: reg.tipoCobranca,
@@ -41,6 +42,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
         dataVencimento: reg.dataVencimento?.toISOString(),
         dataPagamento: reg.dataPagamento?.toISOString(),
         descricao: reg.descricao,
+        ativo: reg.ativo,
       }}
     />
   );

@@ -57,3 +57,26 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json(registro, { status: 201 });
 }
+
+export async function DELETE(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  }
+
+  const ids = req.nextUrl.searchParams.get("ids");
+  if (!ids) {
+    return NextResponse.json({ error: "Parâmetro ids é obrigatório (separados por vírgula)" }, { status: 400 });
+  }
+
+  const idsArray = ids.split(",").map(Number).filter(Boolean);
+  if (idsArray.length === 0) {
+    return NextResponse.json({ error: "Nenhum id válido informado" }, { status: 400 });
+  }
+
+  await prisma.controleDmr.deleteMany({
+    where: { id: { in: idsArray } },
+  });
+
+  return NextResponse.json({ removed: idsArray.length });
+}

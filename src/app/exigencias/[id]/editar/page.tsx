@@ -27,12 +27,14 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
           { value: "true", label: "Sim" },
           { value: "false", label: "Não" },
         ] },
+        { name: "ativo", label: "Ativo", type: "checkbox" },
       ]}
       data={{
         descricao: exigencia.descricao,
         prazo: exigencia.prazo.toISOString(),
         antecedenciaDias: exigencia.antecedenciaDias,
         cumprida: exigencia.cumprida ? "true" : "false",
+        ativo: exigencia.ativo,
       }}
     />
   );

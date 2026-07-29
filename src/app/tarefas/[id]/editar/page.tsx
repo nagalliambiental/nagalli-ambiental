@@ -35,6 +35,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
           { value: "urgente", label: "Urgente" },
         ] },
         { name: "dataVencimento", label: "Data de Vencimento", type: "date" },
+        { name: "ativo", label: "Ativo", type: "checkbox" },
       ]}
       data={{
         titulo: tarefa.titulo,
@@ -42,6 +43,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
         status: tarefa.status,
         prioridade: tarefa.prioridade,
         dataVencimento: tarefa.dataVencimento?.toISOString(),
+        ativo: tarefa.ativo,
       }}
     />
   );

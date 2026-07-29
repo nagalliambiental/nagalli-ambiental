@@ -39,6 +39,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
         { name: "responsavelPgrsNome", label: "Resp. implantação PGRS", type: "text" },
         { name: "responsavelPgrsCargo", label: "Cargo resp. PGRS", type: "text" },
         { name: "ramoAtividade", label: "Ramo de atividade", type: "text" },
+        { name: "ativo", label: "Ativo", type: "checkbox" },
       ]}
       data={{
         apelido: cliente.apelido,
@@ -60,6 +61,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
         responsavelPgrsNome: cliente.responsavelPgrsNome || "",
         responsavelPgrsCargo: cliente.responsavelPgrsCargo || "",
         ramoAtividade: cliente.ramoAtividade || "",
+        ativo: cliente.ativo,
       }}
     />
   );

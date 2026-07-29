@@ -2,9 +2,9 @@ import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import Link from "next/link";
 import { Topbar } from "@/components/Topbar";
-import { Plus, Inbox, Map } from "lucide-react";
-import RowActions from "@/components/RowActions";
+import { Plus } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
+import { EmpreendimentosTable } from "@/components/tables/EmpreendimentosTable";
 
 export const dynamic = "force-dynamic";
 
@@ -52,39 +52,7 @@ export default async function EmpreendimentosPage({
       />
 
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">
-        {empreendimentos.length > 0 ? (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-[var(--color-paper-200)] text-[var(--color-ink-500)]">
-                <th className="text-left p-4 font-medium">Apelido</th>
-                <th className="text-left p-4 font-medium">Cliente</th>
-                <th className="text-left p-4 font-medium">Endereço</th>
-                <th className="text-center p-4 font-medium">Processos</th>
-                <th className="text-left p-4 font-medium">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {empreendimentos.map((e) => (
-                <tr key={e.id} className="border-t border-[var(--color-paper-200)] text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]">
-                  <td className="p-4 font-medium text-[var(--color-ink-900)]">{e.apelido}</td>
-                  <td className="p-4">{e.cliente.apelido}</td>
-                  <td className="p-4 max-w-xs truncate">{[e.rua, e.numero, e.bairro].filter(Boolean).join(", ") || e.municipio || "-"}</td>
-                  <td className="p-4 text-center">{e._count.processos}</td>
-                  <td className="p-4">
-                    <RowActions detailUrl={`/empreendimentos/${e.id}`} entity="empreendimento" entityName="Empreendimento" endpoint={`/api/empreendimentos/${e.id}`} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <div className="flex flex-col items-center gap-3 py-12 text-[var(--color-ink-500)]">
-            <div className="rounded-lg bg-[var(--color-paper-100)] p-3">
-              <Map size={24} />
-            </div>
-            <p className="text-sm">{q ? "Nenhum empreendimento encontrado para essa busca" : "Nenhum empreendimento cadastrado"}</p>
-          </div>
-        )}
+        <EmpreendimentosTable data={empreendimentos} q={q} />
       </div>
     </div>
   );

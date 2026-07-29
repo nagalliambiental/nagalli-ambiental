@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { logAuditoria } from "@/lib/audit";
@@ -56,4 +56,27 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
+}
+
+export async function DELETE(req: NextRequest) {
+  const session = await auth();
+  if (!session) return NextResponse.json({ erro: "Não autorizado" }, { status: 401 });
+  const ids = req.nextUrl.searchParams.get("ids");
+  if (!ids) return NextResponse.json({ erro: "ids é obrigatório" }, { status: 400 });
+  try {
+    await prisma.cliente.deleteMany({ where: { id: { in: ids.split(",").map(Number) } } });
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    return NextResponse.json({ error: "Erro ao remover. Verifique se há registros vinculados." }, { status: 400 });
+  }
+}
+
+export async function PATCH(req: NextRequest) {
+  const session = await auth();
+  if (!session) return NextResponse.json({ erro: "Não autorizado" }, { status: 401 });
+  const ids = req.nextUrl.searchParams.get("ids");
+  if (!ids) return NextResponse.json({ erro: "ids é obrigatório" }, { status: 400 });
+  const body = await req.json();
+  await prisma.cliente.updateMany({ where: { id: { in: ids.split(",").map(Number) } }, data: body });
+  return NextResponse.json({ ok: true });
 }

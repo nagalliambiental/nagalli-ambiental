@@ -38,6 +38,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
         { name: "alertaDias", label: "Alerta (dias)", type: "number" },
         { name: "condicionantes", label: "Condicionantes", type: "textarea" },
         { name: "observacoes", label: "Observações", type: "textarea" },
+        { name: "ativo", label: "Ativo", type: "checkbox" },
       ]}
       data={{
         tipo: processo.tipo,
@@ -51,6 +52,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
         alertaDias: processo.alertaDias,
         condicionantes: processo.condicionantes,
         observacoes: processo.observacoes,
+        ativo: processo.ativo,
       }}
     />
   );

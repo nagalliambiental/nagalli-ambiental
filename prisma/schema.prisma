@@ -31,6 +31,7 @@ model Cliente {
   razaoSocial String
   nomeFantasia String?
   cnpj        String   @unique
+  ativo       Boolean  @default(true)
   rua         String?
   numero      String?
   bairro      String?
@@ -100,6 +101,7 @@ model Cliente {
 model Empreendimento {
   id          Int      @id @default(autoincrement())
   apelido     String
+  ativo       Boolean  @default(true)
   cnpj        String?
   cep         String?
   municipio   String?
@@ -132,6 +134,7 @@ model Orgao {
 model Processo {
   id              Int      @id @default(autoincrement())
   tipo            String
+  ativo           Boolean  @default(true)
   orgaoId         Int
   sistema         String
   numProtocolo    String
@@ -159,6 +162,7 @@ model Processo {
 model Exigencia {
   id               Int      @id @default(autoincrement())
   descricao        String
+  ativo            Boolean  @default(true)
   prazo            DateTime
   antecedenciaDias Int      @default(7)
   cumprida         Boolean  @default(false)
@@ -174,6 +178,7 @@ model Documento {
   id          Int      @id @default(autoincrement())
   nome        String
   tipo        String
+  ativo       Boolean  @default(true)
   caminho     String
   tamanho     Int
   processoId  Int?
@@ -214,6 +219,7 @@ model Tarefa {
   id             Int      @id @default(autoincrement())
   titulo         String
   descricao      String?
+  ativo          Boolean  @default(true)
   status         String   @default("pendente")
   prioridade     String   @default("media")
   dataVencimento DateTime?
@@ -230,6 +236,7 @@ model Financeiro {
   id              Int      @id @default(autoincrement())
   tipoCobranca    String
   valor           Float
+  ativo           Boolean  @default(true)
   formaPagamento  String
   statusPagamento String   @default("pendente")
   dataVencimento  DateTime?

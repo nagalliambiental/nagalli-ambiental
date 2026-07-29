@@ -32,6 +32,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
         { name: "descricao", label: "Descrição", type: "textarea" },
         { name: "latitude", label: "Latitude", type: "number" },
         { name: "longitude", label: "Longitude", type: "number" },
+        { name: "ativo", label: "Ativo", type: "checkbox" },
       ]}
       data={{
         apelido: emp.apelido,
@@ -46,6 +47,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
         descricao: emp.descricao,
         latitude: emp.latitude,
         longitude: emp.longitude,
+        ativo: emp.ativo,
       }}
     />
   );

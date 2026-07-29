@@ -8,7 +8,7 @@ import { Loader2, Save, ArrowLeft } from "lucide-react";
 interface FieldConfig {
   name: string;
   label: string;
-  type: "text" | "select" | "textarea" | "date" | "number";
+  type: "text" | "select" | "textarea" | "date" | "number" | "checkbox";
   required?: boolean;
   options?: { value: string; label: string }[];
 }
@@ -33,11 +33,13 @@ export default function EditEntityForm({
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [form, setForm] = useState<Record<string, string>>(() => {
-    const initial: Record<string, string> = {};
+  const [form, setForm] = useState<Record<string, string | boolean>>(() => {
+    const initial: Record<string, string | boolean> = {};
     for (const f of fields) {
       const val = data[f.name];
-      if (f.type === "date" && val) {
+      if (f.type === "checkbox") {
+        initial[f.name] = Boolean(val);
+      } else if (f.type === "date" && val) {
         const d = new Date(val as string);
         initial[f.name] = d.toISOString().split("T")[0];
       } else {
@@ -55,9 +57,10 @@ export default function EditEntityForm({
       const body: Record<string, unknown> = {};
       for (const f of fields) {
         let val: unknown = form[f.name];
-        if (f.type === "number") val = Number(val);
-        if (f.type === "date" && val) val = new Date(val as string).toISOString();
-        if (val === "" && !f.required) val = null;
+        if (f.type === "checkbox") val = Boolean(val);
+        else if (f.type === "number") val = Number(val);
+        else if (f.type === "date" && val) val = new Date(val as string).toISOString();
+        else if (val === "" && !f.required) val = null;
         body[f.name] = val;
       }
 
@@ -82,7 +85,7 @@ export default function EditEntityForm({
     }
   }
 
-  function setField(name: string, value: string) {
+  function setField(name: string, value: string | boolean) {
     setForm((prev) => ({ ...prev, [name]: value }));
   }
 
@@ -110,9 +113,19 @@ export default function EditEntityForm({
                   {f.label}
                   {f.required && <span className="text-red-500 ml-0.5">*</span>}
                 </label>
-                {f.type === "select" ? (
+                {f.type === "checkbox" ? (
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(form[f.name])}
+                      onChange={(e) => setField(f.name, e.target.checked)}
+                      className="accent-[var(--color-brand-500)] w-4 h-4"
+                    />
+                    <span className="text-sm text-[var(--color-ink-500)]">{form[f.name] ? "Sim" : "Não"}</span>
+                  </label>
+                ) : f.type === "select" ? (
                   <select
-                    value={form[f.name] || ""}
+                    value={form[f.name] as string || ""}
                     onChange={(e) => setField(f.name, e.target.value)}
                     className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]"
                     required={f.required}
@@ -124,7 +137,7 @@ export default function EditEntityForm({
                   </select>
                 ) : f.type === "textarea" ? (
                   <textarea
-                    value={form[f.name] || ""}
+                    value={form[f.name] as string || ""}
                     onChange={(e) => setField(f.name, e.target.value)}
                     rows={5}
                     className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]"
@@ -132,7 +145,7 @@ export default function EditEntityForm({
                 ) : (
                   <input
                     type={f.type === "date" ? "date" : f.type === "number" ? "number" : "text"}
-                    value={form[f.name] || ""}
+                    value={form[f.name] as string || ""}
                     onChange={(e) => setField(f.name, e.target.value)}
                     className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]"
                     required={f.required}

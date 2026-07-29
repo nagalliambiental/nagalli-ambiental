@@ -31,10 +31,12 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
           { value: "anexo", label: "Anexo" },
           { value: "outro", label: "Outro" },
         ] },
+        { name: "ativo", label: "Ativo", type: "checkbox" },
       ]}
       data={{
         nome: doc.nome,
         tipo: doc.tipo,
+        ativo: doc.ativo,
       }}
     />
   );
