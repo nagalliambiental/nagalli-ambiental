@@ -236,3 +236,162 @@ model EmpresaConfig {
   website     String?
   logo        String?
 }
+
+model Empresa {
+  id        Int      @id @default(autoincrement())
+  cnpj      String   @unique
+
+  razaoSocial   String
+  nomeFantasia  String?
+  ramoAtividade String?
+
+  enderecoRua         String?
+  enderecoNumero      String?
+  enderecoComplemento String?
+  bairro              String?
+  municipioUf         String?
+  indicacaoFiscal     String?
+  telefone            String?
+  email               String?
+
+  diasFuncionamento     String?
+  horariosFuncionamento String?
+  areaConstruida        String?
+  porteColaboradores    String?
+
+  possuiRefeitorio     Boolean?
+  refeicoesDiarias     String?
+  unidadesDia          String?
+  preparoRefeicoes     String?
+
+  dirigenteNome  String?
+  dirigenteCargo String?
+
+  responsavelPgrsNome     String?
+  responsavelPgrsCargo    String?
+
+  tags String[] @default([])
+
+  apelido String?
+  cep     String?
+  cidade  String?
+  uf      String?
+  latitude  Float?
+  longitude Float?
+
+  inscricaoEstadual      String?
+  numeroColaboradores    String?
+  representanteLegalNome String?
+  responsavelGestao1Nome     String?
+  responsavelGestao1Telefone String?
+  responsavelGestao1Email    String?
+  responsavelGestao2Nome     String?
+  responsavelGestao2Telefone String?
+  responsavelGestao2Email    String?
+
+  representanteLegalCpf                    String?
+  responsavelTecnicoEstabelecimentoNome    String?
+  responsavelTecnicoEstabelecimentoEmail   String?
+  responsavelTecnicoEstabelecimentoOrgao   String?
+  responsavelTecnicoEstabelecimentoRegistro String?
+  tipoServicosDescricao                    String?
+  atendimentosDia                          String?
+
+  responsavelElaboracaoNome     String?
+  responsavelElaboracaoCpf      String?
+  responsavelElaboracaoEndereco String?
+  responsavelElaboracaoBairro   String?
+  responsavelElaboracaoEmail    String?
+  responsavelElaboracaoTelefone String?
+  responsavelElaboracaoEmpresaNome String?
+  responsavelElaboracaoEmpresaCnpj String?
+  responsavelElaboracaoRegistroCrq String?
+
+  criadoEm DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  residuos            ResiduoItem[]
+  residuosAnuais      ResiduoAnual[]
+  empresasContratadas EmpresaContratada[]
+  documentosGerados   DocumentoGerado[]
+}
+
+model ResiduoItem {
+  id        Int     @id @default(autoincrement())
+  empresaId Int
+  empresa   Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  categoria String
+  ordem     Int
+
+  pontoGeracao     String?
+  residuosGerados  String?
+  quantificacao    String?
+  acondicionamento String?
+  armazenamento    String?
+  coletaInterna    String?
+  empresaTransporte      String?
+  empresaDisposicaoFinal String?
+}
+
+model ResiduoAnual {
+  id        Int     @id @default(autoincrement())
+  empresaId Int
+  empresa   Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  categoria String
+  ordem     Int
+
+  pontoGeracao          String?
+  residuo               String?
+  estadoFisico          String?
+  codIbama              String?
+  classificacaoResiduo  String?
+  codigoNbr10004        String?
+  codigoConamaLgr       String?
+  entrada               String?
+  geracaoAnual          String?
+  acondicionamento      String?
+  transportadora        String?
+  tratamento            String?
+  destino               String?
+}
+
+model EmpresaContratada {
+  id        Int     @id @default(autoincrement())
+  empresaId Int
+  empresa   Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  ordem                     Int
+  nomeFantasia              String?
+  razaoSocial               String?
+  cnpj                      String?
+  numeroDataValidadeLicenca String?
+}
+
+model DocumentoGerado {
+  id           Int      @id @default(autoincrement())
+  empresaId    Int
+  empresa      Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  templateSlug String
+  dadosSnapshot Json
+  createdAt    DateTime @default(now())
+}
+
+model Configuracao {
+  id Int @id @default(autoincrement())
+
+  nomeEmpresa String?
+  cnpj        String?
+  registroCrq String?
+  registroOrgao String?
+
+  responsavelNome      String?
+  responsavelCpf       String?
+  responsavelEndereco  String?
+  responsavelBairro    String?
+  responsavelEmail     String?
+  responsavelTelefone  String?
+
+  atualizadoEm DateTime @updatedAt
+}

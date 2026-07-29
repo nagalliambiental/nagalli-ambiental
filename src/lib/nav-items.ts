@@ -9,6 +9,7 @@ import {
   Users,
   DollarSign,
   ClipboardList,
+  FileText,
   type LucideIcon,
 } from "lucide-react";
 
@@ -22,10 +23,12 @@ export type NavItem = {
 export const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
   { label: "Clientes", href: "/clientes", icon: Building2 },
+  { label: "Empresas (PGRS)", href: "/empresas", icon: Building2 },
   { label: "Empreendimentos", href: "/empreendimentos", icon: Map },
   { label: "Processos", href: "/processos", icon: FileCheck2 },
   { label: "Exigências", href: "/exigencias", icon: ClipboardList },
   { label: "Documentos", href: "/documentos", icon: FileStack },
+  { label: "Modelos", href: "/modelos", icon: FileText },
   { label: "Financeiro", href: "/financeiro", icon: DollarSign, adminOnly: true },
   { label: "Prazos", href: "/prazos", icon: CalendarClock },
   { label: "Tarefas", href: "/tarefas", icon: ClipboardList },
