@@ -110,57 +110,52 @@ export default function DmrPage() {
             </select>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-[var(--color-paper-200)] text-[var(--color-ink-500)]">
-                  <th className="text-left p-2 font-medium">Empresa</th>
-                  <th className="text-left p-2 font-medium">Identificação</th>
-                  <th className="text-left p-2 font-medium">Unidade</th>
-                  <th className="text-center p-2 font-medium" colSpan={2}>1º Trim</th>
-                  <th className="text-center p-2 font-medium" colSpan={2}>2º Trim</th>
-                  <th className="text-center p-2 font-medium" colSpan={2}>3º Trim</th>
-                  <th className="text-center p-2 font-medium" colSpan={2}>4º Trim</th>
-                </tr>
-                <tr className="border-b border-[var(--color-paper-100)] text-xs text-[var(--color-ink-400)]">
-                  <th colSpan={3}></th>
-                  <th className="p-1 text-center">DMR</th>
-                  <th className="p-1 text-center">MTR</th>
-                  <th className="p-1 text-center">DMR</th>
-                  <th className="p-1 text-center">MTR</th>
-                  <th className="p-1 text-center">DMR</th>
-                  <th className="p-1 text-center">MTR</th>
-                  <th className="p-1 text-center">DMR</th>
-                  <th className="p-1 text-center">MTR</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered?.map((row, i) => (
-                  <tr key={i} className="border-b border-[var(--color-paper-50)] text-sm hover:bg-[var(--color-paper-50)]">
-                    <td className="p-2 font-medium text-[var(--color-ink-900)]">{row.empresa}</td>
-                    <td className="p-2">{row.identificacao}</td>
-                    <td className="p-2 text-[var(--color-ink-500)]">{row.unidade}</td>
-                    {row.trimestres.map((t, ti) => (
-                      <td key={ti} className="p-2 text-center">
-                        <span className="inline-flex items-center gap-1" title={`${t.label}: DMR=${t.dmr}, MTR=${t.mtr}`}>
-                          {ti === 0 ? statusIcon(t.dmr) : statusIcon(t.dmr)}
-                          <span className="text-xs">{t.dmr || "—"}</span>
+          <table className="w-full table-fixed text-sm">
+            <colgroup>
+              <col className="w-[22%]" />
+              <col className="w-[28%]" />
+              <col className="w-[14%]" />
+              <col className="w-[9%]" />
+              <col className="w-[9%]" />
+              <col className="w-[9%]" />
+              <col className="w-[9%]" />
+            </colgroup>
+            <thead>
+              <tr className="border-b border-[var(--color-paper-200)] text-[var(--color-ink-500)]">
+                <th className="text-left p-2 font-medium">Empresa</th>
+                <th className="text-left p-2 font-medium">Identificação</th>
+                <th className="text-left p-2 font-medium">Unidade</th>
+                <th className="text-center p-2 font-medium">1º Trim</th>
+                <th className="text-center p-2 font-medium">2º Trim</th>
+                <th className="text-center p-2 font-medium">3º Trim</th>
+                <th className="text-center p-2 font-medium">4º Trim</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered?.map((row, i) => (
+                <tr key={i} className="border-b border-[var(--color-paper-50)] text-sm hover:bg-[var(--color-paper-50)]">
+                  <td className="p-2 font-medium text-[var(--color-ink-900)] truncate" title={row.empresa}>{row.empresa}</td>
+                  <td className="p-2 truncate" title={row.identificacao}>{row.identificacao}</td>
+                  <td className="p-2 text-[var(--color-ink-500)] truncate" title={row.unidade}>{row.unidade}</td>
+                  {row.trimestres.map((t, ti) => (
+                    <td key={ti} className="p-2 text-center text-xs leading-tight">
+                      <span className="inline-flex items-center justify-center gap-1" title={`${t.label}: DMR=${t.dmr}, MTR=${t.mtr}`}>
+                        <span className="inline-flex items-center gap-0.5">
+                          {statusIcon(t.dmr)}
+                          <span>{t.dmr || "—"}</span>
                         </span>
-                      </td>
-                    ))}
-                    {row.trimestres.map((t, ti) => (
-                      <td key={ti} className="p-2 text-center">
-                        <span className="inline-flex items-center gap-1">
+                        <span className="text-[var(--color-ink-300)]">/</span>
+                        <span className="inline-flex items-center gap-0.5">
                           {statusIcon(t.mtr)}
-                          <span className="text-xs">{t.mtr || "—"}</span>
+                          <span>{t.mtr || "—"}</span>
                         </span>
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      </span>
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>
