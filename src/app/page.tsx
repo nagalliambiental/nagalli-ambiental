@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { Building2, CalendarClock, Plus, Inbox, ArrowUpRight, AlertTriangle, FileCheck2 } from "lucide-react";
+import { Building2, CalendarClock, Plus, Inbox, ArrowUpRight, AlertTriangle, FileCheck2, FileSpreadsheet } from "lucide-react";
 import { Topbar } from "@/components/Topbar";
 import { StatCard } from "@/components/StatCard";
 import { prisma } from "@/lib/prisma";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { getTrimestreAtual } from "@/lib/dmr-parser";
 
 export const dynamic = "force-dynamic";
 
@@ -82,6 +83,30 @@ export default async function DashboardPage() {
         <Link href="/exigencias" className="block h-full">
           <StatCard label="Exigências Pendentes" value={exigenciasPendentes} icon={CalendarClock} accent={exigenciasPendentes > 0 ? "river" : "brand"} />
         </Link>
+      </div>
+
+      <div className="mt-6 rounded-[var(--radius-card)] border border-amber-200 bg-amber-50 p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="rounded-full bg-amber-100 p-2">
+              <FileSpreadsheet size={18} className="text-amber-700" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-amber-900">
+                DMR — {getTrimestreAtual().label} ({getTrimestreAtual().inicio} a {getTrimestreAtual().fim})
+              </p>
+              <p className="text-xs text-amber-700">
+                Período vigente. Importe a planilha de conferência para acompanhar.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/dmr"
+            className="focus-ring transition-brand rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700"
+          >
+            Importar planilha
+          </Link>
+        </div>
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
