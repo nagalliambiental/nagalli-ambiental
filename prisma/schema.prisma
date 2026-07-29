@@ -116,8 +116,9 @@ model Empreendimento {
   criadoEm    DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
-  cliente   Cliente    @relation(fields: [clienteId], references: [id])
+  cliente   Cliente      @relation(fields: [clienteId], references: [id])
   processos Processo[]
+  controleDmr ControleDmr?
 }
 
 model Orgao {
