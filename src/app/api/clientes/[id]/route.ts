@@ -97,7 +97,7 @@ export async function PUT(
       "ATUALIZAR",
       "Cliente",
       cliente.id,
-      { apelido, razaoSocial, cnpj, rua, numero, bairro, complemento, cep, municipio, uf, telefone, email, respLegal },
+      data,
       session.user?.id ? Number(session.user.id) : undefined
     );
 
