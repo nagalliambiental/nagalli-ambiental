@@ -44,7 +44,7 @@ export default function RowActions({ detailUrl, entity, entityName, endpoint }: 
           <Eye size={14} />
           <span className="hidden sm:inline">Detalhes</span>
         </Link>
-        <Link href={detailUrl} className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-[var(--color-ink-600)] hover:bg-[var(--color-paper-100)] transition-colors" title="Editar">
+        <Link href={`${detailUrl}/editar`} className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-[var(--color-ink-600)] hover:bg-[var(--color-paper-100)] transition-colors" title="Editar">
           <Edit3 size={14} />
           <span className="hidden sm:inline">Editar</span>
         </Link>
