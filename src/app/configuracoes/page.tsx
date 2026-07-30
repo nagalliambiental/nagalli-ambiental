@@ -1,11 +1,50 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Topbar } from "@/components/Topbar";
-import { Building2, Loader2, Save, Search } from "lucide-react";
+import { Building2, Loader2, Save, Search, ClipboardList } from "lucide-react";
 import { useToast } from "@/components/Toast";
 
+type Tab = "empresa" | "logs";
+
+interface LogEntry {
+  id: number;
+  acao: string;
+  entidade: string;
+  entidadeId: number;
+  dados: string | null;
+  usuarioId: number | null;
+  criadoEm: string;
+  usuario: { nome: string; email: string } | null;
+}
+
 export default function ConfiguracoesPage() {
+  const { toast } = useToast();
+  const [tab, setTab] = useState<Tab>("empresa");
+
+  return (
+    <div>
+      <Topbar title="Configurações" subtitle="Dados da empresa" />
+
+      <div className="mx-auto max-w-4xl">
+        <div className="mb-4 flex gap-1 border-b border-[var(--color-paper-200)]">
+          <button onClick={() => setTab("empresa")} className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 ${tab === "empresa" ? "border-[var(--color-brand-500)] text-[var(--color-brand-600)]" : "border-transparent text-[var(--color-ink-500)] hover:text-[var(--color-ink-700)]"}`}>
+            <Building2 size={16} />
+            Dados da Empresa
+          </button>
+          <button onClick={() => setTab("logs")} className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 ${tab === "logs" ? "border-[var(--color-brand-500)] text-[var(--color-brand-600)]" : "border-transparent text-[var(--color-ink-500)] hover:text-[var(--color-ink-700)]"}`}>
+            <ClipboardList size={16} />
+            Logs
+          </button>
+        </div>
+
+        {tab === "empresa" ? <EmpresaTab /> : <LogsTab />}
+      </div>
+    </div>
+  );
+}
+
+function EmpresaTab() {
   const { toast } = useToast();
   const [form, setForm] = useState({
     razaoSocial: "",
@@ -117,121 +156,212 @@ export default function ConfiguracoesPage() {
   if (!loaded) return null;
 
   return (
-    <div>
-      <Topbar title="Configurações" subtitle="Dados da empresa" />
+    <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5 space-y-4">
+      <div className="flex items-center gap-2 mb-2">
+        <Building2 size={20} className="text-[var(--color-brand-500)]" />
+        <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Dados da Empresa</h2>
+      </div>
 
-      <div className="mx-auto max-w-3xl">
-        <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5 space-y-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Building2 size={20} className="text-[var(--color-brand-500)]" />
-            <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Dados da Empresa</h2>
-          </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Razão Social</label>
+          <input value={form.razaoSocial} onChange={(e) => setField("razaoSocial", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" required />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Nome Fantasia</label>
+          <input value={form.nomeFantasia} onChange={(e) => setField("nomeFantasia", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+        </div>
+      </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Razão Social</label>
-              <input value={form.razaoSocial} onChange={(e) => setField("razaoSocial", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" required />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Nome Fantasia</label>
-              <input value={form.nomeFantasia} onChange={(e) => setField("nomeFantasia", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">CNPJ</label>
-              <div className="flex gap-2">
-                <input value={form.cnpj} onChange={(e) => setField("cnpj", e.target.value)} className="flex-1 rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
-                <button type="button" onClick={buscarCNPJ} className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg bg-[var(--color-brand-500)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] whitespace-nowrap">
-                  <Search size={14} />
-                  Buscar
-                </button>
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Telefone</label>
-              <input value={form.telefone} onChange={(e) => setField("telefone", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Email</label>
-              <input type="email" value={form.email} onChange={(e) => setField("email", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Website</label>
-              <input value={form.website} onChange={(e) => setField("website", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
-            </div>
-          </div>
-
-          <div className="border-t border-[var(--color-paper-200)] pt-4">
-            <h3 className="text-sm font-semibold text-[var(--color-ink-900)] mb-3">Endereço</h3>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="col-span-2">
-                <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Rua</label>
-                <input value={form.rua} onChange={(e) => setField("rua", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Número</label>
-                <input value={form.numero} onChange={(e) => setField("numero", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
-              </div>
-            </div>
-            <div className="grid grid-cols-3 gap-4 mt-4">
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Bairro</label>
-                <input value={form.bairro} onChange={(e) => setField("bairro", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Complemento</label>
-                <input value={form.complemento} onChange={(e) => setField("complemento", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">CEP</label>
-                <div className="flex gap-2">
-                  <input value={form.cep} onChange={(e) => setField("cep", e.target.value)} className="w-28 rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
-                  <button type="button" onClick={buscarCEP} className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg bg-[var(--color-brand-500)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] whitespace-nowrap">
-                    <Search size={14} />
-                    Buscar
-                  </button>
-                </div>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4 mt-4">
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Município</label>
-                <input value={form.municipio} onChange={(e) => setField("municipio", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">UF</label>
-                <input value={form.uf} onChange={(e) => setField("uf", e.target.value)} maxLength={2} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
-              </div>
-            </div>
-          </div>
-
-          <div className="border-t border-[var(--color-paper-200)] pt-4">
-            <h3 className="text-sm font-semibold text-[var(--color-ink-900)] mb-3">Logo</h3>
-            <p className="text-xs text-[var(--color-ink-500)] mb-2">URL da imagem da logo (ex: /Logo.jpeg)</p>
-            <div className="flex items-center gap-3">
-              <input value={form.logo} onChange={(e) => setField("logo", e.target.value)} placeholder="/Logo.jpeg" className="flex-1 rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
-              {form.logo && <img src={form.logo} alt="logo" className="h-10 w-10 rounded object-contain border" />}
-            </div>
-          </div>
-
-          {msg && (
-            <div className={`rounded-lg border px-4 py-3 text-sm ${msg.includes("sucesso") ? "border-green-200 bg-green-50 text-green-700" : "border-red-200 bg-red-50 text-red-700"}`}>
-              {msg}
-            </div>
-          )}
-
-          <div className="flex gap-3 pt-2">
-            <button onClick={handleSave} disabled={saving} className="focus-ring transition-brand flex items-center gap-2 rounded-[var(--radius-card)] bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">
-              {saving ? <><Loader2 size={16} className="animate-spin" /> Salvando...</> : <><Save size={16} /> Salvar</>}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">CNPJ</label>
+          <div className="flex gap-2">
+            <input value={form.cnpj} onChange={(e) => setField("cnpj", e.target.value)} className="flex-1 rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+            <button type="button" onClick={buscarCNPJ} className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg bg-[var(--color-brand-500)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] whitespace-nowrap">
+              <Search size={14} />
+              Buscar
             </button>
           </div>
         </div>
+        <div>
+          <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Telefone</label>
+          <input value={form.telefone} onChange={(e) => setField("telefone", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+        </div>
       </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Email</label>
+          <input type="email" value={form.email} onChange={(e) => setField("email", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Website</label>
+          <input value={form.website} onChange={(e) => setField("website", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+        </div>
+      </div>
+
+      <div className="border-t border-[var(--color-paper-200)] pt-4">
+        <h3 className="text-sm font-semibold text-[var(--color-ink-900)] mb-3">Endereço</h3>
+        <div className="grid grid-cols-3 gap-4">
+          <div className="col-span-2">
+            <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Rua</label>
+            <input value={form.rua} onChange={(e) => setField("rua", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Número</label>
+            <input value={form.numero} onChange={(e) => setField("numero", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-4 mt-4">
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Bairro</label>
+            <input value={form.bairro} onChange={(e) => setField("bairro", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Complemento</label>
+            <input value={form.complemento} onChange={(e) => setField("complemento", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">CEP</label>
+            <div className="flex gap-2">
+              <input value={form.cep} onChange={(e) => setField("cep", e.target.value)} className="w-28 rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+              <button type="button" onClick={buscarCEP} className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg bg-[var(--color-brand-500)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] whitespace-nowrap">
+                <Search size={14} />
+                Buscar
+              </button>
+            </div>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4 mt-4">
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Município</label>
+            <input value={form.municipio} onChange={(e) => setField("municipio", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">UF</label>
+            <input value={form.uf} onChange={(e) => setField("uf", e.target.value)} maxLength={2} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+          </div>
+        </div>
+      </div>
+
+      <div className="border-t border-[var(--color-paper-200)] pt-4">
+        <h3 className="text-sm font-semibold text-[var(--color-ink-900)] mb-3">Logo</h3>
+        <p className="text-xs text-[var(--color-ink-500)] mb-2">URL da imagem da logo (ex: /Logo.jpeg)</p>
+        <div className="flex items-center gap-3">
+          <input value={form.logo} onChange={(e) => setField("logo", e.target.value)} placeholder="/Logo.jpeg" className="flex-1 rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+          {form.logo && <img src={form.logo} alt="logo" className="h-10 w-10 rounded object-contain border" />}
+        </div>
+      </div>
+
+      {msg && (
+        <div className={`rounded-lg border px-4 py-3 text-sm ${msg.includes("sucesso") ? "border-green-200 bg-green-50 text-green-700" : "border-red-200 bg-red-50 text-red-700"}`}>
+          {msg}
+        </div>
+      )}
+
+      <div className="flex gap-3 pt-2">
+        <button onClick={handleSave} disabled={saving} className="focus-ring transition-brand flex items-center gap-2 rounded-[var(--radius-card)] bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">
+          {saving ? <><Loader2 size={16} className="animate-spin" /> Salvando...</> : <><Save size={16} /> Salvar</>}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function LogsTab() {
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  const fetchLogs = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/auditoria?page=${page}&limit=50`);
+      const data = await res.json();
+      setLogs(data.logs);
+      setTotal(data.total);
+      setTotalPages(data.totalPages);
+    } catch {
+      setLogs([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [page]);
+
+  useEffect(() => { fetchLogs(); }, [fetchLogs]);
+
+  function formatDate(iso: string) {
+    const d = new Date(iso);
+    return d.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+  }
+
+  const acaoColors: Record<string, string> = {
+    CRIAR: "text-green-600 bg-green-50",
+    ATUALIZAR: "text-blue-600 bg-blue-50",
+    EXCLUIR: "text-red-600 bg-red-50",
+  };
+
+  return (
+    <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5 space-y-4">
+      <div className="flex items-center gap-2 mb-2">
+        <ClipboardList size={20} className="text-[var(--color-brand-500)]" />
+        <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Auditoria</h2>
+        <span className="text-xs text-[var(--color-ink-500)] ml-auto">{total} registro(s)</span>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 size={24} className="animate-spin text-[var(--color-brand-500)]" />
+        </div>
+      ) : logs.length === 0 ? (
+        <p className="text-sm text-[var(--color-ink-500)] py-8 text-center">Nenhum log encontrado.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-[var(--color-paper-200)]">
+                <th className="text-left py-2 px-2 font-medium text-[var(--color-ink-700)]">Data/Hora</th>
+                <th className="text-left py-2 px-2 font-medium text-[var(--color-ink-700)]">Ação</th>
+                <th className="text-left py-2 px-2 font-medium text-[var(--color-ink-700)]">Entidade</th>
+                <th className="text-left py-2 px-2 font-medium text-[var(--color-ink-700)]">ID</th>
+                <th className="text-left py-2 px-2 font-medium text-[var(--color-ink-700)]">Usuário</th>
+              </tr>
+            </thead>
+            <tbody>
+              {logs.map((log) => (
+                <tr key={log.id} className="border-b border-[var(--color-paper-100)] hover:bg-[var(--color-paper-50)]">
+                  <td className="py-2 px-2 text-[var(--color-ink-600)] whitespace-nowrap">{formatDate(log.criadoEm)}</td>
+                  <td className="py-2 px-2">
+                    <span className={`inline-block rounded px-1.5 py-0.5 text-xs font-medium ${acaoColors[log.acao] || "text-[var(--color-ink-600)] bg-[var(--color-paper-100)]"}`}>
+                      {log.acao}
+                    </span>
+                  </td>
+                  <td className="py-2 px-2 text-[var(--color-ink-600)] capitalize">{log.entidade}</td>
+                  <td className="py-2 px-2 text-[var(--color-ink-600)]">{log.entidadeId}</td>
+                  <td className="py-2 px-2 text-[var(--color-ink-600)]">{log.usuario?.nome || "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between pt-2">
+          <span className="text-xs text-[var(--color-ink-500)]">Página {page} de {totalPages}</span>
+          <div className="flex gap-2">
+            <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1} className="rounded-lg border border-[var(--color-paper-200)] px-3 py-1.5 text-xs font-medium text-[var(--color-ink-600)] hover:bg-[var(--color-paper-50)] disabled:opacity-40 disabled:cursor-not-allowed">
+              Anterior
+            </button>
+            <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="rounded-lg border border-[var(--color-paper-200)] px-3 py-1.5 text-xs font-medium text-[var(--color-ink-600)] hover:bg-[var(--color-paper-50)] disabled:opacity-40 disabled:cursor-not-allowed">
+              Próximo
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
