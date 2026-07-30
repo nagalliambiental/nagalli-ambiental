@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2, Loader2, AlertTriangle, X } from "lucide-react";
+import { useToast } from "@/components/Toast";
 
 interface DeleteButtonProps {
   entity: string;
@@ -20,6 +21,7 @@ export default function DeleteButton({
   const [open, setOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const router = useRouter();
+  const { toast } = useToast();
 
   async function handleDelete() {
     setDeleting(true);
@@ -27,14 +29,15 @@ export default function DeleteButton({
       const res = await fetch(endpoint, { method: "DELETE" });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        alert(data.error || `Erro ao excluir ${entity}`);
+        toast(data.error || `Erro ao excluir ${entity}`, "error");
         setDeleting(false);
         return;
       }
+      toast(`${entity} excluído com sucesso`, "success");
       router.push(redirectTo || "/");
       router.refresh();
     } catch {
-      alert(`Erro ao excluir ${entity}`);
+      toast(`Erro ao excluir ${entity}`, "error");
       setDeleting(false);
     }
   }

@@ -25,6 +25,7 @@ export async function POST(request: Request) {
 
   try {
     const data = await request.json();
+    if (data.clienteId) data.clienteId = Number(data.clienteId);
     const empreendimento = await prisma.empreendimento.create({ data });
 
     await logAuditoria(

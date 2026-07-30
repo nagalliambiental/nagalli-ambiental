@@ -39,6 +39,7 @@ export function DocumentosTable({ data, q }: { data: DocData[]; q?: string | nul
   const columns: Column<DocData>[] = [
     {
       header: "Nome",
+      sortable: true, sortKey: "nome",
       className: "max-w-xs truncate",
       render: (d) => (
         <Link href={`/documentos/${d.id}`} className="font-medium text-[var(--color-ink-900)] hover:text-[var(--color-brand-600)] hover:underline">
@@ -48,6 +49,7 @@ export function DocumentosTable({ data, q }: { data: DocData[]; q?: string | nul
     },
     {
       header: "Tipo",
+      sortable: true, sortKey: "tipo",
       render: (d) => (
         <span className={`inline-block rounded px-2 py-1 text-xs font-medium ${tipoColors[d.tipo] || "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]"}`}>
           {d.tipo.charAt(0).toUpperCase() + d.tipo.slice(1)}
@@ -56,7 +58,7 @@ export function DocumentosTable({ data, q }: { data: DocData[]; q?: string | nul
     },
     { header: "Processo", render: (d) => <span className="font-mono text-sm">{d.processo?.numProtocolo || "—"}</span> },
     { header: "Tamanho", render: (d) => formatBytes(d.tamanho) },
-    { header: "Data", render: (d) => format(new Date(d.criadoEm), "dd/MM/yyyy", { locale: ptBR }) },
+    { header: "Data", sortable: true, sortKey: "criadoEm", render: (d) => format(new Date(d.criadoEm), "dd/MM/yyyy", { locale: ptBR }) },
     {
       header: "Ações",
       render: (d) => (

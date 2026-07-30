@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Topbar } from "@/components/Topbar";
 import { Plus, Trash2, Search, CheckCircle2, Clock, XCircle, Upload, Loader2 } from "lucide-react";
+import { useToast } from "@/components/Toast";
 
 interface Empreendimento {
   id: number;
@@ -39,6 +40,7 @@ function statusIcon(val: string) {
 }
 
 export default function DmrPage() {
+  const { toast } = useToast();
   const [registros, setRegistros] = useState<ControleDmr[]>([]);
   const [loading, setLoading] = useState(true);
   const [disponiveis, setDisponiveis] = useState<Empreendimento[]>([]);
@@ -68,8 +70,8 @@ export default function DmrPage() {
       if (!res.ok) throw new Error("Erro ao remover");
       setRegistros((prev) => prev.filter((r) => !selectedIds.has(r.id)));
       setSelectedIds(new Set());
-    } catch (err) {
-      alert("Erro ao remover registros.");
+    } catch {
+      toast("Erro ao remover registros.", "error");
     }
   };
 
@@ -89,7 +91,7 @@ export default function DmrPage() {
 
   async function importarPlanilha(file: File) {
     if (!file.name.endsWith(".xlsx")) {
-      alert("Selecione um arquivo .xlsx");
+      toast("Selecione um arquivo .xlsx", "error");
       return;
     }
     setImporting(true);
@@ -102,8 +104,8 @@ export default function DmrPage() {
       if (!res.ok) throw new Error(data.error || "Erro ao importar");
       setImportResult(data.mensagem);
       await carregar();
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err) {
+      toast((err as Error).message, "error");
     } finally {
       setImporting(false);
     }
@@ -126,7 +128,7 @@ export default function DmrPage() {
     });
     if (!res.ok) {
       const data = await res.json();
-      alert(data.error || "Erro ao adicionar");
+      toast(data.error || "Erro ao adicionar", "error");
       return;
     }
     setSelectedId("");

@@ -22,6 +22,7 @@ export function ClientesTable({ data, q }: { data: ClienteData[]; q?: string | n
   const columns: Column<ClienteData>[] = [
     {
       header: "Apelido",
+      sortable: true, sortKey: "apelido",
       render: (c) => (
         <div className="flex items-center gap-2">
           <button
@@ -35,8 +36,8 @@ export function ClientesTable({ data, q }: { data: ClienteData[]; q?: string | n
         </div>
       ),
     },
-    { header: "Razão Social", render: (c) => c.razaoSocial },
-    { header: "CNPJ", render: (c) => c.cnpj },
+    { header: "Razão Social", sortable: true, sortKey: "razaoSocial", render: (c) => c.razaoSocial },
+    { header: "CNPJ", sortable: true, sortKey: "cnpj", render: (c) => c.cnpj },
     { header: "Telefone", render: (c) => c.telefone },
     { header: "Empreendimentos", headerClassName: "text-center", className: "text-center", render: (c) => c._count.empreendimentos },
     { header: "Ações", render: (c) => <RowActions detailUrl={`/clientes/${c.id}`} entity="cliente" entityName="Cliente" endpoint={`/api/clientes/${c.id}`} /> },

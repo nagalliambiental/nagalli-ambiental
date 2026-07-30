@@ -16,7 +16,7 @@ interface EmpData {
 
 export function EmpreendimentosTable({ data, q }: { data: EmpData[]; q?: string | null }) {
   const columns: Column<EmpData>[] = [
-    { header: "Apelido", render: (e) => <span className="font-medium text-[var(--color-ink-900)]">{e.apelido}</span> },
+    { header: "Apelido", sortable: true, sortKey: "apelido", render: (e) => <span className="font-medium text-[var(--color-ink-900)]">{e.apelido}</span> },
     { header: "Cliente", render: (e) => e.cliente.apelido },
     {
       header: "Endereço",

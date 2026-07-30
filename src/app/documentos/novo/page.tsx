@@ -4,9 +4,11 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Topbar } from "@/components/Topbar";
 import { Upload, Loader2 } from "lucide-react";
+import { useToast } from "@/components/Toast";
 
 export default function NovoDocumentoPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
     nome: "",
@@ -22,7 +24,7 @@ export default function NovoDocumentoPage() {
     setSaving(true);
     try {
       if (!file) {
-        alert("Selecione um arquivo");
+        toast("Selecione um arquivo", "error");
         return;
       }
 
@@ -30,12 +32,12 @@ export default function NovoDocumentoPage() {
       uploadData.append("file", file);
       const uploadRes = await fetch("/api/upload", { method: "POST", body: uploadData });
       if (!uploadRes.ok) {
-        alert("Erro ao fazer upload do arquivo");
+        toast("Erro ao fazer upload do arquivo", "error");
         return;
       }
       const { path, size } = await uploadRes.json();
 
-      await fetch("/api/documentos", {
+      const docRes = await fetch("/api/documentos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -47,10 +49,15 @@ export default function NovoDocumentoPage() {
           exigenciaId: form.exigenciaId ? Number(form.exigenciaId) : undefined,
         }),
       });
+      if (!docRes.ok) {
+        toast("Erro ao criar documento", "error");
+        return;
+      }
+      toast("Documento criado com sucesso", "success");
       router.push("/documentos");
       router.refresh();
     } catch {
-      alert("Erro ao criar documento");
+      toast("Erro ao criar documento", "error");
     } finally {
       setSaving(false);
     }

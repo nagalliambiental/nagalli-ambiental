@@ -30,15 +30,17 @@ const prioridadeColors: Record<string, string> = {
 
 export function TarefasTable({ data }: { data: TarefaData[] }) {
   const columns: Column<TarefaData>[] = [
-    { header: "Título", className: "max-w-xs truncate", render: (t) => <span className="font-medium text-[var(--color-ink-900)]">{t.titulo}</span> },
+    { header: "Título", sortable: true, sortKey: "titulo", className: "max-w-xs truncate", render: (t) => <span className="font-medium text-[var(--color-ink-900)]">{t.titulo}</span> },
     {
       header: "Prioridade",
+      sortable: true, sortKey: "prioridade",
       render: (t) => <span className={`text-sm font-medium ${prioridadeColors[t.prioridade] || "text-[var(--color-ink-700)]"}`}>{prioridadeLabels[t.prioridade] || t.prioridade}</span>,
     },
     { header: "Responsável", render: (t) => t.responsavel.nome },
     { header: "Criador", render: (t) => t.usuario.nome },
     {
       header: "Status",
+      sortable: true, sortKey: "status",
       render: (t) => <span className={`inline-block rounded px-2 py-1 text-xs font-medium ${statusColors[t.status] || ""}`}>{statusLabels[t.status] || t.status}</span>,
     },
     {

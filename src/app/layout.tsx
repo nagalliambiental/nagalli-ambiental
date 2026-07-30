@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Sora } from "next/font/google";
 import { AppChrome } from "@/components/AppChrome";
 import SessionProvider from "@/components/SessionProvider";
+import { ToastProvider } from "@/components/Toast";
 import "./globals.css";
 
 const inter = Inter({
@@ -29,7 +30,9 @@ export default function RootLayout({
     <html lang="pt-BR" className={`${inter.variable} ${sora.variable}`}>
       <body>
         <SessionProvider>
-          <AppChrome>{children}</AppChrome>
+          <AppChrome>
+            <ToastProvider>{children}</ToastProvider>
+          </AppChrome>
         </SessionProvider>
       </body>
     </html>

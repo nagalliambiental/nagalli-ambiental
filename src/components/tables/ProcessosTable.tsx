@@ -29,12 +29,13 @@ const statusColors: Record<string, string> = {
 
 export function ProcessosTable({ data, q, status }: { data: ProcessoData[]; q?: string | null; status?: string | null }) {
   const columns: Column<ProcessoData>[] = [
-    { header: "Protocolo", render: (p) => <span className="font-mono text-sm">{p.numProtocolo}</span> },
-    { header: "Tipo", render: (p) => p.tipo },
+    { header: "Protocolo", sortable: true, sortKey: "numProtocolo", render: (p) => <span className="font-mono text-sm">{p.numProtocolo}</span> },
+    { header: "Tipo", sortable: true, sortKey: "tipo", render: (p) => p.tipo },
     { header: "Órgão", render: (p) => <span className="font-medium text-[var(--color-ink-900)]">{p.orgao.sigla}</span> },
     { header: "Empreendimento", render: (p) => p.empreendimento.apelido },
     {
       header: "Status",
+      sortable: true, sortKey: "status",
       render: (p) => (
         <span className={`inline-block rounded px-2 py-1 text-xs font-medium ${statusColors[p.status] || "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]"}`}>
           {statusLabels[p.status] || p.status}

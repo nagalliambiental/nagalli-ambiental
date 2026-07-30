@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Mail, Shield, Check, Calendar, ClipboardList, UserCheck, Award, Save, Loader2, Trash2, AlertTriangle, X } from "lucide-react";
 import Link from "next/link";
+import { useToast } from "@/components/Toast";
 
 const perfilLabels: Record<string, string> = {
   socio: "Sócio",
@@ -36,6 +37,7 @@ interface UsuarioData {
 export default function UsuarioDetailPage() {
   const router = useRouter();
   const params = useParams();
+  const { toast } = useToast();
   const [usuario, setUsuario] = useState<UsuarioData | null>(null);
   const [perfil, setPerfil] = useState("");
   const [ativo, setAtivo] = useState(true);
@@ -98,14 +100,15 @@ export default function UsuarioDetailPage() {
       const res = await fetch(`/api/usuarios/${params.id}`, { method: "DELETE" });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        alert(data.error || "Erro ao excluir usuário");
+        toast(data.error || "Erro ao excluir usuário", "error");
         setDeleting(false);
         return;
       }
+      toast("Usuário excluído com sucesso", "success");
       router.push("/usuarios");
       router.refresh();
     } catch {
-      alert("Erro ao excluir usuário");
+      toast("Erro ao excluir usuário", "error");
       setDeleting(false);
     }
   }

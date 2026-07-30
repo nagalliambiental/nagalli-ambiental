@@ -26,11 +26,12 @@ const statusColors: Record<string, string> = {
 export function FinanceiroTable({ data }: { data: FinanceiroData[] }) {
   const columns: Column<FinanceiroData>[] = [
     { header: "Cliente", render: (r) => <span className="font-medium text-[var(--color-ink-900)]">{r.cliente.apelido}</span> },
-    { header: "Tipo", render: (r) => r.tipoCobranca },
-    { header: "Valor", headerClassName: "text-right", className: "text-right font-medium", render: (r) => r.valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) },
+    { header: "Tipo", sortable: true, sortKey: "tipoCobranca", render: (r) => r.tipoCobranca },
+    { header: "Valor", sortable: true, sortKey: "valor", headerClassName: "text-right", className: "text-right font-medium", render: (r) => r.valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) },
     { header: "Pagamento", render: (r) => r.formaPagamento || "—" },
     {
       header: "Status",
+      sortable: true, sortKey: "statusPagamento",
       render: (r) => <span className={`inline-block rounded px-2 py-1 text-xs font-medium ${statusColors[r.statusPagamento] || ""}`}>{statusLabels[r.statusPagamento] || r.statusPagamento}</span>,
     },
     {

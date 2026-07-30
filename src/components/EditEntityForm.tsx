@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Topbar } from "@/components/Topbar";
-import { Loader2, Save, ArrowLeft, Search } from "lucide-react";
+import { Loader2, Save, ArrowLeft, Search, AlertCircle } from "lucide-react";
+import { useToast } from "@/components/Toast";
 
 interface FieldConfig {
   name: string;
@@ -12,6 +13,7 @@ interface FieldConfig {
   required?: boolean;
   options?: { value: string; label: string }[];
   search?: "cep" | "cnpj";
+  validate?: (value: string | boolean) => string | null;
 }
 
 interface EditEntityFormProps {
@@ -21,6 +23,7 @@ interface EditEntityFormProps {
   redirectTo: string;
   fields: FieldConfig[];
   data: Record<string, unknown>;
+  method?: "POST" | "PUT";
 }
 
 export default function EditEntityForm({
@@ -30,10 +33,14 @@ export default function EditEntityForm({
   redirectTo,
   fields,
   data,
+  method = "PUT",
 }: EditEntityFormProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [dirty, setDirty] = useState(false);
   const [form, setForm] = useState<Record<string, string | boolean>>(() => {
     const initial: Record<string, string | boolean> = {};
     for (const f of fields) {
@@ -50,8 +57,33 @@ export default function EditEntityForm({
     return initial;
   });
 
+  useEffect(() => {
+    if (!dirty) return;
+    const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [dirty]);
+
+  const validate = useCallback(() => {
+    const errors: Record<string, string> = {};
+    for (const f of fields) {
+      const val = form[f.name];
+      if (f.required && (!val || (typeof val === "string" && !val.trim()))) {
+        errors[f.name] = `${f.label} é obrigatório`;
+        continue;
+      }
+      if (f.validate && typeof val === "string") {
+        const msg = f.validate(val);
+        if (msg) errors[f.name] = msg;
+      }
+    }
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  }, [fields, form]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!validate()) return;
     setSaving(true);
     setError("");
     try {
@@ -66,7 +98,7 @@ export default function EditEntityForm({
       }
 
       const res = await fetch(endpoint, {
-        method: "PUT",
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
@@ -77,6 +109,8 @@ export default function EditEntityForm({
         return;
       }
 
+      toast(`${entityName} atualizado(a) com sucesso`, "success");
+      setDirty(false);
       router.push(redirectTo);
       router.refresh();
     } catch {
@@ -88,6 +122,10 @@ export default function EditEntityForm({
 
   function setField(name: string, value: string | boolean) {
     setForm((prev) => ({ ...prev, [name]: value }));
+    setDirty(true);
+    if (fieldErrors[name]) {
+      setFieldErrors((prev) => { const n = { ...prev }; delete n[name]; return n; });
+    }
   }
 
   const CEP_MAP: Record<string, string> = { rua: "rua", bairro: "bairro", municipio: "municipio", uf: "uf", complemento: "complemento" };
@@ -101,29 +139,30 @@ export default function EditEntityForm({
     const raw = form[field.name];
     if (!raw || typeof raw !== "string") return;
     const clean = raw.replace(/\D/g, "");
-    if (field.search === "cep" && clean.length !== 8) return alert("CEP inválido (8 dígitos)");
-    if (field.search === "cnpj" && clean.length !== 14) return alert("CNPJ inválido (14 dígitos)");
+    if (field.search === "cep" && clean.length !== 8) return toast("CEP inválido (8 dígitos)", "error");
+    if (field.search === "cnpj" && clean.length !== 14) return toast("CNPJ inválido (14 dígitos)", "error");
     try {
       const res = await fetch(`/api/${field.search}/${clean}`);
-      if (!res.ok) return alert("Não encontrado");
-      const data = await res.json();
+      if (!res.ok) return toast("Não encontrado", "error");
+      const d = await res.json();
       const map = field.search === "cep" ? CEP_MAP : CNPJ_MAP;
       setForm((prev) => {
         const next = { ...prev };
         for (const [apiKey, formKey] of Object.entries(map)) {
-          if (data[apiKey] && formKey in next) next[formKey] = data[apiKey];
+          if (d[apiKey] && formKey in next) next[formKey] = d[apiKey];
         }
         return next;
       });
+      setDirty(true);
     } catch {
-      alert("Erro ao consultar.");
+      toast("Erro ao consultar.", "error");
     }
   }
 
   return (
     <div>
       <Topbar
-        title={`Editar ${entityName}`}
+        title={method === "POST" ? `Novo ${entityName}` : `Editar ${entityName}`}
         actions={
           <button
             type="button"
@@ -158,7 +197,7 @@ export default function EditEntityForm({
                   <select
                     value={form[f.name] as string || ""}
                     onChange={(e) => setField(f.name, e.target.value)}
-                    className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]"
+                    className={`w-full rounded-lg border bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)] ${fieldErrors[f.name] ? "border-red-400" : "border-[var(--color-paper-200)]"}`}
                     required={f.required}
                   >
                     <option value="">Selecione...</option>
@@ -171,7 +210,7 @@ export default function EditEntityForm({
                     value={form[f.name] as string || ""}
                     onChange={(e) => setField(f.name, e.target.value)}
                     rows={5}
-                    className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]"
+                    className={`w-full rounded-lg border bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)] ${fieldErrors[f.name] ? "border-red-400" : "border-[var(--color-paper-200)]"}`}
                   />
                 ) : (
                   <div className="flex gap-2">
@@ -179,7 +218,7 @@ export default function EditEntityForm({
                       type={f.type === "date" ? "date" : f.type === "number" ? "number" : "text"}
                       value={form[f.name] as string || ""}
                       onChange={(e) => setField(f.name, e.target.value)}
-                      className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]"
+                      className={`w-full rounded-lg border bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)] ${fieldErrors[f.name] ? "border-red-400" : "border-[var(--color-paper-200)]"}`}
                       required={f.required}
                     />
                     {f.search && (
@@ -193,6 +232,12 @@ export default function EditEntityForm({
                       </button>
                     )}
                   </div>
+                )}
+                {fieldErrors[f.name] && (
+                  <p className="mt-1 flex items-center gap-1 text-xs text-red-600">
+                    <AlertCircle size={12} />
+                    {fieldErrors[f.name]}
+                  </p>
                 )}
               </div>
             ))}

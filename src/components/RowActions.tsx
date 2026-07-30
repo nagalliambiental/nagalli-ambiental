@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Eye, Edit3, Trash2, Loader2, AlertTriangle, X } from "lucide-react";
+import { useToast } from "@/components/Toast";
 
 interface RowActionsProps {
   detailUrl: string;
@@ -14,6 +15,7 @@ interface RowActionsProps {
 
 export default function RowActions({ detailUrl, entity, entityName, endpoint }: RowActionsProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -23,14 +25,15 @@ export default function RowActions({ detailUrl, entity, entityName, endpoint }: 
       const res = await fetch(endpoint, { method: "DELETE" });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        alert(err.error || `Erro ao excluir ${entity}`);
+        toast(err.error || `Erro ao excluir ${entity}`, "error");
         setDeleting(false);
         setConfirmDelete(false);
         return;
       }
+      toast(`${entityName} excluído(a) com sucesso`, "success");
       router.refresh();
     } catch {
-      alert(`Erro ao excluir ${entity}`);
+      toast(`Erro ao excluir ${entity}`, "error");
     } finally {
       setDeleting(false);
       setConfirmDelete(false);
