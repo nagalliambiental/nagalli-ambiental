@@ -42,8 +42,9 @@ export function buildDocxData(
       "NO LOCAL",
       "TERCEIRIZADO"
     ),
-    dirigente_nome: empresa.dirigenteNome || "",
-    dirigente_cargo: empresa.dirigenteCargo || "",
+    responsavel_tecnico_nome: empresa.responsavelTecnicoNome || "",
+    responsavel_tecnico_conselho: empresa.responsavelTecnicoConselho || "",
+    responsavel_tecnico_cpf: empresa.responsavelTecnicoCpf || "",
     responsavel_pgrs_nome: empresa.responsavelPgrsNome || "",
     responsavel_pgrs_cargo: empresa.responsavelPgrsCargo || "",
 

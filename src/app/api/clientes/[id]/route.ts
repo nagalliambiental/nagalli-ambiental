@@ -61,7 +61,7 @@ export async function PUT(
       "ramoAtividade", "indicacaoFiscal", "diasFuncionamento", "horariosFuncionamento",
       "areaConstruida", "porteColaboradores", "possuiRefeitorio",
       "refeicoesDiarias", "unidadesDia", "preparoRefeicoes",
-      "dirigenteNome", "dirigenteCargo",
+      "responsavelTecnicoNome", "responsavelTecnicoConselho", "responsavelTecnicoCpf",
       "responsavelPgrsNome", "responsavelPgrsCargo",
       "latitude", "longitude", "inscricaoEstadual", "numeroColaboradores",
       "representanteLegalNome",

@@ -39,8 +39,9 @@ export function buildDocxData(
     porte_colaboradores: empresa.porteColaboradores || "",
     horarios_funcionamento: empresa.horariosFuncionamento || "",
     area_construida: empresa.areaConstruida || "",
-    dirigente_nome: empresa.dirigenteNome || "",
-    dirigente_cargo: empresa.dirigenteCargo || "",
+    responsavel_tecnico_nome: empresa.responsavelTecnicoNome || "",
+    responsavel_tecnico_conselho: empresa.responsavelTecnicoConselho || "",
+    responsavel_tecnico_cpf: empresa.responsavelTecnicoCpf || "",
     responsavel_pgrs_nome: empresa.responsavelPgrsNome || "",
     responsavel_pgrs_cargo: empresa.responsavelPgrsCargo || "",
     refeitorio_texto: checkboxLine(!!empresa.possuiRefeitorio, "SIM", "NÃO"),
@@ -79,8 +80,8 @@ export function buildDocxData(
 
     observacoes_gerais: form.observacoesGerais || "",
 
-    responsavel_empreendimento_nome: empresa.dirigenteNome || "",
-    responsavel_empreendimento_cargo: empresa.dirigenteCargo || "",
+    responsavel_empreendimento_nome: empresa.responsavelTecnicoNome || "",
+    responsavel_empreendimento_conselho: empresa.responsavelTecnicoConselho || "",
     responsavel_implantacao_nome: empresa.responsavelPgrsNome || "",
     responsavel_implantacao_cargo: empresa.responsavelPgrsCargo || "",
     responsavel_elaboracao_assinatura_nome: configuracao?.responsavelNome || "",

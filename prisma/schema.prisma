@@ -55,8 +55,9 @@ model Cliente {
   refeicoesDiarias          String?
   unidadesDia               String?
   preparoRefeicoes          String?
-  dirigenteNome             String?
-  dirigenteCargo            String?
+  responsavelTecnicoNome    String?
+  responsavelTecnicoConselho String?
+  responsavelTecnicoCpf     String?
   responsavelPgrsNome       String?
   responsavelPgrsCargo      String?
   tags                      String[] @default([])

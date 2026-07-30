@@ -10,8 +10,9 @@ export interface DadosEstabelecimentoValues {
   refeicoesDiarias: string;
   unidadesDia: string;
   preparoRefeicoes: string;
-  dirigenteNome: string;
-  dirigenteCargo: string;
+  responsavelTecnicoNome: string;
+  responsavelTecnicoConselho: string;
+  responsavelTecnicoCpf: string;
   responsavelPgrsNome: string;
   responsavelPgrsCargo: string;
 }
@@ -26,8 +27,9 @@ export const emptyDadosEstabelecimento = (): DadosEstabelecimentoValues => ({
   refeicoesDiarias: "",
   unidadesDia: "",
   preparoRefeicoes: "NO_LOCAL",
-  dirigenteNome: "",
-  dirigenteCargo: "",
+  responsavelTecnicoNome: "",
+  responsavelTecnicoConselho: "",
+  responsavelTecnicoCpf: "",
   responsavelPgrsNome: "",
   responsavelPgrsCargo: "",
 });
@@ -73,8 +75,9 @@ export function DadosEstabelecimentoFields({
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <input className={inputClass} placeholder="Dirigente do empreendimento" value={values.dirigenteNome} onChange={(e) => set("dirigenteNome", e.target.value)} />
-        <input className={inputClass} placeholder="Cargo do dirigente" value={values.dirigenteCargo} onChange={(e) => set("dirigenteCargo", e.target.value)} />
+        <input className={inputClass} placeholder="Resp. Técnico" value={values.responsavelTecnicoNome} onChange={(e) => set("responsavelTecnicoNome", e.target.value)} />
+        <input className={inputClass} placeholder="Conselho do Resp. Técnico" value={values.responsavelTecnicoConselho} onChange={(e) => set("responsavelTecnicoConselho", e.target.value)} />
+        <input className={inputClass} placeholder="CPF do Resp. Técnico" value={values.responsavelTecnicoCpf} onChange={(e) => set("responsavelTecnicoCpf", e.target.value)} />
         <input className={inputClass} placeholder="Responsável pela implantação do PGRS" value={values.responsavelPgrsNome} onChange={(e) => set("responsavelPgrsNome", e.target.value)} />
         <input className={inputClass} placeholder="Cargo do responsável" value={values.responsavelPgrsCargo} onChange={(e) => set("responsavelPgrsCargo", e.target.value)} />
       </div>
