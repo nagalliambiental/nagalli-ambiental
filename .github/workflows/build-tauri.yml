@@ -45,6 +45,7 @@ jobs:
         env:
           TAURI_BUILD: 1
           NEXT_PUBLIC_API_URL: ${{ vars.API_URL || 'https://nagalli-ambiental.vercel.app' }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
       - name: Generate signing key (if not set)
         shell: pwsh

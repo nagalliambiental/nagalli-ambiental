@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import type { Cliente, Empreendimento } from "@prisma/client";
 import * as XLSX from "xlsx";
 
 export async function GET() {
@@ -16,7 +17,7 @@ export async function GET() {
   const wb = XLSX.utils.book_new();
 
   const clientesSheet = XLSX.utils.json_to_sheet(
-    clientes.map((c) => ({
+    clientes.map((c: Cliente) => ({
       Apelido: c.apelido,
       "Razão Social": c.razaoSocial,
       "Nome Fantasia": c.nomeFantasia || "",
@@ -37,7 +38,7 @@ export async function GET() {
   XLSX.utils.book_append_sheet(wb, clientesSheet, "Clientes");
 
   const empSheet = XLSX.utils.json_to_sheet(
-    empreendimentos.map((e) => ({
+    empreendimentos.map((e: Empreendimento & { cliente: { apelido: string } }) => ({
       Apelido: e.apelido,
       Cliente: e.cliente.apelido,
       CNPJ: e.cnpj || "",
