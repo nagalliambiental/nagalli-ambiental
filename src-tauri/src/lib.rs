@@ -143,7 +143,7 @@ async fn check_update(app: tauri::AppHandle) -> Result<Option<String>, String> {
     let updater = app.updater().map_err(|e| e.to_string())?;
     match updater.check().await.map_err(|e| e.to_string())? {
         Some(update) => {
-            let version = update.version().to_string();
+            let version = update.version.to_string();
             update
                 .download_and_install(|_, _| {}, || {})
                 .await
