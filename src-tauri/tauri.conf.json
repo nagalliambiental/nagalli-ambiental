@@ -7,7 +7,7 @@
     "frontendDist": "../out",
     "devUrl": "http://localhost:3000",
     "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build"
+    "beforeBuildCommand": "node -e \"require('fs').mkdirSync('out',{recursive:true});require('fs').writeFileSync('out/index.html','<!DOCTYPE html><html><head><meta http-equiv=\\'refresh\\' content=\\'0;url=https://nagalli-ambiental.vercel.app\\'></head><body>Carregando...</body></html>')\""
   },
   "app": {
     "windows": [

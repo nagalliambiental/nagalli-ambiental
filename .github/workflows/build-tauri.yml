@@ -12,12 +12,6 @@ jobs:
           - platform: windows-latest
             target: x86_64-pc-windows-msvc
             args: ""
-          # - platform: ubuntu-latest
-          #   target: x86_64-unknown-linux-gnu
-          #   args: ""
-          # - platform: macos-latest
-          #   target: aarch64-apple-darwin
-          #   args: ""
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -32,24 +26,9 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
-      - name: Install dependencies (Linux)
-        if: matrix.platform == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
-
-      - name: Remove API routes (incompatible with static export)
-        shell: pwsh
-        run: |
-          Remove-Item -Recurse -Force "src/app/api" -ErrorAction SilentlyContinue
-
-      - name: Install and build
-        run: |
-          npm install
-          npm run build
+      - name: Install npm dependencies
+        run: npm install
         env:
-          TAURI_BUILD: 1
-          NEXT_PUBLIC_API_URL: ${{ vars.API_URL || 'https://nagalli-ambiental.vercel.app' }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
       - name: Generate signing key (if not set)
