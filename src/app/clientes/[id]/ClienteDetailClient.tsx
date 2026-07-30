@@ -613,7 +613,7 @@ export function ClienteDetailClient({
       )}
 
       {tab === "historico" && (
-        <HistoricoTab clienteId={cliente.id} />
+        <HistoricoTab clienteId={cliente.id} empreendimentos={cliente.empreendimentos.map((e) => ({ id: e.id, apelido: e.apelido }))} />
       )}
 
       {tab === "financeiro" && (

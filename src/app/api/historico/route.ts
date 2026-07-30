@@ -11,15 +11,31 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const clienteId = url.searchParams.get("clienteId");
   const empreendimentoId = url.searchParams.get("empreendimentoId");
+  const empreendimentoIds = url.searchParams.get("empreendimentoIds");
 
-  const where: Record<string, unknown> = {};
-  if (clienteId) where.clienteId = Number(clienteId);
-  if (empreendimentoId) where.empreendimentoId = Number(empreendimentoId);
+  let where: Record<string, unknown> = {};
+
+  if (clienteId && empreendimentoIds) {
+    const ids = empreendimentoIds.split(",").map(Number).filter(Boolean);
+    where = {
+      OR: [
+        { clienteId: Number(clienteId) },
+        ...(ids.length > 0 ? [{ empreendimentoId: { in: ids } }] : []),
+      ],
+    };
+  } else if (clienteId) {
+    where.clienteId = Number(clienteId);
+  } else if (empreendimentoId) {
+    where.empreendimentoId = Number(empreendimentoId);
+  }
 
   const historicos = await prisma.historico.findMany({
     where,
     orderBy: { criadoEm: "desc" },
-    include: { usuario: { select: { nome: true } } },
+    include: {
+      usuario: { select: { nome: true } },
+      empreendimento: { select: { apelido: true } },
+    },
   });
 
   return NextResponse.json(historicos);
@@ -57,7 +73,7 @@ export async function POST(request: Request) {
         empreendimentoId,
         usuarioId: Number((session.user as { id: string }).id),
       },
-      include: { usuario: { select: { nome: true } } },
+      include: { usuario: { select: { nome: true } }, empreendimento: { select: { apelido: true } } },
     });
 
     return NextResponse.json(historico, { status: 201 });
