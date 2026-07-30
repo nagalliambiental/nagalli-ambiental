@@ -4,7 +4,6 @@ import Link from "next/link";
 import { Topbar } from "@/components/Topbar";
 import { Plus } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
-import { ImportCard } from "@/components/ImportCard";
 import { EmpreendimentosTable } from "@/components/tables/EmpreendimentosTable";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { GerarDocumentosButton } from "@/components/GerarDocumentosButton";
@@ -56,12 +55,6 @@ export default async function EmpreendimentosPage({
             </Link>
           </div>
         }
-      />
-
-      <ImportCard
-        importEndpoint="/api/cadastros/importar"
-        exportEndpoint="/api/cadastros/exportar"
-        modelEndpoint="/api/cadastros/modelo"
       />
 
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">

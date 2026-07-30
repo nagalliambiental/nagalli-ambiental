@@ -46,3 +46,7 @@ next-env.d.ts
 # sqlite
 *.db
 *.db-journal
+
+# Rust / Tauri build
+/src-tauri/target/
+temp_check/

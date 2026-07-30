@@ -56,10 +56,15 @@ export function SyncStatusBar() {
 
   async function handleSync() {
     if (!isTauri() || syncing) return;
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (!apiUrl) {
+      setMsg("Configure NEXT_PUBLIC_API_URL no .env");
+      setTimeout(() => setMsg(null), 6000);
+      return;
+    }
     setSyncing(true);
     setMsg(null);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || window.location.origin;
       const token = "";
       const result = await forcePushAll(apiUrl, token);
       setMsg(result);

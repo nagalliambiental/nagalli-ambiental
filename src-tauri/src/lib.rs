@@ -7,10 +7,11 @@ use models::*;
 use std::sync::Mutex;
 use tauri::{Manager, State};
 use tauri_plugin_updater::UpdaterExt;
+use tokio::sync::Mutex as AsyncMutex;
 
 struct AppState {
     db: Mutex<Database>,
-    sync: Mutex<sync::SyncEngine>,
+    sync: AsyncMutex<sync::SyncEngine>,
 }
 
 // ── Cliente commands ──────────────────────────────────────────
@@ -28,16 +29,14 @@ fn get_cliente(state: State<'_, AppState>, id: i64) -> Result<Cliente, String> {
 #[tauri::command]
 fn save_cliente(state: State<'_, AppState>, cliente: ClienteInput) -> Result<Cliente, String> {
     let saved = state.db.lock().map_err(|e| e.to_string())?.save_cliente(&cliente).map_err(|e| e.to_string())?;
-    let sync = state.sync.lock().map_err(|e| e.to_string())?;
-    sync.enqueue("cliente", "upsert", &saved)?;
+    state.sync.blocking_lock().enqueue("cliente", "upsert", &saved)?;
     Ok(saved)
 }
 
 #[tauri::command]
 fn delete_cliente(state: State<'_, AppState>, id: i64) -> Result<(), String> {
     state.db.lock().map_err(|e| e.to_string())?.delete_cliente(id).map_err(|e| e.to_string())?;
-    let sync = state.sync.lock().map_err(|e| e.to_string())?;
-    sync.enqueue("cliente", "delete", &serde_json::json!({ "id": id }))?;
+    state.sync.blocking_lock().enqueue("cliente", "delete", &serde_json::json!({ "id": id }))?;
     Ok(())
 }
 
@@ -51,16 +50,14 @@ fn list_empreendimentos(state: State<'_, AppState>, q: Option<String>, cliente_i
 #[tauri::command]
 fn save_empreendimento(state: State<'_, AppState>, emp: EmpreendimentoInput) -> Result<Empreendimento, String> {
     let saved = state.db.lock().map_err(|e| e.to_string())?.save_empreendimento(&emp).map_err(|e| e.to_string())?;
-    let sync = state.sync.lock().map_err(|e| e.to_string())?;
-    sync.enqueue("empreendimento", "upsert", &saved)?;
+    state.sync.blocking_lock().enqueue("empreendimento", "upsert", &saved)?;
     Ok(saved)
 }
 
 #[tauri::command]
 fn delete_empreendimento(state: State<'_, AppState>, id: i64) -> Result<(), String> {
     state.db.lock().map_err(|e| e.to_string())?.delete_empreendimento(id).map_err(|e| e.to_string())?;
-    let sync = state.sync.lock().map_err(|e| e.to_string())?;
-    sync.enqueue("empreendimento", "delete", &serde_json::json!({ "id": id }))?;
+    state.sync.blocking_lock().enqueue("empreendimento", "delete", &serde_json::json!({ "id": id }))?;
     Ok(())
 }
 
@@ -74,8 +71,7 @@ fn list_processos(state: State<'_, AppState>, empreendimento_id: Option<i64>) ->
 #[tauri::command]
 fn save_processo(state: State<'_, AppState>, processo: ProcessoInput) -> Result<Processo, String> {
     let saved = state.db.lock().map_err(|e| e.to_string())?.save_processo(&processo).map_err(|e| e.to_string())?;
-    let sync = state.sync.lock().map_err(|e| e.to_string())?;
-    sync.enqueue("processo", "upsert", &saved)?;
+    state.sync.blocking_lock().enqueue("processo", "upsert", &saved)?;
     Ok(saved)
 }
 
@@ -89,8 +85,7 @@ fn list_tarefas(state: State<'_, AppState>) -> Result<Vec<Tarefa>, String> {
 #[tauri::command]
 fn save_tarefa(state: State<'_, AppState>, tarefa: TarefaInput) -> Result<Tarefa, String> {
     let saved = state.db.lock().map_err(|e| e.to_string())?.save_tarefa(&tarefa).map_err(|e| e.to_string())?;
-    let sync = state.sync.lock().map_err(|e| e.to_string())?;
-    sync.enqueue("tarefa", "upsert", &saved)?;
+    state.sync.blocking_lock().enqueue("tarefa", "upsert", &saved)?;
     Ok(saved)
 }
 
@@ -104,8 +99,7 @@ fn list_financeiros(state: State<'_, AppState>, cliente_id: Option<i64>) -> Resu
 #[tauri::command]
 fn save_financeiro(state: State<'_, AppState>, financeiro: FinanceiroInput) -> Result<Financeiro, String> {
     let saved = state.db.lock().map_err(|e| e.to_string())?.save_financeiro(&financeiro).map_err(|e| e.to_string())?;
-    let sync = state.sync.lock().map_err(|e| e.to_string())?;
-    sync.enqueue("financeiro", "upsert", &saved)?;
+    state.sync.blocking_lock().enqueue("financeiro", "upsert", &saved)?;
     Ok(saved)
 }
 
@@ -118,7 +112,7 @@ fn is_online() -> bool {
 
 #[tauri::command]
 async fn sync_now(state: State<'_, AppState>, api_url: String, token: String) -> Result<SyncResult, String> {
-    let sync = state.sync.lock().map_err(|e| e.to_string())?;
+    let sync = state.sync.lock().await;
     sync.sync_all(&api_url, &token).await
 }
 
@@ -132,10 +126,15 @@ fn is_online_inner() -> bool {
 }
 
 #[tauri::command]
-fn force_push_all(state: State<'_, AppState>, api_url: String, token: String) -> Result<String, String> {
-    let sync = state.sync.lock().map_err(|e| e.to_string())?;
-    let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
-    rt.block_on(sync.sync_all(&api_url, &token)).map(|_| "Sincronizado com sucesso".into())
+async fn force_push_all(state: State<'_, AppState>, api_url: String, token: String) -> Result<String, String> {
+    let result = {
+        let sync = state.sync.lock().await;
+        sync.sync_all(&api_url, &token).await?
+    };
+    if !result.errors.is_empty() {
+        return Err(result.errors.join("; "));
+    }
+    Ok(format!("Sincronizado com sucesso! {} registro(s) enviado(s).", result.pushed))
 }
 
 #[tauri::command]
@@ -173,7 +172,7 @@ pub fn run() {
 
             app.manage(AppState {
                 db: Mutex::new(db),
-                sync: Mutex::new(sync),
+                sync: AsyncMutex::new(sync),
             });
             Ok(())
         })

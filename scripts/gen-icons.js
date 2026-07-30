@@ -3,7 +3,17 @@ const path = require("path");
 
 const iconsDir = path.resolve(__dirname, "..", "src-tauri", "icons");
 
-// Minimal 1x1 blue PNG (base64)
+// Skip if real icons already exist (bigger than 1×1 placeholder)
+const placeholderThreshold = 500;
+const existing = fs.existsSync(path.join(iconsDir, "icon.ico"));
+if (existing && fs.statSync(path.join(iconsDir, "icon.ico")).size > placeholderThreshold) {
+  console.log("Icons already exist, skipping generation.");
+  process.exit(0);
+}
+
+fs.mkdirSync(iconsDir, { recursive: true });
+
+// Minimal 1×1 transparent PNG (fallback for CI without logo)
 const pngBase64 =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
 
