@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { Topbar } from "@/components/Topbar";
-import { Building2, Loader2, Save } from "lucide-react";
+import { Building2, Loader2, Save, Search } from "lucide-react";
+import { useToast } from "@/components/Toast";
 
 export default function ConfiguracoesPage() {
+  const { toast } = useToast();
   const [form, setForm] = useState({
     razaoSocial: "",
     nomeFantasia: "",
@@ -51,6 +53,33 @@ export default function ConfiguracoesPage() {
     setForm((prev) => ({ ...prev, [field]: masked }));
   }
 
+  async function buscarCNPJ() {
+    const clean = form.cnpj.replace(/\D/g, "");
+    if (clean.length !== 14) { toast("CNPJ inválido (14 dígitos)", "error"); return; }
+    try {
+      const res = await fetch(`/api/cnpj/${clean}`);
+      if (!res.ok) { toast("CNPJ não encontrado", "error"); return; }
+      const d = await res.json();
+      setForm((prev) => ({
+        ...prev,
+        razaoSocial: d.razaoSocial || prev.razaoSocial,
+        nomeFantasia: d.nomeFantasia || prev.nomeFantasia,
+        rua: d.enderecoRua || prev.rua,
+        numero: d.enderecoNumero || prev.numero,
+        bairro: d.bairro || prev.bairro,
+        complemento: d.enderecoComplemento || prev.complemento,
+        cep: d.cep || prev.cep,
+        municipio: d.municipio || prev.municipio,
+        uf: d.uf || prev.uf,
+        telefone: d.telefone || prev.telefone,
+        email: d.email || prev.email,
+      }));
+      toast("Dados preenchidos via CNPJ", "success");
+    } catch {
+      toast("Erro ao consultar CNPJ", "error");
+    }
+  }
+
   async function handleSave() {
     setSaving(true);
     setMsg("");
@@ -91,7 +120,13 @@ export default function ConfiguracoesPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">CNPJ</label>
-              <input value={form.cnpj} onChange={(e) => setField("cnpj", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+              <div className="flex gap-2">
+                <input value={form.cnpj} onChange={(e) => setField("cnpj", e.target.value)} className="flex-1 rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+                <button type="button" onClick={buscarCNPJ} className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg bg-[var(--color-brand-500)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] whitespace-nowrap">
+                  <Search size={14} />
+                  Buscar
+                </button>
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Telefone</label>
