@@ -47,7 +47,7 @@ export function ProcessosTable({ data, q, status }: { data: ProcessoData[]; q?: 
       header: "Validade",
       render: (p) => (p.validade ? format(new Date(p.validade), "dd/MM/yyyy", { locale: ptBR }) : "—"),
     },
-    { header: "Ações", render: (p) => <RowActions detailUrl={`/processos/${p.id}`} entity="processo" entityName="Processo" endpoint={`/api/processos/${p.id}`} /> },
+    { header: "Ações", render: (p) => <RowActions detailUrl={`/processos/${p.id}`} editUrl={`/processos/${p.id}/editar`} entity="processo" entityName="Processo" endpoint={`/api/processos/${p.id}`} /> },
   ];
   return <DataTable data={data} columns={columns} endpoint="/api/processos" searchQuery={q} emptyMessage="Nenhum processo cadastrado" />;
 }

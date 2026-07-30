@@ -46,7 +46,7 @@ export function ExigenciasTable({ data }: { data: ExigenciaData[] }) {
       className: "text-center",
       render: (e) => (e.cumprida ? <Check size={18} className="text-[var(--color-brand-600)]" /> : <AlertTriangle size={18} className="text-[var(--color-river-700)]" />),
     },
-    { header: "Ações", render: (e) => <RowActions detailUrl={`/exigencias/${e.id}`} entity="exigencia" entityName="Exigência" endpoint={`/api/exigencias/${e.id}`} /> },
+    { header: "Ações", render: (e) => <RowActions detailUrl={`/exigencias/${e.id}`} editUrl={`/exigencias/${e.id}/editar`} entity="exigencia" entityName="Exigência" endpoint={`/api/exigencias/${e.id}`} /> },
   ];
   return <DataTable data={data} columns={columns} endpoint="/api/exigencias" emptyMessage="Nenhuma exigência cadastrada" />;
 }

@@ -40,7 +40,7 @@ export function ClientesTable({ data, q }: { data: ClienteData[]; q?: string | n
     { header: "CNPJ", sortable: true, sortKey: "cnpj", render: (c) => c.cnpj },
     { header: "Telefone", render: (c) => c.telefone },
     { header: "Empreendimentos", headerClassName: "text-center", className: "text-center", render: (c) => c._count.empreendimentos },
-    { header: "Ações", render: (c) => <RowActions detailUrl={`/clientes/${c.id}`} entity="cliente" entityName="Cliente" endpoint={`/api/clientes/${c.id}`} /> },
+    { header: "Ações", render: (c) => <RowActions detailUrl={`/clientes/${c.id}`} editUrl={`/clientes/${c.id}/editar`} entity="cliente" entityName="Cliente" endpoint={`/api/clientes/${c.id}`} /> },
   ];
 
   return (

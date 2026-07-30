@@ -25,7 +25,7 @@ export function EmpreendimentosTable({ data, q }: { data: EmpData[]; q?: string 
       render: (e) => [e.rua, e.numero, e.bairro].filter(Boolean).join(", ") || e.municipio || "-",
     },
     { header: "Processos", headerClassName: "text-center", className: "text-center", render: (e) => e._count.processos },
-    { header: "Ações", render: (e) => <RowActions detailUrl={`/empreendimentos/${e.id}`} entity="empreendimento" entityName="Empreendimento" endpoint={`/api/empreendimentos/${e.id}`} /> },
+    { header: "Ações", render: (e) => <RowActions detailUrl={`/empreendimentos/${e.id}`} editUrl={`/empreendimentos/${e.id}/editar`} entity="empreendimento" entityName="Empreendimento" endpoint={`/api/empreendimentos/${e.id}`} /> },
   ];
   return <DataTable data={data} columns={columns} endpoint="/api/empreendimentos" searchQuery={q} emptyMessage="Nenhum empreendimento cadastrado" />;
 }

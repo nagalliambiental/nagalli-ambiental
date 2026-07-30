@@ -9,7 +9,7 @@ import { ptBR } from "date-fns/locale";
 import {
   Building2, Mail, Phone, User, FileText, MapPin, Map, Globe, FileSpreadsheet,
   Edit3, Trash2, Plus, ExternalLink, CheckCircle2, Clock, AlertTriangle,
-  Loader2, X, AlertCircle, Upload, Download, FolderArchive
+  Loader2, X, AlertCircle, Upload, Download, FolderArchive, ArrowLeft
 } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/components/Toast";
@@ -184,6 +184,12 @@ export function ClienteDetailClient({
 
   return (
     <div>
+      <div className="mb-4">
+        <Link href="/clientes" className="focus-ring transition-brand inline-flex items-center gap-1.5 text-sm font-medium text-[var(--color-ink-600)] hover:text-[var(--color-brand-600)]">
+          <ArrowLeft size={16} />
+          Voltar para clientes
+        </Link>
+      </div>
       <Topbar
         title={cliente.apelido}
         subtitle="Detalhes do cliente"

@@ -39,7 +39,7 @@ export function FinanceiroTable({ data }: { data: FinanceiroData[] }) {
       header: "Vencimento",
       render: (r) => (r.dataVencimento ? format(new Date(r.dataVencimento), "dd/MM/yyyy", { locale: ptBR }) : "—"),
     },
-    { header: "Ações", render: (r) => <RowActions detailUrl={`/financeiro/${r.id}`} entity="financeiro" entityName="Registro Financeiro" endpoint={`/api/financeiro/${r.id}`} /> },
+    { header: "Ações", render: (r) => <RowActions detailUrl={`/financeiro/${r.id}`} editUrl={`/financeiro/${r.id}/editar`} entity="financeiro" entityName="Registro Financeiro" endpoint={`/api/financeiro/${r.id}`} /> },
   ];
   return <DataTable data={data} columns={columns} endpoint="/api/financeiro" emptyMessage="Nenhum registro financeiro cadastrado" />;
 }

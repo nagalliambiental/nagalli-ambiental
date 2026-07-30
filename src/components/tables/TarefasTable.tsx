@@ -48,7 +48,7 @@ export function TarefasTable({ data }: { data: TarefaData[] }) {
       header: "Vencimento",
       render: (t) => (t.dataVencimento ? format(new Date(t.dataVencimento), "dd/MM/yyyy", { locale: ptBR }) : "—"),
     },
-    { header: "Ações", render: (t) => <RowActions detailUrl={`/tarefas/${t.id}`} entity="tarefa" entityName="Tarefa" endpoint={`/api/tarefas/${t.id}`} /> },
+    { header: "Ações", render: (t) => <RowActions detailUrl={`/tarefas/${t.id}`} editUrl={`/tarefas/${t.id}/editar`} entity="tarefa" entityName="Tarefa" endpoint={`/api/tarefas/${t.id}`} /> },
   ];
   return <DataTable data={data} columns={columns} endpoint="/api/tarefas" emptyMessage="Nenhuma tarefa cadastrada" />;
 }
