@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import type { Prisma } from "@prisma/client";
 import * as XLSX from "xlsx";
 
 export async function POST(req: NextRequest) {
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
         const cnpj = (row["CNPJ"] || "").replace(/\D/g, "");
         if (!apelido || !cnpj) continue;
 
-        const payload: Record<string, unknown> = {
+        const payload: Prisma.ClienteCreateInput = {
           apelido,
           razaoSocial: (row["Razão Social"] || "").trim() || apelido,
           nomeFantasia: (row["Nome Fantasia"] || "").trim() || null,
@@ -70,9 +71,9 @@ export async function POST(req: NextRequest) {
           continue;
         }
 
-        const payload: Record<string, unknown> = {
+        const payload: Prisma.EmpreendimentoCreateInput = {
           apelido,
-          clienteId: cliente.id,
+          cliente: { connect: { id: cliente.id } },
           descricao: (row["Descrição"] || "").trim() || apelido,
           cnpj: (row["CNPJ"] || "").replace(/\D/g, "") || null,
           cep: (row["CEP"] || "").replace(/\D/g, "") || null,
