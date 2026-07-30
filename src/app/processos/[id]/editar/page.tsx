@@ -1,9 +1,17 @@
 import { notFound, redirect } from "next/navigation";
+import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import EditEntityForm from "@/components/EditEntityForm";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata(props: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await props.params;
+  const processo = await prisma.processo.findUnique({ where: { id: Number(id) } });
+  return { title: `Editar - ${processo?.numProtocolo || "Não encontrado"}` };
+}
 
 export default async function Page(props: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -14,7 +22,9 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
   if (!processo) notFound();
 
   return (
-    <EditEntityForm
+    <div>
+      <Breadcrumbs items={[{ label: "Processos", href: "/processos" }, { label: processo.numProtocolo, href: `/processos/${id}` }, { label: "Editar" }]} />
+      <EditEntityForm
       entity="processo"
       entityName="Processo"
       endpoint={`/api/processos/${id}`}
@@ -55,5 +65,6 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
         ativo: processo.ativo,
       }}
     />
+    </div>
   );
 }

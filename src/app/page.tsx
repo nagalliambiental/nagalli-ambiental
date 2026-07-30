@@ -6,8 +6,10 @@ import { prisma } from "@/lib/prisma";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { getTrimestreAtual, getDiasFimTrimestre } from "@/lib/dmr-parser";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Dashboard" };
 
 const statusLabels: Record<string, string> = {
   protocolado: "Protocolado", em_andamento: "Em Andamento",
@@ -60,6 +62,7 @@ export default async function DashboardPage() {
 
   return (
     <>
+      <Breadcrumbs items={[{ label: "Dashboard" }]} />
       <Topbar
         title="Dashboard"
         subtitle="Visão geral dos processos e cadastros"

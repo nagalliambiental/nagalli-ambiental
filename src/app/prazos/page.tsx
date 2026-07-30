@@ -5,8 +5,10 @@ import { ptBR } from "date-fns/locale";
 import { Topbar } from "@/components/Topbar";
 import { Inbox, Eye, AlertTriangle, Check, CalendarClock, Clock, Settings2 } from "lucide-react";
 import { AlertaDiasEditor } from "@/components/AlertaDiasEditor";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Prazos" };
 
 export default async function PrazosPage() {
   const now = new Date();
@@ -41,6 +43,7 @@ export default async function PrazosPage() {
 
   return (
     <div>
+      <Breadcrumbs items={[{ label: "Prazos" }]} />
       <Topbar
         title="Prazos"
         subtitle="Acompanhe os prazos de processos e exigências"

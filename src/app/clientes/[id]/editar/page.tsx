@@ -2,8 +2,15 @@ import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import EditEntityForm from "@/components/EditEntityForm";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata(props: { params: Promise<{ id: string }> }) {
+  const { id } = await props.params;
+  const cliente = await prisma.cliente.findUnique({ where: { id: Number(id) }, select: { apelido: true } });
+  return { title: `Editar - ${cliente?.apelido}` };
+}
 
 export default async function Page(props: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -14,7 +21,9 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
   if (!cliente) notFound();
 
   return (
-    <EditEntityForm
+    <div>
+      <Breadcrumbs items={[{ label: "Clientes", href: "/clientes" }, { label: cliente.apelido, href: `/clientes/${cliente.id}` }, { label: "Editar" }]} />
+      <EditEntityForm
       entity="cliente"
       entityName="Cliente"
       endpoint={`/api/clientes/${id}`}
@@ -64,5 +73,6 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
         ativo: cliente.ativo,
       }}
     />
+    </div>
   );
 }

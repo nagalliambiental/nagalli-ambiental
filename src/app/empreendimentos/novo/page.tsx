@@ -2,8 +2,11 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import EditEntityForm from "@/components/EditEntityForm";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 
 export const dynamic = "force-dynamic";
+
+export const metadata = { title: "Novo Empreendimento" };
 
 export default async function Page() {
   const session = await auth();
@@ -15,7 +18,9 @@ export default async function Page() {
   });
 
   return (
-    <EditEntityForm
+    <div>
+      <Breadcrumbs items={[{ label: "Empreendimentos", href: "/empreendimentos" }, { label: "Novo" }]} />
+      <EditEntityForm
       entity="empreendimento"
       entityName="Empreendimento"
       endpoint="/api/empreendimentos"
@@ -42,5 +47,6 @@ export default async function Page() {
       ]}
       data={{ ativo: true }}
     />
+    </div>
   );
 }

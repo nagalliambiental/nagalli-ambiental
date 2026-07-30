@@ -1,7 +1,9 @@
 import { notFound, redirect } from "next/navigation";
+import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { Topbar } from "@/components/Topbar";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { FileText, Building2, Map, Calendar, Users, ClipboardList, FileCheck2, Clock, AlertTriangle } from "lucide-react";
@@ -28,6 +30,12 @@ const statusColors: Record<string, string> = {
   arquivado: "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]",
 };
 
+export async function generateMetadata(props: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await props.params;
+  const processo = await prisma.processo.findUnique({ where: { id: Number(id) } });
+  return { title: `Processo - ${processo?.numProtocolo || "Não encontrado"}` };
+}
+
 export default async function ProcessoDetailPage(props: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user) redirect("/login");
@@ -46,6 +54,7 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
 
   return (
     <div>
+      <Breadcrumbs items={[{ label: "Processos", href: "/processos" }, { label: processo.numProtocolo }]} />
       <Topbar title={`Processo ${processo.numProtocolo}`} subtitle={processo.tipo} />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

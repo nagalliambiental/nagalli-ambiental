@@ -333,8 +333,8 @@ export function ClienteDetailClient({
                         <td className="p-4 text-center">
                           {dmr ? (
                             dmrOk
-                              ? <CheckCircle2 size={16} className="text-green-600 mx-auto" title="OK" />
-                              : <Clock size={16} className="text-amber-500 mx-auto" title="Pendente" />
+                              ? <CheckCircle2 size={16} className="text-green-600 mx-auto" aria-label="OK" />
+                              : <Clock size={16} className="text-amber-500 mx-auto" aria-label="Pendente" />
                           ) : (
                             <span className="text-xs text-[var(--color-ink-400)]">—</span>
                           )}

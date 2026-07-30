@@ -2,8 +2,13 @@ import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import EditEntityForm from "@/components/EditEntityForm";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata() {
+  return { title: "Editar Exigência" };
+}
 
 export default async function Page(props: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -14,7 +19,9 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
   if (!exigencia) notFound();
 
   return (
-    <EditEntityForm
+    <div>
+      <Breadcrumbs items={[{ label: "Exigências", href: "/exigencias" }, { label: "Exigência", href: `/exigencias/${id}` }, { label: "Editar" }]} />
+      <EditEntityForm
       entity="exigencia"
       entityName="Exigência"
       endpoint={`/api/exigencias/${id}`}
@@ -37,5 +44,6 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
         ativo: exigencia.ativo,
       }}
     />
+    </div>
   );
 }

@@ -2,8 +2,13 @@ import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import EditEntityForm from "@/components/EditEntityForm";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata() {
+  return { title: "Editar Registro Financeiro" };
+}
 
 export default async function Page(props: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -14,7 +19,9 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
   if (!reg) notFound();
 
   return (
-    <EditEntityForm
+    <div>
+      <Breadcrumbs items={[{ label: "Financeiro", href: "/financeiro" }, { label: "Registro", href: `/financeiro/${id}` }, { label: "Editar" }]} />
+      <EditEntityForm
       entity="financeiro"
       entityName="Registro Financeiro"
       endpoint={`/api/financeiro/${id}`}
@@ -45,5 +52,6 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
         ativo: reg.ativo,
       }}
     />
+    </div>
   );
 }

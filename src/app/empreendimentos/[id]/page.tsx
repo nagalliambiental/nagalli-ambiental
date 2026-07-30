@@ -7,8 +7,18 @@ import { ptBR } from "date-fns/locale";
 import { Map, MapPin, Building2, Calendar, FileText } from "lucide-react";
 import Link from "next/link";
 import EntityActions from "@/components/EntityActions";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata(props: { params: Promise<{ id: string }> }) {
+  const { id } = await props.params;
+  const emp = await prisma.empreendimento.findUnique({
+    where: { id: Number(id) },
+    select: { apelido: true, cliente: { select: { apelido: true } } },
+  });
+  return { title: `Empreendimento - ${emp?.apelido}` };
+}
 
 export default async function EmpreendimentoDetailPage(props: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -26,6 +36,7 @@ export default async function EmpreendimentoDetailPage(props: { params: Promise<
 
   return (
     <div>
+      <Breadcrumbs items={[{ label: "Empreendimentos", href: "/empreendimentos" }, { label: emp.apelido }]} />
       <Topbar title={emp.apelido} subtitle="Detalhes do empreendimento" />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

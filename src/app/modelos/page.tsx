@@ -2,10 +2,14 @@ import Link from "next/link";
 import { FileStack, ArrowUpRight } from "lucide-react";
 import { Topbar } from "@/components/Topbar";
 import { TEMPLATES } from "@/lib/templates";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
+
+export const metadata = { title: "Modelos de Documento" };
 
 export default function ModelosPage() {
   return (
     <div>
+      <Breadcrumbs items={[{ label: "Modelos" }]} />
       <Topbar
         title="Modelos de documento"
         subtitle="Modelos oficiais disponíveis para geração"

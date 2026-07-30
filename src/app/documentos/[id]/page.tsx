@@ -1,7 +1,9 @@
 import { notFound, redirect } from "next/navigation";
+import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { Topbar } from "@/components/Topbar";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { FileText, Download, Building2, Calendar } from "lucide-react";
@@ -9,6 +11,12 @@ import Link from "next/link";
 import EntityActions from "@/components/EntityActions";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata(props: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await props.params;
+  const doc = await prisma.documento.findUnique({ where: { id: Number(id) } });
+  return { title: `Documento - ${doc?.nome || "Não encontrado"}` };
+}
 
 function formatBytes(bytes: number) {
   if (bytes === 0) return "0 B";
@@ -34,6 +42,7 @@ export default async function DocumentoDetailPage(props: { params: Promise<{ id:
 
   return (
     <div>
+      <Breadcrumbs items={[{ label: "Documentos", href: "/documentos" }, { label: doc.nome }]} />
       <Topbar title={doc.nome} subtitle="Detalhes do documento" />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

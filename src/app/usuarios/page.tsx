@@ -3,8 +3,10 @@ import Link from "next/link";
 import { Topbar } from "@/components/Topbar";
 import { Plus, Inbox, Eye, Users, Check, X } from "lucide-react";
 import RowActions from "@/components/RowActions";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Usuários" };
 
 const perfilLabels: Record<string, string> = {
   socio: "Sócio",
@@ -28,6 +30,7 @@ export default async function UsuariosPage() {
 
   return (
     <div>
+      <Breadcrumbs items={[{ label: "Usuários" }]} />
       <Topbar
         title="Usuários"
         actions={

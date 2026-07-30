@@ -7,6 +7,7 @@ import { ptBR } from "date-fns/locale";
 import { ClipboardList, User, Users, Calendar, Clock, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import EntityActions from "@/components/EntityActions";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +39,10 @@ const prioridadeColors: Record<string, string> = {
   urgente: "text-[var(--color-river-700)]",
 };
 
+export async function generateMetadata() {
+  return { title: "Tarefa" };
+}
+
 export default async function TarefaDetailPage(props: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user) redirect("/login");
@@ -54,6 +59,7 @@ export default async function TarefaDetailPage(props: { params: Promise<{ id: st
 
   return (
     <div>
+      <Breadcrumbs items={[{ label: "Tarefas", href: "/tarefas" }, { label: "Tarefa" }]} />
       <Topbar title={tarefa.titulo} subtitle="Detalhes da tarefa" />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

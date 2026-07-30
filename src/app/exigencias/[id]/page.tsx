@@ -7,8 +7,13 @@ import { ptBR } from "date-fns/locale";
 import { AlertTriangle, Check, Clock, FileText, Calendar } from "lucide-react";
 import Link from "next/link";
 import EntityActions from "@/components/EntityActions";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata() {
+  return { title: "Exigência" };
+}
 
 export default async function ExigenciaDetailPage(props: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -37,6 +42,7 @@ export default async function ExigenciaDetailPage(props: { params: Promise<{ id:
 
   return (
     <div>
+      <Breadcrumbs items={[{ label: "Exigências", href: "/exigencias" }, { label: "Exigência" }]} />
       <Topbar title="Exigência" subtitle={exigencia.descricao.length > 60 ? exigencia.descricao.slice(0, 60) + "..." : exigencia.descricao} />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

@@ -1,15 +1,20 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import EditEntityForm from "@/components/EditEntityForm";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 
 export const dynamic = "force-dynamic";
+
+export const metadata = { title: "Novo Cliente" };
 
 export default async function Page() {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
   return (
-    <EditEntityForm
+    <div>
+      <Breadcrumbs items={[{ label: "Clientes", href: "/clientes" }, { label: "Novo" }]} />
+      <EditEntityForm
       entity="cliente"
       entityName="Cliente"
       endpoint="/api/clientes"
@@ -39,5 +44,6 @@ export default async function Page() {
       ]}
       data={{ ativo: true }}
     />
+    </div>
   );
 }

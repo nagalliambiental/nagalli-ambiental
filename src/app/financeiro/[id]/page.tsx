@@ -7,6 +7,7 @@ import { ptBR } from "date-fns/locale";
 import { DollarSign, Building2, Calendar, FileText } from "lucide-react";
 import Link from "next/link";
 import EntityActions from "@/components/EntityActions";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,10 @@ const statusColors: Record<string, string> = {
   cancelado: "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]",
 };
 
+export async function generateMetadata() {
+  return { title: "Registro Financeiro" };
+}
+
 export default async function FinanceiroDetailPage(props: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user) redirect("/login");
@@ -40,6 +45,7 @@ export default async function FinanceiroDetailPage(props: { params: Promise<{ id
 
   return (
     <div>
+      <Breadcrumbs items={[{ label: "Financeiro", href: "/financeiro" }, { label: "Registro" }]} />
       <Topbar title="Registro Financeiro" subtitle={`${reg.tipoCobranca} — ${reg.cliente.apelido}`} />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

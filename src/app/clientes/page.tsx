@@ -6,8 +6,11 @@ import { Plus } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
 import { ImportCard } from "@/components/ImportCard";
 import { ClientesTable } from "@/components/tables/ClientesTable";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 
 export const dynamic = "force-dynamic";
+
+export const metadata = { title: "Clientes" };
 
 export default async function ClientesPage({
   searchParams,
@@ -37,6 +40,7 @@ export default async function ClientesPage({
 
   return (
     <div>
+      <Breadcrumbs items={[{ label: "Clientes" }]} />
       <Topbar
         title="Clientes"
         actions={

@@ -3,8 +3,15 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getDiasFimTrimestre, getTrimestreAtual } from "@/lib/dmr-parser";
 import { ClienteDetailClient } from "./ClienteDetailClient";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata(props: { params: Promise<{ id: string }> }) {
+  const { id } = await props.params;
+  const cliente = await prisma.cliente.findUnique({ where: { id: Number(id) }, select: { apelido: true } });
+  return { title: `Cliente - ${cliente?.apelido}` };
+}
 
 export default async function ClienteDetailPage(props: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -31,11 +38,14 @@ export default async function ClienteDetailPage(props: { params: Promise<{ id: s
   const trimestre = getTrimestreAtual();
 
   return (
-    <ClienteDetailClient
+    <div>
+      <Breadcrumbs items={[{ label: "Clientes", href: "/clientes" }, { label: cliente.apelido }]} />
+      <ClienteDetailClient
       cliente={JSON.parse(JSON.stringify(cliente))}
       id={id}
       diasFimTrimestre={diasFimTrimestre}
       trimestreLabel={trimestre.label}
     />
+    </div>
   );
 }

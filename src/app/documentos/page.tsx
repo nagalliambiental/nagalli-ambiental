@@ -2,12 +2,15 @@ import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import Link from "next/link";
 import { Topbar } from "@/components/Topbar";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { Plus } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
 import { FilterSelect } from "@/components/FilterSelect";
 import { DocumentosTable } from "@/components/tables/DocumentosTable";
 
 export const dynamic = "force-dynamic";
+
+export const metadata = { title: "Documentos" };
 
 export default async function DocumentosPage({
   searchParams,
@@ -38,6 +41,7 @@ export default async function DocumentosPage({
 
   return (
     <div>
+      <Breadcrumbs items={[{ label: "Documentos" }]} />
       <Topbar
         title="Documentos"
         actions={
