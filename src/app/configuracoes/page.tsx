@@ -190,7 +190,7 @@ export default function ConfiguracoesPage() {
               <div>
                 <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">CEP</label>
                 <div className="flex gap-2">
-                  <input value={form.cep} onChange={(e) => setField("cep", e.target.value)} className="flex-1 rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+                  <input value={form.cep} onChange={(e) => setField("cep", e.target.value)} className="w-28 rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
                   <button type="button" onClick={buscarCEP} className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg bg-[var(--color-brand-500)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] whitespace-nowrap">
                     <Search size={14} />
                     Buscar
