@@ -50,9 +50,8 @@ export async function GET(
   const zipBuffer = zip.generate({ type: "nodebuffer" });
 
   const safeName = cliente.apelido.replace(/\s+/g, "_");
-  return new NextResponse(new Uint8Array(zipBuffer), {
+  return new NextResponse(new Blob([zipBuffer], { type: "application/zip" }), {
     headers: {
-      "Content-Type": "application/zip",
       "Content-Disposition": `attachment; filename="${safeName}_documentos.zip"`,
     },
   });
