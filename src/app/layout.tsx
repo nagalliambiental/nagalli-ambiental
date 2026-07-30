@@ -3,6 +3,7 @@ import { Inter, Sora } from "next/font/google";
 import { AppChrome } from "@/components/AppChrome";
 import SessionProvider from "@/components/SessionProvider";
 import { ToastProvider } from "@/components/Toast";
+import { SyncStatusBar } from "@/lib/tauri/SyncStatusBar";
 import "./globals.css";
 
 const inter = Inter({
@@ -33,6 +34,7 @@ export default function RootLayout({
           <AppChrome>
             <ToastProvider>{children}</ToastProvider>
           </AppChrome>
+          <SyncStatusBar />
         </SessionProvider>
       </body>
     </html>

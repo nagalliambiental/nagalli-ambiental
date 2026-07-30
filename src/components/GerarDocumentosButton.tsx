@@ -69,7 +69,7 @@ export function GerarDocumentosButton({ empreendimentoMode = false }: Props) {
   function handleConfirm() {
     if (!selectedTemplate || !selectedId) return;
     if (empreendimentoMode) {
-      const emp = options.find((o: EmpreendimentoOption) => o.id === selectedId) as EmpreendimentoOption | undefined;
+      const emp = (options as EmpreendimentoOption[]).find((o) => o.id === selectedId);
       if (emp) {
         window.open(`/clientes/${emp.clienteId}/gerar/${selectedTemplate}`, "_blank");
       }
