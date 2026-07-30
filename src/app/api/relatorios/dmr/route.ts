@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+export const dynamic = "force-static";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);

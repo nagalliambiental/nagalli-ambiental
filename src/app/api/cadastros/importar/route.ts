@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import type { Prisma } from "@prisma/client";
 import * as XLSX from "xlsx";
+export const dynamic = "force-static";
 
 export async function POST(req: NextRequest) {
   const session = await auth();

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { readFile } from "fs/promises";
 import path from "path";
 import PizZip from "pizzip";
+export const dynamic = "force-static";
 
 export async function GET(
   _request: Request,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+export const dynamic = "force-static";
 
 const CAMPOS = ["t1Dmr", "t1Mtr", "t2Dmr", "t2Mtr", "t3Dmr", "t3Mtr", "t4Dmr", "t4Mtr"] as const;
 

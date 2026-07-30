@@ -5,6 +5,7 @@ import { buildDocxData as buildPinhais, renderDocx as renderPinhais } from "@/li
 import { buildDocxData as buildCuritiba, renderDocx as renderCuritiba } from "@/lib/templates/pgrs-curitiba/generate";
 import { PgrsPinhaisFormData } from "@/lib/templates/pgrs-pinhais/config";
 import { PgrsCuritibaFormData } from "@/lib/templates/pgrs-curitiba/config";
+export const dynamic = "force-static";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
