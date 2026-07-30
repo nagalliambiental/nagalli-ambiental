@@ -35,11 +35,18 @@ jobs:
         shell: pwsh
         run: |
           if ("${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}" -eq "") {
-            npm exec -- tauri sign generate --ci
-            $pub = Get-Content "src-tauri/pubkey.pem" -Raw
-            $priv = Get-Content "src-tauri/privatekey.pem" -Raw
-            Add-Content -Path $env:GITHUB_ENV -Value "TAURI_SIGNING_PRIVATE_KEY=$priv"
-            Add-Content -Path $env:GITHUB_ENV -Value "TAURI_SIGNING_PUB_KEY=$pub"
+            npm exec -- tauri signer generate --ci --force
+            if (Test-Path "src-tauri/pubkey.pem") {
+              $pub = Get-Content "src-tauri/pubkey.pem" -Raw
+              $priv = Get-Content "keys/nagalli-ambiental.key" -Raw
+              Add-Content -Path $env:GITHUB_ENV -Value "TAURI_SIGNING_PRIVATE_KEY=$priv"
+              Add-Content -Path $env:GITHUB_ENV -Value "TAURI_SIGNING_PUB_KEY=$pub"
+            } elseif (Test-Path "pubkey.pem") {
+              $pub = Get-Content "pubkey.pem" -Raw
+              $priv = Get-Content "privatekey.pem" -Raw
+              Add-Content -Path $env:GITHUB_ENV -Value "TAURI_SIGNING_PRIVATE_KEY=$priv"
+              Add-Content -Path $env:GITHUB_ENV -Value "TAURI_SIGNING_PUB_KEY=$pub"
+            }
           }
 
       - name: Update tauri.conf.json with pubkey
@@ -48,8 +55,6 @@ jobs:
           $pub = if ("${{ secrets.TAURI_SIGNING_PUB_KEY }}" -ne "") { "${{ secrets.TAURI_SIGNING_PUB_KEY }}" } else { $env:TAURI_SIGNING_PUB_KEY }
           if ($pub) {
             (Get-Content "src-tauri/tauri.conf.json") -replace '"pubkey": ".*"', "`"pubkey`": `"$pub`"" | Set-Content "src-tauri/tauri.conf.json"
-          } else {
-            (Get-Content "src-tauri/tauri.conf.json") -replace '"pubkey": ".*"', '"pubkey": ""' | Set-Content "src-tauri/tauri.conf.json"
           }
 
       - name: Build Tauri app
