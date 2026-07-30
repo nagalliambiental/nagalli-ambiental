@@ -331,10 +331,12 @@ export function ClienteDetailClient({
                   <span className="text-[var(--color-ink-600)]">Empreendimentos</span>
                   <span className="font-semibold text-[var(--color-ink-900)]">{cliente.empreendimentos.length}</span>
                 </Link>
-                <Link href={`/financeiro?clienteId=${cliente.id}`} className="flex items-center justify-between rounded-lg border border-[var(--color-paper-200)] px-3 py-2 hover:bg-[var(--color-paper-100)]">
-                  <span className="text-[var(--color-ink-600)]">Financeiro</span>
-                  <span className="font-semibold text-[var(--color-ink-900)]">{cliente.financeiros.length}</span>
-                </Link>
+                {podeVerFinanceiro && (
+                  <Link href={`/financeiro?clienteId=${cliente.id}`} className="flex items-center justify-between rounded-lg border border-[var(--color-paper-200)] px-3 py-2 hover:bg-[var(--color-paper-100)]">
+                    <span className="text-[var(--color-ink-600)]">Financeiro</span>
+                    <span className="font-semibold text-[var(--color-ink-900)]">{cliente.financeiros.length}</span>
+                  </Link>
+                )}
               </div>
             </div>
           </div>
