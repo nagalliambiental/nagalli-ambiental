@@ -65,7 +65,7 @@ export async function GET() {
   }
 
   const pdfBytes = await pdf.save();
-  return new NextResponse(pdfBytes, {
+  return new NextResponse(new Uint8Array(pdfBytes), {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename="relatorio-clientes.pdf"`,

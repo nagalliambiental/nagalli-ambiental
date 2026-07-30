@@ -96,7 +96,7 @@ export async function GET(request: Request) {
   page.drawText(`Total pendente: ${totalPendente.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`, { x: margin, y, size: 10, font: bold });
 
   const pdfBytes = await pdf.save();
-  return new NextResponse(pdfBytes, {
+  return new NextResponse(new Uint8Array(pdfBytes), {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename="relatorio-financeiro.pdf"`,

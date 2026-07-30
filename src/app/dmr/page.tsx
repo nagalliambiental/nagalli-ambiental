@@ -258,13 +258,13 @@ export default function DmrPage() {
             <table className="w-full table-fixed text-sm">
               <colgroup>
                 <col className="w-[3%]" />
-                <col className="w-[19%]" />
-                <col className="w-[19%]" />
-                <col className="w-[13%]" />
-                <col className="w-[13%]" />
-                <col className="w-[13%]" />
-                <col className="w-[13%]" />
-                <col className="w-[7%]" />
+                <col className="w-[22%]" />
+                <col className="w-[22%]" />
+                <col className="w-[11%]" />
+                <col className="w-[11%]" />
+                <col className="w-[11%]" />
+                <col className="w-[11%]" />
+                <col className="w-[9%]" />
               </colgroup>
               <thead>
                 <tr className="border-b border-[var(--color-paper-200)] text-[var(--color-ink-500)]">
@@ -301,33 +301,37 @@ export default function DmrPage() {
                     <td className="p-2 truncate font-medium text-[var(--color-ink-900)]" title={r.empreendimento.apelido}>
                       {r.empreendimento.apelido}
                     </td>
-                    {trimestres.map((t) => {
+                      {trimestres.map((t) => {
                       const campoDmr = `${t.key}Dmr` as keyof typeof r;
                       const campoMtr = `${t.key}Mtr` as keyof typeof r;
+                      const dmrVal = (r[campoDmr] as string) || "";
+                      const mtrVal = (r[campoMtr] as string) || "";
+                      const ambosOk = dmrVal === "OK" && mtrVal === "OK";
+                      const algumPendente = dmrVal === "Pendente" || mtrVal === "Pendente";
+                      const combined = ambosOk ? "OK" : algumPendente ? "Pendente" : "";
+
+                      async function alterar(valor: string) {
+                        await atualizarStatus(r.id, campoDmr as string, valor);
+                        await atualizarStatus(r.id, campoMtr as string, valor);
+                      }
+
                       return (
                         <td key={t.key} className="p-1.5 text-center">
-                          <div className="inline-flex items-center gap-1">
+                          <div className="flex flex-col items-center gap-0.5">
                             <select
-                              value={r[campoDmr] as string}
-                              onChange={(e) => atualizarStatus(r.id, campoDmr as string, e.target.value)}
-                              className="w-20 rounded border border-[var(--color-paper-200)] bg-white px-1 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-500)]"
-                              title={`DMR ${t.label}`}
+                              value={combined}
+                              onChange={(e) => alterar(e.target.value)}
+                              className={`w-full max-w-[90px] rounded border px-1 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-500)] ${
+                                ambosOk ? "border-green-300 bg-green-50" : algumPendente ? "border-amber-300 bg-amber-50" : "border-[var(--color-paper-200)] bg-white"
+                              }`}
                             >
                               {STATUS_OPTIONS.map((opt) => (
                                 <option key={opt.value} value={opt.value}>{opt.label}</option>
                               ))}
                             </select>
-                            <span className="text-[var(--color-ink-300)] text-xs">/</span>
-                            <select
-                              value={r[campoMtr] as string}
-                              onChange={(e) => atualizarStatus(r.id, campoMtr as string, e.target.value)}
-                              className="w-20 rounded border border-[var(--color-paper-200)] bg-white px-1 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-500)]"
-                              title={`MTR ${t.label}`}
-                            >
-                              {STATUS_OPTIONS.map((opt) => (
-                                <option key={opt.value} value={opt.value}>{opt.label}</option>
-                              ))}
-                            </select>
+                            <span className="text-[10px] text-[var(--color-ink-400)]">
+                              {dmrVal || "—"}/{mtrVal || "—"}
+                            </span>
                           </div>
                         </td>
                       );
