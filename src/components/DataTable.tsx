@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { Trash2, ToggleLeft, ToggleRight } from "lucide-react";
 
 export interface Column<T extends { id: number }> {
@@ -17,6 +17,7 @@ interface DataTableProps<T extends { id: number }> {
   emptyMessage?: string;
   searchQuery?: string | null;
   extraBulkActions?: React.ReactNode;
+  extraRow?: (item: T) => React.ReactNode;
 }
 
 export function DataTable<T extends { id: number }>({
@@ -26,6 +27,7 @@ export function DataTable<T extends { id: number }>({
   emptyMessage = "Nenhum registro encontrado",
   searchQuery,
   extraBulkActions,
+  extraRow,
 }: DataTableProps<T>) {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
@@ -127,7 +129,8 @@ export function DataTable<T extends { id: number }>({
           </thead>
           <tbody>
             {data.map((item) => (
-              <tr key={item.id} className="border-t border-[var(--color-paper-200)] text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]">
+              <React.Fragment key={item.id}>
+              <tr className="border-t border-[var(--color-paper-200)] text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]">
                 <td className="p-4 text-center">
                   <input
                     type="checkbox"
@@ -141,9 +144,11 @@ export function DataTable<T extends { id: number }>({
                     {col.render(item)}
                   </td>
                 ))}
-              </tr>
-            ))}
-          </tbody>
+                </tr>
+                {extraRow?.(item)}
+              </React.Fragment>
+              ))}
+            </tbody>
         </table>
       ) : (
         <div className="flex flex-col items-center gap-3 py-12 text-[var(--color-ink-500)]">

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Topbar } from "@/components/Topbar";
 import { Plus } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
+import { ImportCard } from "@/components/ImportCard";
 import { ClientesTable } from "@/components/tables/ClientesTable";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +28,10 @@ export default async function ClientesPage({
 
   const clientes = await prisma.cliente.findMany({
     where,
-    include: { _count: { select: { empreendimentos: true } } },
+    include: {
+      _count: { select: { empreendimentos: true } },
+      empreendimentos: { select: { id: true, apelido: true }, orderBy: { apelido: "asc" } },
+    },
     orderBy: { apelido: "asc" },
   });
 
@@ -47,6 +51,13 @@ export default async function ClientesPage({
             </Link>
           </div>
         }
+      />
+
+      <ImportCard
+        importEndpoint="/api/cadastros/importar"
+        exportEndpoint="/api/cadastros/exportar"
+        modelEndpoint="/api/cadastros/modelo"
+        title="Importar / Exportar cadastros"
       />
 
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">

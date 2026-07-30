@@ -16,15 +16,21 @@ import {
 
 export type NavItem = {
   label: string;
-  href: string;
+  href?: string;
   icon: LucideIcon;
   adminOnly?: boolean;
+  children?: { label: string; href: string }[];
 };
 
 export const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
-  { label: "Clientes", href: "/clientes", icon: Building2 },
-  { label: "Empreendimentos", href: "/empreendimentos", icon: Map },
+  {
+    label: "Cadastros", icon: Building2,
+    children: [
+      { label: "Clientes", href: "/clientes" },
+      { label: "Empreendimentos", href: "/empreendimentos" },
+    ],
+  },
   { label: "Processos", href: "/processos", icon: FileCheck2 },
   { label: "Exigências", href: "/exigencias", icon: ClipboardList },
   { label: "Documentos", href: "/documentos", icon: FileStack },

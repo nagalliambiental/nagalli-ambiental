@@ -5,18 +5,31 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { NAV_ITEMS } from "@/lib/nav-items";
 import { useSession } from "next-auth/react";
-import { Menu, X } from "lucide-react";
+import { Menu, X, ChevronDown } from "lucide-react";
 import { useState } from "react";
 
 export function MobileNav() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const [open, setOpen] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(["Cadastros"]));
   const perfil = (session?.user as Record<string, unknown>)?.perfil as string;
 
   const itensVisiveis = NAV_ITEMS.filter(
     (item) => !item.adminOnly || perfil === "socio"
   );
+
+  function toggleGroup(label: string) {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(label)) next.delete(label); else next.add(label);
+      return next;
+    });
+  }
+
+  function isActive(href: string) {
+    return href === "/" ? pathname === "/" : pathname?.startsWith(href);
+  }
 
   return (
     <div className="lg:hidden">
@@ -36,20 +49,58 @@ export function MobileNav() {
       </div>
       {open && (
         <nav className="border-b border-[var(--color-paper-200)] bg-[var(--color-paper-0)] px-4 pb-4 pt-2 space-y-1">
-          {itensVisiveis.map(({ label, href, icon: Icon }) => {
-            const active = href === "/" ? pathname === "/" : pathname?.startsWith(href);
+          {itensVisiveis.map(({ label, href, icon: Icon, children }) => {
+            if (children) {
+              const expanded = expandedGroups.has(label);
+              const groupActive = children.some((c) => isActive(c.href));
+              return (
+                <div key={label}>
+                  <button
+                    onClick={() => toggleGroup(label)}
+                    className={`focus-ring transition-brand flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium ${
+                      groupActive
+                        ? "bg-[var(--color-brand-50)] text-[var(--color-brand-700)]"
+                        : "text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]"
+                    }`}
+                  >
+                    <Icon size={18} strokeWidth={2} className={groupActive ? "text-[var(--color-brand-600)]" : "text-[var(--color-ink-500)]"} />
+                    {label}
+                    <ChevronDown size={14} className={`ml-auto transition-transform ${expanded ? "rotate-0" : "-rotate-90"}`} />
+                  </button>
+                  {expanded && (
+                    <div className="ml-3 mt-1 space-y-0.5 border-l border-[var(--color-paper-200)] pl-3">
+                      {children.map((child) => (
+                        <Link
+                          key={child.href}
+                          href={child.href}
+                          onClick={() => setOpen(false)}
+                          className={`focus-ring transition-brand flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium ${
+                            isActive(child.href)
+                              ? "bg-[var(--color-brand-50)] text-[var(--color-brand-700)]"
+                              : "text-[var(--color-ink-600)] hover:bg-[var(--color-paper-100)]"
+                          }`}
+                        >
+                          {child.label}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
             return (
               <Link
                 key={href}
-                href={href}
+                href={href!}
                 onClick={() => setOpen(false)}
                 className={`focus-ring transition-brand flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium ${
-                  active
+                  isActive(href!)
                     ? "bg-[var(--color-brand-50)] text-[var(--color-brand-700)]"
                     : "text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]"
                 }`}
               >
-                <Icon size={18} strokeWidth={2} className={active ? "text-[var(--color-brand-600)]" : "text-[var(--color-ink-500)]"} />
+                <Icon size={18} strokeWidth={2} className={isActive(href!) ? "text-[var(--color-brand-600)]" : "text-[var(--color-ink-500)]"} />
                 {label}
               </Link>
             );

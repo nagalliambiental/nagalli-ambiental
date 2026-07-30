@@ -3,19 +3,33 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Plus } from "lucide-react";
+import { Plus, ChevronDown } from "lucide-react";
 import { NAV_ITEMS } from "@/lib/nav-items";
 import { UserMenu } from "@/components/UserMenu";
 import { useSession } from "next-auth/react";
+import { useState } from "react";
 
 export default function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const perfil = (session?.user as Record<string, unknown>)?.perfil as string;
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(["Cadastros"]));
 
   const itensVisiveis = NAV_ITEMS.filter(
     (item) => !item.adminOnly || perfil === "socio"
   );
+
+  function toggleGroup(label: string) {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(label)) next.delete(label); else next.add(label);
+      return next;
+    });
+  }
+
+  function isChildActive(href: string) {
+    return href === "/" ? pathname === "/" : pathname?.startsWith(href);
+  }
 
   return (
     <aside
@@ -44,12 +58,53 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1 space-y-1 px-4 py-6 overflow-y-auto">
-        {itensVisiveis.map(({ label, href, icon: Icon }) => {
-          const active = href === "/" ? pathname === "/" : pathname?.startsWith(href);
+        {itensVisiveis.map(({ label, href, icon: Icon, children }) => {
+          if (children) {
+            const expanded = expandedGroups.has(label);
+            const groupActive = children.some((c) => isChildActive(c.href));
+            return (
+              <div key={label}>
+                <button
+                  onClick={() => toggleGroup(label)}
+                  className={`focus-ring transition-brand group relative flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium ${
+                    groupActive
+                      ? "bg-[var(--color-brand-50)] text-[var(--color-brand-700)]"
+                      : "text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]"
+                  }`}
+                >
+                  <Icon size={18} strokeWidth={2} className={groupActive ? "text-[var(--color-brand-600)]" : "text-[var(--color-ink-500)]"} />
+                  {label}
+                  <ChevronDown size={14} className={`ml-auto transition-transform ${expanded ? "rotate-0" : "-rotate-90"}`} />
+                </button>
+                {expanded && (
+                  <div className="ml-3 mt-1 space-y-0.5 border-l border-[var(--color-paper-200)] pl-3">
+                    {children.map((child) => {
+                      const active = isChildActive(child.href);
+                      return (
+                        <Link
+                          key={child.href}
+                          href={child.href}
+                          className={`focus-ring transition-brand flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium ${
+                            active
+                              ? "bg-[var(--color-brand-50)] text-[var(--color-brand-700)]"
+                              : "text-[var(--color-ink-600)] hover:bg-[var(--color-paper-100)]"
+                          }`}
+                        >
+                          {child.label}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          const active = isChildActive(href!);
           return (
             <Link
               key={href}
-              href={href}
+              href={href!}
               className={`focus-ring transition-brand group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium ${
                 active
                   ? "bg-[var(--color-brand-50)] text-[var(--color-brand-700)]"
@@ -59,11 +114,7 @@ export default function Sidebar() {
               {active && (
                 <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-[var(--color-brand-500)]" />
               )}
-              <Icon
-                size={18}
-                strokeWidth={2}
-                className={active ? "text-[var(--color-brand-600)]" : "text-[var(--color-ink-500)]"}
-              />
+              <Icon size={18} strokeWidth={2} className={active ? "text-[var(--color-brand-600)]" : "text-[var(--color-ink-500)]"} />
               {label}
             </Link>
           );
