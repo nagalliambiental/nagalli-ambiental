@@ -13,7 +13,7 @@
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
     "export": "next build && next export",
-    "gen-tauri-dist": "node scripts/gen-tauri-dist.js"
+    "gen-tauri-dist": "node scripts/gen-tauri-dist.js && node scripts/gen-icons.js"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
