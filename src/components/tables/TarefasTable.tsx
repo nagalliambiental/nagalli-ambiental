@@ -2,6 +2,7 @@
 
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import Link from "next/link";
 import { DataTable, type Column } from "@/components/DataTable";
 import RowActions from "@/components/RowActions";
 
@@ -30,7 +31,7 @@ const prioridadeColors: Record<string, string> = {
 
 export function TarefasTable({ data }: { data: TarefaData[] }) {
   const columns: Column<TarefaData>[] = [
-    { header: "Título", sortable: true, sortKey: "titulo", className: "max-w-xs truncate", render: (t) => <span className="font-medium text-[var(--color-ink-900)]">{t.titulo}</span> },
+    { header: "Título", sortable: true, sortKey: "titulo", className: "max-w-xs truncate", render: (t) => <Link href={`/tarefas/${t.id}`} className="font-medium text-[var(--color-ink-900)] hover:text-[var(--color-brand-600)] hover:underline">{t.titulo}</Link> },
     {
       header: "Prioridade",
       sortable: true, sortKey: "prioridade",

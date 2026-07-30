@@ -35,7 +35,7 @@ export default async function ProcessosPage({
     where,
     include: {
       orgao: { select: { sigla: true } },
-      empreendimento: { select: { apelido: true } },
+      empreendimento: { select: { id: true, apelido: true } },
     },
     orderBy: { criadoEm: "desc" },
   });

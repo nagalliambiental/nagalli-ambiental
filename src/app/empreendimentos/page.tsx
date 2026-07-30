@@ -31,7 +31,7 @@ export default async function EmpreendimentosPage({
   const empreendimentos = await prisma.empreendimento.findMany({
     where,
     include: {
-      cliente: { select: { apelido: true } },
+      cliente: { select: { id: true, apelido: true } },
       _count: { select: { processos: true } },
     },
     orderBy: { apelido: "asc" },

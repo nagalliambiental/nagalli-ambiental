@@ -32,7 +32,7 @@ export function ClientesTable({ data, q }: { data: ClienteData[]; q?: string | n
           >
             {expandedId === c.id ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
           </button>
-          <span className="font-medium text-[var(--color-ink-900)]">{c.apelido}</span>
+          <Link href={`/clientes/${c.id}`} className="font-medium text-[var(--color-ink-900)] hover:text-[var(--color-brand-600)] hover:underline">{c.apelido}</Link>
         </div>
       ),
     },

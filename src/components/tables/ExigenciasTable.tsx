@@ -2,6 +2,7 @@
 
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import Link from "next/link";
 import { DataTable, type Column } from "@/components/DataTable";
 import RowActions from "@/components/RowActions";
 import { Check, AlertTriangle } from "lucide-react";
@@ -12,6 +13,7 @@ interface ExigenciaData {
   cumprida: boolean;
   prazo: Date;
   processo: {
+    id: number;
     numProtocolo: string;
     orgao: { sigla: string };
     empreendimento: { apelido: string };
@@ -20,8 +22,8 @@ interface ExigenciaData {
 
 export function ExigenciasTable({ data }: { data: ExigenciaData[] }) {
   const columns: Column<ExigenciaData>[] = [
-    { header: "Descrição", sortable: true, sortKey: "descricao", className: "max-w-xs truncate", render: (e) => <span className="font-medium text-[var(--color-ink-900)]">{e.descricao}</span> },
-    { header: "Processo", render: (e) => <span className="font-mono text-sm">{e.processo.numProtocolo}</span> },
+    { header: "Descrição", sortable: true, sortKey: "descricao", className: "max-w-xs truncate", render: (e) => <Link href={`/exigencias/${e.id}`} className="font-medium text-[var(--color-ink-900)] hover:text-[var(--color-brand-600)] hover:underline">{e.descricao}</Link> },
+    { header: "Processo", render: (e) => <Link href={`/processos/${e.processo.id}`} className="font-mono text-sm text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)] hover:underline">{e.processo.numProtocolo}</Link> },
     { header: "Órgão", render: (e) => e.processo.orgao.sigla },
     { header: "Empreendimento", render: (e) => e.processo.empreendimento.apelido },
     {

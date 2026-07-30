@@ -22,7 +22,7 @@ export default async function FinanceiroPage({
   const session = await auth();
   if (!session?.user) redirect("/login");
   const perfil = (session.user as { perfil?: string }).perfil;
-  if (perfil !== "socio") redirect("/");
+  if (perfil !== "socio" && perfil !== "admin") redirect("/");
 
   const where: Prisma.FinanceiroWhereInput = {};
   if (q) {
@@ -35,7 +35,7 @@ export default async function FinanceiroPage({
   const registros = await prisma.financeiro.findMany({
     where,
     include: {
-      cliente: { select: { apelido: true } },
+      cliente: { select: { id: true, apelido: true } },
     },
     orderBy: { criadoEm: "desc" },
   });

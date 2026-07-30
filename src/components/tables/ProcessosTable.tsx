@@ -2,6 +2,7 @@
 
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import Link from "next/link";
 import { DataTable, type Column } from "@/components/DataTable";
 import RowActions from "@/components/RowActions";
 
@@ -12,7 +13,7 @@ interface ProcessoData {
   status: string;
   validade: Date | null;
   orgao: { sigla: string };
-  empreendimento: { apelido: string };
+  empreendimento: { id: number; apelido: string };
 }
 
 const statusLabels: Record<string, string> = {
@@ -29,10 +30,10 @@ const statusColors: Record<string, string> = {
 
 export function ProcessosTable({ data, q, status }: { data: ProcessoData[]; q?: string | null; status?: string | null }) {
   const columns: Column<ProcessoData>[] = [
-    { header: "Protocolo", sortable: true, sortKey: "numProtocolo", render: (p) => <span className="font-mono text-sm">{p.numProtocolo}</span> },
+    { header: "Protocolo", sortable: true, sortKey: "numProtocolo", render: (p) => <Link href={`/processos/${p.id}`} className="font-mono text-sm text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)] hover:underline">{p.numProtocolo}</Link> },
     { header: "Tipo", sortable: true, sortKey: "tipo", render: (p) => p.tipo },
     { header: "Órgão", render: (p) => <span className="font-medium text-[var(--color-ink-900)]">{p.orgao.sigla}</span> },
-    { header: "Empreendimento", render: (p) => p.empreendimento.apelido },
+    { header: "Empreendimento", render: (p) => <Link href={`/empreendimentos/${p.empreendimento.id}`} className="hover:text-[var(--color-brand-600)] hover:underline">{p.empreendimento.apelido}</Link> },
     {
       header: "Status",
       sortable: true, sortKey: "status",

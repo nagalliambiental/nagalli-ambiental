@@ -27,6 +27,7 @@ export default async function ExigenciasPage({
     include: {
       processo: {
         select: {
+          id: true,
           numProtocolo: true,
           orgao: { select: { sigla: true } },
           empreendimento: { select: { apelido: true } },
