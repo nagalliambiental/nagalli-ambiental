@@ -137,6 +137,19 @@ fn force_push_all(state: State<AppState>, api_url: String, token: String) -> Res
     rt.block_on(sync.sync_all(&api_url, &token)).map(|_| "Sincronizado com sucesso".into())
 }
 
+#[tauri::command]
+async fn check_update(app: tauri::AppHandle) -> Result<Option<String>, String> {
+    let updater = app.updater().map_err(|e| e.to_string())?;
+    let update = updater.check().await.map_err(|e| e.to_string())?;
+    if update.is_update_available() {
+        let version = update.latest_version().to_string();
+        update.download_and_install().await.map_err(|e| e.to_string())?;
+        Ok(Some(version))
+    } else {
+        Ok(None)
+    }
+}
+
 pub fn run() {
     env_logger::init();
 
@@ -145,6 +158,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
             let app_dir = app.path().app_data_dir().expect("failed to get app data dir");
             std::fs::create_dir_all(&app_dir).ok();
@@ -175,6 +189,7 @@ pub fn run() {
             save_financeiro,
             is_online,
             force_push_all,
+            check_update,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

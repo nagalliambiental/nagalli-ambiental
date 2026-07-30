@@ -35,6 +35,15 @@ export async function forcePushAll(apiUrl: string, token: string): Promise<strin
   return invoke<string>("force_push_all", { apiUrl, token });
 }
 
+export async function checkForUpdates(): Promise<string | null> {
+  if (!isTauri()) return null;
+  try {
+    return await invoke<string | null>("check_update");
+  } catch {
+    return null;
+  }
+}
+
 // ── Cliente ─────────────────────────────────────────────────────
 
 function mapCliente(row: any) {
