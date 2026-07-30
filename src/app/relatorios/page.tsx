@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Topbar } from "@/components/Topbar";
+import { useSession } from "next-auth/react";
 import { FileSpreadsheet, DollarSign, Building2, FileCheck2, Download, Loader2 } from "lucide-react";
 
 const currentYear = new Date().getFullYear();
@@ -47,6 +48,10 @@ function Card({ icon: Icon, title, description, children }: { icon: React.Elemen
 }
 
 export default function RelatoriosPage() {
+  const { data: session } = useSession();
+  const perfil = (session?.user as { perfil?: string })?.perfil;
+  const podeVerFinanceiro = perfil === "socio" || perfil === "admin";
+
   const [ano, setAno] = useState(currentYear);
   const [finStatus, setFinStatus] = useState("");
   const [procStatus, setProcStatus] = useState("");
@@ -77,7 +82,7 @@ export default function RelatoriosPage() {
           </button>
         </Card>
 
-        <Card icon={DollarSign} title="Relatório Financeiro" description="Registros financeiros com totais">
+        {podeVerFinanceiro && <Card icon={DollarSign} title="Relatório Financeiro" description="Registros financeiros com totais">
           <div className="mb-4">
             <label className="block text-xs font-medium text-[var(--color-ink-500)] mb-1">Status</label>
             <select value={finStatus} onChange={(e) => setFinStatus(e.target.value)}
@@ -96,7 +101,7 @@ export default function RelatoriosPage() {
             {financeiro.loading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
             {financeiro.loading ? "Gerando..." : "Baixar PDF"}
           </button>
-        </Card>
+        </Card>}
 
         <Card icon={FileCheck2} title="Relatório de Processos" description="Lista de processos com status e prazos">
           <div className="mb-4">
