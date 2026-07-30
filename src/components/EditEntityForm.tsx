@@ -271,7 +271,7 @@ export default function EditEntityForm({
             </button>
             <button
               type="button"
-              onClick={() => router.push(redirectTo)}
+            onClick={() => router.back()}
               className="focus-ring transition-brand rounded-lg border border-[var(--color-paper-200)] bg-white px-6 py-2.5 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]"
             >
               Cancelar

@@ -4,10 +4,11 @@ import { auth } from "@/lib/auth";
 import { Topbar } from "@/components/Topbar";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Map, MapPin, Building2, Calendar, FileText } from "lucide-react";
+import { Map, MapPin, Building2, Calendar, FileText, ClipboardList } from "lucide-react";
 import Link from "next/link";
 import EntityActions from "@/components/EntityActions";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { HistoricoTab } from "@/components/HistoricoTab";
 
 export const dynamic = "force-dynamic";
 
@@ -149,6 +150,14 @@ export default async function EmpreendimentoDetailPage(props: { params: Promise<
             }}
           />
         </div>
+      </div>
+
+      <div className="mt-8">
+        <div className="flex items-center gap-2 mb-4">
+          <ClipboardList size={20} className="text-[var(--color-brand-500)]" />
+          <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Histórico</h2>
+        </div>
+        <HistoricoTab empreendimentoId={emp.id} />
       </div>
     </div>
   );

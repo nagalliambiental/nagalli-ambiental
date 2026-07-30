@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Topbar } from "@/components/Topbar";
@@ -9,12 +9,14 @@ import { ptBR } from "date-fns/locale";
 import {
   Building2, Mail, Phone, User, FileText, MapPin, Map, Globe, FileSpreadsheet,
   Edit3, Trash2, Plus, ExternalLink, CheckCircle2, Clock, AlertTriangle,
-  Loader2, X, AlertCircle, Upload, Download, FolderArchive, ArrowLeft
+  Loader2, X, AlertCircle, Upload, Download, FolderArchive, ArrowLeft, ChevronDown as ChevronDownIcon
 } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/components/Toast";
+import { TEMPLATES } from "@/lib/templates";
+import { HistoricoTab } from "@/components/HistoricoTab";
 
-type Tab = "info" | "empreendimentos" | "documentos" | "financeiro";
+type Tab = "info" | "empreendimentos" | "documentos" | "financeiro" | "historico";
 
 interface ClienteData {
   id: number;
@@ -109,6 +111,8 @@ export function ClienteDetailClient({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [gerarOpen, setGerarOpen] = useState(false);
+  const gerarRef = useRef<HTMLDivElement>(null);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadNome, setUploadNome] = useState("");
   const [uploadTipo, setUploadTipo] = useState("anexo");
@@ -155,6 +159,16 @@ export function ClienteDetailClient({
     }
   }
 
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (gerarRef.current && !gerarRef.current.contains(e.target as Node)) {
+        setGerarOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   async function handleExportZip() {
     setExporting(true);
     try {
@@ -177,6 +191,7 @@ export function ClienteDetailClient({
     { key: "info", label: "Informações" },
     { key: "empreendimentos", label: "Empreendimentos", count: cliente.empreendimentos.length },
     { key: "documentos", label: "Documentos", count: cliente.documentosGerados.length + documentos.length },
+    { key: "historico", label: "Histórico" },
   ];
   if (podeVerFinanceiro) {
     tabs.push({ key: "financeiro", label: "Financeiro", count: cliente.financeiros.length });
@@ -202,6 +217,32 @@ export function ClienteDetailClient({
               <Edit3 size={14} />
               Editar
             </Link>
+            <div ref={gerarRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setGerarOpen(!gerarOpen)}
+                className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg bg-[var(--color-brand-500)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)]"
+              >
+                <FileText size={14} />
+                Gerar
+                <ChevronDownIcon size={12} />
+              </button>
+              {gerarOpen && (
+                <div className="absolute right-0 top-full z-50 mt-1 w-64 rounded-lg border border-[var(--color-paper-200)] bg-white py-1 shadow-lg">
+                  {TEMPLATES.map((t) => (
+                    <Link
+                      key={t.slug}
+                      href={`/clientes/${id}/gerar/${t.slug}`}
+                      onClick={() => setGerarOpen(false)}
+                      className="flex items-center gap-2 px-4 py-2 text-sm text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]"
+                    >
+                      <FileText size={14} className="text-[var(--color-brand-500)]" />
+                      <span>{t.nome}</span>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
             <button
               type="button"
               onClick={() => setConfirmDelete(true)}
@@ -343,6 +384,21 @@ export function ClienteDetailClient({
                     <span className="font-semibold text-[var(--color-ink-900)]">{cliente.financeiros.length}</span>
                   </Link>
                 )}
+              </div>
+            </div>
+            <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
+              <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-3">Gerar Documentos</h2>
+              <div className="space-y-2">
+                {TEMPLATES.map((t) => (
+                  <Link
+                    key={t.slug}
+                    href={`/clientes/${id}/gerar/${t.slug}`}
+                    className="flex items-center gap-2 rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]"
+                  >
+                    <FileText size={14} className="text-[var(--color-brand-500)]" />
+                    <span>{t.nome}</span>
+                  </Link>
+                ))}
               </div>
             </div>
           </div>
@@ -554,6 +610,10 @@ export function ClienteDetailClient({
             </div>
           )}
         </div>
+      )}
+
+      {tab === "historico" && (
+        <HistoricoTab clienteId={cliente.id} />
       )}
 
       {tab === "financeiro" && (

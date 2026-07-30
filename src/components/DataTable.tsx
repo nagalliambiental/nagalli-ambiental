@@ -19,7 +19,7 @@ interface DataTableProps<T extends { id: number }> {
   endpoint: string;
   emptyMessage?: string;
   searchQuery?: string | null;
-  extraBulkActions?: React.ReactNode;
+  extraBulkActions?: React.ReactNode | ((selectedIds: number[]) => React.ReactNode);
   extraRow?: (item: T) => React.ReactNode;
   pageSize?: number;
 }
@@ -101,7 +101,7 @@ export function DataTable<T extends { id: number }>({
         <div className="flex items-center justify-between border-b border-[var(--color-paper-200)] bg-[var(--color-paper-50)] px-4 py-2">
           <span className="text-sm text-[var(--color-ink-500)]">{selectedIds.size} selecionado(s)</span>
           <div className="flex items-center gap-2">
-            {extraBulkActions}
+            {typeof extraBulkActions === "function" ? extraBulkActions(Array.from(selectedIds)) : extraBulkActions}
             {hasAtivo && (
               <>
                 <button

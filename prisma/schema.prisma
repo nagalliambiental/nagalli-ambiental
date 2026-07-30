@@ -23,6 +23,7 @@ model Usuario {
   logs           LogAuditoria[]
   responsaveis   Responsavel[]
   alertas        Alerta[]
+  historicos     Historico[]
 }
 
 model Cliente {
@@ -97,6 +98,7 @@ model Cliente {
   empresasContratadas EmpresaContratada[]
   documentosGerados   DocumentoGerado[]
   documentos          Documento[]
+  historicos          Historico[]
 }
 
 model Empreendimento {
@@ -122,6 +124,7 @@ model Empreendimento {
   cliente   Cliente      @relation(fields: [clienteId], references: [id])
   processos Processo[]
   controleDmr ControleDmr?
+  historicos Historico[]
 }
 
 model Orgao {
@@ -393,4 +396,18 @@ model Configuracao {
   responsavelTelefone  String?
 
   atualizadoEm DateTime @updatedAt
+}
+
+model Historico {
+  id              Int      @id @default(autoincrement())
+  descricao       String
+  anexo           String?
+  clienteId       Int?
+  empreendimentoId Int?
+  usuarioId       Int?
+  criadoEm        DateTime @default(now())
+
+  cliente      Cliente?      @relation(fields: [clienteId], references: [id])
+  empreendimento Empreendimento? @relation(fields: [empreendimentoId], references: [id])
+  usuario      Usuario?      @relation(fields: [usuarioId], references: [id])
 }

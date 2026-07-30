@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { DataTable, type Column } from "@/components/DataTable";
 import RowActions from "@/components/RowActions";
-import { ChevronRight, ChevronDown, MapPin } from "lucide-react";
+import { ChevronRight, ChevronDown, MapPin, FileText, ChevronDown as ChevronDownIcon } from "lucide-react";
 import Link from "next/link";
+import { TEMPLATES } from "@/lib/templates";
 
 interface ClienteData {
   id: number;
@@ -18,6 +19,18 @@ interface ClienteData {
 
 export function ClientesTable({ data, q }: { data: ClienteData[]; q?: string | null }) {
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const columns: Column<ClienteData>[] = [
     {
@@ -51,6 +64,39 @@ export function ClientesTable({ data, q }: { data: ClienteData[]; q?: string | n
         endpoint="/api/clientes"
         searchQuery={q}
         emptyMessage="Nenhum cliente cadastrado"
+        extraBulkActions={(selectedIds) => (
+          <div ref={dropdownRef} className="relative">
+            <button
+              type="button"
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+              className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg bg-[var(--color-brand-500)] px-3 py-1.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)]"
+            >
+              <FileText size={14} />
+              Gerar Documentos
+              <ChevronDownIcon size={12} />
+            </button>
+            {dropdownOpen && (
+              <div className="absolute left-0 top-full z-50 mt-1 w-64 rounded-lg border border-[var(--color-paper-200)] bg-white py-1 shadow-lg">
+                {TEMPLATES.map((t) => (
+                  <button
+                    key={t.slug}
+                    type="button"
+                    onClick={() => {
+                      setDropdownOpen(false);
+                      for (const id of selectedIds) {
+                        window.open(`/clientes/${id}/gerar/${t.slug}`, "_blank");
+                      }
+                    }}
+                    className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]"
+                  >
+                    <FileText size={14} className="text-[var(--color-brand-500)]" />
+                    <span>{t.nome}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         extraRow={(item) =>
           expandedId === item.id && item.empreendimentos.length > 0 ? (
             <tr key={`exp-${item.id}`} className="bg-[var(--color-paper-50)]">
