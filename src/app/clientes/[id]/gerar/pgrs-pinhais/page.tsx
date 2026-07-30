@@ -1,7 +1,5 @@
 "use client";
 
-export function generateStaticParams() { return []; }
-
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { Topbar } from "@/components/Topbar";
