@@ -11,6 +11,7 @@ import {
   ClipboardList,
   FileText,
   FileSpreadsheet,
+  BarChart3,
   type LucideIcon,
 } from "lucide-react";
 
@@ -40,5 +41,6 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Prazos", href: "/prazos", icon: CalendarClock },
   { label: "Tarefas", href: "/tarefas", icon: ClipboardList },
   { label: "Usuários", href: "/usuarios", icon: Users, adminOnly: true },
+  { label: "Relatórios", href: "/relatorios", icon: BarChart3 },
   { label: "Configurações", href: "/configuracoes", icon: Settings, adminOnly: true },
 ];
