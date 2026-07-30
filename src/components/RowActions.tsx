@@ -11,9 +11,10 @@ interface RowActionsProps {
   entity: string;
   entityName: string;
   endpoint: string;
+  editUrl?: string;
 }
 
-export default function RowActions({ detailUrl, entity, entityName, endpoint }: RowActionsProps) {
+export default function RowActions({ detailUrl, entity, entityName, endpoint, editUrl }: RowActionsProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [deleting, setDeleting] = useState(false);
@@ -47,10 +48,15 @@ export default function RowActions({ detailUrl, entity, entityName, endpoint }: 
           <Eye size={14} />
           <span className="hidden sm:inline">Detalhes</span>
         </Link>
-        <Link href={`${detailUrl}/editar`} className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-[var(--color-ink-600)] hover:bg-[var(--color-paper-100)] transition-colors" title="Editar">
+        {editUrl !== undefined ? (
+          <Link href={editUrl} className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-[var(--color-ink-600)] hover:bg-[var(--color-paper-100)] transition-colors" title="Editar">
+            <Edit3 size={14} />
+            <span className="hidden sm:inline">Editar</span>
+          </Link>
+        ) : <span className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-[var(--color-ink-300)] pointer-events-none">
           <Edit3 size={14} />
           <span className="hidden sm:inline">Editar</span>
-        </Link>
+        </span>}
         <button onClick={() => setConfirmDelete(true)} className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors" title="Excluir">
           <Trash2 size={14} />
           <span className="hidden sm:inline">Excluir</span>
