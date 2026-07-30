@@ -141,13 +141,16 @@ fn force_push_all(state: State<'_, AppState>, api_url: String, token: String) ->
 #[tauri::command]
 async fn check_update(app: tauri::AppHandle) -> Result<Option<String>, String> {
     let updater = app.updater().map_err(|e| e.to_string())?;
-    let update = updater.check().await.map_err(|e| e.to_string())?;
-    if update.is_update_available() {
-        let version = update.latest_version().to_string();
-        update.download_and_install().await.map_err(|e| e.to_string())?;
-        Ok(Some(version))
-    } else {
-        Ok(None)
+    match updater.check().await.map_err(|e| e.to_string())? {
+        Some(update) => {
+            let version = update.latest_version().to_string();
+            update
+                .download_and_install(|_, _| {}, || {})
+                .await
+                .map_err(|e| e.to_string())?;
+            Ok(Some(version))
+        }
+        None => Ok(None),
     }
 }
 
