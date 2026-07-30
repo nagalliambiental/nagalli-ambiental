@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Topbar } from "@/components/Topbar";
-import { Plus, Trash2, Search, CheckCircle2, Clock, XCircle, Upload, Loader2 } from "lucide-react";
+import { Plus, Trash2, Search, Upload, Loader2 } from "lucide-react";
 import { useToast } from "@/components/Toast";
 
 interface Empreendimento {
@@ -31,13 +31,6 @@ const STATUS_OPTIONS = [
   { value: "OK", label: "OK" },
   { value: "Pendente", label: "Pendente" },
 ];
-
-function statusIcon(val: string) {
-  const s = val.trim().toLowerCase();
-  if (s === "ok") return <CheckCircle2 size={13} className="text-green-600" />;
-  if (s === "pendente") return <Clock size={13} className="text-amber-500" />;
-  return null;
-}
 
 export default function DmrPage() {
   const { toast } = useToast();

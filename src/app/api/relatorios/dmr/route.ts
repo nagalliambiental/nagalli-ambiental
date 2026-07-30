@@ -69,8 +69,8 @@ export async function GET(request: Request) {
     x += colWidths[1];
 
     for (const tri of [1, 2, 3, 4]) {
-      const dmr = (r as Record<string, string>)[`t${tri}Dmr`] || "";
-      const mtr = (r as Record<string, string>)[`t${tri}Mtr`] || "";
+      const dmr = r[`t${tri}Dmr` as keyof typeof r] as string || "";
+      const mtr = r[`t${tri}Mtr` as keyof typeof r] as string || "";
       drawCell(dmr === "OK" ? "OK" : dmr ? dmr : "—", x, colWidths[2]);
       x += colWidths[2];
       drawCell(mtr === "OK" ? "OK" : mtr ? mtr : "—", x, colWidths[2]);
