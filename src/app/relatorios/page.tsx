@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Topbar } from "@/components/Topbar";
 import { useSession } from "next-auth/react";
-import { FileSpreadsheet, DollarSign, Building2, FileCheck2, Download, Loader2 } from "lucide-react";
+import { FileSpreadsheet, DollarSign, Building2, FileCheck2, Download, Loader2, Eye } from "lucide-react";
 
 const currentYear = new Date().getFullYear();
 
@@ -28,6 +28,10 @@ function useDownload(url: string) {
   }
 
   return { download, loading };
+}
+
+function preview(url: string) {
+  window.open(url, "_blank");
 }
 
 function Card({ icon: Icon, title, description, children }: { icon: React.ElementType; title: string; description: string; children?: React.ReactNode }) {
@@ -68,26 +72,27 @@ export default function RelatoriosPage() {
         <Card icon={FileSpreadsheet} title="Relatório DMR" description="Situação DMR/MTR por empreendimento e trimestre">
           <div className="mb-4">
             <label className="block text-xs font-medium text-[var(--color-ink-500)] mb-1">Ano</label>
-            <input
-              type="number" value={ano}
-              onChange={(e) => setAno(Number(e.target.value))}
-              className="w-32 rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]"
-            />
+            <input type="number" value={ano} onChange={(e) => setAno(Number(e.target.value))}
+              className="w-32 rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
           </div>
-          <button onClick={dmr.download} disabled={dmr.loading}
-            className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
-          >
-            {dmr.loading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-            {dmr.loading ? "Gerando..." : "Baixar PDF"}
-          </button>
+          <div className="flex gap-2">
+            <button onClick={() => preview(`/api/relatorios/dmr?ano=${ano}`)}
+              className="focus-ring transition-brand flex items-center gap-2 rounded-lg border border-[var(--color-paper-200)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]">
+              <Eye size={16} /> Visualizar
+            </button>
+            <button onClick={dmr.download} disabled={dmr.loading}
+              className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">
+              {dmr.loading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+              {dmr.loading ? "Gerando..." : "Baixar PDF"}
+            </button>
+          </div>
         </Card>
 
         {podeVerFinanceiro && <Card icon={DollarSign} title="Relatório Financeiro" description="Registros financeiros com totais">
           <div className="mb-4">
             <label className="block text-xs font-medium text-[var(--color-ink-500)] mb-1">Status</label>
             <select value={finStatus} onChange={(e) => setFinStatus(e.target.value)}
-              className="w-full rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]"
-            >
+              className="w-full rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]">
               <option value="">Todos</option>
               <option value="pendente">Pendente</option>
               <option value="pago">Pago</option>
@@ -95,20 +100,24 @@ export default function RelatoriosPage() {
               <option value="cancelado">Cancelado</option>
             </select>
           </div>
-          <button onClick={financeiro.download} disabled={financeiro.loading}
-            className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
-          >
-            {financeiro.loading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-            {financeiro.loading ? "Gerando..." : "Baixar PDF"}
-          </button>
+          <div className="flex gap-2">
+            <button onClick={() => preview(`/api/relatorios/financeiro?status=${finStatus}`)}
+              className="focus-ring transition-brand flex items-center gap-2 rounded-lg border border-[var(--color-paper-200)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]">
+              <Eye size={16} /> Visualizar
+            </button>
+            <button onClick={financeiro.download} disabled={financeiro.loading}
+              className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">
+              {financeiro.loading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+              {financeiro.loading ? "Gerando..." : "Baixar PDF"}
+            </button>
+          </div>
         </Card>}
 
         <Card icon={FileCheck2} title="Relatório de Processos" description="Lista de processos com status e prazos">
           <div className="mb-4">
             <label className="block text-xs font-medium text-[var(--color-ink-500)] mb-1">Status</label>
             <select value={procStatus} onChange={(e) => setProcStatus(e.target.value)}
-              className="w-full rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]"
-            >
+              className="w-full rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]">
               <option value="">Todos</option>
               <option value="protocolado">Protocolado</option>
               <option value="em_andamento">Em Andamento</option>
@@ -118,21 +127,31 @@ export default function RelatoriosPage() {
               <option value="arquivado">Arquivado</option>
             </select>
           </div>
-          <button onClick={processos.download} disabled={processos.loading}
-            className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
-          >
-            {processos.loading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-            {processos.loading ? "Gerando..." : "Baixar PDF"}
-          </button>
+          <div className="flex gap-2">
+            <button onClick={() => preview(`/api/relatorios/processos?status=${procStatus}`)}
+              className="focus-ring transition-brand flex items-center gap-2 rounded-lg border border-[var(--color-paper-200)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]">
+              <Eye size={16} /> Visualizar
+            </button>
+            <button onClick={processos.download} disabled={processos.loading}
+              className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">
+              {processos.loading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+              {processos.loading ? "Gerando..." : "Baixar PDF"}
+            </button>
+          </div>
         </Card>
 
         <Card icon={Building2} title="Relatório de Clientes" description="Lista completa de clientes cadastrados">
-          <button onClick={clientes.download} disabled={clientes.loading}
-            className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
-          >
-            {clientes.loading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-            {clientes.loading ? "Gerando..." : "Baixar PDF"}
-          </button>
+          <div className="flex gap-2">
+            <button onClick={() => preview("/api/relatorios/clientes")}
+              className="focus-ring transition-brand flex items-center gap-2 rounded-lg border border-[var(--color-paper-200)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]">
+              <Eye size={16} /> Visualizar
+            </button>
+            <button onClick={clientes.download} disabled={clientes.loading}
+              className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">
+              {clientes.loading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+              {clientes.loading ? "Gerando..." : "Baixar PDF"}
+            </button>
+          </div>
         </Card>
       </div>
     </div>

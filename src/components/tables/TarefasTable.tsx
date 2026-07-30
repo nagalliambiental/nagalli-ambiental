@@ -16,12 +16,12 @@ interface TarefaData {
   usuario: { nome: string };
 }
 
-const statusLabels: Record<string, string> = { pendente: "Pendente", em_andamento: "Em Andamento", concluida: "Concluída", cancelada: "Cancelada" };
+const statusLabels: Record<string, string> = { pendente: "Pendente", andamento: "Em Andamento", aguardando: "Aguardando", concluido: "Concluído" };
 const statusColors: Record<string, string> = {
   pendente: "bg-[var(--color-river-100)] text-[var(--color-river-700)]",
-  em_andamento: "bg-[var(--color-brand-50)] text-[var(--color-brand-600)]",
-  concluida: "bg-[var(--color-brand-50)] text-[var(--color-brand-600)]",
-  cancelada: "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]",
+  andamento: "bg-blue-50 text-blue-600",
+  aguardando: "bg-amber-50 text-amber-700",
+  concluido: "bg-green-50 text-green-700",
 };
 const prioridadeLabels: Record<string, string> = { baixa: "Baixa", media: "Média", alta: "Alta", urgente: "Urgente" };
 const prioridadeColors: Record<string, string> = {

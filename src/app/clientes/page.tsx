@@ -7,6 +7,7 @@ import { SearchBar } from "@/components/SearchBar";
 import { ImportCard } from "@/components/ImportCard";
 import { ClientesTable } from "@/components/tables/ClientesTable";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { GerarDocumentosButton } from "@/components/GerarDocumentosButton";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +47,7 @@ export default async function ClientesPage({
         actions={
           <div className="flex items-center gap-3">
             <SearchBar placeholder="Buscar por nome, CNPJ ou email..." />
+            <GerarDocumentosButton />
             <Link
               href="/clientes/novo"
               className="focus-ring transition-brand flex items-center gap-2 rounded-[var(--radius-card)] bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)]"

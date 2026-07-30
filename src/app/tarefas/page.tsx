@@ -51,9 +51,9 @@ export default async function TarefasPage({
               paramName="status"
               options={[
                 { value: "pendente", label: "Pendente" },
-                { value: "em_andamento", label: "Em Andamento" },
-                { value: "concluida", label: "Concluída" },
-                { value: "cancelada", label: "Cancelada" },
+                { value: "andamento", label: "Em Andamento" },
+                { value: "aguardando", label: "Aguardando" },
+                { value: "concluido", label: "Concluído" },
               ]}
             />
             <Link

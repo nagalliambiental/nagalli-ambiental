@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth";
 import { Topbar } from "@/components/Topbar";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ClipboardList, User, Users, Calendar, Clock, AlertTriangle } from "lucide-react";
+import { ClipboardList, User, Users, Calendar, Clock, AlertTriangle, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import EntityActions from "@/components/EntityActions";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
@@ -13,30 +13,25 @@ export const dynamic = "force-dynamic";
 
 const statusLabels: Record<string, string> = {
   pendente: "Pendente",
-  em_andamento: "Em Andamento",
-  concluida: "Concluída",
-  cancelada: "Cancelada",
+  andamento: "Em Andamento",
+  aguardando: "Aguardando",
+  concluido: "Concluído",
 };
 
 const statusColors: Record<string, string> = {
   pendente: "bg-[var(--color-river-100)] text-[var(--color-river-700)]",
-  em_andamento: "bg-[var(--color-brand-50)] text-[var(--color-brand-600)]",
-  concluida: "bg-[var(--color-brand-50)] text-[var(--color-brand-600)]",
-  cancelada: "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]",
+  andamento: "bg-blue-50 text-blue-600",
+  aguardando: "bg-amber-50 text-amber-700",
+  concluido: "bg-green-50 text-green-700",
 };
 
 const prioridadeLabels: Record<string, string> = {
-  baixa: "Baixa",
-  media: "Média",
-  alta: "Alta",
-  urgente: "Urgente",
+  baixa: "Baixa", media: "Média", alta: "Alta", urgente: "Urgente",
 };
 
 const prioridadeColors: Record<string, string> = {
-  baixa: "text-[var(--color-ink-500)]",
-  media: "text-[var(--color-brand-600)]",
-  alta: "text-[var(--color-river-700)]",
-  urgente: "text-[var(--color-river-700)]",
+  baixa: "text-[var(--color-ink-500)]", media: "text-[var(--color-brand-600)]",
+  alta: "text-[var(--color-river-700)]", urgente: "text-[var(--color-river-700)]",
 };
 
 export async function generateMetadata() {
@@ -92,6 +87,16 @@ export default async function TarefaDetailPage(props: { params: Promise<{ id: st
               <p className="text-sm text-[var(--color-ink-700)] whitespace-pre-wrap">{tarefa.descricao}</p>
             </div>
           )}
+
+          {tarefa.statusObs && (
+            <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
+              <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-2 flex items-center gap-2">
+                <MessageSquare size={16} />
+                Observação da mudança de status
+              </h2>
+              <p className="text-sm text-[var(--color-ink-700)] whitespace-pre-wrap">{tarefa.statusObs}</p>
+            </div>
+          )}
         </div>
 
         <div className="space-y-6">
@@ -125,17 +130,16 @@ export default async function TarefaDetailPage(props: { params: Promise<{ id: st
               { name: "descricao", label: "Descrição", type: "textarea" },
               { name: "status", label: "Status", type: "select", required: true, options: [
                 { value: "pendente", label: "Pendente" },
-                { value: "em_andamento", label: "Em Andamento" },
-                { value: "concluida", label: "Concluída" },
-                { value: "cancelada", label: "Cancelada" },
+                { value: "andamento", label: "Em Andamento" },
+                { value: "aguardando", label: "Aguardando" },
+                { value: "concluido", label: "Concluído" },
               ] },
               { name: "prioridade", label: "Prioridade", type: "select", required: true, options: [
-                { value: "baixa", label: "Baixa" },
-                { value: "media", label: "Média" },
-                { value: "alta", label: "Alta" },
-                { value: "urgente", label: "Urgente" },
+                { value: "baixa", label: "Baixa" }, { value: "media", label: "Média" },
+                { value: "alta", label: "Alta" }, { value: "urgente", label: "Urgente" },
               ] },
               { name: "dataVencimento", label: "Data de Vencimento", type: "date" },
+              { name: "statusObs", label: "Observação da mudança", type: "textarea" },
             ]}
             data={{
               titulo: tarefa.titulo,
@@ -143,6 +147,7 @@ export default async function TarefaDetailPage(props: { params: Promise<{ id: st
               status: tarefa.status,
               prioridade: tarefa.prioridade,
               dataVencimento: tarefa.dataVencimento?.toISOString(),
+              statusObs: tarefa.statusObs,
             }}
           />
         </div>

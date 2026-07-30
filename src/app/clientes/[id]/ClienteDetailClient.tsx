@@ -15,8 +15,9 @@ import Link from "next/link";
 import { useToast } from "@/components/Toast";
 import { TEMPLATES } from "@/lib/templates";
 import { HistoricoTab } from "@/components/HistoricoTab";
+import { AcessosTab } from "@/components/AcessosTab";
 
-type Tab = "info" | "empreendimentos" | "documentos" | "financeiro" | "historico";
+type Tab = "info" | "empreendimentos" | "documentos" | "financeiro" | "historico" | "acessos";
 
 interface ClienteData {
   id: number;
@@ -192,6 +193,7 @@ export function ClienteDetailClient({
     { key: "empreendimentos", label: "Empreendimentos", count: cliente.empreendimentos.length },
     { key: "documentos", label: "Documentos", count: cliente.documentosGerados.length + documentos.length },
     { key: "historico", label: "Histórico" },
+    { key: "acessos", label: "Acessos" },
   ];
   if (podeVerFinanceiro) {
     tabs.push({ key: "financeiro", label: "Financeiro", count: cliente.financeiros.length });
@@ -614,6 +616,10 @@ export function ClienteDetailClient({
 
       {tab === "historico" && (
         <HistoricoTab clienteId={cliente.id} empreendimentos={cliente.empreendimentos.map((e) => ({ id: e.id, apelido: e.apelido }))} />
+      )}
+
+      {tab === "acessos" && (
+        <AcessosTab clienteId={cliente.id} empreendimentos={cliente.empreendimentos.map((e) => ({ id: e.id, apelido: e.apelido }))} />
       )}
 
       {tab === "financeiro" && (

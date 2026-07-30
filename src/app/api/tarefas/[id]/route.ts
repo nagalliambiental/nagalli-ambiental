@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { logAuditoria } from "@/lib/audit";
 
 export async function GET(
@@ -8,19 +8,14 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-  }
+  if (!session?.user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
 
   const { id } = await params;
   const tarefa = await prisma.tarefa.findUnique({
     where: { id: Number(id) },
     include: { responsavel: true, usuario: true },
   });
-
-  if (!tarefa) {
-    return NextResponse.json({ error: "Tarefa não encontrada" }, { status: 404 });
-  }
+  if (!tarefa) return NextResponse.json({ error: "Tarefa não encontrada" }, { status: 404 });
 
   return NextResponse.json(tarefa);
 }
@@ -30,9 +25,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-  }
+  if (!session?.user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
 
   const { id } = await params;
   const body = await request.json();
@@ -46,6 +39,7 @@ export async function PUT(
       prioridade: body.prioridade,
       dataVencimento: body.dataVencimento ? new Date(body.dataVencimento) : null,
       responsavelId: Number(body.responsavelId),
+      statusObs: body.statusObs ?? null,
     },
   });
 
@@ -58,19 +52,13 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-  }
+  if (!session?.user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
 
   const { id } = await params;
-
   const tarefa = await prisma.tarefa.findUnique({ where: { id: Number(id) } });
-  if (!tarefa) {
-    return NextResponse.json({ error: "Tarefa não encontrada" }, { status: 404 });
-  }
+  if (!tarefa) return NextResponse.json({ error: "Tarefa não encontrada" }, { status: 404 });
 
   await prisma.tarefa.delete({ where: { id: Number(id) } });
-
   await logAuditoria("EXCLUIR", "tarefa", Number(id), { titulo: tarefa.titulo }, Number((session.user as { id: string }).id));
   return NextResponse.json({ mensagem: "Tarefa excluída" });
 }

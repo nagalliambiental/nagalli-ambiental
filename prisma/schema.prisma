@@ -99,6 +99,7 @@ model Cliente {
   documentosGerados   DocumentoGerado[]
   documentos          Documento[]
   historicos          Historico[]
+  acessos             Acesso[]
 }
 
 model Empreendimento {
@@ -125,6 +126,7 @@ model Empreendimento {
   processos Processo[]
   controleDmr ControleDmr?
   historicos Historico[]
+  acessos    Acesso[]
 }
 
 model Orgao {
@@ -229,6 +231,7 @@ model Tarefa {
   status         String   @default("pendente")
   prioridade     String   @default("media")
   dataVencimento DateTime?
+  statusObs      String?
   responsavelId  Int
   usuarioId      Int
   criadoEm       DateTime @default(now())
@@ -410,4 +413,17 @@ model Historico {
   cliente      Cliente?      @relation(fields: [clienteId], references: [id])
   empreendimento Empreendimento? @relation(fields: [empreendimentoId], references: [id])
   usuario      Usuario?      @relation(fields: [usuarioId], references: [id])
+}
+
+model Acesso {
+  id              Int      @id @default(autoincrement())
+  login           String
+  senha           String
+  descricao       String
+  clienteId       Int?
+  empreendimentoId Int?
+  criadoEm        DateTime @default(now())
+
+  cliente      Cliente?      @relation(fields: [clienteId], references: [id])
+  empreendimento Empreendimento? @relation(fields: [empreendimentoId], references: [id])
 }
