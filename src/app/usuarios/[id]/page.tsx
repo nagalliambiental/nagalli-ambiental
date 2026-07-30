@@ -1,6 +1,8 @@
-export function generateStaticParams() { return []; }
+import dynamic from "next/dynamic";
 
-import ClientPage from "./detail";
+const ClientPage = dynamic(() => import("./detail"), { ssr: false });
+
+export function generateStaticParams() { return []; }
 
 export default function Page() {
   return <ClientPage />;
