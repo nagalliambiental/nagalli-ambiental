@@ -50,8 +50,16 @@ export async function DELETE(req: NextRequest) {
   if (!session?.user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   const ids = req.nextUrl.searchParams.get("ids");
   if (!ids) return NextResponse.json({ error: "ids é obrigatório" }, { status: 400 });
+  const parsedIds = ids.split(",").map(Number);
   try {
-    await prisma.empreendimento.deleteMany({ where: { id: { in: ids.split(",").map(Number) } } });
+    await prisma.$transaction(async (tx) => {
+      await tx.documento.deleteMany({ where: { processo: { empreendimentoId: { in: parsedIds } } } });
+      await tx.exigencia.deleteMany({ where: { processo: { empreendimentoId: { in: parsedIds } } } });
+      await tx.timelineProcesso.deleteMany({ where: { processo: { empreendimentoId: { in: parsedIds } } } });
+      await tx.processo.deleteMany({ where: { empreendimentoId: { in: parsedIds } } });
+      await tx.controleDmr.deleteMany({ where: { empreendimentoId: { in: parsedIds } } });
+      await tx.empreendimento.deleteMany({ where: { id: { in: parsedIds } } });
+    });
     return NextResponse.json({ ok: true });
   } catch (e) {
     return NextResponse.json({ error: "Erro ao remover. Verifique se há registros vinculados." }, { status: 400 });
