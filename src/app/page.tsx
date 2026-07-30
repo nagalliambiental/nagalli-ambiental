@@ -5,7 +5,7 @@ import { StatCard } from "@/components/StatCard";
 import { prisma } from "@/lib/prisma";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { getTrimestreAtual } from "@/lib/dmr-parser";
+import { getTrimestreAtual, getDiasFimTrimestre } from "@/lib/dmr-parser";
 
 export const dynamic = "force-dynamic";
 
@@ -83,29 +83,39 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
-      <div className="mt-6 rounded-[var(--radius-card)] border border-amber-200 bg-amber-50 p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="rounded-full bg-amber-100 p-2">
-              <FileSpreadsheet size={18} className="text-amber-700" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-amber-900">
-                DMR — {getTrimestreAtual().label} ({getTrimestreAtual().inicio} a {getTrimestreAtual().fim})
-              </p>
-              <p className="text-xs text-amber-700">
-                Período vigente. Acompanhe os empreendimentos cadastrados.
-              </p>
+      {(() => {
+        const dias = getDiasFimTrimestre();
+        const tri = getTrimestreAtual();
+        const isUrgent = dias <= 20;
+        return (
+          <div className={`mt-6 rounded-[var(--radius-card)] border p-4 ${isUrgent ? "border-red-200 bg-red-50" : "border-amber-200 bg-amber-50"}`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`rounded-full p-2 ${isUrgent ? "bg-red-100" : "bg-amber-100"}`}>
+                  <FileSpreadsheet size={18} className={isUrgent ? "text-red-700" : "text-amber-700"} />
+                </div>
+                <div>
+                  <p className={`text-sm font-medium ${isUrgent ? "text-red-900" : "text-amber-900"}`}>
+                    DMR — {tri.label} ({tri.inicio} a {tri.fim})
+                  </p>
+                  <p className={`text-xs ${isUrgent ? "text-red-700" : "text-amber-700"}`}>
+                    {dias <= 0
+                      ? "O trimestre encerrou! Regularize as pendências."
+                      : `Faltam ${dias} dia(s) para o fim do trimestre.${dias <= 20 ? " Acompanhe os empreendimentos pendentes." : ""}`
+                    }
+                  </p>
+                </div>
+              </div>
+              <Link
+                href="/dmr"
+                className={`focus-ring transition-brand rounded-lg px-4 py-2 text-sm font-medium text-white ${isUrgent ? "bg-red-600 hover:bg-red-700" : "bg-amber-600 hover:bg-amber-700"}`}
+              >
+                Ver controle
+              </Link>
             </div>
           </div>
-          <Link
-            href="/dmr"
-            className="focus-ring transition-brand rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700"
-          >
-            Ver controle
-          </Link>
-        </div>
-      </div>
+        );
+      })()}
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">

@@ -85,3 +85,24 @@ export function getTrimestreAtual(): {
   ];
   return trimestres[Math.floor(mes / 3)] || trimestres[0];
 }
+
+export function getDiasFimTrimestre(): number {
+  const hoje = new Date();
+  const mes = hoje.getMonth();
+  const ano = hoje.getFullYear();
+  const trimestre = Math.floor(mes / 3);
+  const fimTrimestre = new Date(ano, (trimestre + 1) * 3, 0);
+  return Math.ceil((fimTrimestre.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+export function getDmrStatusField(trimestre: number): { dmr: string; mtr: string } {
+  return {
+    dmr: `t${trimestre}Dmr`,
+    mtr: `t${trimestre}Mtr`,
+  };
+}
+
+export function isDmrPendente(registro: Record<string, string>, trimestre: number): boolean {
+  const { dmr, mtr } = getDmrStatusField(trimestre);
+  return (registro[dmr] || "") !== "OK" || (registro[mtr] || "") !== "OK";
+}
