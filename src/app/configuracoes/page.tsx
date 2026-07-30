@@ -37,8 +37,18 @@ export default function ConfiguracoesPage() {
       .catch(() => setLoaded(true));
   }, []);
 
+  function formatCNPJ(raw: string): string {
+    const digits = raw.replace(/\D/g, "").slice(0, 14);
+    return digits
+      .replace(/^(\d{2})(\d)/, "$1.$2")
+      .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+      .replace(/\.(\d{3})(\d)/, ".$1/$2")
+      .replace(/(\d{4})(\d)/, "$1-$2");
+  }
+
   function setField(field: string, value: string) {
-    setForm((prev) => ({ ...prev, [field]: value }));
+    const masked = field === "cnpj" ? formatCNPJ(value) : value;
+    setForm((prev) => ({ ...prev, [field]: masked }));
   }
 
   async function handleSave() {

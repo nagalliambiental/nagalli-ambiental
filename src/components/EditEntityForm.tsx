@@ -120,8 +120,19 @@ export default function EditEntityForm({
     }
   }
 
+  function formatCNPJ(raw: string): string {
+    const digits = raw.replace(/\D/g, "").slice(0, 14);
+    return digits
+      .replace(/^(\d{2})(\d)/, "$1.$2")
+      .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+      .replace(/\.(\d{3})(\d)/, ".$1/$2")
+      .replace(/(\d{4})(\d)/, "$1-$2");
+  }
+
   function setField(name: string, value: string | boolean) {
-    setForm((prev) => ({ ...prev, [name]: value }));
+    const field = fields.find((f) => f.name === name);
+    const masked = field?.search === "cnpj" && typeof value === "string" ? formatCNPJ(value) : value;
+    setForm((prev) => ({ ...prev, [name]: masked }));
     setDirty(true);
     if (fieldErrors[name]) {
       setFieldErrors((prev) => { const n = { ...prev }; delete n[name]; return n; });
