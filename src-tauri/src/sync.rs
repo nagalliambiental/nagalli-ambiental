@@ -1,6 +1,5 @@
 use chrono::Utc;
 use serde_json;
-use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use uuid::Uuid;

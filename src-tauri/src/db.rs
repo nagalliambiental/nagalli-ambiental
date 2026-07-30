@@ -1,5 +1,4 @@
 use rusqlite::{params, Connection, Result as SqlResult};
-use serde_json;
 
 use crate::models::*;
 
