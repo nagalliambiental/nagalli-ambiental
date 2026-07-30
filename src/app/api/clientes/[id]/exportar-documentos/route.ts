@@ -47,10 +47,17 @@ export async function GET(
     }
   }
 
-  const zipBuffer = zip.generate({ type: "nodebuffer" });
+  const nodeBuf = zip.generate({ type: "nodebuffer" });
+  const zipBytes = new Uint8Array(nodeBuf.length);
+  zipBytes.set(nodeBuf);
 
   const safeName = cliente.apelido.replace(/\s+/g, "_");
-  return new NextResponse(new Blob([zipBuffer], { type: "application/zip" }), {
+  return new NextResponse(zipBytes, {
+    headers: {
+      "Content-Type": "application/zip",
+      "Content-Disposition": `attachment; filename="${safeName}_documentos.zip"`,
+    },
+  });
     headers: {
       "Content-Disposition": `attachment; filename="${safeName}_documentos.zip"`,
     },
