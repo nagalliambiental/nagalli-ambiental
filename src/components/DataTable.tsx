@@ -115,7 +115,7 @@ export function DataTable<T extends { id: number }>({
                 <button
                   type="button"
                   onClick={() => bulkAction("PATCH", { ativo: false })}
-                  className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg bg-[var(--color-river-600)] px-3 py-1.5 text-sm font-medium text-white hover:bg-[var(--color-river-700)]"
+                  className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg bg-zinc-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-700"
                 >
                   <ToggleLeft size={14} />
                   Inativar

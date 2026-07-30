@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Topbar } from "@/components/Topbar";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   Building2, Mail, Phone, User, FileText, MapPin, Map, Globe, FileSpreadsheet,
   Edit3, Trash2, Plus, ExternalLink, CheckCircle2, Clock, AlertTriangle,
-  Loader2, X, AlertCircle
+  Loader2, X, AlertCircle, Upload, Download, FolderArchive
 } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/components/Toast";
@@ -71,6 +72,15 @@ interface DocData {
   createdAt: string;
 }
 
+interface DocumentoUploaded {
+  id: number;
+  nome: string;
+  tipo: string;
+  caminho: string;
+  tamanho: number;
+  criadoEm: string;
+}
+
 const statusLabels: Record<string, string> = {
   pendente: "Pendente", pago: "Pago", atrasado: "Atrasado", cancelado: "Cancelado",
 };
@@ -80,18 +90,28 @@ const statusColors: Record<string, string> = {
 };
 
 export function ClienteDetailClient({
-  cliente, id, diasFimTrimestre, trimestreLabel,
+  cliente, documentos, id, diasFimTrimestre, trimestreLabel,
 }: {
   cliente: ClienteData;
+  documentos: DocumentoUploaded[];
   id: string;
   diasFimTrimestre: number;
   trimestreLabel: string;
 }) {
   const router = useRouter();
   const { toast } = useToast();
+  const { data: session } = useSession();
+  const perfil = (session?.user as { perfil?: string })?.perfil;
+  const podeVerFinanceiro = perfil === "socio" || perfil === "admin";
+
   const [tab, setTab] = useState<Tab>("info");
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadNome, setUploadNome] = useState("");
+  const [uploadTipo, setUploadTipo] = useState("anexo");
 
   async function handleDelete() {
     setDeleting(true);
@@ -114,12 +134,53 @@ export function ClienteDetailClient({
     }
   }
 
+  async function handleUpload() {
+    if (!uploadFile) { toast("Selecione um arquivo", "error"); return; }
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", uploadFile);
+      formData.append("clienteId", id);
+      if (uploadNome) formData.append("nome", uploadNome);
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      if (!res.ok) throw new Error("Erro ao enviar");
+      toast("Documento enviado com sucesso", "success");
+      setUploadFile(null);
+      setUploadNome("");
+      router.refresh();
+    } catch {
+      toast("Erro ao enviar documento", "error");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleExportZip() {
+    setExporting(true);
+    try {
+      const res = await fetch(`/api/clientes/${id}/exportar-documentos`);
+      if (!res.ok) throw new Error("Erro ao exportar");
+      const blob = await res.blob();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `${cliente.apelido.replace(/\s+/g, "_")}_documentos.zip`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch {
+      toast("Erro ao exportar documentos", "error");
+    } finally {
+      setExporting(false);
+    }
+  }
+
   const tabs: { key: Tab; label: string; count?: number }[] = [
     { key: "info", label: "Informações" },
     { key: "empreendimentos", label: "Empreendimentos", count: cliente.empreendimentos.length },
-    { key: "documentos", label: "Documentos", count: cliente.documentosGerados.length },
-    { key: "financeiro", label: "Financeiro", count: cliente.financeiros.length },
+    { key: "documentos", label: "Documentos", count: cliente.documentosGerados.length + documentos.length },
   ];
+  if (podeVerFinanceiro) {
+    tabs.push({ key: "financeiro", label: "Financeiro", count: cliente.financeiros.length });
+  }
 
   return (
     <div>
@@ -368,27 +429,120 @@ export function ClienteDetailClient({
       )}
 
       {tab === "documentos" && (
-        <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
-          <h2 className="font-display text-base font-semibold mb-4">Documentos gerados</h2>
-          {cliente.documentosGerados.length === 0 ? (
+        <div className="space-y-6">
+          <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-display text-base font-semibold">Fazer upload</h2>
+              <button
+                type="button"
+                onClick={handleExportZip}
+                disabled={exporting || (documentos.length === 0 && cliente.documentosGerados.length === 0)}
+                className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg border border-[var(--color-paper-200)] px-3 py-1.5 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)] disabled:opacity-50"
+              >
+                {exporting ? <Loader2 size={14} className="animate-spin" /> : <FolderArchive size={14} />}
+                {exporting ? "Exportando..." : "Exportar ZIP"}
+              </button>
+            </div>
+            <div className="flex items-end gap-3">
+              <div className="flex-1">
+                <label className="block text-xs font-medium text-[var(--color-ink-500)] mb-1">Arquivo</label>
+                <input
+                  type="file"
+                  onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                  className="w-full text-sm text-[var(--color-ink-700)] file:mr-3 file:rounded-lg file:border-0 file:bg-[var(--color-brand-50)] file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-[var(--color-brand-600)] hover:file:bg-[var(--color-brand-100)]"
+                />
+                {uploadFile && <p className="mt-1 text-xs text-[var(--color-ink-500)]">{uploadFile.name}</p>}
+              </div>
+              <div className="w-40">
+                <label className="block text-xs font-medium text-[var(--color-ink-500)] mb-1">Nome (opcional)</label>
+                <input
+                  value={uploadNome}
+                  onChange={(e) => setUploadNome(e.target.value)}
+                  placeholder="Deixe em branco..."
+                  className="w-full rounded-lg border border-[var(--color-paper-200)] px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]"
+                />
+              </div>
+              <div className="w-32">
+                <label className="block text-xs font-medium text-[var(--color-ink-500)] mb-1">Tipo</label>
+                <select
+                  value={uploadTipo}
+                  onChange={(e) => setUploadTipo(e.target.value)}
+                  className="w-full rounded-lg border border-[var(--color-paper-200)] px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]"
+                >
+                  <option value="licenca">Licença</option>
+                  <option value="parecer">Parecer</option>
+                  <option value="oficio">Ofício</option>
+                  <option value="laudo">Laudo</option>
+                  <option value="relatorio">Relatório</option>
+                  <option value="contrato">Contrato</option>
+                  <option value="anexo">Anexo</option>
+                  <option value="outro">Outro</option>
+                </select>
+              </div>
+              <button
+                type="button"
+                onClick={handleUpload}
+                disabled={uploading || !uploadFile}
+                className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg bg-[var(--color-brand-500)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
+              >
+                {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                {uploading ? "Enviando..." : "Upload"}
+              </button>
+            </div>
+          </div>
+
+          {documentos.length > 0 && (
+            <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
+              <h2 className="font-display text-base font-semibold mb-4">Documentos enviados</h2>
+              <div className="space-y-2">
+                {documentos.map((d) => (
+                  <div key={d.id} className="flex items-center justify-between border-b border-[var(--color-paper-200)] pb-2 text-sm">
+                    <div className="flex items-center gap-3">
+                      <FileText size={16} className="text-[var(--color-ink-400)]" />
+                      <span className="text-[var(--color-ink-700)]">{d.nome}</span>
+                      <span className="text-xs text-[var(--color-ink-400)]">({(d.tamanho / 1024).toFixed(1)} KB)</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-[var(--color-ink-500)]">{format(new Date(d.criadoEm), "dd/MM/yyyy")}</span>
+                      <a
+                        href={d.caminho}
+                        target="_blank"
+                        className="rounded p-1 text-[var(--color-ink-400)] hover:text-[var(--color-brand-600)]"
+                        title="Download"
+                      >
+                        <Download size={14} />
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {cliente.documentosGerados.length > 0 && (
+            <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
+              <h2 className="font-display text-base font-semibold mb-4">Documentos gerados</h2>
+              <div className="space-y-2">
+                {cliente.documentosGerados.map((d) => (
+                  <div key={d.id} className="flex items-center justify-between border-b border-[var(--color-paper-200)] pb-2 text-sm">
+                    <span className="text-[var(--color-ink-700)]">
+                      {d.templateSlug === "pgrs-pinhais" ? "PGRS Pinhais"
+                        : d.templateSlug === "pgrs-curitiba" ? "PGRS Curitiba"
+                        : d.templateSlug}
+                    </span>
+                    <span className="text-xs text-[var(--color-ink-500)]">
+                      {format(new Date(d.createdAt), "dd/MM/yyyy")}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {documentos.length === 0 && cliente.documentosGerados.length === 0 && (
             <div className="flex flex-col items-center gap-2 py-12 text-[var(--color-ink-500)]">
               <FileText size={24} />
-              <p className="text-sm">Nenhum documento gerado ainda.</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {cliente.documentosGerados.map((d) => (
-                <div key={d.id} className="flex items-center justify-between border-b border-[var(--color-paper-200)] pb-2 text-sm">
-                  <span className="text-[var(--color-ink-700)]">
-                    {d.templateSlug === "pgrs-pinhais" ? "PGRS Pinhais"
-                      : d.templateSlug === "pgrs-curitiba" ? "PGRS Curitiba"
-                      : d.templateSlug}
-                  </span>
-                  <span className="text-xs text-[var(--color-ink-500)]">
-                    {format(new Date(d.createdAt), "dd/MM/yyyy")}
-                  </span>
-                </div>
-              ))}
+              <p className="text-sm">Nenhum documento vinculado a este cliente.</p>
             </div>
           )}
         </div>

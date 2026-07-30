@@ -96,6 +96,7 @@ model Cliente {
   residuosAnuais      ResiduoAnual[]
   empresasContratadas EmpresaContratada[]
   documentosGerados   DocumentoGerado[]
+  documentos          Documento[]
 }
 
 model Empreendimento {
@@ -183,10 +184,12 @@ model Documento {
   tamanho     Int
   processoId  Int?
   exigenciaId Int?
+  clienteId   Int?
   criadoEm    DateTime @default(now())
 
   processo  Processo?  @relation(fields: [processoId], references: [id])
   exigencia Exigencia? @relation(fields: [exigenciaId], references: [id])
+  cliente   Cliente?   @relation(fields: [clienteId], references: [id])
 }
 
 model TimelineProcesso {

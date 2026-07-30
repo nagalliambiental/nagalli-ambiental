@@ -12,10 +12,12 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const processoId = searchParams.get("processoId");
   const exigenciaId = searchParams.get("exigenciaId");
+  const clienteId = searchParams.get("clienteId");
 
   const where: Record<string, unknown> = {};
   if (processoId) where.processoId = Number(processoId);
   if (exigenciaId) where.exigenciaId = Number(exigenciaId);
+  if (clienteId) where.clienteId = Number(clienteId);
 
   const documentos = await prisma.documento.findMany({
     where,

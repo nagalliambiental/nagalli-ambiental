@@ -27,10 +27,11 @@ export async function POST(request: Request) {
     const filePath = path.join(uploadDir, safeName);
     await writeFile(filePath, buffer);
 
+    const nome = formData.get("nome") as string | null;
     const documento = await prisma.documento.create({
       data: {
-        nome: file.name,
-        tipo: file.type,
+        nome: nome || file.name,
+        tipo: formData.get("tipo") as string || "anexo",
         caminho: `/uploads/${safeName}`,
         tamanho: file.size,
         processoId: formData.get("processoId")
@@ -38,6 +39,9 @@ export async function POST(request: Request) {
           : null,
         exigenciaId: formData.get("exigenciaId")
           ? Number(formData.get("exigenciaId"))
+          : null,
+        clienteId: formData.get("clienteId")
+          ? Number(formData.get("clienteId"))
           : null,
       },
     });

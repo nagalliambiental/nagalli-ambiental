@@ -1,7 +1,6 @@
 import {
   LayoutDashboard,
   Building2,
-  FileStack,
   Settings,
   CalendarClock,
   Map,
@@ -34,7 +33,6 @@ export const NAV_ITEMS: NavItem[] = [
   },
   { label: "Processos", href: "/processos", icon: FileCheck2 },
   { label: "Exigências", href: "/exigencias", icon: ClipboardList },
-  { label: "Documentos", href: "/documentos", icon: FileStack },
   { label: "DMR", href: "/dmr", icon: FileSpreadsheet },
   { label: "Modelos", href: "/modelos", icon: FileText },
   { label: "Financeiro", href: "/financeiro", icon: DollarSign, adminOnly: true },

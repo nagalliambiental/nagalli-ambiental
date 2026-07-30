@@ -34,6 +34,17 @@ export default async function ClienteDetailPage(props: { params: Promise<{ id: s
   });
   if (!cliente) notFound();
 
+  const documentos = await prisma.documento.findMany({
+    where: {
+      OR: [
+        { clienteId: Number(id) },
+        { processo: { empreendimento: { clienteId: Number(id) } } },
+        { exigencia: { processo: { empreendimento: { clienteId: Number(id) } } } },
+      ],
+    },
+    orderBy: { criadoEm: "desc" },
+  });
+
   const diasFimTrimestre = getDiasFimTrimestre();
   const trimestre = getTrimestreAtual();
 
@@ -42,6 +53,7 @@ export default async function ClienteDetailPage(props: { params: Promise<{ id: s
       <Breadcrumbs items={[{ label: "Clientes", href: "/clientes" }, { label: cliente.apelido }]} />
       <ClienteDetailClient
       cliente={JSON.parse(JSON.stringify(cliente))}
+      documentos={JSON.parse(JSON.stringify(documentos))}
       id={id}
       diasFimTrimestre={diasFimTrimestre}
       trimestreLabel={trimestre.label}
