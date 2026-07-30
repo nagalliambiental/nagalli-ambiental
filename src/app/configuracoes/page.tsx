@@ -80,6 +80,27 @@ export default function ConfiguracoesPage() {
     }
   }
 
+  async function buscarCEP() {
+    const clean = form.cep.replace(/\D/g, "");
+    if (clean.length !== 8) { toast("CEP inválido (8 dígitos)", "error"); return; }
+    try {
+      const res = await fetch(`/api/cep/${clean}`);
+      if (!res.ok) { toast("CEP não encontrado", "error"); return; }
+      const d = await res.json();
+      setForm((prev) => ({
+        ...prev,
+        rua: d.rua || prev.rua,
+        bairro: d.bairro || prev.bairro,
+        municipio: d.municipio || prev.municipio,
+        uf: d.uf || prev.uf,
+        complemento: d.complemento || prev.complemento,
+      }));
+      toast("Endereço preenchido via CEP", "success");
+    } catch {
+      toast("Erro ao consultar CEP", "error");
+    }
+  }
+
   async function handleSave() {
     setSaving(true);
     setMsg("");
@@ -168,7 +189,13 @@ export default function ConfiguracoesPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">CEP</label>
-                <input value={form.cep} onChange={(e) => setField("cep", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+                <div className="flex gap-2">
+                  <input value={form.cep} onChange={(e) => setField("cep", e.target.value)} className="flex-1 rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+                  <button type="button" onClick={buscarCEP} className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg bg-[var(--color-brand-500)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] whitespace-nowrap">
+                    <Search size={14} />
+                    Buscar
+                  </button>
+                </div>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4 mt-4">
