@@ -57,7 +57,6 @@ export default async function ClientesPage({
         importEndpoint="/api/cadastros/importar"
         exportEndpoint="/api/cadastros/exportar"
         modelEndpoint="/api/cadastros/modelo"
-        title="Importar / Exportar cadastros"
       />
 
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">
