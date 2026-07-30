@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Topbar } from "@/components/Topbar";
-import { Loader2, Plus, Trash2, Key, Link as LinkIcon, Building2 } from "lucide-react";
+import { Loader2, Plus, Trash2, Key, Link as LinkIcon, Building2, Search } from "lucide-react";
 import { useToast } from "@/components/Toast";
 
 interface AcessoEntry {
@@ -28,6 +28,10 @@ export default function AcessosPage() {
   const [formLogin, setFormLogin] = useState("");
   const [formSenha, setFormSenha] = useState("");
   const [formDescricao, setFormDescricao] = useState("");
+  const [formClienteId, setFormClienteId] = useState("");
+  const [formEmpId, setFormEmpId] = useState("");
+  const [clientes, setClientes] = useState<{ id: number; apelido: string }[]>([]);
+  const [empreendimentos, setEmpreendimentos] = useState<{ id: number; apelido: string }[]>([]);
   const [saving, setSaving] = useState(false);
 
   const fetchAcessos = useCallback(async () => {
@@ -48,19 +52,40 @@ export default function AcessosPage() {
 
   useEffect(() => { fetchAcessos(); }, [fetchAcessos]);
 
+  useEffect(() => {
+    fetch("/api/clientes?limit=999")
+      .then((r) => r.json())
+      .then((d) => setClientes(Array.isArray(d) ? d : d.data ?? []))
+      .catch(() => setClientes([]));
+  }, []);
+
+  useEffect(() => {
+    if (!formClienteId) { setEmpreendimentos([]); return; }
+    fetch(`/api/empreendimentos?clienteId=${formClienteId}&limit=999`)
+      .then((r) => r.json())
+      .then((d) => setEmpreendimentos(Array.isArray(d) ? d : d.data ?? []))
+      .catch(() => setEmpreendimentos([]));
+  }, [formClienteId]);
+
   async function handleCreate() {
     if (!formLogin.trim() || !formSenha.trim() || !formDescricao.trim()) {
       toast("Preencha login, senha e descrição", "error"); return;
     }
     setSaving(true);
     try {
+      const body: Record<string, unknown> = { login: formLogin, senha: formSenha, descricao: formDescricao };
+      const cid = Number(formClienteId);
+      if (cid) body.clienteId = cid;
+      const eid = Number(formEmpId);
+      if (eid) body.empreendimentoId = eid;
       const res = await fetch("/api/acessos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ login: formLogin, senha: formSenha, descricao: formDescricao }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error();
       setFormLogin(""); setFormSenha(""); setFormDescricao("");
+      setFormClienteId(""); setFormEmpId("");
       setShowModal(false);
       toast("Acesso criado", "success");
       fetchAcessos();
@@ -121,7 +146,7 @@ export default function AcessosPage() {
 
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="mx-4 w-full max-w-md rounded-xl bg-white p-6 shadow-lg">
+          <div className="mx-4 w-full max-w-lg rounded-xl bg-white p-6 shadow-lg">
             <h3 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-4">Novo Acesso</h3>
             <div className="space-y-3">
               <div>
@@ -139,9 +164,33 @@ export default function AcessosPage() {
                 <input value={formDescricao} onChange={(e) => setFormDescricao(e.target.value)} placeholder="Ex: Portal da Prefeitura, Sistema XYZ..."
                   className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Vincular a cliente <span className="text-[var(--color-ink-400)] font-normal">(opcional)</span></label>
+                <select value={formClienteId} onChange={(e) => { setFormClienteId(e.target.value); setFormEmpId(""); }}
+                  className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]"
+                >
+                  <option value="">Nenhum</option>
+                  {clientes.map((c) => (
+                    <option key={c.id} value={c.id}>{c.apelido}</option>
+                  ))}
+                </select>
+              </div>
+              {formClienteId && (
+                <div>
+                  <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Vincular a empreendimento <span className="text-[var(--color-ink-400)] font-normal">(opcional)</span></label>
+                  <select value={formEmpId} onChange={(e) => setFormEmpId(e.target.value)}
+                    className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]"
+                  >
+                    <option value="">Nenhum</option>
+                    {empreendimentos.map((e) => (
+                      <option key={e.id} value={e.id}>{e.apelido}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
             <div className="mt-6 flex justify-end gap-3">
-              <button onClick={() => setShowModal(false)} className="rounded-lg border border-[var(--color-paper-200)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]">Cancelar</button>
+              <button onClick={() => { setShowModal(false); setFormClienteId(""); setFormEmpId(""); }} className="rounded-lg border border-[var(--color-paper-200)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]">Cancelar</button>
               <button onClick={handleCreate} disabled={saving}
                 className="flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">
                 {saving ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
