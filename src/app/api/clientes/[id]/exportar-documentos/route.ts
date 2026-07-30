@@ -58,8 +58,4 @@ export async function GET(
       "Content-Disposition": `attachment; filename="${safeName}_documentos.zip"`,
     },
   });
-    headers: {
-      "Content-Disposition": `attachment; filename="${safeName}_documentos.zip"`,
-    },
-  });
 }
