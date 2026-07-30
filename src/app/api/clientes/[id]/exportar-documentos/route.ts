@@ -6,6 +6,8 @@ import path from "path";
 import PizZip from "pizzip";
 export const dynamic = "force-static";
 
+export function generateStaticParams() { return []; }
+
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 export const dynamic = "force-static";
 
+export function generateStaticParams() { return []; }
+
 interface DadosEmpresa {
   razaoSocial: string;
   nomeFantasia: string;

@@ -5,6 +5,8 @@ import { logAuditoria } from "@/lib/audit";
 import bcrypt from "bcryptjs";
 export const dynamic = "force-static";
 
+export function generateStaticParams() { return []; }
+
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }

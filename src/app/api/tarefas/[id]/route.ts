@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { logAuditoria } from "@/lib/audit";
 export const dynamic = "force-static";
 
+export function generateStaticParams() { return []; }
+
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
