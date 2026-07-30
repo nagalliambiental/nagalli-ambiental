@@ -38,6 +38,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
+      - name: Remove API routes (incompatible with static export)
+        shell: pwsh
+        run: |
+          Remove-Item -Recurse -Force "src/app/api" -ErrorAction SilentlyContinue
+
       - name: Install and build
         run: |
           npm install

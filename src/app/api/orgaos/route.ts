@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-export const dynamic = "force-static";
 
 const ORGAOS = [
   { sigla: "IAT", nome: "Instituto Água e Terra" },

@@ -2,9 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { logAuditoria } from "@/lib/audit";
-export const dynamic = "force-static";
 
-export function generateStaticParams() { return []; }
 
 export async function GET(
   request: Request,

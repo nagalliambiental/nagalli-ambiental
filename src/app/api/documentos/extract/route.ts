@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { extractFromBuffer } from "@/lib/extract-license";
 import { auth } from "@/lib/auth";
-export const dynamic = "force-static";
 
 export async function POST(request: Request) {
   const session = await auth();

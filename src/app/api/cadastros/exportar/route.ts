@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import type { Cliente, Empreendimento } from "@prisma/client";
 import * as XLSX from "xlsx";
-export const dynamic = "force-static";
 
 export async function GET() {
   const session = await auth();

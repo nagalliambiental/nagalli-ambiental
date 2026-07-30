@@ -3,7 +3,6 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAuditoria } from "@/lib/audit";
 import bcrypt from "bcryptjs";
-export const dynamic = "force-static";
 
 export async function GET() {
   const session = await auth();

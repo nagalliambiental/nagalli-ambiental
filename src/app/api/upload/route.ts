@@ -4,7 +4,6 @@ import { prisma } from "@/lib/prisma";
 import { logAuditoria } from "@/lib/audit";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
-export const dynamic = "force-static";
 
 export async function POST(request: Request) {
   const session = await auth();

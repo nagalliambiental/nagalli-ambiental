@@ -3,7 +3,6 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
-export const dynamic = "force-static";
 
 export async function GET(request: Request) {
   const session = await auth();

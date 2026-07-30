@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { parseDmrSheet } from "@/lib/dmr-parser";
-export const dynamic = "force-static";
 
 export async function POST(req: NextRequest) {
   const session = await auth();

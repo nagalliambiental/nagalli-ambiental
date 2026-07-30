@@ -1,3 +1,5 @@
+export function generateStaticParams() { return []; }
+
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";

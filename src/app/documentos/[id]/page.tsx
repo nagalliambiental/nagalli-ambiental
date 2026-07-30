@@ -1,3 +1,5 @@
+export function generateStaticParams() { return []; }
+
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
