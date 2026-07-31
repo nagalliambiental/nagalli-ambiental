@@ -33,7 +33,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
       redirectTo={`/processos/${id}`}
       fields={[
         { name: "tipo", label: "Tipo", type: "text", required: true },
-        { name: "numProtocolo", label: "Nº Protocolo", type: "text", required: true },
+        { name: "numProtocolo", label: "Nº Protocolo", type: "text", required: true, search: "sia" },
         { name: "numLicenca", label: "Nº Licença", type: "text" },
         { name: "sistema", label: "Sistema", type: "text", required: true },
         { name: "status", label: "Status", type: "select", required: true, options: [

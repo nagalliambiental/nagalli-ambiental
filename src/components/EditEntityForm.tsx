@@ -12,7 +12,7 @@ interface FieldConfig {
   type: "text" | "select" | "textarea" | "date" | "number" | "checkbox";
   required?: boolean;
   options?: { value: string; label: string }[];
-  search?: "cep" | "cnpj";
+  search?: "cep" | "cnpj" | "sia";
   validate?: (value: string | boolean) => string | null;
 }
 
@@ -146,6 +146,11 @@ export default function EditEntityForm({
     bairro: "bairro", cep: "cep", municipio: "municipio", uf: "uf", telefone: "telefone", email: "email",
   };
 
+  function toDateInput(value: string): string {
+    const m = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    return m ? `${m[3]}-${m[2]}-${m[1]}` : "";
+  }
+
   async function handleSearch(field: FieldConfig) {
     const raw = form[field.name];
     if (!raw || typeof raw !== "string") return;
@@ -153,6 +158,24 @@ export default function EditEntityForm({
     if (field.search === "cep" && clean.length !== 8) return toast("CEP inválido (8 dígitos)", "error");
     if (field.search === "cnpj" && clean.length !== 14) return toast("CNPJ inválido (14 dígitos)", "error");
     try {
+      if (field.search === "sia") {
+        if (!clean) return toast("Informe o nº do protocolo", "error");
+        const res = await fetch(`/api/sia/consulta?protocolo=${clean}`);
+        if (!res.ok) return toast("Licença não encontrada no SIA/IAP", "error");
+        const d = await res.json();
+        setForm((prev) => {
+          const next = { ...prev };
+          if (d.protocolo && "numProtocolo" in next) next.numProtocolo = d.protocolo;
+          if (d.numLicenca && "numLicenca" in next) next.numLicenca = d.numLicenca;
+          if (d.dataValidade && "validade" in next) next.validade = toDateInput(d.dataValidade);
+          if (d.dataEmissao && "dataProtocolo" in next) next.dataProtocolo = toDateInput(d.dataEmissao);
+          if (d.condicionantes && "condicionantes" in next) next.condicionantes = d.condicionantes;
+          return next;
+        });
+        setDirty(true);
+        toast("Dados do SIA/IAP preenchidos", "success");
+        return;
+      }
       const res = await fetch(`/api/${field.search}/${clean}`);
       if (!res.ok) return toast("Não encontrado", "error");
       const d = await res.json();
