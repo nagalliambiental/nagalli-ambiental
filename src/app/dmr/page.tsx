@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Topbar } from "@/components/Topbar";
-import { Plus, Trash2, Search, Upload, Loader2 } from "lucide-react";
+import { Plus, Trash2, Search } from "lucide-react";
 import { useToast } from "@/components/Toast";
 
 interface Empreendimento {
@@ -39,8 +39,6 @@ export default function DmrPage() {
   const [disponiveis, setDisponiveis] = useState<Empreendimento[]>([]);
   const [busca, setBusca] = useState("");
   const [selectedId, setSelectedId] = useState("");
-  const [importing, setImporting] = useState(false);
-  const [importResult, setImportResult] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   const toggleSelect = (id: number) => {
@@ -80,28 +78,6 @@ export default function DmrPage() {
     const resEmps = await fetch("/api/empreendimentos");
     const emps: Empreendimento[] = await resEmps.json();
     setDisponiveis(emps.filter((e) => !registros.some((r) => r.empreendimentoId === e.id)));
-  }
-
-  async function importarPlanilha(file: File) {
-    if (!file.name.endsWith(".xlsx")) {
-      toast("Selecione um arquivo .xlsx", "error");
-      return;
-    }
-    setImporting(true);
-    setImportResult(null);
-    const form = new FormData();
-    form.set("file", file);
-    try {
-      const res = await fetch("/api/dmr/import-mtr", { method: "POST", body: form });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Erro ao importar");
-      setImportResult(data.mensagem);
-      await carregar();
-    } catch (err) {
-      toast((err as Error).message, "error");
-    } finally {
-      setImporting(false);
-    }
   }
 
   useEffect(() => {
@@ -164,26 +140,6 @@ export default function DmrPage() {
   return (
     <div>
       <Topbar title="DMR — Controle Trimestral" subtitle="Gerencie os empreendimentos que precisam de declaração DMR/MTR" />
-
-      <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5 mb-4">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="font-display text-base font-semibold">Importar planilha</h2>
-          <label className="focus-ring transition-brand inline-flex cursor-pointer items-center gap-2 rounded-lg bg-[var(--color-river-500)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-river-600)] disabled:opacity-50">
-            {importing ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
-            {importing ? "Importando..." : "Selecionar .xlsx"}
-            <input
-              type="file"
-              accept=".xlsx"
-              className="hidden"
-              disabled={importing}
-              onChange={(e) => e.target.files?.[0] && importarPlanilha(e.target.files[0])}
-            />
-          </label>
-        </div>
-        {importResult && (
-          <p className="text-sm text-green-700 bg-green-50 rounded-lg px-3 py-2">{importResult}</p>
-        )}
-      </div>
 
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5 mb-6">
         <h2 className="font-display text-base font-semibold mb-3">Adicionar empreendimento</h2>

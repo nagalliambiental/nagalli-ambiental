@@ -22,47 +22,50 @@ export async function GET(request: Request) {
 
   let page = pdf.addPage([842, 595]);
   const { width, height } = page.getSize();
-  const margin = 40;
+  const marginX = 40;
+  const marginTop = 60;
   const colWidths = [90, 100, 72, 72, 72, 72, 72, 72, 72, 72];
-  let y = height - margin;
-
-  function drawHeader(text: string, x: number, w: number) {
-    page.drawText(text, { x, y, size: 8, font: bold, color: rgb(1, 1, 1) });
-  }
+  let y = height - marginTop;
 
   function drawCell(text: string, x: number, w: number) {
     page.drawText(text.slice(0, Math.floor(w / 4.5)), { x, y, size: 8, font, color: rgb(0.15, 0.15, 0.15) });
   }
 
-  page.drawText("Relatório DMR", { x: margin, y, size: 18, font: bold });
-  y -= 20;
-  page.drawText(`Ano: ${ano}`, { x: margin, y, size: 11, font });
-  y -= 16;
-  page.drawText(`Gerado em: ${new Date().toLocaleDateString("pt-BR")}`, { x: margin, y, size: 9, font });
-  y -= 24;
-
-  page.drawRectangle({ x: margin, y: y - 12, width: width - 80, height: 14, color: rgb(0.2, 0.2, 0.2) });
-
   const headers = ["Cliente", "Empreendimento", "T1 DMR", "T1 MTR", "T2 DMR", "T2 MTR", "T3 DMR", "T3 MTR", "T4 DMR", "T4 MTR"];
-  let x = margin + 4;
-  for (let i = 0; i < headers.length; i++) {
-    drawHeader(headers[i], x, colWidths[i]);
-    x += colWidths[i];
+
+  function drawPageHeader() {
+    page.drawText("Relatório DMR", { x: marginX, y, size: 18, font: bold });
+    y -= 20;
+    page.drawText(`Ano: ${ano}`, { x: marginX, y, size: 11, font });
+    y -= 16;
+    page.drawText(`Gerado em: ${new Date().toLocaleDateString("pt-BR")}`, { x: marginX, y, size: 9, font });
+    y -= 24;
+
+    page.drawRectangle({ x: marginX, y: y - 12, width: width - 80, height: 14, color: rgb(0.2, 0.2, 0.2) });
+
+    let x = marginX + 4;
+    for (let i = 0; i < headers.length; i++) {
+      page.drawText(headers[i], { x, y, size: 8, font: bold, color: rgb(1, 1, 1) });
+      x += colWidths[i];
+    }
+    y -= 14;
   }
-  y -= 14;
+
+  drawPageHeader();
 
   let row = 0;
   for (const r of registros) {
     if (y < 50) {
       page = pdf.addPage([842, 595]);
-      y = height - margin;
+      y = height - marginTop;
+      drawPageHeader();
     }
 
     if (row % 2 === 0) {
-      page.drawRectangle({ x: margin, y: y - 12, width: width - 80, height: 14, color: rgb(0.95, 0.95, 0.95) });
+      page.drawRectangle({ x: marginX, y: y - 12, width: width - 80, height: 14, color: rgb(0.95, 0.95, 0.95) });
     }
 
-    x = margin + 4;
+    let x = marginX + 4;
     drawCell(r.empreendimento.cliente.apelido, x, colWidths[0]);
     x += colWidths[0];
     drawCell(r.empreendimento.apelido, x, colWidths[1]);
@@ -82,13 +85,17 @@ export async function GET(request: Request) {
   }
 
   y -= 20;
-  page.drawText(`Total de empreendimentos: ${registros.length}`, { x: margin, y, size: 10, font: bold });
+  if (y < 50) {
+    page = pdf.addPage([842, 595]);
+    y = height - marginTop;
+  }
+  page.drawText(`Total de empreendimentos: ${registros.length}`, { x: marginX, y, size: 10, font: bold });
 
   const pdfBytes = await pdf.save();
   return new NextResponse(new Uint8Array(pdfBytes), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="relatorio-dmr-${ano}.pdf"`,
+      "Content-Disposition": `inline; filename="relatorio-dmr-${ano}.pdf"`,
     },
   });
 }

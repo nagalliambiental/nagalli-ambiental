@@ -35,47 +35,50 @@ export async function GET(request: Request) {
 
   let page = pdf.addPage([842, 595]);
   const { width, height } = page.getSize();
-  const margin = 40;
+  const marginX = 40;
+  const marginTop = 60;
   const colWidths = [100, 130, 70, 70, 70, 90, 90];
-  let y = height - margin;
-
-  function drawHeader(text: string, x: number) {
-    page.drawText(text, { x, y, size: 8, font: bold, color: rgb(1, 1, 1) });
-  }
+  let y = height - marginTop;
 
   function drawCell(text: string, x: number, w: number) {
     page.drawText(text.slice(0, Math.floor(w / 4.5)), { x, y, size: 8, font, color: rgb(0.15, 0.15, 0.15) });
   }
 
-  page.drawText("Relatório Financeiro", { x: margin, y, size: 18, font: bold });
-  y -= 20;
-  const filtros = [status ? `Status: ${status}` : "", clienteId ? `Cliente ID: ${clienteId}` : "", dataInicio ? `De: ${dataInicio}` : "", dataFim ? `Até: ${dataFim}` : ""].filter(Boolean).join(" | ");
-  if (filtros) { page.drawText(filtros, { x: margin, y, size: 10, font }); y -= 14; }
-  page.drawText(`Gerado em: ${new Date().toLocaleDateString("pt-BR")}`, { x: margin, y, size: 9, font });
-  y -= 24;
-
-  page.drawRectangle({ x: margin, y: y - 12, width: width - 80, height: 14, color: rgb(0.2, 0.2, 0.2) });
-
   const headers = ["Cliente", "Descrição", "Tipo", "Valor", "Status", "Vencimento", "Pagamento"];
-  let x = margin + 4;
-  for (let i = 0; i < headers.length; i++) {
-    drawHeader(headers[i], x);
-    x += colWidths[i];
+  const filtros = [status ? `Status: ${status}` : "", clienteId ? `Cliente ID: ${clienteId}` : "", dataInicio ? `De: ${dataInicio}` : "", dataFim ? `Até: ${dataFim}` : ""].filter(Boolean).join(" | ");
+
+  function drawPageHeader() {
+    page.drawText("Relatório Financeiro", { x: marginX, y, size: 18, font: bold });
+    y -= 20;
+    if (filtros) { page.drawText(filtros, { x: marginX, y, size: 10, font }); y -= 14; }
+    page.drawText(`Gerado em: ${new Date().toLocaleDateString("pt-BR")}`, { x: marginX, y, size: 9, font });
+    y -= 24;
+
+    page.drawRectangle({ x: marginX, y: y - 12, width: width - 80, height: 14, color: rgb(0.2, 0.2, 0.2) });
+
+    let x = marginX + 4;
+    for (let i = 0; i < headers.length; i++) {
+      page.drawText(headers[i], { x, y, size: 8, font: bold, color: rgb(1, 1, 1) });
+      x += colWidths[i];
+    }
+    y -= 14;
   }
-  y -= 14;
+
+  drawPageHeader();
 
   let row = 0;
   for (const r of registros) {
     if (y < 50) {
       page = pdf.addPage([842, 595]);
-      y = height - margin;
+      y = height - marginTop;
+      drawPageHeader();
     }
 
     if (row % 2 === 0) {
-      page.drawRectangle({ x: margin, y: y - 12, width: width - 80, height: 14, color: rgb(0.95, 0.95, 0.95) });
+      page.drawRectangle({ x: marginX, y: y - 12, width: width - 80, height: 14, color: rgb(0.95, 0.95, 0.95) });
     }
 
-    x = margin + 4;
+    let x = marginX + 4;
     drawCell(r.cliente.apelido, x, colWidths[0]); x += colWidths[0];
     drawCell(r.descricao || "—", x, colWidths[1]); x += colWidths[1];
     drawCell(r.tipoCobranca, x, colWidths[2]); x += colWidths[2];
@@ -91,15 +94,19 @@ export async function GET(request: Request) {
   }
 
   y -= 20;
-  page.drawText(`Total de registros: ${registros.length}`, { x: margin, y, size: 10, font: bold }); y -= 13;
-  page.drawText(`Total geral: ${totalGeral.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`, { x: margin, y, size: 10, font: bold }); y -= 13;
-  page.drawText(`Total pendente: ${totalPendente.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`, { x: margin, y, size: 10, font: bold });
+  if (y < 50) {
+    page = pdf.addPage([842, 595]);
+    y = height - marginTop;
+  }
+  page.drawText(`Total de registros: ${registros.length}`, { x: marginX, y, size: 10, font: bold }); y -= 13;
+  page.drawText(`Total geral: ${totalGeral.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`, { x: marginX, y, size: 10, font: bold }); y -= 13;
+  page.drawText(`Total pendente: ${totalPendente.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`, { x: marginX, y, size: 10, font: bold });
 
   const pdfBytes = await pdf.save();
   return new NextResponse(new Uint8Array(pdfBytes), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="relatorio-financeiro.pdf"`,
+      "Content-Disposition": `inline; filename="relatorio-financeiro.pdf"`,
     },
   });
 }
