@@ -18,14 +18,14 @@ export async function GET(req: NextRequest) {
     );
     if (!dado) {
       return NextResponse.json(
-        { error: "Nenhuma licença encontrada no SIA/IAP" },
+        { error: "Nenhuma licença encontrada no SIA/IAP ou SGA" },
         { status: 404 }
       );
     }
     return NextResponse.json(dado);
   } catch {
     return NextResponse.json(
-      { error: "Falha ao consultar o SIA/IAP. Tente novamente." },
+      { error: "Falha ao consultar o SIA/IAP ou SGA. Tente novamente." },
       { status: 502 }
     );
   }

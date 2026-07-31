@@ -113,9 +113,6 @@ export default function NovoProcessoPage() {
 
       setForm((prev) => ({
         ...prev,
-        numProtocolo: data.numProtocolo || prev.numProtocolo,
-        numLicenca: data.numLicenca || prev.numLicenca,
-        validade: data.validade || prev.validade,
         condicionantes: data.condicionantes || prev.condicionantes,
       }));
 

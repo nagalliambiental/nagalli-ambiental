@@ -1,4 +1,5 @@
 const OCR_API = "https://api.ocr.space/parse/image";
+import pdfParse from "pdf-parse/lib/pdf-parse.js";
 
 const MIME_TYPES: Record<string, string> = {
   png: "image/png",
@@ -9,6 +10,19 @@ const MIME_TYPES: Record<string, string> = {
   tif: "image/tiff",
   bmp: "image/bmp",
 };
+
+const CONDICIONANTES_HEADERS = [
+  /^\s*4\.\s*CONDICIONANTES\s*$/i,
+  /^\s*CONDICIONANTES\s*$/i,
+  /CONDICIONANTES\s+D[AE]?\s+(?:LICEN[ÇC]A|AUTORIZA[ÇC][ÃA]O)/i,
+];
+
+const CONDICIONANTES_FOOTERS = [
+  /P[aá]gina \d+\/2/,
+  /Esta LICEN[ÇC]A/,
+  /Assinatura do Representante/,
+  /^\s*\d+\s*$/,
+];
 
 const DATE_PATTERNS = [
   /validade[:\s]*(\d{2})\/(\d{2})\/(\d{4})/i,
@@ -21,6 +35,8 @@ const DATE_PATTERNS = [
 ];
 
 const LICENCA_PATTERNS = [
+  /n[úu]mero\s+do\s+documento[^\d\n]*[\n\r\s]*(\d{3,})/i,
+  /LICEN[ÇC]A\s+PR[ÉE]VIA[\n\r\s]+(\d{3,})/i,
   /licen[cç]a\s*n[º°o]?\s*\.?\s*([\d\/\.\-]+)/i,
   /n[º°o]\s*(?:da\s+)?licen[cç]a[:\s]*([\d\/\.\-]+)/i,
   /licen[cç]a\s*(?:ambiental)?\s*:?\s*n[º°o]?\s*\.?\s*([\d\/\.\-]+)/i,
@@ -29,6 +45,7 @@ const LICENCA_PATTERNS = [
 ];
 
 const PROTOCOLO_PATTERNS = [
+  /n[úu]mero\s+do\s+protocolo[^\d]*?([\d][\d\.\/\-]{4,})/i,
   /protocolo\s*n[º°o]?\s*\.?\s*([\d\/\.\-]+)/i,
   /n[º°o]\s*(?:do\s+)?protocolo[:\s]*([\d\/\.\-]+)/i,
   /protocolo[:\s]*([\d\/\.\-]+)/i,
@@ -40,9 +57,69 @@ function mimeType(ext: string): string {
   return MIME_TYPES[ext.toLowerCase()] || "image/jpeg";
 }
 
+function extractCondicionantes(text: string): string | null {
+  if (!text) return null;
+
+  let start = -1;
+  let headerLen = 0;
+  for (const re of CONDICIONANTES_HEADERS) {
+    const m = text.match(re);
+    if (m && m.index !== undefined) {
+      start = m.index + m[0].length;
+      headerLen = m[0].length;
+      break;
+    }
+  }
+  if (start === -1) {
+    const m = text.match(/CONDICIONANTES/i);
+    if (m && m.index !== undefined) {
+      start = m.index + m[0].length;
+    } else {
+      return null;
+    }
+  }
+
+  let end = text.length;
+  for (const re of CONDICIONANTES_FOOTERS) {
+    const m = text.slice(start).match(re);
+    if (m && m.index !== undefined && start + m.index < end) {
+      end = start + m.index;
+    }
+  }
+
+  let sec = text.slice(start, end);
+
+  const artifact = /^\s*(?:P[aá]gina\s+\d+(?:\/LP|\/\d+)?[^\S\r\n]*|LP\s+N[º°o]?\s*\d+|Instituto [ÁA]gua e Terra|Rua Engenheiros Rebou[çc]as.*|EM BRANCO.*)\s*$/gm;
+  sec = sec.replace(artifact, "").replace(/\n{3,}/g, "\n\n").trim();
+
+  if (!sec) return null;
+  return sec;
+}
+
 export async function extractFromBuffer(buffer: Buffer, ext: string) {
   let text = "";
 
+  if (ext.toLowerCase() === "pdf") {
+    try {
+      const parsed = await pdfParse(buffer);
+      if (parsed?.text) text = parsed.text;
+    } catch (err) {
+      console.error("[PDF] native text extraction failed, falling back to OCR:", err);
+    }
+  }
+
+  if (!text || text.replace(/\s+/g, "").length < 30) {
+    text = await runOcr(buffer, ext);
+  }
+
+  console.log("[EXTRACT] text length:", text.length);
+  if (text) console.log("[EXTRACT] text preview:", text.slice(0, 500));
+  const result = extractFields(text);
+  console.log("[EXTRACT] extracted fields:", result);
+  return result;
+}
+
+async function runOcr(buffer: Buffer, ext: string): Promise<string> {
   try {
     const mime = mimeType(ext);
     const blob = new Blob([new Uint8Array(buffer)], { type: mime });
@@ -67,18 +144,13 @@ export async function extractFromBuffer(buffer: Buffer, ext: string) {
       if (json.IsErroredOnProcessing) {
         console.error("OCR.space processing error:", json.ErrorMessage);
       } else if (json.ParsedResults?.[0]?.ParsedText) {
-        text = json.ParsedResults[0].ParsedText;
+        return json.ParsedResults[0].ParsedText;
       }
     }
   } catch (err) {
     console.error("OCR fetch failed:", err);
   }
-
-  console.log("[OCR] extracted text length:", text.length);
-  if (text) console.log("[OCR] text preview:", text.slice(0, 500));
-  const result = extractFields(text);
-  console.log("[OCR] extracted fields:", result);
-  return result;
+  return "";
 }
 
 export function extractFields(text: string) {
@@ -102,6 +174,7 @@ export function extractFields(text: string) {
     const m = text.match(pat);
     if (m && m[1].trim().length > 2) {
       const raw = m[1].trim();
+      if (raw.split("/").length === 3) continue;
       if (!/^\d+$/.test(raw.replace(/[\/\-\.]/g, ""))) continue;
       numLicenca = raw;
       break;
@@ -119,5 +192,10 @@ export function extractFields(text: string) {
     }
   }
 
-  return { validade, numLicenca, numProtocolo, condicionantes: null };
+  return {
+    validade,
+    numLicenca,
+    numProtocolo,
+    condicionantes: extractCondicionantes(text),
+  };
 }

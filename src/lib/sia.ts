@@ -1,4 +1,24 @@
 const BASE_URL = "https://celepar7.pr.gov.br/sia/licenciamento/consulta";
+const SGA_BASE_URL =
+  "http://www.sga.pr.gov.br/sga-iap/consultarProcessoLicenciamento.do";
+
+const SIGLA_MODALIDADE: Record<string, string> = {
+  AA: "Autorização Ambiental",
+  AF: "Autorização Florestal",
+  LP: "Licença Prévia",
+  LI: "Licença de Instalação",
+  LO: "Licença de Operação",
+  LAS: "Licença Ambiental Simplificada",
+  LAC: "Licença Ambiental por Adesão e Compromisso",
+  RLO: "Renovação de Licença de Operação",
+  RLI: "Renovação de Licença de Instalação",
+  RLAS: "Renovação de Licença Ambiental Simplificada",
+  LOR: "Licença de Operação de Regularização",
+  LASR: "Licença Ambiental Simplificada de Regularização",
+  DLAE: "Declaração de Dispensa de Licenciamento Ambiental",
+  DLAM: "Dispensa de Licenciamento Ambiental",
+  CP: "Consulta Prévia",
+};
 
 export interface DadosSia {
   id: string;
@@ -82,6 +102,78 @@ async function fetchHtml(url: string): Promise<string> {
   return new TextDecoder("iso-8859-1").decode(buf);
 }
 
+interface ResultadoSga {
+  numProtocolo: number;
+  numProtocoloFormatado?: string;
+  numDocumento?: number;
+  numDocumentoFormatado?: string;
+  siglaModalidade?: string;
+  descAtividade?: string;
+  descAtividadeEspecifica?: string;
+  dtDecisaoFormatado?: string;
+  dtValidadeFormatado?: string;
+  nomeRazaoSocial?: string;
+  municipioUfFormatado?: string;
+  indSia?: boolean;
+}
+
+async function consultarSga(opts: {
+  protocolo?: string;
+  licenca?: string;
+}): Promise<DadosSia | null> {
+  const qs = new URLSearchParams({
+    action: "consultarProcessoLicenciamento",
+  });
+  if (opts.protocolo) qs.set("numProtocolo", opts.protocolo);
+  if (opts.licenca) qs.set("numDocumento", opts.licenca);
+
+  const res = await fetch(`${SGA_BASE_URL}?${qs.toString()}`, {
+    cache: "no-store",
+    headers: {
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+    },
+  });
+  if (!res.ok) throw new Error(`SGA respondeu ${res.status}`);
+  const buf = await res.arrayBuffer();
+  const texto = new TextDecoder("iso-8859-1").decode(buf);
+
+  const jsonTexto = texto
+    .replace(/,\s*([}\]])/g, "$1")
+    .replace(/([{,]\s*)([A-Za-z_$][\w$]*)\s*:/g, '$1"$2":')
+    .replace(/'/g, '"');
+
+  let json: {
+    success?: boolean;
+    listaProcessoLicenciamento?: ResultadoSga[];
+  };
+  try {
+    json = JSON.parse(jsonTexto);
+  } catch {
+    return null;
+  }
+
+  const item = json?.listaProcessoLicenciamento?.[0];
+  if (!item) return null;
+
+  const modalidade =
+    SIGLA_MODALIDADE[item.siglaModalidade || ""] || item.siglaModalidade || "";
+  return {
+    id: String(item.numProtocolo ?? ""),
+    modalidade,
+    protocolo: item.numProtocoloFormatado || String(item.numProtocolo || ""),
+    numLicenca:
+      item.numDocumentoFormatado || String(item.numDocumento ?? ""),
+    dataEmissao: item.dtDecisaoFormatado || "",
+    dataValidade: item.dtValidadeFormatado || "",
+    condicionantes: "",
+    empreendedor: item.nomeRazaoSocial || "",
+    empreendimento: item.descAtividadeEspecifica || item.descAtividade || "",
+    atividade: item.descAtividade || "",
+    urlDetalhe: `${SGA_BASE_URL}?action=exibirDadosPublicoLicenca&numProtocolo=${item.numProtocolo}&indSia=${item.indSia ? "true" : "false"}`,
+  };
+}
+
 function parseResultados(html: string): ResultadoBusca[] {
   const resultados: ResultadoBusca[] = [];
   const rowRe = /<tr[^>]*>([\s\S]*?)<\/tr>/g;
@@ -146,7 +238,9 @@ export async function consultarSia(opts: {
 
   const html = await fetchHtml(`${BASE_URL}/con_licenca_ajax.asp?${qs.toString()}`);
   const resultados = parseResultados(html);
-  if (resultados.length === 0) return null;
+  if (resultados.length === 0) {
+    return consultarSga(opts);
+  }
 
   const primeiro = resultados[0];
   const detalheHtml = await fetchHtml(
