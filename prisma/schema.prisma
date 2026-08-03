@@ -185,6 +185,19 @@ model Processo {
   exigencias    Exigencia[]
   documentos    Documento[]
   timeline      TimelineProcesso[]
+  condicionantesItens Condicionante[]
+}
+
+model Condicionante {
+  id           Int      @id @default(autoincrement())
+  processoId   Int
+  ordem        Int      @default(0)
+  texto        String
+  atendida     Boolean  @default(false)
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  processo Processo @relation(fields: [processoId], references: [id], onDelete: Cascade)
 }
 
 model Exigencia {

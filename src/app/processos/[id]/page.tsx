@@ -13,6 +13,7 @@ import Link from "next/link";
 import DeleteButton from "@/components/DeleteButton";
 import { Tabs } from "@/components/Tabs";
 import { UltimaModificacao } from "@/components/UltimaModificacao";
+import { CondicionantesEditor } from "@/components/CondicionantesEditor";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +52,7 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
       orgao: true,
       empreendimento: { select: { apelido: true, id: true, cliente: { select: { apelido: true } } } },
       responsavel: { select: { nome: true, email: true, telefone: true } },
+      condicionantesItens: { orderBy: { ordem: "asc" } },
       _count: { select: { exigencias: true, documentos: true } },
     },
   });
@@ -200,14 +202,14 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
           {
             key: "condicionantes",
             label: "Condicionantes",
+            count: processo.condicionantesItens.length,
             content: (
               <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
-                <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-3">Condicionantes</h2>
-                {processo.condicionantes ? (
-                  <p className="text-sm text-[var(--color-ink-700)] whitespace-pre-wrap">{processo.condicionantes}</p>
-                ) : (
-                  <p className="text-sm text-[var(--color-ink-500)]">Nenhuma condicionante registrada.</p>
-                )}
+                <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-3">Relatório de Atendimento a Condicionantes</h2>
+                <CondicionantesEditor
+                  processoId={processo.id}
+                  initialItens={processo.condicionantesItens.map((c) => ({ texto: c.texto, atendida: c.atendida }))}
+                />
               </div>
             ),
           },

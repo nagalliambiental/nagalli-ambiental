@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { PDFDocument, StandardFonts, rgb, type PDFFont } from "pdf-lib";
+import { embedBrandLogos, drawBrandHeader, drawBrandFooter } from "@/lib/pdf-branding";
 
 function wrapLines(text: string, f: PDFFont, size: number, maxWidth: number): string[] {
   const words = (text || "").split(/\s+/).filter(Boolean);
@@ -49,11 +50,13 @@ export async function GET(request: Request) {
   const pdf = await PDFDocument.create();
   const font = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const logos = await embedBrandLogos(pdf);
 
   let page = pdf.addPage([842, 595]);
+  drawBrandFooter(page, font, 842);
   const { width, height } = page.getSize();
   const marginX = 40;
-  const marginTop = 60;
+  const marginTop = 92;
   const colWidths = [100, 130, 70, 70, 70, 90, 90];
   const cellSize = 8;
   let y = height - marginTop;
@@ -75,6 +78,7 @@ export async function GET(request: Request) {
   const filtros = [status ? `Status: ${status}` : "", clienteId ? `Cliente ID: ${clienteId}` : "", dataInicio ? `De: ${dataInicio}` : "", dataFim ? `Até: ${dataFim}` : ""].filter(Boolean).join(" | ");
 
   function drawPageHeader() {
+    drawBrandHeader(page, logos, marginX, height - 20);
     page.drawText("Relatório Financeiro", { x: marginX, y, size: 18, font: bold });
     y -= 20;
     if (filtros) { page.drawText(filtros, { x: marginX, y, size: 10, font }); y -= 14; }
@@ -88,7 +92,7 @@ export async function GET(request: Request) {
       page.drawText(headers[i], { x, y, size: 8, font: bold, color: rgb(1, 1, 1) });
       x += colWidths[i];
     }
-    y -= 14;
+    y -= 20;
   }
 
   drawPageHeader();
@@ -111,6 +115,7 @@ export async function GET(request: Request) {
 
     if (y - rowHeight < 50) {
       page = pdf.addPage([842, 595]);
+      drawBrandFooter(page, font, width);
       y = height - marginTop;
       drawPageHeader();
     }
@@ -132,6 +137,7 @@ export async function GET(request: Request) {
   y -= 20;
   if (y < 50) {
     page = pdf.addPage([842, 595]);
+    drawBrandFooter(page, font, width);
     y = height - marginTop;
   }
   page.drawText(`Total de registros: ${registros.length}`, { x: marginX, y, size: 10, font: bold }); y -= 13;
