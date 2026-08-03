@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { logAuditoria } from "@/lib/audit";
+import { ehPrivilegiado } from "@/lib/perfil";
 
 
 export async function GET(
@@ -29,6 +30,11 @@ export async function GET(
     return NextResponse.json({ error: "Empreendimento não encontrado" }, { status: 404 });
   }
 
+  const perfil = (session.user as { perfil?: string }).perfil;
+  if (!ehPrivilegiado(perfil) && emp.visibilidade === "privado") {
+    return NextResponse.json({ error: "Acesso restrito" }, { status: 403 });
+  }
+
   return NextResponse.json(emp);
 }
 
@@ -41,8 +47,19 @@ export async function PUT(
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
 
+  const perfil = (session.user as { perfil?: string }).perfil;
   const { id } = await params;
   const body = await request.json();
+
+  const atual = await prisma.empreendimento.findUnique({
+    where: { id: Number(id) },
+    select: { clienteId: true },
+  });
+  if (!atual) {
+    return NextResponse.json({ error: "Empreendimento não encontrado" }, { status: 404 });
+  }
+
+  const visibilidade = ehPrivilegiado(perfil) && body.visibilidade === "privado" ? "privado" : "publico";
 
   const emp = await prisma.empreendimento.update({
     where: { id: Number(id) },
@@ -60,7 +77,8 @@ export async function PUT(
       latitude: body.latitude ?? null,
       longitude: body.longitude ?? null,
       poligono: body.poligono ?? null,
-      clienteId: Number(body.clienteId),
+      clienteId: body.clienteId !== undefined && body.clienteId !== null && body.clienteId !== "" ? Number(body.clienteId) : atual.clienteId,
+      visibilidade,
     },
   });
 

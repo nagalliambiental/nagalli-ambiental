@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { logAuditoria } from "@/lib/audit";
+import { ehPrivilegiado } from "@/lib/perfil";
 
 export async function GET() {
   try {
@@ -10,7 +11,11 @@ export async function GET() {
       return NextResponse.json({ erro: "Não autorizado" }, { status: 401 });
     }
 
+    const perfil = (session.user as { perfil?: string }).perfil;
+    const where = ehPrivilegiado(perfil) ? {} : { visibilidade: "publico" };
+
     const clientes = await prisma.cliente.findMany({
+      where,
       orderBy: { criadoEm: "desc" },
     });
 
@@ -39,13 +44,19 @@ export async function POST(request: Request) {
       );
     }
 
-    const cliente = await prisma.cliente.create({ data: body });
+    const perfil = (session.user as { perfil?: string }).perfil;
+    const data = { ...body };
+    if (!ehPrivilegiado(perfil)) {
+      data.visibilidade = "publico";
+    }
+
+    const cliente = await prisma.cliente.create({ data });
 
     await logAuditoria(
       "CRIAR",
       "Cliente",
       cliente.id,
-      body,
+      data,
       session.user?.id ? Number(session.user.id) : undefined
     );
 

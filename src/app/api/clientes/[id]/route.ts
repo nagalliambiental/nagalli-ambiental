@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { logAuditoria } from "@/lib/audit";
+import { ehPrivilegiado } from "@/lib/perfil";
 
 
 export async function GET(
@@ -30,6 +31,11 @@ export async function GET(
         { erro: "Cliente não encontrado" },
         { status: 404 }
       );
+    }
+
+    const perfil = (session.user as { perfil?: string }).perfil;
+    if (!ehPrivilegiado(perfil) && cliente.visibilidade === "privado") {
+      return NextResponse.json({ erro: "Acesso restrito" }, { status: 403 });
     }
 
     return NextResponse.json(cliente);
@@ -87,6 +93,11 @@ export async function PUT(
         { erro: "Todos os campos obrigatórios devem ser preenchidos" },
         { status: 400 }
       );
+    }
+
+    const perfil = (session.user as { perfil?: string }).perfil;
+    if (!ehPrivilegiado(perfil) && "visibilidade" in data) {
+      data.visibilidade = "publico";
     }
 
     const cliente = await prisma.cliente.update({

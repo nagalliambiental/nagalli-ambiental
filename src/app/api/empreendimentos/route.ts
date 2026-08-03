@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAuditoria } from "@/lib/audit";
+import { ehPrivilegiado } from "@/lib/perfil";
 import type { Prisma } from "@prisma/client";
 
 export async function GET() {
@@ -10,7 +11,9 @@ export async function GET() {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
 
+  const perfil = (session.user as { perfil?: string }).perfil;
   const empreendimentos = await prisma.empreendimento.findMany({
+    where: ehPrivilegiado(perfil) ? {} : { visibilidade: "publico" },
     include: { cliente: true },
     orderBy: { criadoEm: "desc" },
   });
@@ -27,6 +30,10 @@ export async function POST(request: Request) {
   try {
     const data = await request.json();
     const payload: Record<string, unknown> = { ...data };
+
+    if (!ehPrivilegiado((session.user as { perfil?: string }).perfil)) {
+      payload.visibilidade = "publico";
+    }
 
     if (payload.clienteId !== undefined && payload.clienteId !== null) {
       const cid = Number(payload.clienteId);

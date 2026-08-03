@@ -3,6 +3,7 @@ export function generateStaticParams() { return []; }
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { ehPrivilegiado } from "@/lib/perfil";
 import { Topbar } from "@/components/Topbar";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -12,6 +13,8 @@ import DeleteButton from "@/components/DeleteButton";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { HistoricoTab } from "@/components/HistoricoTab";
 import { Tabs } from "@/components/Tabs";
+import { UltimaModificacao } from "@/components/UltimaModificacao";
+import { VisibilidadeBadge } from "@/components/VisibilidadeBadge";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +41,15 @@ export default async function EmpreendimentoDetailPage(props: { params: Promise<
   });
   if (!emp) notFound();
 
+  const perfil = (session.user as { perfil?: string }).perfil;
+  if (!ehPrivilegiado(perfil) && emp.visibilidade === "privado") {
+    return (
+      <div className="mx-auto max-w-xl py-16 text-center">
+        <p className="text-ink-500">Acesso restrito a este empreendimento.</p>
+      </div>
+    );
+  }
+
   const processos = await prisma.processo.findMany({
     where: { empreendimentoId: emp.id },
     include: { orgao: { select: { sigla: true } } },
@@ -60,6 +72,11 @@ export default async function EmpreendimentoDetailPage(props: { params: Promise<
           Voltar para empreendimentos
         </Link>
       </div>
+
+      <div className="mb-2 flex items-center gap-3">
+        <VisibilidadeBadge visibilidade={emp.visibilidade} />
+      </div>
+      <UltimaModificacao entidade="empreendimento" entidadeId={emp.id} />
 
       <Topbar
         title={emp.apelido}

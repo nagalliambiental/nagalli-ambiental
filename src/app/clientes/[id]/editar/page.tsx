@@ -51,6 +51,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
         { name: "responsavelPgrsNome", label: "Resp. implantação PGRS", type: "text" },
         { name: "responsavelPgrsCargo", label: "Cargo resp. PGRS", type: "text" },
         { name: "ramoAtividade", label: "Ramo de atividade", type: "text" },
+        { name: "visibilidade", label: "Visibilidade", type: "select", adminOnly: true, options: [{ value: "publico", label: "Público" }, { value: "privado", label: "Privado" }] },
         { name: "ativo", label: "Ativo", type: "checkbox" },
       ]}
       data={{
@@ -74,6 +75,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
         responsavelPgrsNome: cliente.responsavelPgrsNome || "",
         responsavelPgrsCargo: cliente.responsavelPgrsCargo || "",
         ramoAtividade: cliente.ramoAtividade || "",
+        visibilidade: cliente.visibilidade,
         ativo: cliente.ativo,
       }}
     />

@@ -7,6 +7,8 @@ import { SearchBar } from "@/components/SearchBar";
 import { EmpreendimentosTable } from "@/components/tables/EmpreendimentosTable";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { GerarDocumentosButton } from "@/components/GerarDocumentosButton";
+import { auth } from "@/lib/auth";
+import { ehPrivilegiado } from "@/lib/perfil";
 
 export const dynamic = "force-dynamic";
 
@@ -18,8 +20,11 @@ export default async function EmpreendimentosPage({
   searchParams: Promise<{ q?: string }>;
 }) {
   const { q } = await searchParams;
+  const session = await auth();
+  const perfil = (session?.user as { perfil?: string } | undefined)?.perfil;
 
   const where: Prisma.EmpreendimentoWhereInput = {};
+  if (!ehPrivilegiado(perfil)) where.visibilidade = "publico";
   if (q) {
     where.OR = [
       { apelido: { contains: q, mode: "insensitive" } },

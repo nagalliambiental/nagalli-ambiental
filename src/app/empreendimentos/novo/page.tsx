@@ -43,9 +43,10 @@ export default async function Page() {
         { name: "descricao", label: "Descrição", type: "textarea", required: true },
         { name: "latitude", label: "Latitude", type: "number" },
         { name: "longitude", label: "Longitude", type: "number" },
+        { name: "visibilidade", label: "Visibilidade", type: "select", adminOnly: true, options: [{ value: "publico", label: "Público" }, { value: "privado", label: "Privado" }] },
         { name: "ativo", label: "Ativo", type: "checkbox" },
       ]}
-      data={{ ativo: true }}
+      data={{ ativo: true, visibilidade: "publico" }}
     />
     </div>
   );

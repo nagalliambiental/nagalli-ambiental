@@ -22,6 +22,11 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
   const emp = await prisma.empreendimento.findUnique({ where: { id: Number(id) } });
   if (!emp) notFound();
 
+  const clientes = await prisma.cliente.findMany({
+    select: { id: true, apelido: true },
+    orderBy: { apelido: "asc" },
+  });
+
   return (
     <div>
       <Breadcrumbs items={[{ label: "Empreendimentos", href: "/empreendimentos" }, { label: emp.apelido, href: `/empreendimentos/${emp.id}` }, { label: "Editar" }]} />
@@ -32,6 +37,10 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
       redirectTo={`/empreendimentos/${id}`}
       fields={[
         { name: "apelido", label: "Apelido", type: "text", required: true },
+        {
+          name: "clienteId", label: "Cliente", type: "select", required: true,
+          options: clientes.map((c) => ({ value: String(c.id), label: c.apelido })),
+        },
         { name: "cnpj", label: "CNPJ", type: "text" },
         { name: "cep", label: "CEP", type: "text", search: "cep" },
         { name: "municipio", label: "Município", type: "text" },
@@ -43,10 +52,12 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
         { name: "descricao", label: "Descrição", type: "textarea" },
         { name: "latitude", label: "Latitude", type: "number" },
         { name: "longitude", label: "Longitude", type: "number" },
+        { name: "visibilidade", label: "Visibilidade", type: "select", adminOnly: true, options: [{ value: "publico", label: "Público" }, { value: "privado", label: "Privado" }] },
         { name: "ativo", label: "Ativo", type: "checkbox" },
       ]}
       data={{
         apelido: emp.apelido,
+        clienteId: String(emp.clienteId),
         cnpj: emp.cnpj,
         cep: emp.cep,
         municipio: emp.municipio,
@@ -58,6 +69,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
         descricao: emp.descricao,
         latitude: emp.latitude,
         longitude: emp.longitude,
+        visibilidade: emp.visibilidade,
         ativo: emp.ativo,
       }}
     />

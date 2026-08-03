@@ -5,12 +5,15 @@ import { useRouter } from "next/navigation";
 import { Topbar } from "@/components/Topbar";
 import { Loader2, Save, ArrowLeft, Search, AlertCircle } from "lucide-react";
 import { useToast } from "@/components/Toast";
+import { useSession } from "next-auth/react";
+import { ehPrivilegiado } from "@/lib/perfil";
 
 interface FieldConfig {
   name: string;
   label: string;
   type: "text" | "select" | "textarea" | "date" | "number" | "checkbox";
   required?: boolean;
+  adminOnly?: boolean;
   options?: { value: string; label: string }[];
   search?: "cep" | "cnpj" | "sia";
   validate?: (value: string | boolean) => string | null;
@@ -37,6 +40,10 @@ export default function EditEntityForm({
 }: EditEntityFormProps) {
   const router = useRouter();
   const { toast } = useToast();
+  const { data: session } = useSession();
+  const perfil = (session?.user as Record<string, unknown>)?.perfil as string;
+  const privilegiado = ehPrivilegiado(perfil);
+  const camposVisiveis = fields.filter((f) => !f.adminOnly || privilegiado);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -66,7 +73,7 @@ export default function EditEntityForm({
 
   const validate = useCallback(() => {
     const errors: Record<string, string> = {};
-    for (const f of fields) {
+    for (const f of camposVisiveis) {
       const val = form[f.name];
       if (f.required && (!val || (typeof val === "string" && !val.trim()))) {
         errors[f.name] = `${f.label} é obrigatório`;
@@ -79,7 +86,7 @@ export default function EditEntityForm({
     }
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
-  }, [fields, form]);
+  }, [camposVisiveis, form]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -88,7 +95,7 @@ export default function EditEntityForm({
     setError("");
     try {
       const body: Record<string, unknown> = {};
-      for (const f of fields) {
+      for (const f of camposVisiveis) {
         let val: unknown = form[f.name];
         if (f.type === "checkbox") val = Boolean(val);
         else if (f.type === "number") val = val === "" || val == null ? null : Number(val);
@@ -211,7 +218,7 @@ export default function EditEntityForm({
       <div className="mx-auto max-w-3xl">
         <form onSubmit={handleSubmit} className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-6 space-y-5">
           <div className="grid grid-cols-2 gap-5">
-            {fields.map((f) => (
+            {camposVisiveis.map((f) => (
               <div key={f.name} className={f.type === "textarea" ? "col-span-2" : ""}>
                 <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1.5">
                   {f.label}

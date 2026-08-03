@@ -12,6 +12,7 @@ import { FileText, Download, Building2, Calendar, ArrowLeft, Edit3 } from "lucid
 import Link from "next/link";
 import DeleteButton from "@/components/DeleteButton";
 import { Tabs } from "@/components/Tabs";
+import { UltimaModificacao } from "@/components/UltimaModificacao";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +54,8 @@ export default async function DocumentoDetailPage(props: { params: Promise<{ id:
           Voltar para documentos
         </Link>
       </div>
+
+      <UltimaModificacao entidade="documento" entidadeId={doc.id} />
 
       <Topbar
         title={doc.nome}

@@ -11,6 +11,7 @@ import Link from "next/link";
 import DeleteButton from "@/components/DeleteButton";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { Tabs } from "@/components/Tabs";
+import { UltimaModificacao } from "@/components/UltimaModificacao";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +57,8 @@ export default async function FinanceiroDetailPage(props: { params: Promise<{ id
           Voltar para financeiro
         </Link>
       </div>
+
+      <UltimaModificacao entidade="financeiro" entidadeId={reg.id} />
 
       <Topbar
         title="Registro Financeiro"

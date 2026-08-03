@@ -11,6 +11,7 @@ import Link from "next/link";
 import DeleteButton from "@/components/DeleteButton";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { Tabs } from "@/components/Tabs";
+import { UltimaModificacao } from "@/components/UltimaModificacao";
 
 export const dynamic = "force-dynamic";
 
@@ -65,6 +66,8 @@ export default async function TarefaDetailPage(props: { params: Promise<{ id: st
           Voltar para tarefas
         </Link>
       </div>
+
+      <UltimaModificacao entidade="tarefa" entidadeId={tarefa.id} />
 
       <Topbar
         title={tarefa.titulo}

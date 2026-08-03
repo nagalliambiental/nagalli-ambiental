@@ -12,6 +12,7 @@ import { FileText, Building2, Map, Calendar, Users, ClipboardList, FileCheck2, C
 import Link from "next/link";
 import DeleteButton from "@/components/DeleteButton";
 import { Tabs } from "@/components/Tabs";
+import { UltimaModificacao } from "@/components/UltimaModificacao";
 
 export const dynamic = "force-dynamic";
 
@@ -65,6 +66,8 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
           Voltar para processos
         </Link>
       </div>
+
+      <UltimaModificacao entidade="processo" entidadeId={processo.id} />
 
       <Topbar
         title={`Processo ${processo.numProtocolo}`}
