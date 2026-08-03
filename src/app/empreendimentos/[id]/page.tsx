@@ -7,7 +7,7 @@ import { ehPrivilegiado } from "@/lib/perfil";
 import { Topbar } from "@/components/Topbar";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Map, MapPin, Building2, Calendar, FileText, Edit3, ArrowLeft } from "lucide-react";
+import { Map, MapPin, Building2, Calendar, FileText, Edit3, ArrowLeft, FileCheck2, Download } from "lucide-react";
 import Link from "next/link";
 import DeleteButton from "@/components/DeleteButton";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
@@ -175,6 +175,7 @@ export default async function EmpreendimentoDetailPage(props: { params: Promise<
                           <th className="text-left p-4 font-medium">Tipo</th>
                           <th className="text-left p-4 font-medium">Órgão</th>
                           <th className="text-left p-4 font-medium">Status</th>
+                          <th className="text-left p-4 font-medium">Condicionantes</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -186,6 +187,26 @@ export default async function EmpreendimentoDetailPage(props: { params: Promise<
                             <td className="p-4">{p.tipo}</td>
                             <td className="p-4">{p.orgao.sigla}</td>
                             <td className="p-4">{p.status}</td>
+                            <td className="p-4">
+                              <div className="flex items-center gap-3">
+                                <Link
+                                  href={`/processos/${p.id}?tab=condicionantes`}
+                                  className="flex items-center gap-1 text-[var(--color-brand-600)] hover:underline"
+                                  title="Editar condicionantes"
+                                >
+                                  <FileCheck2 size={14} /> Editar
+                                </Link>
+                                <a
+                                  href={`/api/relatorios/condicionantes/${p.id}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-1 text-[var(--color-ink-500)] hover:text-[var(--color-brand-600)]"
+                                  title="Baixar relatório de condicionantes (PDF)"
+                                >
+                                  <Download size={14} /> PDF
+                                </a>
+                              </div>
+                            </td>
                           </tr>
                         ))}
                       </tbody>

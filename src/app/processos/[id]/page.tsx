@@ -41,11 +41,12 @@ export async function generateMetadata(props: { params: Promise<{ id: string }> 
   return { title: `Processo - ${processo?.numProtocolo || "Não encontrado"}` };
 }
 
-export default async function ProcessoDetailPage(props: { params: Promise<{ id: string }> }) {
+export default async function ProcessoDetailPage(props: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string }> }) {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
   const { id } = await props.params;
+  const { tab } = await props.searchParams;
   const processo = await prisma.processo.findUnique({
     where: { id: Number(id) },
     include: {
@@ -89,6 +90,7 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
       <UltimaModificacao entidade="processo" entidadeId={processo.id} />
 
       <Tabs
+        initialTab={tab}
         tabs={[
           {
             key: "informacoes",
