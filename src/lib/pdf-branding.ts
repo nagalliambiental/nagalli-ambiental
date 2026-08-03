@@ -1,6 +1,14 @@
+import fs from "fs";
+import path from "path";
 import type { PDFDocument, PDFFont, PDFImage, PDFPage } from "pdf-lib";
 import { rgb } from "pdf-lib";
-import { LOGO_ICON_BASE64, LOGO_WORDMARK_BASE64 } from "@/lib/brand-assets";
+
+let iconBytes: Buffer | null = null;
+let wordmarkBytes: Buffer | null = null;
+
+function readPublicFile(name: string): Buffer {
+  return fs.readFileSync(path.join(process.cwd(), "public", name));
+}
 
 export interface BrandLogos {
   icon: PDFImage;
@@ -8,9 +16,12 @@ export interface BrandLogos {
 }
 
 export async function embedBrandLogos(pdf: PDFDocument): Promise<BrandLogos> {
+  if (!iconBytes) iconBytes = readPublicFile("Logo.jpeg");
+  if (!wordmarkBytes) wordmarkBytes = readPublicFile("Logo1.jpeg");
+
   const [icon, wordmark] = await Promise.all([
-    pdf.embedJpg(Buffer.from(LOGO_ICON_BASE64, "base64")),
-    pdf.embedJpg(Buffer.from(LOGO_WORDMARK_BASE64, "base64")),
+    pdf.embedJpg(iconBytes),
+    pdf.embedJpg(wordmarkBytes),
   ]);
 
   return { icon, wordmark };

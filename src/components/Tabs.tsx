@@ -9,10 +9,8 @@ export interface TabItem {
   content: ReactNode;
 }
 
-export function Tabs({ tabs, initialTab }: { tabs: TabItem[]; initialTab?: string }) {
-  const [active, setActive] = useState(
-    initialTab && tabs.some((t) => t.key === initialTab) ? initialTab : tabs[0]?.key ?? ""
-  );
+export function Tabs({ tabs }: { tabs: TabItem[] }) {
+  const [active, setActive] = useState(tabs[0]?.key ?? "");
   const current = tabs.find((t) => t.key === active) ?? tabs[0];
 
   return (
