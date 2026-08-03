@@ -85,14 +85,14 @@ export async function GET(request: Request) {
     page.drawText(`Gerado em: ${new Date().toLocaleDateString("pt-BR")}`, { x: marginX, y, size: 9, font });
     y -= 24;
 
-    page.drawRectangle({ x: marginX, y: y - 12, width: width - 80, height: 14, color: rgb(0.2, 0.2, 0.2) });
+    page.drawRectangle({ x: marginX, y: y - 14, width: width - 80, height: 16, color: rgb(0.2, 0.2, 0.2) });
 
     let x = marginX + 4;
     for (let i = 0; i < headers.length; i++) {
-      page.drawText(headers[i], { x, y, size: 8, font: bold, color: rgb(1, 1, 1) });
+      page.drawText(headers[i], { x, y: y - 10, size: 8, font: bold, color: rgb(1, 1, 1) });
       x += colWidths[i];
     }
-    y -= 20;
+    y -= 24;
   }
 
   drawPageHeader();

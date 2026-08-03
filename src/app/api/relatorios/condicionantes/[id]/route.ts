@@ -97,7 +97,7 @@ export async function GET(
     page.drawRectangle({ x: marginX, y: y - 14, width: width - 2 * marginX, height: 16, color: rgb(0.2, 0.2, 0.2) });
     page.drawText("Condicionante", { x: marginX + 6, y: y - 10, size: 9, font: bold, color: rgb(1, 1, 1) });
     page.drawText("Atendida", { x: marginX + colWidths[0] + 6, y: y - 10, size: 9, font: bold, color: rgb(1, 1, 1) });
-    y -= 20;
+    y -= 24;
   }
 
   drawPageHeader(true);
