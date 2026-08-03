@@ -6,7 +6,7 @@ export async function proxy(request: NextRequest) {
   const session = await auth();
   const { pathname } = request.nextUrl;
 
-  if (pathname.startsWith("/login") || pathname.startsWith("/register") || pathname.startsWith("/api/auth")) {
+  if (pathname.startsWith("/login") || pathname.startsWith("/api/auth")) {
     return NextResponse.next();
   }
 
@@ -19,5 +19,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api/auth|login|register|_next/static|_next/image|favicon.ico|Logo|Logo1).*)"],
+  matcher: ["/((?!api/auth|login|_next/static|_next/image|favicon.ico|Logo|Logo1).*)"],
 };

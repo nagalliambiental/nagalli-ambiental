@@ -12,6 +12,7 @@ import {
   FileSpreadsheet,
   BarChart3,
   Key,
+  FileSignature,
   type LucideIcon,
 } from "lucide-react";
 
@@ -35,6 +36,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Processos", href: "/processos", icon: FileCheck2 },
   { label: "Exigências", href: "/exigencias", icon: ClipboardList },
   { label: "DMR", href: "/dmr", icon: FileSpreadsheet },
+  { label: "Contratos", href: "/contratos", icon: FileSignature, adminOnly: true },
   { label: "Modelos", href: "/modelos", icon: FileText },
   { label: "Financeiro", href: "/financeiro", icon: DollarSign, adminOnly: true },
   { label: "Prazos", href: "/prazos", icon: CalendarClock },

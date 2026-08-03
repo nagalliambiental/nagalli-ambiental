@@ -128,6 +128,7 @@ model Empreendimento {
   controleDmr ControleDmr?
   historicos Historico[]
   acessos    Acesso[]
+  contratos Contrato[]
 }
 
 model Orgao {
@@ -136,6 +137,22 @@ model Orgao {
   sigla  String @unique
 
   processos Processo[]
+}
+
+model Contrato {
+  id                  Int      @id @default(autoincrement())
+  nomeEmpresa         String
+  servicoProcesso     String
+  dataAssinatura      DateTime
+  dataValidade        DateTime
+  alertaRenovacaoDias Int      @default(60)
+  visibilidade        String   @default("privado")
+  ativo               Boolean  @default(true)
+  empreendimentoId    Int?
+  criadoEm            DateTime @default(now())
+  atualizadoEm        DateTime @updatedAt
+
+  empreendimento Empreendimento? @relation(fields: [empreendimentoId], references: [id])
 }
 
 model Processo {

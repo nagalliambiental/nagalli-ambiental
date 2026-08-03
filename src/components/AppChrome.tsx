@@ -8,7 +8,7 @@ import { useSession } from "next-auth/react";
 export function AppChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const semChrome = pathname === "/login" || pathname === "/register";
+  const semChrome = pathname === "/login";
 
   if (semChrome || !session) {
     return <>{children}</>;
