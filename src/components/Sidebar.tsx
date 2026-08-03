@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Plus, ChevronDown } from "lucide-react";
-import { NAV_ITEMS } from "@/lib/nav-items";
+import { NAV_ITEMS, type NavChild } from "@/lib/nav-items";
 import { UserMenu } from "@/components/UserMenu";
 import { useSession } from "next-auth/react";
 import { useState } from "react";
@@ -15,9 +15,16 @@ export default function Sidebar() {
   const perfil = (session?.user as Record<string, unknown>)?.perfil as string;
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(["Cadastros"]));
 
-  const itensVisiveis = NAV_ITEMS.filter(
-    (item) => !item.adminOnly || perfil === "socio"
-  );
+  const ehPrivilegiado = perfil === "socio" || perfil === "admin";
+
+  const filtraFilhos = (children: NavChild[] = []) =>
+    children.filter((c) => !c.adminOnly || ehPrivilegiado);
+
+  const itensVisiveis = NAV_ITEMS.filter((item) => {
+    if (item.adminOnly && !ehPrivilegiado) return false;
+    if (item.children) return filtraFilhos(item.children).length > 0;
+    return true;
+  });
 
   function toggleGroup(label: string) {
     setExpandedGroups((prev) => {
@@ -60,8 +67,9 @@ export default function Sidebar() {
       <nav className="flex-1 space-y-1 px-4 py-6 overflow-y-auto">
         {itensVisiveis.map(({ label, href, icon: Icon, children }) => {
           if (children) {
+            const filhos = filtraFilhos(children);
             const expanded = expandedGroups.has(label);
-            const groupActive = children.some((c) => isChildActive(c.href));
+            const groupActive = filhos.some((c) => isChildActive(c.href));
             return (
               <div key={label}>
                 <button
@@ -78,7 +86,7 @@ export default function Sidebar() {
                 </button>
                 {expanded && (
                   <div className="ml-3 mt-1 space-y-0.5 border-l border-[var(--color-paper-200)] pl-3">
-                    {children.map((child) => {
+                    {filhos.map((child) => {
                       const active = isChildActive(child.href);
                       return (
                         <Link

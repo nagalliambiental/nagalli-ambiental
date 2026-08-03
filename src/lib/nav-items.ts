@@ -2,26 +2,24 @@ import {
   LayoutDashboard,
   Building2,
   Settings,
-  CalendarClock,
-  Map,
   FileCheck2,
-  Users,
-  DollarSign,
-  ClipboardList,
-  FileText,
-  FileSpreadsheet,
   BarChart3,
-  Key,
-  FileSignature,
+  ListTodo,
   type LucideIcon,
 } from "lucide-react";
+
+export type NavChild = {
+  label: string;
+  href: string;
+  adminOnly?: boolean;
+};
 
 export type NavItem = {
   label: string;
   href?: string;
   icon: LucideIcon;
   adminOnly?: boolean;
-  children?: { label: string; href: string }[];
+  children?: NavChild[];
 };
 
 export const NAV_ITEMS: NavItem[] = [
@@ -33,16 +31,26 @@ export const NAV_ITEMS: NavItem[] = [
       { label: "Empreendimentos", href: "/empreendimentos" },
     ],
   },
-  { label: "Processos", href: "/processos", icon: FileCheck2 },
-  { label: "Exigências", href: "/exigencias", icon: ClipboardList },
-  { label: "DMR", href: "/dmr", icon: FileSpreadsheet },
-  { label: "Contratos", href: "/contratos", icon: FileSignature, adminOnly: true },
-  { label: "Modelos", href: "/modelos", icon: FileText },
-  { label: "Financeiro", href: "/financeiro", icon: DollarSign, adminOnly: true },
-  { label: "Prazos", href: "/prazos", icon: CalendarClock },
-  { label: "Acessos", href: "/acessos", icon: Key },
-  { label: "Tarefas", href: "/tarefas", icon: ClipboardList },
-  { label: "Usuários", href: "/usuarios", icon: Users, adminOnly: true },
+  {
+    label: "Operacional", icon: FileCheck2,
+    children: [
+      { label: "Processos", href: "/processos" },
+      { label: "Exigências", href: "/exigencias" },
+      { label: "DMR", href: "/dmr" },
+      { label: "Prazos", href: "/prazos" },
+      { label: "Modelos", href: "/modelos" },
+    ],
+  },
+  { label: "Tarefas", href: "/tarefas", icon: ListTodo },
+  {
+    label: "Administrativo", icon: Settings,
+    children: [
+      { label: "Financeiro", href: "/financeiro", adminOnly: true },
+      { label: "Contratos", href: "/contratos", adminOnly: true },
+      { label: "Acessos", href: "/acessos" },
+      { label: "Usuários", href: "/usuarios", adminOnly: true },
+      { label: "Configurações", href: "/configuracoes", adminOnly: true },
+    ],
+  },
   { label: "Relatórios", href: "/relatorios", icon: BarChart3 },
-  { label: "Configurações", href: "/configuracoes", icon: Settings, adminOnly: true },
 ];

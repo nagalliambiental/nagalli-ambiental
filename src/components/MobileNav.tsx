@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { NAV_ITEMS } from "@/lib/nav-items";
+import { NAV_ITEMS, type NavChild } from "@/lib/nav-items";
 import { useSession } from "next-auth/react";
 import { Menu, X, ChevronDown } from "lucide-react";
 import { useState } from "react";
@@ -15,9 +15,16 @@ export function MobileNav() {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(["Cadastros"]));
   const perfil = (session?.user as Record<string, unknown>)?.perfil as string;
 
-  const itensVisiveis = NAV_ITEMS.filter(
-    (item) => !item.adminOnly || perfil === "socio"
-  );
+  const ehPrivilegiado = perfil === "socio" || perfil === "admin";
+
+  const filtraFilhos = (children: NavChild[] = []) =>
+    children.filter((c) => !c.adminOnly || ehPrivilegiado);
+
+  const itensVisiveis = NAV_ITEMS.filter((item) => {
+    if (item.adminOnly && !ehPrivilegiado) return false;
+    if (item.children) return filtraFilhos(item.children).length > 0;
+    return true;
+  });
 
   function toggleGroup(label: string) {
     setExpandedGroups((prev) => {
@@ -51,8 +58,9 @@ export function MobileNav() {
         <nav className="border-b border-[var(--color-paper-200)] bg-[var(--color-paper-0)] px-4 pb-4 pt-2 space-y-1">
           {itensVisiveis.map(({ label, href, icon: Icon, children }) => {
             if (children) {
+              const filhos = filtraFilhos(children);
               const expanded = expandedGroups.has(label);
-              const groupActive = children.some((c) => isActive(c.href));
+              const groupActive = filhos.some((c) => isActive(c.href));
               return (
                 <div key={label}>
                   <button
@@ -69,7 +77,7 @@ export function MobileNav() {
                   </button>
                   {expanded && (
                     <div className="ml-3 mt-1 space-y-0.5 border-l border-[var(--color-paper-200)] pl-3">
-                      {children.map((child) => (
+                      {filhos.map((child) => (
                         <Link
                           key={child.href}
                           href={child.href}
