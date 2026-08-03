@@ -29,7 +29,7 @@ export function Tabs({ tabs }: { tabs: TabItem[] }) {
               }`}
             >
               {t.label}
-              {t.count !== undefined && (
+              {t.count !== undefined && t.count > 0 && (
                 <span className={`ml-1.5 rounded px-1.5 py-0.5 text-xs ${
                   active === t.key ? "bg-[var(--color-brand-50)] text-[var(--color-brand-600)]" : "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]"
                 }`}>

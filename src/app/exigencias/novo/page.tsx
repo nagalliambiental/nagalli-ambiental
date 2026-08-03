@@ -7,6 +7,8 @@ import { Topbar } from "@/components/Topbar";
 interface Processo {
   id: number;
   numProtocolo: string;
+  tipo: string;
+  empreendimento: { apelido: string };
 }
 
 export default function NovaExigenciaPage() {
@@ -23,7 +25,7 @@ export default function NovaExigenciaPage() {
   useEffect(() => {
     fetch("/api/processos")
       .then((r) => r.json())
-      .then((data: { id: number; numProtocolo: string }[]) => setProcessos(data))
+      .then((data: Processo[]) => setProcessos(data))
       .catch(() => {});
   }, []);
 
@@ -67,7 +69,7 @@ export default function NovaExigenciaPage() {
             <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Processo</label>
             <select value={form.processoId} onChange={(e) => setForm({ ...form, processoId: e.target.value })} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" required>
               <option value="">Selecione...</option>
-              {processos.map((p) => <option key={p.id} value={p.id}>{p.numProtocolo}</option>)}
+              {processos.map((p) => <option key={p.id} value={p.id}>{p.numProtocolo} — {p.tipo} ({p.empreendimento.apelido})</option>)}
             </select>
           </div>
           <div className="flex gap-3 pt-4">
