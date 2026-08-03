@@ -32,16 +32,25 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           email: usuario.email,
           name: usuario.nome,
           perfil: usuario.perfil,
+          termosAceitosEm: usuario.termosAceitosEm ? usuario.termosAceitosEm.toISOString() : null,
         };
       },
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         const u = user as unknown as Record<string, unknown>;
         token.perfil = u.perfil as string;
         token.id = u.id as string;
+        token.termosAceitosEm = u.termosAceitosEm ?? null;
+      }
+      if (trigger === "update") {
+        const id = Number(token.id);
+        if (id) {
+          const u = await prisma.usuario.findUnique({ where: { id }, select: { termosAceitosEm: true } });
+          token.termosAceitosEm = u?.termosAceitosEm ? u.termosAceitosEm.toISOString() : null;
+        }
       }
       return token;
     },
@@ -50,6 +59,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const user = session.user as unknown as Record<string, unknown>;
         user.perfil = token.perfil;
         user.id = token.id;
+        user.termosAceitosEm = token.termosAceitosEm ?? null;
       }
       return session;
     },

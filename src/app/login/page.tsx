@@ -65,6 +65,9 @@ export default function LoginPage() {
             {loading ? "Entrando..." : "Entrar"}
           </button>
         </form>
+        <p className="mt-8 text-center text-xs text-[var(--color-ink-400)]">
+          © Nagalli Ambiental — Proibida a cópia e distribuição. Todos os direitos reservados.
+        </p>
       </div>
     </div>
   );

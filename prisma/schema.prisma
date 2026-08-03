@@ -16,6 +16,7 @@ model Usuario {
   conselho  String?
   perfil    String   @default("tecnico")
   ativo     Boolean  @default(true)
+  termosAceitosEm DateTime?
   criadoEm  DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
