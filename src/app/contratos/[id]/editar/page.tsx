@@ -11,6 +11,12 @@ interface Empreendimento {
   ativo: boolean;
 }
 
+interface Cliente {
+  id: number;
+  apelido: string;
+  ativo: boolean;
+}
+
 function toDateInput(iso?: string): string {
   if (!iso) return "";
   const d = new Date(iso);
@@ -21,17 +27,17 @@ export default function EditarContratoPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const [empreendimentos, setEmpreendimentos] = useState<Empreendimento[]>([]);
+  const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [form, setForm] = useState({
-    nomeEmpresa: "",
+    clienteId: "",
     empreendimentoId: "",
     servicoProcesso: "",
     dataAssinatura: "",
     dataValidade: "",
     alertaRenovacaoDias: "60",
-    visibilidade: "privado",
   });
 
   useEffect(() => {
@@ -39,17 +45,20 @@ export default function EditarContratoPage() {
       .then((r) => r.json())
       .then((data) => setEmpreendimentos(Array.isArray(data) ? data.filter((e) => e.ativo !== false) : []))
       .catch(() => {});
+    fetch("/api/clientes")
+      .then((r) => r.json())
+      .then((data) => setClientes(Array.isArray(data) ? data.filter((c) => c.ativo !== false) : []))
+      .catch(() => {});
     fetch(`/api/contratos/${params.id}`)
       .then((r) => r.json())
       .then((c) => {
         setForm({
-          nomeEmpresa: c.nomeEmpresa || "",
+          clienteId: c.clienteId ? String(c.clienteId) : "",
           empreendimentoId: c.empreendimentoId ? String(c.empreendimentoId) : "",
           servicoProcesso: c.servicoProcesso || "",
           dataAssinatura: toDateInput(c.dataAssinatura),
           dataValidade: toDateInput(c.dataValidade),
           alertaRenovacaoDias: String(c.alertaRenovacaoDias ?? 60),
-          visibilidade: c.visibilidade || "privado",
         });
       })
       .catch(() => setError("Erro ao carregar contrato"))
@@ -62,12 +71,11 @@ export default function EditarContratoPage() {
     setError("");
 
     const body: Record<string, unknown> = {
-      nomeEmpresa: form.nomeEmpresa,
+      clienteId: Number(form.clienteId),
       servicoProcesso: form.servicoProcesso,
       dataAssinatura: new Date(form.dataAssinatura).toISOString(),
       dataValidade: new Date(form.dataValidade).toISOString(),
       alertaRenovacaoDias: Number(form.alertaRenovacaoDias),
-      visibilidade: form.visibilidade,
       empreendimentoId: form.empreendimentoId ? Number(form.empreendimentoId) : null,
     };
 
@@ -94,13 +102,16 @@ export default function EditarContratoPage() {
 
   return (
     <div>
-      <Topbar title="Editar Contrato" subtitle={form.nomeEmpresa || "Contrato"} />
+      <Topbar title="Editar Contrato" subtitle={clientes.find((c) => String(c.id) === form.clienteId)?.apelido || "Contrato"} />
       <div className="mx-auto max-w-2xl">
         <form onSubmit={handleSubmit} className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Nome da empresa <span className="text-red-500">*</span></label>
-              <input type="text" value={form.nomeEmpresa} onChange={(e) => setForm({ ...form, nomeEmpresa: e.target.value })} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" required />
+              <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Cliente <span className="text-red-500">*</span></label>
+              <select value={form.clienteId} onChange={(e) => setForm({ ...form, clienteId: e.target.value })} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" required>
+                <option value="">Selecione...</option>
+                {clientes.map((c) => <option key={c.id} value={c.id}>{c.apelido}</option>)}
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Empreendimento</label>
@@ -124,19 +135,10 @@ export default function EditarContratoPage() {
               <input type="date" value={form.dataValidade} onChange={(e) => setForm({ ...form, dataValidade: e.target.value })} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" required />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Alerta de renovação (dias)</label>
-              <input type="number" min={0} value={form.alertaRenovacaoDias} onChange={(e) => setForm({ ...form, alertaRenovacaoDias: e.target.value })} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
-              <p className="mt-1 text-xs text-[var(--color-ink-500)]">Padrão: 60 dias antes do vencimento</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Visibilidade</label>
-              <select value={form.visibilidade} onChange={(e) => setForm({ ...form, visibilidade: e.target.value })} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" required>
-                <option value="privado">Privado (só sócio/admin)</option>
-                <option value="publico">Público (todos os usuários)</option>
-              </select>
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Alerta de renovação (dias)</label>
+            <input type="number" min={0} value={form.alertaRenovacaoDias} onChange={(e) => setForm({ ...form, alertaRenovacaoDias: e.target.value })} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+            <p className="mt-1 text-xs text-[var(--color-ink-500)]">Padrão: 60 dias antes do vencimento</p>
           </div>
 
           {error && (

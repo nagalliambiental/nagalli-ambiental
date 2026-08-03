@@ -27,7 +27,7 @@ export default async function ContratosPage({
   const where: Prisma.ContratoWhereInput = {};
   if (q) {
     where.OR = [
-      { nomeEmpresa: { contains: q, mode: "insensitive" } },
+      { cliente: { apelido: { contains: q, mode: "insensitive" } } },
       { servicoProcesso: { contains: q, mode: "insensitive" } },
       { empreendimento: { apelido: { contains: q, mode: "insensitive" } } },
     ];
@@ -36,6 +36,7 @@ export default async function ContratosPage({
   const registros = await prisma.contrato.findMany({
     where,
     include: {
+      cliente: { select: { id: true, apelido: true } },
       empreendimento: { select: { id: true, apelido: true } },
     },
     orderBy: { criadoEm: "desc" },
@@ -48,7 +49,7 @@ export default async function ContratosPage({
         title="Contratos"
         actions={
           <div className="flex items-center gap-3">
-            <SearchBar placeholder="Buscar por empresa, serviço ou empreendimento..." />
+            <SearchBar placeholder="Buscar por cliente, serviço ou empreendimento..." />
             <Link
               href="/contratos/novo"
               className="focus-ring transition-brand flex items-center gap-2 rounded-[var(--radius-card)] bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)]"

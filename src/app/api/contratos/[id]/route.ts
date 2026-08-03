@@ -17,20 +17,21 @@ export async function GET(
   }
 
   const perfil = (session.user as { perfil?: string }).perfil;
+  if (!isAdmin(perfil)) {
+    return NextResponse.json({ error: "Acesso restrito a sócios/administradores" }, { status: 403 });
+  }
+
   const { id } = await params;
   const contrato = await prisma.contrato.findUnique({
     where: { id: Number(id) },
     include: {
+      cliente: { select: { id: true, apelido: true } },
       empreendimento: { select: { id: true, apelido: true } },
     },
   });
 
   if (!contrato) {
     return NextResponse.json({ error: "Contrato não encontrado" }, { status: 404 });
-  }
-
-  if (!isAdmin(perfil) && contrato.visibilidade !== "publico") {
-    return NextResponse.json({ error: "Acesso restrito" }, { status: 403 });
   }
 
   return NextResponse.json(contrato);
@@ -56,15 +57,15 @@ export async function PUT(
   const contrato = await prisma.contrato.update({
     where: { id: Number(id) },
     data: {
-      nomeEmpresa: String(body.nomeEmpresa),
+      clienteId: Number(body.clienteId),
       servicoProcesso: String(body.servicoProcesso),
       dataAssinatura: new Date(body.dataAssinatura),
       dataValidade: new Date(body.dataValidade),
       alertaRenovacaoDias: Number(body.alertaRenovacaoDias) || 60,
-      visibilidade: body.visibilidade === "publico" ? "publico" : "privado",
       empreendimentoId: body.empreendimentoId ? Number(body.empreendimentoId) : null,
     },
     include: {
+      cliente: { select: { id: true, apelido: true } },
       empreendimento: { select: { id: true, apelido: true } },
     },
   });
@@ -96,6 +97,6 @@ export async function DELETE(
 
   await prisma.contrato.delete({ where: { id: Number(id) } });
 
-  await logAuditoria("excluir", "contrato", Number(id), { nomeEmpresa: contrato.nomeEmpresa }, Number((session.user as { id: string }).id));
+  await logAuditoria("excluir", "contrato", Number(id), { clienteId: contrato.clienteId }, Number((session.user as { id: string }).id));
   return NextResponse.json({ mensagem: "Contrato excluído" });
 }

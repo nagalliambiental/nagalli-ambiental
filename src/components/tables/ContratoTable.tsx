@@ -8,13 +8,12 @@ import RowActions from "@/components/RowActions";
 
 interface ContratoData {
   id: number;
-  nomeEmpresa: string;
   servicoProcesso: string;
   dataAssinatura: Date;
   dataValidade: Date;
   alertaRenovacaoDias: number;
-  visibilidade: string;
   ativo: boolean;
+  cliente: { id: number; apelido: string };
   empreendimento: { id: number; apelido: string } | null;
 }
 
@@ -27,15 +26,9 @@ function getSituacao(r: ContratoData) {
   return { label: "Vigente", cls: "bg-[var(--color-brand-50)] text-[var(--color-brand-600)]" };
 }
 
-const visibilidadeLabels: Record<string, string> = { publico: "Público", privado: "Privado" };
-const visibilidadeColors: Record<string, string> = {
-  publico: "bg-[var(--color-brand-50)] text-[var(--color-brand-600)]",
-  privado: "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]",
-};
-
 export function ContratoTable({ data }: { data: ContratoData[] }) {
   const columns: Column<ContratoData>[] = [
-    { header: "Empresa", sortable: true, sortKey: "nomeEmpresa", render: (r) => <span className="font-medium text-[var(--color-ink-900)]">{r.nomeEmpresa}</span> },
+    { header: "Cliente", sortable: true, sortKey: "clienteId", render: (r) => <Link href={`/clientes/${r.cliente.id}`} className="font-medium text-[var(--color-ink-900)] hover:text-[var(--color-brand-600)] hover:underline">{r.cliente.apelido}</Link> },
     {
       header: "Empreendimento",
       render: (r) => (r.empreendimento ? <Link href={`/empreendimentos/${r.empreendimento.id}`} className="text-[var(--color-brand-600)] hover:underline">{r.empreendimento.apelido}</Link> : "—"),
@@ -49,11 +42,6 @@ export function ContratoTable({ data }: { data: ContratoData[] }) {
         const s = getSituacao(r);
         return <span className={`inline-block rounded px-2 py-1 text-xs font-medium ${s.cls}`}>{s.label}</span>;
       },
-    },
-    {
-      header: "Visibilidade",
-      sortable: true, sortKey: "visibilidade",
-      render: (r) => <span className={`inline-block rounded px-2 py-1 text-xs font-medium ${visibilidadeColors[r.visibilidade] || ""}`}>{visibilidadeLabels[r.visibilidade] || r.visibilidade}</span>,
     },
     { header: "Ações", render: (r) => <RowActions detailUrl={`/contratos/${r.id}`} editUrl={`/contratos/${r.id}/editar`} entity="contrato" entityName="Contrato" endpoint={`/api/contratos/${r.id}`} /> },
   ];

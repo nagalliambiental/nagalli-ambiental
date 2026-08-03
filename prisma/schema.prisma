@@ -101,6 +101,7 @@ model Cliente {
   documentos          Documento[]
   historicos          Historico[]
   acessos             Acesso[]
+  contratos           Contrato[]
 }
 
 model Empreendimento {
@@ -141,17 +142,17 @@ model Orgao {
 
 model Contrato {
   id                  Int      @id @default(autoincrement())
-  nomeEmpresa         String
+  clienteId           Int
   servicoProcesso     String
   dataAssinatura      DateTime
   dataValidade        DateTime
   alertaRenovacaoDias Int      @default(60)
-  visibilidade        String   @default("privado")
   ativo               Boolean  @default(true)
   empreendimentoId    Int?
   criadoEm            DateTime @default(now())
   atualizadoEm        DateTime @updatedAt
 
+  cliente        Cliente        @relation(fields: [clienteId], references: [id])
   empreendimento Empreendimento? @relation(fields: [empreendimentoId], references: [id])
 }
 

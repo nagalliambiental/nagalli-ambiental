@@ -14,11 +14,13 @@ export async function GET() {
   }
 
   const perfil = (session.user as { perfil?: string }).perfil;
-  const where = isAdmin(perfil) ? {} : { visibilidade: "publico" };
+  if (!isAdmin(perfil)) {
+    return NextResponse.json({ error: "Acesso restrito a sócios/administradores" }, { status: 403 });
+  }
 
   const contratos = await prisma.contrato.findMany({
-    where,
     include: {
+      cliente: { select: { id: true, apelido: true } },
       empreendimento: { select: { id: true, apelido: true } },
     },
     orderBy: { criadoEm: "desc" },
@@ -41,24 +43,24 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
 
-    if (!body.nomeEmpresa || !body.servicoProcesso || !body.dataAssinatura || !body.dataValidade) {
+    if (!body.clienteId || !body.servicoProcesso || !body.dataAssinatura || !body.dataValidade) {
       return NextResponse.json(
-        { error: "Nome da empresa, serviço/processo, data de assinatura e data de validade são obrigatórios" },
+        { error: "Cliente, serviço/processo, data de assinatura e data de validade são obrigatórios" },
         { status: 400 }
       );
     }
 
     const contrato = await prisma.contrato.create({
       data: {
-        nomeEmpresa: String(body.nomeEmpresa),
+        clienteId: Number(body.clienteId),
         servicoProcesso: String(body.servicoProcesso),
         dataAssinatura: new Date(body.dataAssinatura),
         dataValidade: new Date(body.dataValidade),
         alertaRenovacaoDias: Number(body.alertaRenovacaoDias) || 60,
-        visibilidade: body.visibilidade === "publico" ? "publico" : "privado",
         empreendimentoId: body.empreendimentoId ? Number(body.empreendimentoId) : null,
       },
       include: {
+        cliente: { select: { id: true, apelido: true } },
         empreendimento: { select: { id: true, apelido: true } },
       },
     });

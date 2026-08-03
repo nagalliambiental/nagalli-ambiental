@@ -6,7 +6,7 @@ import { auth } from "@/lib/auth";
 import { Topbar } from "@/components/Topbar";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Building2, FileText, Calendar, Clock, Eye, EyeOff, Edit3, ArrowLeft } from "lucide-react";
+import { Building2, FileText, Calendar, Clock, Edit3, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import DeleteButton from "@/components/DeleteButton";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
@@ -37,7 +37,10 @@ export default async function ContratoDetailPage(props: { params: Promise<{ id: 
   const { id } = await props.params;
   const contrato = await prisma.contrato.findUnique({
     where: { id: Number(id) },
-    include: { empreendimento: { select: { id: true, apelido: true } } },
+    include: {
+      cliente: { select: { id: true, apelido: true } },
+      empreendimento: { select: { id: true, apelido: true } },
+    },
   });
   if (!contrato) notFound();
 
@@ -45,7 +48,7 @@ export default async function ContratoDetailPage(props: { params: Promise<{ id: 
 
   return (
     <div>
-      <Breadcrumbs items={[{ label: "Contratos", href: "/contratos" }, { label: contrato.nomeEmpresa }]} />
+      <Breadcrumbs items={[{ label: "Contratos", href: "/contratos" }, { label: contrato.cliente.apelido }]} />
 
       <div className="mb-4">
         <Link href="/contratos" className="focus-ring transition-brand inline-flex items-center gap-1.5 text-sm font-medium text-[var(--color-ink-600)] hover:text-[var(--color-brand-600)]">
@@ -55,7 +58,7 @@ export default async function ContratoDetailPage(props: { params: Promise<{ id: 
       </div>
 
       <Topbar
-        title={contrato.nomeEmpresa}
+        title={contrato.cliente.apelido}
         subtitle={contrato.servicoProcesso}
         actions={
           <div className="flex items-center gap-2">
@@ -82,7 +85,7 @@ export default async function ContratoDetailPage(props: { params: Promise<{ id: 
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
                     <Building2 size={16} />
-                    <span className="font-medium text-[var(--color-ink-900)]">{contrato.nomeEmpresa}</span>
+                    <Link href={`/clientes/${contrato.cliente.id}`} className="font-medium text-[var(--color-ink-900)] hover:text-[var(--color-brand-600)] hover:underline">{contrato.cliente.apelido}</Link>
                   </div>
                   <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
                     <Building2 size={16} />
@@ -96,11 +99,6 @@ export default async function ContratoDetailPage(props: { params: Promise<{ id: 
                   </div>
                   <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
                     <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${situacao.cls}`}>{situacao.label}</span>
-                    {contrato.visibilidade === "publico" ? (
-                      <span className="inline-flex items-center gap-1 rounded bg-[var(--color-brand-50)] px-2 py-0.5 text-xs font-medium text-[var(--color-brand-600)]"><Eye size={12} /> Público</span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 rounded bg-[var(--color-paper-100)] px-2 py-0.5 text-xs font-medium text-[var(--color-ink-500)]"><EyeOff size={12} /> Privado</span>
-                    )}
                   </div>
                 </div>
               </div>
