@@ -14,10 +14,11 @@ Todas as informações acessadas neste sistema são confidenciais e de proprieda
 export function TermosModal() {
   const { data: session, update } = useSession();
   const [saving, setSaving] = useState(false);
+  const [aceitoLocal, setAceitoLocal] = useState(false);
 
   const aceitou = Boolean((session?.user as Record<string, unknown> | undefined)?.termosAceitosEm);
 
-  if (!session?.user || aceitou) {
+  if (!session?.user || aceitou || aceitoLocal) {
     return null;
   }
 
@@ -28,10 +29,13 @@ export function TermosModal() {
       if (!res.ok) {
         throw new Error("Falha ao registrar o aceite");
       }
-      await update();
+      setAceitoLocal(true);
     } catch {
       setSaving(false);
+    } finally {
+      setSaving(false);
     }
+    update({}).catch(() => {});
   }
 
   return (
