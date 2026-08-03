@@ -67,8 +67,6 @@ export default async function TarefaDetailPage(props: { params: Promise<{ id: st
         </Link>
       </div>
 
-      <UltimaModificacao entidade="tarefa" entidadeId={tarefa.id} />
-
       <Topbar
         title={tarefa.titulo}
         subtitle="Detalhes da tarefa"
@@ -85,6 +83,8 @@ export default async function TarefaDetailPage(props: { params: Promise<{ id: st
           </div>
         }
       />
+
+      <UltimaModificacao entidade="tarefa" entidadeId={tarefa.id} />
 
       <Tabs
         tabs={[

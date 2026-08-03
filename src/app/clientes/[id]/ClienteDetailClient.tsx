@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Topbar } from "@/components/Topbar";
@@ -16,6 +16,7 @@ import { useToast } from "@/components/Toast";
 import { TEMPLATES } from "@/lib/templates";
 import { HistoricoTab } from "@/components/HistoricoTab";
 import { AcessosTab } from "@/components/AcessosTab";
+import { VisibilidadeToggle } from "@/components/VisibilidadeToggle";
 
 type Tab = "info" | "empreendimentos" | "documentos" | "financeiro" | "historico" | "acessos";
 
@@ -37,6 +38,7 @@ interface ClienteData {
   uf: string | null;
   criadoEm: string;
   ativo: boolean;
+  visibilidade: string;
   empreendimentos: EmpreendimentoData[];
   financeiros: FinanceiroData[];
   documentosGerados: DocData[];
@@ -93,13 +95,14 @@ const statusColors: Record<string, string> = {
 };
 
 export function ClienteDetailClient({
-  cliente, documentos, id, diasFimTrimestre, trimestreLabel,
+  cliente, documentos, id, diasFimTrimestre, trimestreLabel, ultimaModificacao,
 }: {
   cliente: ClienteData;
   documentos: DocumentoUploaded[];
   id: string;
   diasFimTrimestre: number;
   trimestreLabel: string;
+  ultimaModificacao?: ReactNode;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -212,6 +215,9 @@ export function ClienteDetailClient({
         subtitle="Detalhes do cliente"
         actions={
           <div className="flex items-center gap-2">
+            {podeVerFinanceiro && (
+              <VisibilidadeToggle endpoint={`/api/clientes/${id}`} visibilidade={cliente.visibilidade} />
+            )}
             <Link
               href={`/clientes/${id}/editar`}
               className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]"
@@ -403,6 +409,7 @@ export function ClienteDetailClient({
                 ))}
               </div>
             </div>
+            {ultimaModificacao}
           </div>
         </div>
       )}

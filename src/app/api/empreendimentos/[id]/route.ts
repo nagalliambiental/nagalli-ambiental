@@ -86,6 +86,35 @@ export async function PUT(
   return NextResponse.json(emp);
 }
 
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  }
+
+  const perfil = (session.user as { perfil?: string }).perfil;
+  if (!ehPrivilegiado(perfil)) {
+    return NextResponse.json({ error: "Acesso restrito" }, { status: 403 });
+  }
+
+  const { id } = await params;
+  const body = await request.json();
+  if (body.visibilidade !== "publico" && body.visibilidade !== "privado") {
+    return NextResponse.json({ error: "Visibilidade inválida" }, { status: 400 });
+  }
+
+  const emp = await prisma.empreendimento.update({
+    where: { id: Number(id) },
+    data: { visibilidade: body.visibilidade },
+  });
+
+  await logAuditoria("ATUALIZAR", "empreendimento", emp.id, { visibilidade: body.visibilidade }, Number((session.user as { id: string }).id));
+  return NextResponse.json(emp);
+}
+
 export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }

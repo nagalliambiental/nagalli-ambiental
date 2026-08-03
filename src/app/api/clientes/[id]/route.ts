@@ -122,6 +122,52 @@ export async function PUT(
   }
 }
 
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await auth();
+    if (!session) {
+      return NextResponse.json({ erro: "Não autorizado" }, { status: 401 });
+    }
+
+    const perfil = (session.user as { perfil?: string }).perfil;
+    if (!ehPrivilegiado(perfil)) {
+      return NextResponse.json({ erro: "Acesso restrito" }, { status: 403 });
+    }
+
+    const { id } = await params;
+    const body = await request.json();
+    if (body.visibilidade !== "publico" && body.visibilidade !== "privado") {
+      return NextResponse.json(
+        { erro: "Visibilidade inválida" },
+        { status: 400 }
+      );
+    }
+
+    const cliente = await prisma.cliente.update({
+      where: { id: Number(id) },
+      data: { visibilidade: body.visibilidade },
+    });
+
+    await logAuditoria(
+      "ATUALIZAR",
+      "Cliente",
+      cliente.id,
+      { visibilidade: body.visibilidade },
+      session.user?.id ? Number(session.user.id) : undefined
+    );
+
+    return NextResponse.json(cliente);
+  } catch (error) {
+    return NextResponse.json(
+      { erro: "Erro ao atualizar visibilidade" },
+      { status: 500 }
+    );
+  }
+}
+
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -149,6 +195,7 @@ export async function DELETE(
       where: { clienteId: Number(id) },
       select: { id: true },
     })).map((e) => e.id);
+
 
     const processoIds = (await prisma.processo.findMany({
       where: { empreendimentoId: { in: empreendimentoIds } },

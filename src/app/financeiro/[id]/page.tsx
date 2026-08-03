@@ -58,8 +58,6 @@ export default async function FinanceiroDetailPage(props: { params: Promise<{ id
         </Link>
       </div>
 
-      <UltimaModificacao entidade="financeiro" entidadeId={reg.id} />
-
       <Topbar
         title="Registro Financeiro"
         subtitle={`${reg.tipoCobranca} — ${reg.cliente.apelido}`}
@@ -76,6 +74,8 @@ export default async function FinanceiroDetailPage(props: { params: Promise<{ id
           </div>
         }
       />
+
+      <UltimaModificacao entidade="financeiro" entidadeId={reg.id} />
 
       <Tabs
         tabs={[

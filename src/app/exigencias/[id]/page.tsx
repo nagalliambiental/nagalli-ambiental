@@ -55,8 +55,6 @@ export default async function ExigenciaDetailPage(props: { params: Promise<{ id:
         </Link>
       </div>
 
-      <UltimaModificacao entidade="exigencia" entidadeId={exigencia.id} />
-
       <Topbar
         title="Exigência"
         subtitle={exigencia.descricao.length > 60 ? exigencia.descricao.slice(0, 60) + "..." : exigencia.descricao}
@@ -73,6 +71,8 @@ export default async function ExigenciaDetailPage(props: { params: Promise<{ id:
           </div>
         }
       />
+
+      <UltimaModificacao entidade="exigencia" entidadeId={exigencia.id} />
 
       <Tabs
         tabs={[

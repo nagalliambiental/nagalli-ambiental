@@ -8,7 +8,6 @@ import { getDiasFimTrimestre, getTrimestreAtual } from "@/lib/dmr-parser";
 import { ClienteDetailClient } from "./ClienteDetailClient";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { UltimaModificacao } from "@/components/UltimaModificacao";
-import { VisibilidadeBadge } from "@/components/VisibilidadeBadge";
 
 export const dynamic = "force-dynamic";
 
@@ -65,16 +64,13 @@ export default async function ClienteDetailPage(props: { params: Promise<{ id: s
   return (
     <div>
       <Breadcrumbs items={[{ label: "Clientes", href: "/clientes" }, { label: cliente.apelido }]} />
-      <div className="mb-4 flex items-center gap-3">
-        <VisibilidadeBadge visibilidade={cliente.visibilidade} />
-      </div>
-      <UltimaModificacao entidade="Cliente" entidadeId={cliente.id} />
       <ClienteDetailClient
       cliente={JSON.parse(JSON.stringify(cliente))}
       documentos={JSON.parse(JSON.stringify(documentos))}
       id={id}
       diasFimTrimestre={diasFimTrimestre}
       trimestreLabel={trimestre.label}
+      ultimaModificacao={<UltimaModificacao entidade="Cliente" entidadeId={cliente.id} />}
     />
     </div>
   );

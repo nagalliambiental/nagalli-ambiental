@@ -58,8 +58,6 @@ export default async function ContratoDetailPage(props: { params: Promise<{ id: 
         </Link>
       </div>
 
-      <UltimaModificacao entidade="contrato" entidadeId={contrato.id} />
-
       <Topbar
         title={contrato.cliente.apelido}
         subtitle={contrato.servicoProcesso}
@@ -76,6 +74,8 @@ export default async function ContratoDetailPage(props: { params: Promise<{ id: 
           </div>
         }
       />
+
+      <UltimaModificacao entidade="contrato" entidadeId={contrato.id} />
 
       <Tabs
         tabs={[

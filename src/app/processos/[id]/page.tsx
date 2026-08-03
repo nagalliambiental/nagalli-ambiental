@@ -67,8 +67,6 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
         </Link>
       </div>
 
-      <UltimaModificacao entidade="processo" entidadeId={processo.id} />
-
       <Topbar
         title={`Processo ${processo.numProtocolo}`}
         subtitle={processo.tipo}
@@ -85,6 +83,8 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
           </div>
         }
       />
+
+      <UltimaModificacao entidade="processo" entidadeId={processo.id} />
 
       <Tabs
         tabs={[

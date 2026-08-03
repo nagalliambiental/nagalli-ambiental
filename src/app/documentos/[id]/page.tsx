@@ -55,8 +55,6 @@ export default async function DocumentoDetailPage(props: { params: Promise<{ id:
         </Link>
       </div>
 
-      <UltimaModificacao entidade="documento" entidadeId={doc.id} />
-
       <Topbar
         title={doc.nome}
         subtitle="Detalhes do documento"
@@ -73,6 +71,8 @@ export default async function DocumentoDetailPage(props: { params: Promise<{ id:
           </div>
         }
       />
+
+      <UltimaModificacao entidade="documento" entidadeId={doc.id} />
 
       <Tabs
         tabs={[

@@ -14,7 +14,7 @@ import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { HistoricoTab } from "@/components/HistoricoTab";
 import { Tabs } from "@/components/Tabs";
 import { UltimaModificacao } from "@/components/UltimaModificacao";
-import { VisibilidadeBadge } from "@/components/VisibilidadeBadge";
+import { VisibilidadeToggle } from "@/components/VisibilidadeToggle";
 
 export const dynamic = "force-dynamic";
 
@@ -73,16 +73,14 @@ export default async function EmpreendimentoDetailPage(props: { params: Promise<
         </Link>
       </div>
 
-      <div className="mb-2 flex items-center gap-3">
-        <VisibilidadeBadge visibilidade={emp.visibilidade} />
-      </div>
-      <UltimaModificacao entidade="empreendimento" entidadeId={emp.id} />
-
       <Topbar
         title={emp.apelido}
         subtitle="Detalhes do empreendimento"
         actions={
           <div className="flex items-center gap-2">
+            {ehPrivilegiado(perfil) && (
+              <VisibilidadeToggle endpoint={`/api/empreendimentos/${emp.id}`} visibilidade={emp.visibilidade} />
+            )}
             <Link
               href={`/empreendimentos/${emp.id}/editar`}
               className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]"
@@ -94,6 +92,8 @@ export default async function EmpreendimentoDetailPage(props: { params: Promise<
           </div>
         }
       />
+
+      <UltimaModificacao entidade="empreendimento" entidadeId={emp.id} />
 
       <Tabs
         tabs={[

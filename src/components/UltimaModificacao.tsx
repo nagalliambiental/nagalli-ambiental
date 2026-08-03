@@ -14,8 +14,8 @@ export async function UltimaModificacao({
 
   const ehCriacao = /criar|CRIAR/.test(log.acao);
   return (
-    <div className="mb-4 flex items-center gap-2 text-xs text-[var(--color-ink-500)]">
-      <History size={14} className="shrink-0" />
+    <div className="shadow-card mb-6 flex items-center gap-3 rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white px-4 py-3 text-xs text-[var(--color-ink-500)]">
+      <History size={16} className="shrink-0 text-[var(--color-brand-500)]" />
       <span>
         {ehCriacao ? "Criado" : "Última modificação"} por{" "}
         <span className="font-medium text-[var(--color-ink-700)]">
