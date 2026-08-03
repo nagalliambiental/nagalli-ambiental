@@ -142,7 +142,7 @@ export default function DmrPage() {
       <Topbar title="DMR — Controle Trimestral" subtitle="Gerencie os empreendimentos que precisam de declaração DMR/MTR" />
 
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5 mb-6">
-        <h2 className="font-display text-base font-semibold mb-3">Adicionar empreendimento</h2>
+        <h2 className="font-display text-base font-semibold mb-3">Adicionar empreendimento ao controle (DMR)</h2>
         <div className="flex gap-2">
           <div className="relative flex-1">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-ink-400)]" />

@@ -123,8 +123,8 @@ export default function AcessosPage() {
               className="rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]"
             >
               <option value="">Todos</option>
-              <option value="geral">Gerais</option>
-              <option value="vinculado">Vinculados</option>
+              <option value="geral">Acesso PJ</option>
+              <option value="vinculado">Acesso Empreendimentos</option>
             </select>
             <button onClick={() => setShowModal(true)}
               className="focus-ring transition-brand flex items-center gap-2 rounded-[var(--radius-card)] bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)]"
@@ -139,8 +139,8 @@ export default function AcessosPage() {
         <div className="flex justify-center py-12"><Loader2 size={24} className="animate-spin text-[var(--color-brand-500)]" /></div>
       ) : (
         <div className="space-y-8">
-          <Section title="Acessos Gerais" icon={Key} acessos={gerais} onDelete={handleDelete} />
-          <Section title="Acessos Vinculados" icon={Building2} acessos={vinculados} onDelete={handleDelete} />
+          <Section title="Acessos PJ" icon={Key} acessos={gerais} onDelete={handleDelete} />
+          <Section title="Acessos Empreendimentos" icon={Building2} acessos={vinculados} onDelete={handleDelete} />
         </div>
       )}
 
