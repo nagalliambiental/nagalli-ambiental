@@ -91,7 +91,7 @@ export default function EditEntityForm({
       for (const f of fields) {
         let val: unknown = form[f.name];
         if (f.type === "checkbox") val = Boolean(val);
-        else if (f.type === "number") val = Number(val);
+        else if (f.type === "number") val = val === "" || val == null ? null : Number(val);
         else if (f.type === "date" && val) val = new Date(val as string).toISOString();
         else if (val === "" && !f.required) val = null;
         body[f.name] = val;

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAuditoria } from "@/lib/audit";
+import type { Prisma } from "@prisma/client";
 
 export async function GET() {
   const session = await auth();
@@ -25,21 +26,46 @@ export async function POST(request: Request) {
 
   try {
     const data = await request.json();
-    if (data.clienteId) data.clienteId = Number(data.clienteId);
-    const empreendimento = await prisma.empreendimento.create({ data });
+    const payload: Record<string, unknown> = { ...data };
+
+    if (payload.clienteId !== undefined && payload.clienteId !== null) {
+      const cid = Number(payload.clienteId);
+      if (Number.isNaN(cid)) {
+        return NextResponse.json({ error: "Cliente inválido" }, { status: 400 });
+      }
+      payload.clienteId = cid;
+    }
+
+    for (const key of ["latitude", "longitude"]) {
+      if (payload[key] === undefined || payload[key] === null || payload[key] === "") {
+        delete payload[key];
+      } else {
+        const num = Number(payload[key]);
+        if (Number.isNaN(num)) {
+          return NextResponse.json({ error: `${key} inválido(a)` }, { status: 400 });
+        }
+        payload[key] = num;
+      }
+    }
+
+    const empreendimento = await prisma.empreendimento.create({
+      data: payload as Prisma.EmpreendimentoUncheckedCreateInput,
+    });
 
     await logAuditoria(
       "criar",
       "empreendimento",
       empreendimento.id,
-      data,
+      payload,
       Number((session.user as { id: string }).id)
     );
 
     return NextResponse.json(empreendimento, { status: 201 });
   } catch (error) {
+    const message = error instanceof Error ? error.message : "Erro desconhecido";
+    console.error("Erro ao criar empreendimento:", message);
     return NextResponse.json(
-      { error: "Erro ao criar empreendimento" },
+      { error: `Erro ao criar empreendimento: ${message}` },
       { status: 400 }
     );
   }

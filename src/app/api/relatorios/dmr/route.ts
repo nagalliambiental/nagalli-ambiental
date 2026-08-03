@@ -1,6 +1,23 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { PDFDocument, StandardFonts, rgb, type PDFFont } from "pdf-lib";
+
+function wrapLines(text: string, f: PDFFont, size: number, maxWidth: number): string[] {
+  const words = (text || "").split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let line = "";
+  for (const word of words) {
+    const candidate = line ? `${line} ${word}` : word;
+    if (line && f.widthOfTextAtSize(candidate, size) > maxWidth) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = candidate;
+    }
+  }
+  if (line) lines.push(line);
+  return lines.length ? lines : [""];
+}
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -25,10 +42,20 @@ export async function GET(request: Request) {
   const marginX = 40;
   const marginTop = 60;
   const colWidths = [90, 100, 72, 72, 72, 72, 72, 72, 72, 72];
+  const cellSize = 8;
   let y = height - marginTop;
 
-  function drawCell(text: string, x: number, w: number) {
-    page.drawText(text.slice(0, Math.floor(w / 4.5)), { x, y, size: 8, font, color: rgb(0.15, 0.15, 0.15) });
+  function wrapCell(text: string, w: number): string[] {
+    return wrapLines(text, font, cellSize, w - 6);
+  }
+
+  function drawCell(text: string, x: number, lines: string[]) {
+    let ly = y;
+    for (const ln of lines) {
+      page.drawText(ln, { x, y: ly, size: cellSize, font, color: rgb(0.15, 0.15, 0.15) });
+      ly -= cellSize + 2;
+    }
+    void text;
   }
 
   const headers = ["Cliente", "Empreendimento", "T1 DMR", "T1 MTR", "T2 DMR", "T2 MTR", "T3 DMR", "T3 MTR", "T4 DMR", "T4 MTR"];
@@ -55,32 +82,37 @@ export async function GET(request: Request) {
 
   let row = 0;
   for (const r of registros) {
-    if (y < 50) {
+    const cells: string[] = [
+      r.empreendimento.cliente.apelido || "",
+      r.empreendimento.apelido || "",
+    ];
+    for (const tri of [1, 2, 3, 4]) {
+      const dmr = r[`t${tri}Dmr` as keyof typeof r] as string || "";
+      const mtr = r[`t${tri}Mtr` as keyof typeof r] as string || "";
+      cells.push(dmr === "OK" ? "OK" : dmr ? dmr : "—");
+      cells.push(mtr === "OK" ? "OK" : mtr ? mtr : "—");
+    }
+    const wrapped = cells.map((text, i) => wrapCell(text, colWidths[i]));
+    const linesCount = Math.max(...wrapped.map((l) => l.length));
+    const rowHeight = linesCount * (cellSize + 2) + 4;
+
+    if (y - rowHeight < 50) {
       page = pdf.addPage([842, 595]);
       y = height - marginTop;
       drawPageHeader();
     }
 
     if (row % 2 === 0) {
-      page.drawRectangle({ x: marginX, y: y - 12, width: width - 80, height: 14, color: rgb(0.95, 0.95, 0.95) });
+      page.drawRectangle({ x: marginX, y: y - rowHeight + 4, width: width - 80, height: rowHeight, color: rgb(0.95, 0.95, 0.95) });
     }
 
     let x = marginX + 4;
-    drawCell(r.empreendimento.cliente.apelido, x, colWidths[0]);
-    x += colWidths[0];
-    drawCell(r.empreendimento.apelido, x, colWidths[1]);
-    x += colWidths[1];
-
-    for (const tri of [1, 2, 3, 4]) {
-      const dmr = r[`t${tri}Dmr` as keyof typeof r] as string || "";
-      const mtr = r[`t${tri}Mtr` as keyof typeof r] as string || "";
-      drawCell(dmr === "OK" ? "OK" : dmr ? dmr : "—", x, colWidths[2]);
-      x += colWidths[2];
-      drawCell(mtr === "OK" ? "OK" : mtr ? mtr : "—", x, colWidths[2]);
-      x += colWidths[2];
+    for (let i = 0; i < cells.length; i++) {
+      drawCell(cells[i], x, wrapped[i]);
+      x += colWidths[i];
     }
 
-    y -= 14;
+    y -= rowHeight;
     row++;
   }
 

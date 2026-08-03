@@ -1,7 +1,24 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { PDFDocument, StandardFonts, rgb, type PDFFont } from "pdf-lib";
+
+function wrapLines(text: string, f: PDFFont, size: number, maxWidth: number): string[] {
+  const words = (text || "").split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let line = "";
+  for (const word of words) {
+    const candidate = line ? `${line} ${word}` : word;
+    if (line && f.widthOfTextAtSize(candidate, size) > maxWidth) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = candidate;
+    }
+  }
+  if (line) lines.push(line);
+  return lines.length ? lines : [""];
+}
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -33,10 +50,20 @@ export async function GET(request: Request) {
   const marginX = 40;
   const marginTop = 60;
   const colWidths = [80, 120, 60, 100, 80, 80, 80];
+  const cellSize = 8;
   let y = height - marginTop;
 
-  function drawCell(text: string, x: number, w: number) {
-    page.drawText(text.slice(0, Math.floor(w / 4.8)), { x, y, size: 8, font, color: rgb(0.15, 0.15, 0.15) });
+  function wrapCell(text: string, w: number): string[] {
+    return wrapLines(text, font, cellSize, w - 6);
+  }
+
+  function drawCell(text: string, x: number, lines: string[]) {
+    let ly = y;
+    for (const ln of lines) {
+      page.drawText(ln, { x, y: ly, size: cellSize, font, color: rgb(0.15, 0.15, 0.15) });
+      ly -= cellSize + 2;
+    }
+    void text;
   }
 
   const headers = ["Protocolo", "Cliente", "Tipo", "Empreendimento", "Órgão", "Status", "Validade"];
@@ -62,26 +89,36 @@ export async function GET(request: Request) {
 
   let row = 0;
   for (const p of processos) {
-    if (y < 50) {
+    const cells: string[] = [
+      p.numProtocolo || "",
+      p.empreendimento.cliente.apelido || "",
+      p.tipo || "",
+      p.empreendimento.apelido || "",
+      p.orgao.sigla || "",
+      statusLabels[p.status] || p.status,
+      p.validade ? new Date(p.validade).toLocaleDateString("pt-BR") : "—",
+    ];
+    const wrapped = cells.map((text, i) => wrapCell(text, colWidths[i]));
+    const linesCount = Math.max(...wrapped.map((l) => l.length));
+    const rowHeight = linesCount * (cellSize + 2) + 4;
+
+    if (y - rowHeight < 50) {
       page = pdf.addPage([842, 595]);
       y = height - marginTop;
       drawPageHeader();
     }
 
     if (row % 2 === 0) {
-      page.drawRectangle({ x: marginX, y: y - 12, width: width - 80, height: 14, color: rgb(0.95, 0.95, 0.95) });
+      page.drawRectangle({ x: marginX, y: y - rowHeight + 4, width: width - 80, height: rowHeight, color: rgb(0.95, 0.95, 0.95) });
     }
 
     let x = marginX + 4;
-    drawCell(p.numProtocolo, x, colWidths[0]); x += colWidths[0];
-    drawCell(p.empreendimento.cliente.apelido, x, colWidths[1]); x += colWidths[1];
-    drawCell(p.tipo, x, colWidths[2]); x += colWidths[2];
-    drawCell(p.empreendimento.apelido, x, colWidths[3]); x += colWidths[3];
-    drawCell(p.orgao.sigla, x, colWidths[4]); x += colWidths[4];
-    drawCell(statusLabels[p.status] || p.status, x, colWidths[5]); x += colWidths[5];
-    drawCell(p.validade ? new Date(p.validade).toLocaleDateString("pt-BR") : "—", x, colWidths[6]);
+    for (let i = 0; i < cells.length; i++) {
+      drawCell(cells[i], x, wrapped[i]);
+      x += colWidths[i];
+    }
 
-    y -= 14;
+    y -= rowHeight;
     row++;
   }
 

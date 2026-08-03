@@ -40,7 +40,7 @@ export default async function Page() {
         { name: "numero", label: "Número", type: "text" },
         { name: "bairro", label: "Bairro", type: "text" },
         { name: "complemento", label: "Complemento", type: "text" },
-        { name: "descricao", label: "Descrição", type: "textarea" },
+        { name: "descricao", label: "Descrição", type: "textarea", required: true },
         { name: "latitude", label: "Latitude", type: "number" },
         { name: "longitude", label: "Longitude", type: "number" },
         { name: "ativo", label: "Ativo", type: "checkbox" },

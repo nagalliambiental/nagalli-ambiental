@@ -1,6 +1,23 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { PDFDocument, StandardFonts, rgb, type PDFFont } from "pdf-lib";
+
+function wrapLines(text: string, f: PDFFont, size: number, maxWidth: number): string[] {
+  const words = (text || "").split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let line = "";
+  for (const word of words) {
+    const candidate = line ? `${line} ${word}` : word;
+    if (line && f.widthOfTextAtSize(candidate, size) > maxWidth) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = candidate;
+    }
+  }
+  if (line) lines.push(line);
+  return lines.length ? lines : [""];
+}
 
 export async function GET() {
   const clientes = await prisma.cliente.findMany({
@@ -17,10 +34,20 @@ export async function GET() {
   const marginX = 40;
   const marginTop = 60;
   const colWidths = [100, 160, 120, 100, 80];
+  const cellSize = 8;
   let y = height - marginTop;
 
-  function drawCell(text: string, x: number, w: number, boldCell = false) {
-    page.drawText(text.slice(0, Math.floor(w / 4.8)), { x, y, size: 8, font: boldCell ? bold : font, color: rgb(0.15, 0.15, 0.15) });
+  function wrapCell(text: string, w: number): string[] {
+    return wrapLines(text, font, cellSize, w - 6);
+  }
+
+  function drawCell(text: string, x: number, w: number, lines: string[], boldCell = false) {
+    let ly = y;
+    for (const ln of lines) {
+      page.drawText(ln, { x, y: ly, size: cellSize, font: boldCell ? bold : font, color: rgb(0.15, 0.15, 0.15) });
+      ly -= cellSize + 2;
+    }
+    void w;
   }
 
   const headers = ["Apelido", "Razão Social", "CNPJ", "Telefone", "Empreendimentos"];
@@ -46,24 +73,34 @@ export async function GET() {
 
   let row = 0;
   for (const c of clientes) {
-    if (y < 50) {
+    const cells: { text: string; w: number; boldCell: boolean }[] = [
+      { text: c.apelido || "", w: colWidths[0], boldCell: true },
+      { text: c.razaoSocial || "", w: colWidths[1], boldCell: false },
+      { text: c.cnpj || "", w: colWidths[2], boldCell: false },
+      { text: c.telefone || "", w: colWidths[3], boldCell: false },
+      { text: String(c._count.empreendimentos), w: colWidths[4], boldCell: false },
+    ];
+    const wrapped = cells.map((c) => wrapCell(c.text, c.w));
+    const linesCount = Math.max(...wrapped.map((l) => l.length));
+    const rowHeight = linesCount * (cellSize + 2) + 4;
+
+    if (y - rowHeight < 50) {
       page = pdf.addPage([842, 595]);
       y = height - marginTop;
       drawPageHeader();
     }
 
     if (row % 2 === 0) {
-      page.drawRectangle({ x: marginX, y: y - 12, width: width - 80, height: 14, color: rgb(0.95, 0.95, 0.95) });
+      page.drawRectangle({ x: marginX, y: y - rowHeight + 4, width: width - 80, height: rowHeight, color: rgb(0.95, 0.95, 0.95) });
     }
 
     let x = marginX + 4;
-    drawCell(c.apelido, x, colWidths[0], true); x += colWidths[0];
-    drawCell(c.razaoSocial, x, colWidths[1]); x += colWidths[1];
-    drawCell(c.cnpj, x, colWidths[2]); x += colWidths[2];
-    drawCell(c.telefone, x, colWidths[3]); x += colWidths[3];
-    drawCell(String(c._count.empreendimentos), x, colWidths[4]);
+    for (let i = 0; i < cells.length; i++) {
+      drawCell(cells[i].text, x, cells[i].w, wrapped[i], cells[i].boldCell);
+      x += cells[i].w;
+    }
 
-    y -= 14;
+    y -= rowHeight;
     row++;
   }
 
