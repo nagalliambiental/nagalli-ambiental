@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logAuditoria } from "@/lib/audit";
 import {
   buildCondicionantesData,
   renderCondicionantesDocx,
 } from "@/lib/templates/relatorio-condicionantes/generate";
+import { writeFile, mkdir } from "fs/promises";
+import path from "path";
 
 export async function GET(
   _req: Request,
@@ -50,14 +53,48 @@ export async function GET(
     return NextResponse.json({ error: "Erro ao gerar o relatório" }, { status: 500 });
   }
 
-  const filename = `relatorio_condicionantes_${processo.numLicenca || processo.numProtocolo || processo.id}.docx`
+  const safeName = `relatorio_condicionantes_${processo.numLicenca || processo.numProtocolo || processo.id}_${Date.now()}.docx`
     .replace(/[^a-zA-Z0-9._-]/g, "_");
+
+  const uploadDir = path.join(process.cwd(), "public", "uploads", "documentos");
+  await mkdir(uploadDir, { recursive: true });
+  const filePath = path.join(uploadDir, safeName);
+  await writeFile(filePath, buffer);
+
+  const caminho = `/uploads/documentos/${safeName}`;
+
+  const docExistente = await prisma.documento.findFirst({
+    where: {
+      processoId: processo.id,
+      nome: { contains: "Relatório de condicionantes" },
+    },
+  });
+
+  if (!docExistente) {
+    const documento = await prisma.documento.create({
+      data: {
+        nome: "Relatório de condicionantes",
+        tipo: "relatorio",
+        caminho,
+        tamanho: buffer.length,
+        processoId: processo.id,
+      },
+    });
+
+    await logAuditoria(
+      "criar",
+      "documento",
+      documento.id,
+      { nome: "Relatório de condicionantes", caminho },
+      Number((session.user as { id: string }).id)
+    );
+  }
 
   return new NextResponse(new Uint8Array(buffer), {
     status: 200,
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "Content-Disposition": `attachment; filename="${filename}"`,
+      "Content-Disposition": `attachment; filename="${safeName}"`,
     },
   });
 }

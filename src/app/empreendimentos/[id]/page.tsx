@@ -36,7 +36,6 @@ export default async function EmpreendimentoDetailPage(props: { params: Promise<
     where: { id: Number(id) },
     include: {
       cliente: { select: { apelido: true, id: true } },
-      _count: { select: { processos: true } },
     },
   });
   if (!emp) notFound();
