@@ -11,33 +11,52 @@ export type CondicionanteLinha = {
   atendimento: string;
 };
 
-const NUM_ITEM_RE = /^\d{1,3}\.\s/;
+const NUM_ITEM_RE = /^(?:\d{1,3}\.\s*|\d{1,3}\)\s*|\-\s*|•\s*|\*\s*)/;
 const PAGE_FOOTER_RE = /^página\s+\d+\//i;
+const BULLET_LETTER_RE = /^[a-záéíóú]\)\s*/i;
 
 export function parseCondicionantes(raw: string | null | undefined): string[] {
   if (!raw) return [];
   const lines = raw
     .split(/\r?\n/)
-    .map((l) => l.trim())
+    .map((l) => l.replace(/\s+/g, " ").trim())
     .filter((l) => l && !PAGE_FOOTER_RE.test(l));
 
   const items: string[] = [];
   let current: string | null = null;
 
+  const startsNew = (line: string): boolean =>
+    NUM_ITEM_RE.test(line) || BULLET_LETTER_RE.test(line);
+
   for (const line of lines) {
-    if (NUM_ITEM_RE.test(line)) {
+    if (startsNew(line)) {
       if (current) items.push(current);
       current = line;
     } else if (current) {
-      current = `${current} ${line}`;
+      // continua no item anterior (evita quebras de linha e espaços duplicados)
+      const compact = line.replace(/^[-\u2022*]\s*/, "");
+      current = `${current} ${compact}`;
     } else {
       current = line;
     }
   }
   if (current) items.push(current);
 
-  if (items.length === 0) return lines;
-  return items;
+  // garante numeração sequencial (1., 2., ...) em itens que ainda não têm
+  const renumbered: string[] = [];
+  let hasNumber = items.some((i) => NUM_ITEM_RE.test(i));
+  items.forEach((item, i) => {
+    if (hasNumber && NUM_ITEM_RE.test(item)) {
+      renumbered.push(item);
+    } else if (hasNumber) {
+      renumbered.push(item);
+    } else {
+      renumbered.push(`${i + 1}. ${item}`);
+    }
+  });
+
+  if (renumbered.length === 0) return lines;
+  return renumbered;
 }
 
 export function buildCondicionantesData(

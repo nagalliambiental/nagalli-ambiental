@@ -67,13 +67,29 @@ export default async function DashboardPage() {
         title="Dashboard"
         subtitle="Visão geral dos processos e cadastros"
         actions={
-          <Link
-            href="/clientes/novo"
-            className="focus-ring transition-brand flex items-center gap-2 rounded-[var(--radius-card)] bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)]"
-          >
-            <Plus size={16} strokeWidth={2.5} />
-            Novo cliente
-          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href="/clientes/novo"
+              className="focus-ring transition-brand flex items-center gap-2 rounded-[var(--radius-card)] bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)]"
+            >
+              <Plus size={16} strokeWidth={2.5} />
+              Novo cliente
+            </Link>
+            <Link
+              href="/empreendimentos/novo"
+              className="focus-ring transition-brand flex items-center gap-2 rounded-[var(--radius-card)] bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)]"
+            >
+              <Plus size={16} strokeWidth={2.5} />
+              Novo empreendimento
+            </Link>
+            <Link
+              href="/processos/novo"
+              className="focus-ring transition-brand flex items-center gap-2 rounded-[var(--radius-card)] bg-[var(--color-river-700)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-river-500)]"
+            >
+              <Plus size={16} strokeWidth={2.5} />
+              Novo processo
+            </Link>
+          </div>
         }
       />
 
@@ -176,24 +192,7 @@ export default async function DashboardPage() {
             Prazos a Vencer
           </h2>
           <div className="space-y-3">
-      <div className="mt-6 flex flex-wrap items-center gap-3">
-        <Link
-          href="/empreendimentos/novo"
-          className="focus-ring transition-brand flex items-center gap-2 rounded-[var(--radius-card)] bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)]"
-        >
-          <Plus size={16} strokeWidth={2.5} />
-          Novo empreendimento
-        </Link>
-        <Link
-          href="/processos/novo"
-          className="focus-ring transition-brand flex items-center gap-2 rounded-[var(--radius-card)] bg-[var(--color-river-700)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-river-500)]"
-        >
-          <Plus size={16} strokeWidth={2.5} />
-          Novo processo
-        </Link>
-      </div>
-
-      {(() => {
+            {(() => {
               const now = new Date();
               const vencendo = processosVencendo.filter((p) => {
                 if (!p.validade) return false;

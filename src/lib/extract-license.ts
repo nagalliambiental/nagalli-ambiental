@@ -87,10 +87,23 @@ function extractCondicionantes(text: string): string | null {
     }
   }
 
-  let sec = text.slice(start, end);
+   let sec = text.slice(start, end);
 
   const artifact = /^\s*(?:P[aá]gina\s+\d+(?:\/LP|\/\d+)?[^\S\r\n]*|LP\s+N[º°o]?\s*\d+|Instituto [ÁA]gua e Terra|Rua Engenheiros Rebou[çc]as.*|EM BRANCO.*)\s*$/gm;
-  sec = sec.replace(artifact, "").replace(/\n{3,}/g, "\n\n").trim();
+  sec = sec.replace(artifact, "");
+
+  // junta hífen de fincamento de linha ("licen-ça" -> "licença")
+  sec = sec.replace(/[ \t]*-\n[ \t]*/g, "");
+  // colapsa espaços/tabs horizontais em um único espaço
+  sec = sec.replace(/[ \t]+/g, " ");
+  // remove espaços ao final de cada linha e linhas em branco redundantes
+  sec = sec
+    .split("\n")
+    .map((l) => l.replace(/ $/, "").trim())
+    .filter((l) => l)
+    .join("\n");
+  // colapsa múltiplas quebras de linha
+  sec = sec.replace(/\n{3,}/g, "\n\n").trim();
 
   if (!sec) return null;
   return sec;

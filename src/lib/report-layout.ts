@@ -133,8 +133,9 @@ export class NagalliReport {
       hour: "2-digit",
       minute: "2-digit",
     })}`;
+    const generatedW = this.font.widthOfTextAtSize(generated, 7.5);
     this.page.drawText(generated, {
-      x: this.pageW - MARGIN_X,
+      x: this.pageW - MARGIN_X - generatedW,
       y: this.y + 2,
       size: 7.5,
       font: this.font,
