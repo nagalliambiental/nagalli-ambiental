@@ -197,7 +197,8 @@ export default function NovoProcessoPage() {
       return;
     }
 
-    router.push("/processos");
+    const processo = await res.json();
+    router.push(`/processos/${processo.id}`);
     router.refresh();
   }
 
