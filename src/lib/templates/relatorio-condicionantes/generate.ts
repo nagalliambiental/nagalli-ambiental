@@ -8,9 +8,9 @@ export type CondicionanteLinha = {
   descricao: string;
 };
 
-const NUM_ITEM_RE = /^(?:\d{1,3}\.\s*|\d{1,3}\)\s*|\-\s*|ÔÇó\s*|\*\s*)/;
-const PAGE_FOOTER_RE = /^p├ígina\s+\d+\//i;
-const BULLET_LETTER_RE = /^[a-z├í├®├¡├│├║]\)\s*/i;
+const NUM_ITEM_RE = /^(?:\d{1,3}\.\s*|\d{1,3}\)\s*|\-\s*|\u2022\s*|\*\s*)/;
+const PAGE_FOOTER_RE = /^p\u00e1gina\s+\d+\//i;
+const BULLET_LETTER_RE = /^[a-z\u00e1\u00e9\u00ed\u00f3\u00fa]\)\s*/i;
 
 export function parseCondicionantes(raw: string | null | undefined): string[] {
   if (!raw) return [];
@@ -30,7 +30,6 @@ export function parseCondicionantes(raw: string | null | undefined): string[] {
       if (current) items.push(current);
       current = line;
     } else if (current) {
-      // continua no item anterior (evita quebras de linha e espa├ºos duplicados)
       const compact = line.replace(/^[-\u2022*]\s*/, "");
       current = `${current} ${compact}`;
     } else {
@@ -39,7 +38,6 @@ export function parseCondicionantes(raw: string | null | undefined): string[] {
   }
   if (current) items.push(current);
 
-  // garante numera├º├úo sequencial (1., 2., ...) em itens que ainda n├úo t├¬m
   const renumbered: string[] = [];
   let hasNumber = items.some((i) => NUM_ITEM_RE.test(i));
   items.forEach((item, i) => {
