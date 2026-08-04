@@ -7,7 +7,7 @@ import { ehPrivilegiado } from "@/lib/perfil";
 import { Topbar } from "@/components/Topbar";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Map, MapPin, Building2, Calendar, FileText, Edit3, ArrowLeft } from "lucide-react";
+import { Map, MapPin, Building2, Calendar, FileText, Edit3, ArrowLeft, Download } from "lucide-react";
 import Link from "next/link";
 import DeleteButton from "@/components/DeleteButton";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
@@ -214,8 +214,9 @@ export default async function EmpreendimentoDetailPage(props: { params: Promise<
                         </div>
                         <div className="flex items-center gap-3">
                           <span className="text-xs text-[var(--color-ink-500)]">{format(new Date(d.criadoEm), "dd/MM/yyyy", { locale: ptBR })}</span>
-                          <a href={d.caminho} target="_blank" className="rounded p-1 text-[var(--color-ink-400)] hover:text-[var(--color-brand-600)]" title="Download">
-                            <FileText size={14} />
+                          <a href={d.caminho} target="_blank" className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)] hover:underline">
+                            <Download size={14} />
+                            Download
                           </a>
                         </div>
                       </div>
