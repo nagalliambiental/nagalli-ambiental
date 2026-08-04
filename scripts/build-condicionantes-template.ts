@@ -22,8 +22,10 @@ function makeTable() {
   const sz20 = `<w:sz w:val="20"/><w:szCs w:val="20"/>`;
   const boldTag = `<w:b/><w:bCs/>`;
 
+  const borders = `<w:tcBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="000000"/><w:left w:val="single" w:sz="4" w:space="0" w:color="000000"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="000000"/><w:right w:val="single" w:sz="4" w:space="0" w:color="000000"/></w:tcBorders>`;
+
   function tc(width: string, content: string, jc = "both") {
-    return `<w:tc><w:tcPr><w:tcW w:w="${width}" w:type="dxa"/></w:tcPr><w:p><w:pPr><w:jc w:val="${jc}"/></w:pPr>${content}</w:p></w:tc>`;
+    return `<w:tc><w:tcPr><w:tcW w:w="${width}" w:type="dxa"/>${borders}</w:tcPr><w:p><w:pPr><w:jc w:val="${jc}"/></w:pPr>${content}</w:p></w:tc>`;
   }
 
   function headerCell(text: string) {
@@ -41,12 +43,14 @@ function makeTable() {
   const col1 = "6587";
   const col2 = "2196";
 
+  const tblBorders = `<w:tblBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="000000"/><w:left w:val="single" w:sz="4" w:space="0" w:color="000000"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="000000"/><w:right w:val="single" w:sz="4" w:space="0" w:color="000000"/><w:insideH w:val="single" w:sz="4" w:space="0" w:color="000000"/><w:insideV w:val="single" w:sz="4" w:space="0" w:color="000000"/></w:tblBorders>`;
+
   const headerRow = `<w:tr>${tc(col1, headerCell("Requisito"))}${tc(col2, headerCell("Atendimento"))}</w:tr>`;
 
   // docxtemplater table row loop: {#} in first <w:tc>, {/} in last <w:tc>
   const dataRow = `<w:tr>${tc(col1, `<w:r><w:rPr>${fontTag}${sz20}</w:rPr><w:t xml:space="preserve">{#condicionantes}</w:t></w:r>${descRun()}`, "left")}${tc(col2, `${atendRun()}<w:r><w:rPr>${fontTag}${sz20}</w:rPr><w:t xml:space="preserve">{/condicionantes}</w:t></w:r>`, "center")}</w:tr>`;
 
-  return `<w:tbl><w:tblPr><w:tblStyle w:val="Tabelacomgrade"/><w:tblW w:w="8783" w:type="dxa"/><w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr><w:tblGrid><w:gridCol w:w="${col1}"/><w:gridCol w:w="${col2}"/></w:tblGrid>${headerRow}${dataRow}</w:tbl>`;
+  return `<w:tbl><w:tblPr><w:tblW w:w="8783" w:type="dxa"/>${tblBorders}<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr><w:tblGrid><w:gridCol w:w="${col1}"/><w:gridCol w:w="${col2}"/></w:tblGrid>${headerRow}${dataRow}</w:tbl>`;
 }
 
 function makeDateLine() {
