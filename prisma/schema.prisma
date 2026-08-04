@@ -185,6 +185,28 @@ model Processo {
   exigencias    Exigencia[]
   documentos    Documento[]
   timeline      TimelineProcesso[]
+  autorizacaoCorte AutorizacaoCorte?
+}
+
+model AutorizacaoCorte {
+  id                   Int      @id @default(autoincrement())
+  processoId           Int      @unique
+  processo             Processo @relation(fields: [processoId], references: [id], onDelete: Cascade)
+
+  quantidadeIndividuos Int?
+
+  compensacaoExigida   Boolean   @default(false)
+  tipoCompensacao      String?
+  quantidadeMudas      Int?
+  areaCompensacaoM2    Float?
+  prazoCompensacao     DateTime?
+  statusCompensacao    String    @default("pendente")
+  comprovante          String?
+
+  exigenciaId          Int?
+
+  criadoEm             DateTime @default(now())
+  atualizadoEm         DateTime @updatedAt
 }
 
 model Exigencia {

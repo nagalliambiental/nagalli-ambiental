@@ -13,6 +13,7 @@ import Link from "next/link";
 import DeleteButton from "@/components/DeleteButton";
 import { Tabs } from "@/components/Tabs";
 import { UltimaModificacao } from "@/components/UltimaModificacao";
+import CompensacaoCorteCard from "@/components/CompensacaoCorteCard";
 
 export const dynamic = "force-dynamic";
 
@@ -220,6 +221,15 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
               </div>
             ),
           },
+          ...(processo.tipo === "Autorização Ambiental para Corte"
+            ? [
+                {
+                  key: "compensacao",
+                  label: "Compensação Ambiental",
+                  content: <CompensacaoCorteCard processoId={processo.id} />,
+                },
+              ]
+            : []),
           {
             key: "vinculados",
             label: "Itens vinculados",
