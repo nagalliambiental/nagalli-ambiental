@@ -15,17 +15,18 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
   const proposta = await prisma.proposta.findUnique({ where: { id: Number(id) } });
   if (!proposta) redirect("/propostas");
 
-  const clientes = await prisma.cliente.findMany({
-    where: { ativo: true },
-    select: { id: true, apelido: true },
-    orderBy: { apelido: "asc" },
-  });
-
-  const empreendimentos = await prisma.empreendimento.findMany({
-    where: { ativo: true },
-    select: { id: true, apelido: true },
-    orderBy: { apelido: "asc" },
-  });
+  const [clientes, empreendimentos] = await Promise.all([
+    prisma.cliente.findMany({
+      where: { ativo: true },
+      select: { id: true, apelido: true },
+      orderBy: { apelido: "asc" },
+    }),
+    prisma.empreendimento.findMany({
+      where: { ativo: true },
+      select: { id: true, apelido: true },
+      orderBy: { apelido: "asc" },
+    }),
+  ]);
 
   return (
     <div>

@@ -16,13 +16,39 @@ export async function GET(
   const { id } = await params;
   const proc = await prisma.processo.findUnique({
     where: { id: Number(id) },
-    include: {
-      orgao: true,
-      empreendimento: { include: { cliente: true } },
-      responsavel: true,
-      exigencias: { orderBy: { prazo: "asc" } },
-      documentos: true,
-      timeline: { orderBy: { criadoEm: "asc" } },
+    select: {
+      id: true, numProtocolo: true, numLicenca: true, tipo: true, sistema: true,
+      status: true, validade: true, dataProtocolo: true, dataContato: true,
+      alertaDias: true, condicionantes: true, observacoes: true, criadoEm: true, atualizadoEm: true,
+      empreendimentoId: true, orgaoId: true, responsavelId: true,
+      orgao: { select: { id: true, sigla: true, nome: true } },
+      empreendimento: {
+        select: {
+          id: true, apelido: true, municipio: true, uf: true,
+          cliente: { select: { id: true, apelido: true, razaoSocial: true } },
+        },
+      },
+      responsavel: { select: { id: true, nome: true, email: true, telefone: true } },
+      exigencias: {
+        orderBy: { prazo: "asc" },
+        select: {
+          id: true, descricao: true, prazo: true, cumprida: true,
+          antecedenciaDias: true, criadoEm: true, processoId: true,
+        },
+      },
+      documentos: {
+        select: {
+          id: true, nome: true, tipo: true, caminho: true, tamanho: true, criadoEm: true,
+        },
+      },
+      timeline: {
+        orderBy: { criadoEm: "asc" },
+        select: {
+          id: true, status: true, descricao: true, criadoEm: true, usuarioId: true,
+        },
+      },
+      autorizacaoCorte: true,
+      _count: { select: { exigencias: true, documentos: true } },
     },
   });
 

@@ -10,10 +10,13 @@ export async function GET() {
   }
 
   const processos = await prisma.processo.findMany({
-    include: {
-      orgao: true,
-      empreendimento: { include: { cliente: true } },
-      responsavel: true,
+    select: {
+      id: true, numProtocolo: true, numLicenca: true, tipo: true, sistema: true,
+      status: true, validade: true, dataProtocolo: true, alertaDias: true, criadoEm: true,
+      empreendimentoId: true, orgaoId: true, responsavelId: true,
+      orgao: { select: { id: true, sigla: true } },
+      empreendimento: { select: { id: true, apelido: true, cliente: { select: { id: true, apelido: true } } } },
+      responsavel: { select: { id: true, nome: true } },
     },
     orderBy: { criadoEm: "desc" },
   });

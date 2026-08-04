@@ -34,7 +34,12 @@ export default async function EmpreendimentoDetailPage(props: { params: Promise<
   const { id } = await props.params;
   const emp = await prisma.empreendimento.findUnique({
     where: { id: Number(id) },
-    include: {
+    select: {
+      id: true, apelido: true, descricao: true, cnpj: true, cep: true,
+      municipio: true, uf: true, rua: true, numero: true, bairro: true,
+      complemento: true, latitude: true, longitude: true,
+      utmX: true, utmY: true, utmZona: true, utmHemisferio: true,
+      criadoEm: true, visibilidade: true, clienteId: true,
       cliente: { select: { apelido: true, id: true } },
     },
   });
@@ -49,17 +54,19 @@ export default async function EmpreendimentoDetailPage(props: { params: Promise<
     );
   }
 
-  const processos = await prisma.processo.findMany({
-    where: { empreendimentoId: emp.id },
-    include: { orgao: { select: { sigla: true } } },
-    orderBy: { criadoEm: "desc" },
-  });
-
-  const documentos = await prisma.documento.findMany({
-    where: { processo: { empreendimentoId: emp.id } },
-    orderBy: { criadoEm: "desc" },
-    take: 20,
-  });
+  const [processos, documentos] = await Promise.all([
+    prisma.processo.findMany({
+      where: { empreendimentoId: emp.id },
+      select: { id: true, numProtocolo: true, tipo: true, status: true, orgao: { select: { sigla: true } } },
+      orderBy: { criadoEm: "desc" },
+    }),
+    prisma.documento.findMany({
+      where: { processo: { empreendimentoId: emp.id } },
+      orderBy: { criadoEm: "desc" },
+      take: 20,
+      select: { id: true, nome: true, tipo: true, caminho: true, criadoEm: true },
+    }),
+  ]);
 
   return (
     <div>
