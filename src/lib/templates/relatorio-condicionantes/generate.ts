@@ -70,10 +70,7 @@ export function buildCondicionantesData(
     tipo: processo.tipo || "",
     data_emissao: dataEmissao,
     empresa: empresa.razaoSocial || "",
-    condicionantes: condicionantes.map((descricao) => ({
-      descricao,
-      atendimento: ATENDIMENTO_DROPDOWN_XML,
-    })),
+    condicionantes: condicionantes.map((descricao) => ({ descricao })),
   };
 }
 
