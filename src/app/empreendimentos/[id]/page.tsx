@@ -128,7 +128,7 @@ export default async function EmpreendimentoDetailPage(props: { params: Promise<
                     </div>
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       {emp.rua && <div className="col-span-2 text-[var(--color-ink-700)]">
-                        {emp.rua}{emp.numero && emp.numero !== "0" ? `, ${emp.numero}` : ""}
+                        {emp.rua}{emp.numero && emp.numero !== "0" && emp.numero !== "S/N" ? `, ${emp.numero}` : ""}
                       </div>}
                       {emp.bairro && <div className="text-[var(--color-ink-500)]">Bairro: {emp.bairro}</div>}
                       {emp.complemento && <div className="text-[var(--color-ink-500)]">Complemento: {emp.complemento}</div>}

@@ -22,7 +22,7 @@ export function EmpreendimentosTable({ data, q }: { data: EmpData[]; q?: string 
     {
       header: "Endereço",
       className: "max-w-xs truncate",
-      render: (e) => [e.rua, e.numero && e.numero !== "0" ? e.numero : null, e.bairro].filter(Boolean).join(", ") || e.municipio || "-",
+      render: (e) => [e.rua, e.numero && e.numero !== "0" && e.numero !== "S/N" ? e.numero : null, e.bairro].filter(Boolean).join(", ") || e.municipio || "-",
     },
     { header: "Processos", headerClassName: "text-center", className: "text-center", render: (e) => e._count.processos },
     { header: "Ações", render: (e) => <RowActions detailUrl={`/empreendimentos/${e.id}`} editUrl={`/empreendimentos/${e.id}/editar`} entity="empreendimento" entityName="Empreendimento" endpoint={`/api/empreendimentos/${e.id}`} /> },
