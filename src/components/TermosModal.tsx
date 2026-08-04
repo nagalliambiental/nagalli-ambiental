@@ -3,13 +3,13 @@
 import { useSession, signOut } from "next-auth/react";
 import { useState } from "react";
 
-const TEXTO_TERMOS = `TERMO DE USO E PROTEÇÃO DE DADOS
+const TEXTO_TERMOS = `TERMO DE USO E DE PROTEÇÃO DE DADOS
 
-Este sistema é de uso exclusivo da Nagalli Ambiental e de seus colaboradores devidamente autorizados.
+Este sistema é de uso exclusivo da Nagalli Ambiental Ltda. e de seus colaboradores e parceiros devidamente autorizados.
 
-É PROIBIDA a cópia, reprodução, distribuição, divulgação, compartilhamento ou qualquer forma de transferência deste sistema, de suas telas, dados e informações, total ou parcialmente, sem autorização prévia e expressa da Nagalli Ambiental.
+É PROIBIDA a cópia, reprodução, distribuição, divulgação, compartilhamento ou qualquer forma de transferência deste sistema, de suas telas, dados e informações, total ou parcialmente, sem autorização prévia e expressa da Nagalli Ambiental Ltda (Lei n. 9.610/98). Constitui crime previsto na Lei n. 5.194/66 e infração ao Código de Ética Profissional - Resolução Confea n. 1.002/2002 a violação da propriedade intelectual sobre a criação técnica.
 
-Todas as informações acessadas neste sistema são confidenciais e de propriedade da Nagalli Ambiental. Direitos reservados.`;
+Todas as informações acessadas neste sistema são confidenciais e de propriedade da Nagalli Ambiental. Todos os Direitos reservados.`;
 
 export function TermosModal() {
   const { data: session, update } = useSession();
@@ -42,7 +42,7 @@ export function TermosModal() {
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
       <div className="mx-4 w-full max-w-lg rounded-xl bg-white p-6 shadow-2xl">
         <h2 className="font-display text-lg font-semibold text-[var(--color-ink-900)]">
-          Termo de Uso e Condições
+          Termo de Uso e de Proteção de Dados
         </h2>
         <div className="mt-3 max-h-80 overflow-y-auto whitespace-pre-line rounded-lg border border-[var(--color-paper-200)] bg-[var(--color-paper-50)] p-4 text-sm leading-relaxed text-[var(--color-ink-700)]">
           {TEXTO_TERMOS}

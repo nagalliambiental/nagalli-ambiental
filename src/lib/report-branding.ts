@@ -35,16 +35,23 @@ export const NAGALLI_LINHA = PALETTE.paper["200"];
 const MARGIN_X = 40;
 const COPYRIGHT = "Proibida a cópia e distribuição. Todos os direitos reservados.";
 
-let cachedLogoBytes: Uint8Array | null | undefined;
+let cachedLogoBytes: Uint8Array | null = null;
+let logoResolved = false;
 
 export function getNagalliLogoBytes(): Uint8Array | null {
-  if (cachedLogoBytes !== undefined) return cachedLogoBytes;
-  try {
-    cachedLogoBytes = fs.readFileSync(path.join(process.cwd(), "public", "Logo.jpeg"));
-  } catch {
-    cachedLogoBytes = null;
+  if (logoResolved) return cachedLogoBytes;
+  logoResolved = true;
+  const candidates = ["Logo.jpeg", "logo.jpeg", "Logo.jpg", "logo.jpg"];
+  for (const name of candidates) {
+    try {
+      cachedLogoBytes = fs.readFileSync(path.join(process.cwd(), "public", name));
+      return cachedLogoBytes;
+    } catch {
+      continue;
+    }
   }
-  return cachedLogoBytes;
+  cachedLogoBytes = null;
+  return null;
 }
 
 export async function embedNagalliLogo(pdf: PDFDocument): Promise<PDFImage | null> {

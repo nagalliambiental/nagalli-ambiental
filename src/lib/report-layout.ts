@@ -294,12 +294,15 @@ export class NagalliReport {
   }
 
   summary(items: NagalliSummaryItem[], cols = 2) {
-    if (this.y < BOTTOM_RESERVE + 24) this.addPage();
     const gap = 16;
     const boxW = (this.usableW - gap * (cols - 1)) / cols;
     const boxH = 26;
+    const rowsUsed = Math.ceil(items.length / cols);
+    const totalH = rowsUsed * (boxH + 6) + 24;
 
-    this.y -= 10;
+    if (this.y < BOTTOM_RESERVE + totalH) this.addPage();
+
+    this.y -= 20;
     items.forEach((item, i) => {
       const col = i % cols;
       const rowIdx = Math.floor(i / cols);
@@ -323,7 +326,6 @@ export class NagalliReport {
       });
     });
 
-    const rowsUsed = Math.ceil(items.length / cols);
     this.y -= rowsUsed * (boxH + 6) + 10;
   }
 
