@@ -56,14 +56,17 @@ export async function GET(
   const safeName = `relatorio_condicionantes_${processo.numLicenca || processo.numProtocolo || processo.id}_${Date.now()}.docx`
     .replace(/[^a-zA-Z0-9._-]/g, "_");
 
+  let caminho = `/uploads/documentos/${safeName}`;
   try {
     const uploadDir = path.join(process.cwd(), "public", "uploads", "documentos");
     await mkdir(uploadDir, { recursive: true });
     const filePath = path.join(uploadDir, safeName);
     await writeFile(filePath, buffer);
+  } catch (saveErr) {
+    console.error("Erro ao salvar arquivo em disco:", saveErr);
+  }
 
-    const caminho = `/uploads/documentos/${safeName}`;
-
+  try {
     const docExistente = await prisma.documento.findFirst({
       where: {
         processoId: processo.id,
@@ -90,8 +93,8 @@ export async function GET(
         Number((session.user as { id: string }).id)
       );
     }
-  } catch (saveErr) {
-    console.error("Erro ao salvar relatório em documentos (download continua):", saveErr);
+  } catch (dbErr) {
+    console.error("Erro ao salvar registro do documento no banco:", dbErr);
   }
 
   return new NextResponse(new Uint8Array(buffer), {
