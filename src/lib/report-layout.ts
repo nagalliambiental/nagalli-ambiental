@@ -298,11 +298,11 @@ export class NagalliReport {
     const boxW = (this.usableW - gap * (cols - 1)) / cols;
     const boxH = 26;
     const rowsUsed = Math.ceil(items.length / cols);
-    const totalH = rowsUsed * (boxH + 6) + 24;
+    const totalH = rowsUsed * (boxH + 6) + 30;
 
     if (this.y < BOTTOM_RESERVE + totalH) this.addPage();
 
-    this.y -= 20;
+    this.y -= 30;
     items.forEach((item, i) => {
       const col = i % cols;
       const rowIdx = Math.floor(i / cols);
