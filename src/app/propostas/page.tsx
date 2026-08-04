@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import Link from "next/link";
 import { Topbar } from "@/components/Topbar";
-import { Plus } from "lucide-react";
+import { Plus, Wrench } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
 import { PropostasTable } from "@/components/tables/PropostasTable";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
@@ -41,6 +41,13 @@ export default async function PropostasPage({
         title="Propostas Comerciais"
         actions={
           <div className="flex items-center gap-3">
+            <Link
+              href="/propostas/demolicao"
+              className="focus-ring transition-brand flex items-center gap-2 rounded-[var(--radius-card)] border border-[var(--color-ink-300)] px-4 py-2.5 text-sm font-medium text-ink-700 hover:bg-gray-50"
+            >
+              <Wrench size={16} />
+              Propostas de Demolição (PGRCC/RGRCC)
+            </Link>
             <SearchBar placeholder="Buscar por título, cliente..." />
             <Link
               href="/propostas/nova"

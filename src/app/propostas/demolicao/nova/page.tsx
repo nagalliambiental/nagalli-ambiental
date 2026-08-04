@@ -15,8 +15,8 @@ export default async function Page() {
       <Breadcrumbs
         items={[
           { label: "Propostas", href: "/propostas" },
-          { label: "Demolição", href: "/propostas/demolicao" },
-          { label: "Nova" },
+          { label: "Nova", href: "/propostas/nova" },
+          { label: "PGRCC e RGRCC (Demolição)" },
         ]}
       />
       <PropostaDemolicaoForm />

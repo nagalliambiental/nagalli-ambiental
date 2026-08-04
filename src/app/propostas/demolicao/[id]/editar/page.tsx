@@ -20,7 +20,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
       <Breadcrumbs
         items={[
           { label: "Propostas", href: "/propostas" },
-          { label: "Demolição", href: "/propostas/demolicao" },
+          { label: "PGRCC e RGRCC (Demolição)", href: "/propostas/demolicao" },
           { label: `${proposta.numero}/${proposta.ano}`, href: `/propostas/demolicao/${proposta.id}` },
           { label: "Editar" },
         ]}
