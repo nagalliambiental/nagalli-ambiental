@@ -104,6 +104,7 @@ model Cliente {
   historicos          Historico[]
   acessos             Acesso[]
   contratos           Contrato[]
+  propostas           Proposta[]
 }
 
 model Empreendimento {
@@ -133,6 +134,7 @@ model Empreendimento {
   historicos Historico[]
   acessos    Acesso[]
   contratos Contrato[]
+  propostas Proposta[]
 }
 
 model Orgao {
@@ -186,6 +188,7 @@ model Processo {
   documentos    Documento[]
   timeline      TimelineProcesso[]
   autorizacaoCorte AutorizacaoCorte?
+  condicionantesReg Condicionante[]
 }
 
 model AutorizacaoCorte {
@@ -469,5 +472,37 @@ model Acesso {
   criadoEm        DateTime @default(now())
 
   cliente      Cliente?      @relation(fields: [clienteId], references: [id])
+  empreendimento Empreendimento? @relation(fields: [empreendimentoId], references: [id])
+}
+
+model Condicionante {
+  id              Int      @id @default(autoincrement())
+  descricao       String
+  status          String   @default("pendente")
+  prazo           DateTime?
+  dataCumprimento DateTime?
+  responsavel     String?
+  observacoes     String?
+  processoId      Int
+  criadoEm        DateTime @default(now())
+  atualizadoEm    DateTime @updatedAt
+
+  processo Processo @relation(fields: [processoId], references: [id])
+}
+
+model Proposta {
+  id              Int      @id @default(autoincrement())
+  titulo          String
+  clienteId       Int
+  empreendimentoId Int?
+  valor           Float?
+  status          String   @default("rascunho")
+  validadeDias    Int      @default(30)
+  servicos        Json?
+  observacoes     String?
+  criadoEm        DateTime @default(now())
+  atualizadoEm    DateTime @updatedAt
+
+  cliente        Cliente        @relation(fields: [clienteId], references: [id])
   empreendimento Empreendimento? @relation(fields: [empreendimentoId], references: [id])
 }

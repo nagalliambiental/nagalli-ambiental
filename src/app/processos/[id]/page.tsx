@@ -52,7 +52,8 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
       orgao: true,
       empreendimento: { select: { apelido: true, id: true, cliente: { select: { apelido: true } } } },
       responsavel: { select: { nome: true, email: true, telefone: true } },
-      _count: { select: { exigencias: true, documentos: true } },
+      _count: { select: { exigencias: true, documentos: true, condicionantesReg: true } },
+      condicionantesReg: { orderBy: { criadoEm: "desc" } },
     },
   });
   if (!processo) notFound();
@@ -210,13 +211,40 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
           {
             key: "condicionantes",
             label: "Condicionantes",
+            count: processo._count.condicionantesReg,
             content: (
               <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
-                <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Condicionantes</h2>
-                {processo.condicionantes ? (
-                  <p className="text-sm text-[var(--color-ink-700)] whitespace-pre-wrap">{processo.condicionantes}</p>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Condicionantes</h2>
+                  <Link href={`/condicionantes/novo?processoId=${processo.id}`} className="text-sm font-medium text-[var(--color-brand-600)] hover:underline">+ Adicionar</Link>
+                </div>
+                {processo.condicionantesReg.length > 0 ? (
+                  <div className="space-y-3">
+                    {processo.condicionantesReg.map((c) => (
+                      <Link key={c.id} href={`/condicionantes/${c.id}`} className="block border border-[var(--color-paper-200)] rounded-lg p-3 hover:bg-[var(--color-paper-50)] transition-brand">
+                        <div className="flex items-start justify-between">
+                          <p className="text-sm text-[var(--color-ink-700)] line-clamp-2">{c.descricao}</p>
+                          <span className={`ml-2 shrink-0 inline-block rounded px-2 py-0.5 text-xs font-medium ${
+                            c.status === "cumprida" ? "bg-green-50 text-green-800" :
+                            c.status === "vencida" ? "bg-red-50 text-red-800" :
+                            c.status === "em_andamento" ? "bg-blue-50 text-blue-800" :
+                            "bg-amber-50 text-amber-800"
+                          }`}>
+                            {c.status === "pendente" ? "Pendente" : c.status === "em_andamento" ? "Em Andamento" : c.status === "cumprida" ? "Cumprida" : c.status === "vencida" ? "Vencida" : "Suspensa"}
+                          </span>
+                        </div>
+                        {c.prazo && <p className="text-xs text-[var(--color-ink-500)] mt-1">Prazo: {format(new Date(c.prazo), "dd/MM/yyyy", { locale: ptBR })}</p>}
+                      </Link>
+                    ))}
+                  </div>
                 ) : (
                   <p className="text-sm text-[var(--color-ink-500)]">Nenhuma condicionante registrada.</p>
+                )}
+                {processo.condicionantes && (
+                  <div className="mt-4 pt-4 border-t border-[var(--color-paper-200)]">
+                    <p className="text-xs font-medium text-[var(--color-ink-500)] mb-1">Texto original das condicionantes:</p>
+                    <p className="text-sm text-[var(--color-ink-700)] whitespace-pre-wrap">{processo.condicionantes}</p>
+                  </div>
                 )}
               </div>
             ),
@@ -233,7 +261,7 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
           {
             key: "vinculados",
             label: "Itens vinculados",
-            count: processo._count.exigencias + processo._count.documentos,
+            count: processo._count.exigencias + processo._count.documentos + processo._count.condicionantesReg,
             content: (
               <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
                 <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-3">Itens vinculados</h2>

@@ -5,6 +5,8 @@ import {
   FileCheck2,
   BarChart3,
   ListTodo,
+  Shield,
+  ClipboardList,
   type LucideIcon,
 } from "lucide-react";
 
@@ -36,6 +38,7 @@ export const NAV_ITEMS: NavItem[] = [
     children: [
       { label: "Processos", href: "/processos" },
       { label: "Exigências", href: "/exigencias" },
+      { label: "Condicionantes", href: "/condicionantes" },
       { label: "DMR", href: "/dmr" },
       { label: "Prazos", href: "/prazos" },
       { label: "Modelos", href: "/modelos" },
@@ -45,6 +48,7 @@ export const NAV_ITEMS: NavItem[] = [
   {
     label: "Administrativo", icon: Settings,
     children: [
+      { label: "Propostas", href: "/propostas", adminOnly: true },
       { label: "Financeiro", href: "/financeiro", adminOnly: true },
       { label: "Contratos", href: "/contratos", adminOnly: true },
       { label: "Acessos", href: "/acessos" },
