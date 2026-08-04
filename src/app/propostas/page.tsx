@@ -1,54 +1,64 @@
+import { redirect } from "next/navigation";
+import Link from "next/link";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
-import Link from "next/link";
 import { Topbar } from "@/components/Topbar";
-import { Plus, Wrench } from "lucide-react";
+import { Plus } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
-import { PropostasTable } from "@/components/tables/PropostasTable";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
+import PropostasServicoList from "@/components/propostas/PropostasServicoList";
+import { getModelosProposta } from "@/lib/propostas/modelos";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Propostas Comerciais" };
+export const metadata = { title: "Propostas de Serviços" };
 
 export default async function PropostasPage({
   searchParams,
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
+  const session = await auth();
+  if (!session?.user) redirect("/login");
+
   const { q } = await searchParams;
 
-  const where: Prisma.PropostaWhereInput = {};
+  const modeloNomes: Record<string, string> = {};
+  for (const modelo of getModelosProposta()) {
+    modeloNomes[modelo.slug] = modelo.nome;
+  }
+
+  const where: Prisma.PropostaServicoWhereInput = {};
   if (q) {
+    const qNum = Number(q);
     where.OR = [
-      { titulo: { contains: q, mode: "insensitive" } },
-      { cliente: { apelido: { contains: q, mode: "insensitive" } } },
+      { modeloSlug: { contains: q, mode: "insensitive" } },
+      ...(Number.isNaN(qNum)
+        ? []
+        : [{ numero: qNum }, { ano: qNum }]),
     ];
   }
 
-  const propostas = await prisma.proposta.findMany({
+  const propostas = await prisma.propostaServico.findMany({
     where,
-    include: {
-      cliente: { select: { apelido: true } },
-      empreendimento: { select: { apelido: true } },
-    },
-    orderBy: { criadoEm: "desc" },
+    orderBy: [{ ano: "desc" }, { numero: "desc" }],
   });
+
+  const propostasSerializadas = propostas.map((p) => ({
+    ...p,
+    criadoEm: p.criadoEm.toISOString(),
+    dados: (p.dados ?? {}) as Record<string, unknown>,
+  }));
 
   return (
     <div>
       <Breadcrumbs items={[{ label: "Propostas" }]} />
       <Topbar
-        title="Propostas Comerciais"
+        title="Propostas de Serviços"
+        subtitle="Propostas comerciais por tipo de serviço, com numeração sequencial e revisões."
         actions={
           <div className="flex items-center gap-3">
-            <Link
-              href="/propostas/demolicao"
-              className="focus-ring transition-brand flex items-center gap-2 rounded-[var(--radius-card)] border border-[var(--color-ink-300)] px-4 py-2.5 text-sm font-medium text-ink-700 hover:bg-gray-50"
-            >
-              <Wrench size={16} />
-              Propostas de Demolição (PGRCC/RGRCC)
-            </Link>
-            <SearchBar placeholder="Buscar por título, cliente..." />
+            <SearchBar placeholder="Buscar por modelo, número..." />
             <Link
               href="/propostas/nova"
               className="focus-ring transition-brand flex items-center gap-2 rounded-[var(--radius-card)] bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)]"
@@ -60,7 +70,7 @@ export default async function PropostasPage({
         }
       />
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">
-        <PropostasTable data={propostas} q={q} />
+        <PropostasServicoList propostas={propostasSerializadas} modeloNomes={modeloNomes} />
       </div>
     </div>
   );

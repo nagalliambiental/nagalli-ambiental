@@ -462,25 +462,13 @@ model Proposta {
   empreendimento   Empreendimento? @relation(fields: [empreendimentoId], references: [id])
 }
 
-model PropostaDemolicao {
-  id                 Int      @id @default(autoincrement())
-  numero             Int
-  ano                Int
-  revisao            Int      @default(0)
-  engenheiroNome     String
-  empresaNome        String
-  bairro             String
-  cidade             String
-  uf                 String
-  quantidadePgrcc    Int      @default(0)
-  quantidadeRgrcc    Int      @default(0)
-  valorUnitPgrcc     Float    @default(291.78)
-  valorUnitRgrcc     Float    @default(291.78)
-  percentualDesconto Float?   @default(18)
-  valorDesconto      Float?
-  totalCalculado     Float?
-  totalFinal         Float?
-  observacoes        String?
-  criadoEm           DateTime @default(now())
-  atualizadoEm       DateTime @updatedAt
+model PropostaServico {
+  id           Int      @id @default(autoincrement())
+  modeloSlug   String
+  numero       Int
+  ano          Int
+  revisao      Int      @default(0)
+  dados        Json
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
 }

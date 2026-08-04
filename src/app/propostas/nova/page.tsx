@@ -2,33 +2,17 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
-import { FileText, Wrench } from "lucide-react";
+import { getModelosProposta } from "@/lib/propostas/modelos";
+import { FileText } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Nova Proposta" };
 
-const TIPOS = [
-  {
-    slug: "comercial",
-    titulo: "Proposta Comercial",
-    descricao:
-      "Proposta de serviço genérica vinculada a cliente e empreendimento cadastrados, com valor e validade.",
-    href: "/propostas/nova/comercial",
-    icon: FileText,
-  },
-  {
-    slug: "demolicao",
-    titulo: "PGRCC e RGRCC (Demolição)",
-    descricao:
-      "Proposta para obras de demolição com elaboração de PGRCC e RGRCC, numeração sequencial e controle de revisões.",
-    href: "/propostas/demolicao/nova",
-    icon: Wrench,
-  },
-] as const;
-
 export default async function Page() {
   const session = await auth();
   if (!session?.user) redirect("/login");
+
+  const modelos = getModelosProposta();
 
   return (
     <div>
@@ -45,26 +29,23 @@ export default async function Page() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        {TIPOS.map((tipo) => {
-          const Icon = tipo.icon;
-          return (
-            <Link
-              key={tipo.slug}
-              href={tipo.href}
-              className="group rounded-[var(--radius-card)] border border-paper-200 bg-white p-6 shadow-card transition hover:border-brand-500 hover:shadow-lg"
-            >
-              <div className="flex items-start gap-4">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600 transition group-hover:bg-brand-100">
-                  <Icon size={24} />
-                </div>
-                <div>
-                  <h2 className="text-lg font-semibold text-ink-900">{tipo.titulo}</h2>
-                  <p className="mt-1 text-sm text-ink-500">{tipo.descricao}</p>
-                </div>
+        {modelos.map((modelo) => (
+          <Link
+            key={modelo.slug}
+            href={`/propostas/nova/${modelo.slug}`}
+            className="group rounded-[var(--radius-card)] border border-paper-200 bg-white p-6 shadow-card transition hover:border-brand-500 hover:shadow-lg"
+          >
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600 transition group-hover:bg-brand-100">
+                <FileText size={24} />
               </div>
-            </Link>
-          );
-        })}
+              <div>
+                <h2 className="text-lg font-semibold text-ink-900">{modelo.nome}</h2>
+                <p className="mt-1 text-sm text-ink-500">{modelo.descricao}</p>
+              </div>
+            </div>
+          </Link>
+        ))}
       </div>
     </div>
   );

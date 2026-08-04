@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAuditoria } from "@/lib/audit";
+import { getModeloProposta } from "@/lib/propostas/modelos";
 
 export const dynamic = "force-dynamic";
 
@@ -9,7 +10,7 @@ export async function GET() {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
 
-  const propostas = await prisma.propostaDemolicao.findMany({
+  const propostas = await prisma.propostaServico.findMany({
     orderBy: [{ ano: "desc" }, { numero: "desc" }],
   });
 
@@ -23,9 +24,14 @@ export async function POST(req: NextRequest) {
   const userId = Number((session.user as { id?: string }).id);
   const body = await req.json();
 
+  const modeloSlug = body.modeloSlug;
+  if (!getModeloProposta(modeloSlug)) {
+    return NextResponse.json({ error: "Modelo de proposta não encontrado" }, { status: 400 });
+  }
+
   const anoAtual = new Date().getFullYear();
 
-  const ultimaProposta = await prisma.propostaDemolicao.findFirst({
+  const ultimaProposta = await prisma.propostaServico.findFirst({
     where: { ano: anoAtual },
     orderBy: { numero: "desc" },
     select: { numero: true },
@@ -34,28 +40,16 @@ export async function POST(req: NextRequest) {
   const proximoNumero = (ultimaProposta?.numero ?? 0) + 1;
 
   const data = {
+    modeloSlug,
     numero: proximoNumero,
     ano: anoAtual,
     revisao: 0,
-    engenheiroNome: body.engenheiroNome,
-    empresaNome: body.empresaNome,
-    bairro: body.bairro,
-    cidade: body.cidade,
-    uf: body.uf,
-    quantidadePgrcc: Number(body.quantidadePgrcc) || 0,
-    quantidadeRgrcc: Number(body.quantidadeRgrcc) || 0,
-    valorUnitPgrcc: Number(body.valorUnitPgrcc) || 291.78,
-    valorUnitRgrcc: Number(body.valorUnitRgrcc) || 291.78,
-    percentualDesconto: Number(body.percentualDesconto) || 18,
-    valorDesconto: body.valorDesconto ? Number(body.valorDesconto) : null,
-    totalCalculado: body.totalCalculado ? Number(body.totalCalculado) : null,
-    totalFinal: body.totalFinal ? Number(body.totalFinal) : null,
-    observacoes: body.observacoes,
+    dados: body.dados ?? {},
   };
 
-  const proposta = await prisma.propostaDemolicao.create({ data });
+  const proposta = await prisma.propostaServico.create({ data });
 
-  await logAuditoria("criar", "propostaDemolicao", proposta.id, data, userId);
+  await logAuditoria("criar", "propostaServico", proposta.id, data, userId);
 
   return NextResponse.json(proposta, { status: 201 });
 }
