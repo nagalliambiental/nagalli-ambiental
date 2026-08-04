@@ -359,7 +359,7 @@ export function ClienteDetailClient({
                 </div>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   {cliente.rua && <div className="col-span-2 text-[var(--color-ink-700)]">
-                    {cliente.rua}{cliente.numero ? `, ${cliente.numero}` : ""}
+                    {cliente.rua}{cliente.numero && cliente.numero !== "0" ? `, ${cliente.numero}` : ""}
                   </div>}
                   {cliente.bairro && <div className="text-[var(--color-ink-500)]">Bairro: {cliente.bairro}</div>}
                   {cliente.complemento && <div className="text-[var(--color-ink-500)]">Complemento: {cliente.complemento}</div>}
@@ -461,7 +461,7 @@ export function ClienteDetailClient({
                           </Link>
                         </td>
                         <td className="p-4 max-w-xs truncate text-[var(--color-ink-500)]">
-                          {[emp.rua, emp.numero, emp.bairro, emp.municipio].filter(Boolean).join(", ") || "—"}
+                          {[emp.rua, emp.numero && emp.numero !== "0" ? emp.numero : null, emp.bairro, emp.municipio].filter(Boolean).join(", ") || "—"}
                         </td>
                         <td className="p-4 text-center">{emp._count.processos}</td>
                         <td className="p-4 text-center">
