@@ -38,12 +38,15 @@ function makeTable() {
     return `<w:r><w:rPr>${fontTag}${sz20}</w:rPr><w:t xml:space="preserve">Item dispositivo/orientativo. Requisito atendido.</w:t></w:r>`;
   }
 
-  const headerRow = `<w:tr>${tc("5665", headerCell("Requisito"))}${tc("3118", headerCell("Atendimento"))}</w:tr>`;
+  const col1 = "6587";
+  const col2 = "2196";
+
+  const headerRow = `<w:tr>${tc(col1, headerCell("Requisito"))}${tc(col2, headerCell("Atendimento"))}</w:tr>`;
 
   // docxtemplater table row loop: {#} in first <w:tc>, {/} in last <w:tc>
-  const dataRow = `<w:tr>${tc("5665", `<w:r><w:rPr>${fontTag}${sz20}</w:rPr><w:t xml:space="preserve">{#condicionantes}</w:t></w:r>${descRun()}`, "left")}${tc("3118", `${atendRun()}<w:r><w:rPr>${fontTag}${sz20}</w:rPr><w:t xml:space="preserve">{/condicionantes}</w:t></w:r>`, "center")}</w:tr>`;
+  const dataRow = `<w:tr>${tc(col1, `<w:r><w:rPr>${fontTag}${sz20}</w:rPr><w:t xml:space="preserve">{#condicionantes}</w:t></w:r>${descRun()}`, "left")}${tc(col2, `${atendRun()}<w:r><w:rPr>${fontTag}${sz20}</w:rPr><w:t xml:space="preserve">{/condicionantes}</w:t></w:r>`, "center")}</w:tr>`;
 
-  return `<w:tbl><w:tblPr><w:tblStyle w:val="Tabelacomgrade"/><w:tblW w:w="8783" w:type="dxa"/><w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr><w:tblGrid><w:gridCol w:w="5665"/><w:gridCol w:w="3118"/></w:tblGrid>${headerRow}${dataRow}</w:tbl>`;
+  return `<w:tbl><w:tblPr><w:tblStyle w:val="Tabelacomgrade"/><w:tblW w:w="8783" w:type="dxa"/><w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr><w:tblGrid><w:gridCol w:w="${col1}"/><w:gridCol w:w="${col2}"/></w:tblGrid>${headerRow}${dataRow}</w:tbl>`;
 }
 
 function makeDateLine() {
