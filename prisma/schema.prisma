@@ -8,199 +8,187 @@ datasource db {
 }
 
 model Usuario {
-  id        Int      @id @default(autoincrement())
-  nome      String
-  email     String   @unique
-  senha     String
-  cpf       String?
-  conselho  String?
-  perfil    String   @default("tecnico")
-  ativo     Boolean  @default(true)
+  id              Int            @id @default(autoincrement())
+  nome            String
+  email           String         @unique
+  senha           String
+  perfil          String         @default("tecnico")
+  ativo           Boolean        @default(true)
+  criadoEm        DateTime       @default(now())
+  atualizadoEm    DateTime       @updatedAt
+  cpf             String?
+  conselho        String?
   termosAceitosEm DateTime?
-  criadoEm  DateTime @default(now())
-  atualizadoEm DateTime @updatedAt
-
-  tarefas        Tarefa[]
-  logs           LogAuditoria[]
-  responsaveis   Responsavel[]
-  alertas        Alerta[]
-  historicos     Historico[]
+  alertas         Alerta[]
+  historicos      Historico[]
+  logs            LogAuditoria[]
+  responsaveis    Responsavel[]
+  tarefas         Tarefa[]
 }
 
 model Cliente {
-  id          Int      @id @default(autoincrement())
-  apelido     String
-  razaoSocial String
-  nomeFantasia String?
-  cnpj        String   @unique
-  ativo       Boolean  @default(true)
-  visibilidade String  @default("publico")
-  rua         String?
-  numero      String?
-  bairro      String?
-  complemento String?
-  cep         String?
-  municipio   String?
-  uf          String?
-  telefone    String
-  email       String
-  respLegal   String
-
-  // --- PGRS fields (merged from Empresa) ---
-  ramoAtividade             String?
-  indicacaoFiscal           String?
-  diasFuncionamento         String?
-  horariosFuncionamento     String?
-  areaConstruida            String?
-  porteColaboradores        String?
-  possuiRefeitorio          Boolean?
-  refeicoesDiarias          String?
-  unidadesDia               String?
-  preparoRefeicoes          String?
-  responsavelTecnicoNome    String?
-  responsavelTecnicoConselho String?
-  responsavelTecnicoCpf     String?
-  responsavelPgrsNome       String?
-  responsavelPgrsCargo      String?
-  tags                      String[] @default([])
-  latitude                  Float?
-  longitude                 Float?
-  inscricaoEstadual         String?
-  numeroColaboradores       String?
-  representanteLegalNome    String?
-  responsavelGestao1Nome    String?
-  responsavelGestao1Telefone String?
-  responsavelGestao1Email   String?
-  responsavelGestao2Nome    String?
-  responsavelGestao2Telefone String?
-  responsavelGestao2Email   String?
-  representanteLegalCpf     String?
-  responsavelTecnicoEstabelecimentoNome    String?
-  responsavelTecnicoEstabelecimentoEmail   String?
-  responsavelTecnicoEstabelecimentoOrgao   String?
+  id                                        Int                 @id @default(autoincrement())
+  apelido                                   String
+  razaoSocial                               String
+  cnpj                                      String              @unique
+  telefone                                  String
+  email                                     String
+  respLegal                                 String
+  criadoEm                                  DateTime            @default(now())
+  updatedAt                                 DateTime            @updatedAt
+  nomeFantasia                              String?
+  cep                                       String?
+  municipio                                 String?
+  uf                                        String?
+  rua                                       String?
+  numero                                    String?
+  bairro                                    String?
+  complemento                               String?
+  ramoAtividade                             String?
+  indicacaoFiscal                           String?
+  diasFuncionamento                         String?
+  horariosFuncionamento                     String?
+  areaConstruida                            String?
+  porteColaboradores                        String?
+  possuiRefeitorio                          Boolean?
+  refeicoesDiarias                          String?
+  unidadesDia                               String?
+  preparoRefeicoes                          String?
+  responsavelPgrsNome                       String?
+  responsavelPgrsCargo                      String?
+  tags                                      String[]            @default([])
+  latitude                                  Float?
+  longitude                                 Float?
+  inscricaoEstadual                         String?
+  numeroColaboradores                       String?
+  representanteLegalNome                    String?
+  responsavelGestao1Nome                    String?
+  responsavelGestao1Telefone                String?
+  responsavelGestao1Email                   String?
+  responsavelGestao2Nome                    String?
+  responsavelGestao2Telefone                String?
+  responsavelGestao2Email                   String?
+  representanteLegalCpf                     String?
+  responsavelTecnicoEstabelecimentoNome     String?
+  responsavelTecnicoEstabelecimentoEmail    String?
+  responsavelTecnicoEstabelecimentoOrgao    String?
   responsavelTecnicoEstabelecimentoRegistro String?
-  tipoServicosDescricao                    String?
-  atendimentosDia                          String?
-  responsavelElaboracaoNome     String?
-  responsavelElaboracaoCpf      String?
-  responsavelElaboracaoEndereco String?
-  responsavelElaboracaoBairro   String?
-  responsavelElaboracaoEmail    String?
-  responsavelElaboracaoTelefone String?
-  responsavelElaboracaoEmpresaNome String?
-  responsavelElaboracaoEmpresaCnpj String?
-  responsavelElaboracaoRegistroCrq String?
-
-  criadoEm    DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  empreendimentos Empreendimento[]
-  financeiros     Financeiro[]
-  residuos            ResiduoItem[]
-  residuosAnuais      ResiduoAnual[]
-  empresasContratadas EmpresaContratada[]
-  documentosGerados   DocumentoGerado[]
-  documentos          Documento[]
-  historicos          Historico[]
-  acessos             Acesso[]
-  contratos           Contrato[]
-  propostas           Proposta[]
+  tipoServicosDescricao                     String?
+  atendimentosDia                           String?
+  responsavelElaboracaoNome                 String?
+  responsavelElaboracaoCpf                  String?
+  responsavelElaboracaoEndereco             String?
+  responsavelElaboracaoBairro               String?
+  responsavelElaboracaoEmail                String?
+  responsavelElaboracaoTelefone             String?
+  responsavelElaboracaoEmpresaNome          String?
+  responsavelElaboracaoEmpresaCnpj          String?
+  responsavelElaboracaoRegistroCrq          String?
+  ativo                                     Boolean             @default(true)
+  responsavelTecnicoNome                    String?
+  responsavelTecnicoConselho                String?
+  responsavelTecnicoCpf                     String?
+  visibilidade                              String              @default("publico")
+  acessos                                   Acesso[]
+  contratos                                 Contrato[]
+  documentos                                Documento[]
+  documentosGerados                         DocumentoGerado[]
+  empreendimentos                           Empreendimento[]
+  empresasContratadas                       EmpresaContratada[]
+  financeiros                               Financeiro[]
+  historicos                                Historico[]
+  propostas                                 Proposta[]
+  residuosAnuais                            ResiduoAnual[]
+  residuos                                  ResiduoItem[]
 }
 
 model Empreendimento {
-  id          Int      @id @default(autoincrement())
-  apelido     String
-  ativo       Boolean  @default(true)
-  visibilidade String  @default("publico")
-  cnpj        String?
-  cep         String?
-  municipio   String?
-  uf          String?
-  rua         String?
-  numero      String?
-  bairro      String?
-  complemento String?
-  descricao   String
-  latitude    Float?
-  longitude   Float?
-  utmX        Float?
-  utmY        Float?
-  utmZona     Int?
+  id            Int          @id @default(autoincrement())
+  apelido       String
+  descricao     String
+  latitude      Float?
+  longitude     Float?
+  poligono      String?
+  clienteId     Int
+  criadoEm      DateTime     @default(now())
+  atualizadoEm  DateTime     @updatedAt
+  cnpj          String?
+  cep           String?
+  municipio     String?
+  uf            String?
+  rua           String?
+  numero        String?
+  bairro        String?
+  complemento   String?
+  ativo         Boolean      @default(true)
+  visibilidade  String       @default("publico")
   utmHemisferio String?
-  poligono    String?
-  clienteId   Int
-  criadoEm    DateTime @default(now())
-  atualizadoEm DateTime @updatedAt
-
-  cliente   Cliente      @relation(fields: [clienteId], references: [id])
-  processos Processo[]
-  controleDmr ControleDmr?
-  historicos Historico[]
-  acessos    Acesso[]
-  contratos Contrato[]
-  propostas Proposta[]
+  utmX          Float?
+  utmY          Float?
+  utmZona       Int?
+  acessos       Acesso[]
+  contratos     Contrato[]
+  controleDmr   ControleDmr?
+  cliente       Cliente      @relation(fields: [clienteId], references: [id])
+  historicos    Historico[]
+  processos     Processo[]
+  propostas     Proposta[]
 }
 
 model Orgao {
-  id     Int    @id @default(autoincrement())
-  nome   String
-  sigla  String @unique
-
+  id        Int        @id @default(autoincrement())
+  nome      String
+  sigla     String     @unique
   processos Processo[]
 }
 
 model Contrato {
-  id                  Int      @id @default(autoincrement())
-  clienteId           Int
+  id                  Int             @id @default(autoincrement())
   servicoProcesso     String
   dataAssinatura      DateTime
   dataValidade        DateTime
-  alertaRenovacaoDias Int      @default(60)
-  ativo               Boolean  @default(true)
+  alertaRenovacaoDias Int             @default(60)
+  ativo               Boolean         @default(true)
   empreendimentoId    Int?
-  criadoEm            DateTime @default(now())
-  atualizadoEm        DateTime @updatedAt
-
-  cliente        Cliente        @relation(fields: [clienteId], references: [id])
-  empreendimento Empreendimento? @relation(fields: [empreendimentoId], references: [id])
+  criadoEm            DateTime        @default(now())
+  atualizadoEm        DateTime        @updatedAt
+  clienteId           Int
+  cliente             Cliente         @relation(fields: [clienteId], references: [id])
+  empreendimento      Empreendimento? @relation(fields: [empreendimentoId], references: [id])
 }
 
 model Processo {
-  id              Int      @id @default(autoincrement())
-  tipo            String
-  ativo           Boolean  @default(true)
-  orgaoId         Int
-  sistema         String
-  numProtocolo    String
-  status          String   @default("protocolado")
-  validade        DateTime?
+  id               Int                @id @default(autoincrement())
+  tipo             String
+  orgaoId          Int
+  sistema          String
+  numProtocolo     String
+  status           String             @default("protocolado")
+  validade         DateTime?
   empreendimentoId Int
-  responsavelId   Int?
-  observacoes     String?
-  numLicenca      String?
-  condicionantes  String?
-  dataProtocolo   DateTime?
-  dataContato     DateTime?
-  alertaDias      Int         @default(30)
-  criadoEm        DateTime @default(now())
-  atualizadoEm    DateTime @updatedAt
-
-  orgao         Orgao          @relation(fields: [orgaoId], references: [id])
-  empreendimento Empreendimento @relation(fields: [empreendimentoId], references: [id])
-  responsavel   Responsavel?   @relation(fields: [responsavelId], references: [id])
-  exigencias    Exigencia[]
-  documentos    Documento[]
-  timeline      TimelineProcesso[]
+  responsavelId    Int?
+  observacoes      String?
+  criadoEm         DateTime           @default(now())
+  atualizadoEm     DateTime           @updatedAt
+  numLicenca       String?
+  condicionantes   String?
+  dataProtocolo    DateTime?
+  dataContato      DateTime?
+  alertaDias       Int                @default(30)
+  ativo            Boolean            @default(true)
   autorizacaoCorte AutorizacaoCorte?
+  documentos       Documento[]
+  exigencias       Exigencia[]
+  empreendimento   Empreendimento     @relation(fields: [empreendimentoId], references: [id])
+  orgao            Orgao              @relation(fields: [orgaoId], references: [id])
+  responsavel      Responsavel?       @relation(fields: [responsavelId], references: [id])
+  timeline         TimelineProcesso[]
 }
 
 model AutorizacaoCorte {
-  id                   Int      @id @default(autoincrement())
-  processoId           Int      @unique
-  processo             Processo @relation(fields: [processoId], references: [id], onDelete: Cascade)
-
+  id                   Int       @id @default(autoincrement())
+  processoId           Int       @unique
   quantidadeIndividuos Int?
-
   compensacaoExigida   Boolean   @default(false)
   tipoCompensacao      String?
   quantidadeMudas      Int?
@@ -208,289 +196,291 @@ model AutorizacaoCorte {
   prazoCompensacao     DateTime?
   statusCompensacao    String    @default("pendente")
   comprovante          String?
-
   exigenciaId          Int?
-
-  criadoEm             DateTime @default(now())
-  atualizadoEm         DateTime @updatedAt
+  criadoEm             DateTime  @default(now())
+  atualizadoEm         DateTime  @updatedAt
+  processo             Processo  @relation(fields: [processoId], references: [id], onDelete: Cascade)
 }
 
 model Exigencia {
-  id               Int      @id @default(autoincrement())
+  id               Int         @id @default(autoincrement())
   descricao        String
-  ativo            Boolean  @default(true)
   prazo            DateTime
-  antecedenciaDias Int      @default(7)
-  cumprida         Boolean  @default(false)
+  antecedenciaDias Int         @default(7)
+  cumprida         Boolean     @default(false)
   processoId       Int
-  criadoEm         DateTime @default(now())
-  atualizadoEm     DateTime @updatedAt
-
-  processo   Processo    @relation(fields: [processoId], references: [id])
-  documentos Documento[]
+  criadoEm         DateTime    @default(now())
+  atualizadoEm     DateTime    @updatedAt
+  ativo            Boolean     @default(true)
+  documentos       Documento[]
+  processo         Processo    @relation(fields: [processoId], references: [id])
 }
 
 model Documento {
-  id          Int      @id @default(autoincrement())
+  id          Int        @id @default(autoincrement())
   nome        String
   tipo        String
-  ativo       Boolean  @default(true)
   caminho     String
   tamanho     Int
   processoId  Int?
   exigenciaId Int?
+  criadoEm    DateTime   @default(now())
+  ativo       Boolean    @default(true)
   clienteId   Int?
-  criadoEm    DateTime @default(now())
-
-  processo  Processo?  @relation(fields: [processoId], references: [id])
-  exigencia Exigencia? @relation(fields: [exigenciaId], references: [id])
-  cliente   Cliente?   @relation(fields: [clienteId], references: [id])
+  cliente     Cliente?   @relation(fields: [clienteId], references: [id])
+  exigencia   Exigencia? @relation(fields: [exigenciaId], references: [id])
+  processo    Processo?  @relation(fields: [processoId], references: [id])
 }
 
 model TimelineProcesso {
-  id          Int      @id @default(autoincrement())
-  status      String
-  descricao   String?
-  criadoEm    DateTime @default(now())
-  processoId  Int
-  usuarioId   Int?
-
-  processo Processo @relation(fields: [processoId], references: [id])
+  id         Int      @id @default(autoincrement())
+  status     String
+  descricao  String?
+  criadoEm   DateTime @default(now())
+  processoId Int
+  usuarioId  Int?
+  processo   Processo @relation(fields: [processoId], references: [id])
 }
 
 model Responsavel {
-  id        Int      @id @default(autoincrement())
-  nome      String
-  email     String
-  telefone  String?
-  funcao    String
-  cargaHoras Int     @default(0)
-  usuarioId Int?
-  criadoEm  DateTime @default(now())
-
-  usuario   Usuario?  @relation(fields: [usuarioId], references: [id])
-  processos Processo[]
-  tarefas   Tarefa[]
+  id         Int        @id @default(autoincrement())
+  nome       String
+  email      String
+  telefone   String?
+  funcao     String
+  cargaHoras Int        @default(0)
+  usuarioId  Int?
+  criadoEm   DateTime   @default(now())
+  processos  Processo[]
+  usuario    Usuario?   @relation(fields: [usuarioId], references: [id])
+  tarefas    Tarefa[]
 }
 
 model Tarefa {
-  id             Int      @id @default(autoincrement())
+  id             Int         @id @default(autoincrement())
   titulo         String
   descricao      String?
-  ativo          Boolean  @default(true)
-  status         String   @default("pendente")
-  prioridade     String   @default("media")
+  status         String      @default("pendente")
+  prioridade     String      @default("media")
   dataVencimento DateTime?
-  statusObs      String?
   responsavelId  Int
   usuarioId      Int
-  criadoEm       DateTime @default(now())
-  atualizadoEm   DateTime @updatedAt
-
-  responsavel Responsavel @relation(fields: [responsavelId], references: [id])
-  usuario     Usuario     @relation(fields: [usuarioId], references: [id])
+  criadoEm       DateTime    @default(now())
+  atualizadoEm   DateTime    @updatedAt
+  ativo          Boolean     @default(true)
+  statusObs      String?
+  responsavel    Responsavel @relation(fields: [responsavelId], references: [id])
+  usuario        Usuario     @relation(fields: [usuarioId], references: [id])
 }
 
 model Financeiro {
-  id              Int      @id @default(autoincrement())
+  id              Int       @id @default(autoincrement())
   tipoCobranca    String
   valor           Float
-  ativo           Boolean  @default(true)
   formaPagamento  String
-  statusPagamento String   @default("pendente")
+  statusPagamento String    @default("pendente")
   dataVencimento  DateTime?
   dataPagamento   DateTime?
   descricao       String?
   clienteId       Int
   processoId      Int?
-  criadoEm        DateTime @default(now())
-  atualizadoEm    DateTime @updatedAt
-
-  cliente Cliente   @relation(fields: [clienteId], references: [id])
+  criadoEm        DateTime  @default(now())
+  atualizadoEm    DateTime  @updatedAt
+  ativo           Boolean   @default(true)
+  cliente         Cliente   @relation(fields: [clienteId], references: [id])
 }
 
 model LogAuditoria {
-  id        Int      @id @default(autoincrement())
-  acao      String
-  entidade  String
+  id         Int      @id @default(autoincrement())
+  acao       String
+  entidade   String
   entidadeId Int
-  dados     String?
-  usuarioId Int?
-  criadoEm  DateTime @default(now())
-
-  usuario Usuario? @relation(fields: [usuarioId], references: [id])
+  dados      String?
+  usuarioId  Int?
+  criadoEm   DateTime @default(now())
+  usuario    Usuario? @relation(fields: [usuarioId], references: [id])
 }
 
 model Alerta {
-  id          Int      @id @default(autoincrement())
+  id          Int       @id @default(autoincrement())
   titulo      String
   mensagem    String
   tipo        String
-  lido        Boolean  @default(false)
+  lido        Boolean   @default(false)
   dataDisparo DateTime?
   processoId  Int?
   usuarioId   Int?
-  criadoEm    DateTime @default(now())
-
-  usuario Usuario? @relation(fields: [usuarioId], references: [id])
+  criadoEm    DateTime  @default(now())
+  usuario     Usuario?  @relation(fields: [usuarioId], references: [id])
 }
 
 model EmpresaConfig {
-  id          Int     @id @default(autoincrement())
-  razaoSocial String
+  id           Int     @id @default(autoincrement())
+  razaoSocial  String
   nomeFantasia String?
-  cnpj        String?
-  rua         String?
-  numero      String?
-  bairro      String?
-  complemento String?
-  cep         String?
-  municipio   String?
-  uf          String?
-  telefone    String?
-  email       String?
-  website     String?
-  logo        String?
+  cnpj         String?
+  rua          String?
+  numero       String?
+  bairro       String?
+  complemento  String?
+  cep          String?
+  municipio    String?
+  uf           String?
+  telefone     String?
+  email        String?
+  website      String?
+  logo         String?
 }
 
 model ResiduoItem {
-  id        Int     @id @default(autoincrement())
-  clienteId Int
-  cliente   Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-
-  categoria String
-  ordem     Int
-
-  pontoGeracao     String?
-  residuosGerados  String?
-  quantificacao    String?
-  acondicionamento String?
-  armazenamento    String?
-  coletaInterna    String?
+  id                     Int     @id @default(autoincrement())
+  clienteId              Int
+  categoria              String
+  ordem                  Int
+  pontoGeracao           String?
+  residuosGerados        String?
+  quantificacao          String?
+  acondicionamento       String?
+  armazenamento          String?
+  coletaInterna          String?
   empresaTransporte      String?
   empresaDisposicaoFinal String?
+  cliente                Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
 }
 
 model ResiduoAnual {
-  id        Int     @id @default(autoincrement())
-  clienteId Int
-  cliente   Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-
-  categoria String
-  ordem     Int
-
-  pontoGeracao          String?
-  residuo               String?
-  estadoFisico          String?
-  codIbama              String?
-  classificacaoResiduo  String?
-  codigoNbr10004        String?
-  codigoConamaLgr       String?
-  entrada               String?
-  geracaoAnual          String?
-  acondicionamento      String?
-  transportadora        String?
-  tratamento            String?
-  destino               String?
+  id                   Int     @id @default(autoincrement())
+  clienteId            Int
+  categoria            String
+  ordem                Int
+  pontoGeracao         String?
+  residuo              String?
+  estadoFisico         String?
+  codIbama             String?
+  classificacaoResiduo String?
+  codigoNbr10004       String?
+  codigoConamaLgr      String?
+  entrada              String?
+  geracaoAnual         String?
+  acondicionamento     String?
+  transportadora       String?
+  tratamento           String?
+  destino              String?
+  cliente              Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
 }
 
 model EmpresaContratada {
-  id        Int     @id @default(autoincrement())
-  clienteId Int
-  cliente   Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-
+  id                        Int     @id @default(autoincrement())
+  clienteId                 Int
   ordem                     Int
   nomeFantasia              String?
   razaoSocial               String?
   cnpj                      String?
   numeroDataValidadeLicenca String?
+  cliente                   Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
 }
 
 model ControleDmr {
-  id              Int      @id @default(autoincrement())
-  empreendimentoId Int     @unique
-  ano             Int
-  t1Dmr           String   @default("")
-  t1Mtr           String   @default("")
-  t2Dmr           String   @default("")
-  t2Mtr           String   @default("")
-  t3Dmr           String   @default("")
-  t3Mtr           String   @default("")
-  t4Dmr           String   @default("")
-  t4Mtr           String   @default("")
-  criadoEm        DateTime @default(now())
-  atualizadoEm    DateTime @updatedAt
-
-  empreendimento Empreendimento @relation(fields: [empreendimentoId], references: [id], onDelete: Cascade)
+  id               Int            @id @default(autoincrement())
+  empreendimentoId Int            @unique
+  ano              Int
+  t1Dmr            String         @default("")
+  t1Mtr            String         @default("")
+  t2Dmr            String         @default("")
+  t2Mtr            String         @default("")
+  t3Dmr            String         @default("")
+  t3Mtr            String         @default("")
+  t4Dmr            String         @default("")
+  t4Mtr            String         @default("")
+  criadoEm         DateTime       @default(now())
+  atualizadoEm     DateTime       @updatedAt
+  empreendimento   Empreendimento @relation(fields: [empreendimentoId], references: [id], onDelete: Cascade)
 }
 
 model DocumentoGerado {
-  id           Int      @id @default(autoincrement())
-  clienteId    Int
-  cliente      Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-  templateSlug String
+  id            Int      @id @default(autoincrement())
+  clienteId     Int
+  templateSlug  String
   dadosSnapshot Json
-  createdAt    DateTime @default(now())
+  createdAt     DateTime @default(now())
+  cliente       Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
 }
 
 model Configuracao {
-  id Int @id @default(autoincrement())
-
-  nomeEmpresa String?
-  cnpj        String?
-  registroCrq String?
-  registroOrgao String?
-
-  responsavelNome      String?
-  responsavelCpf       String?
-  responsavelEndereco  String?
-  responsavelBairro    String?
-  responsavelEmail     String?
-  responsavelTelefone  String?
-
-  atualizadoEm DateTime @updatedAt
+  id                  Int      @id @default(autoincrement())
+  nomeEmpresa         String?
+  cnpj                String?
+  registroCrq         String?
+  registroOrgao       String?
+  responsavelNome     String?
+  responsavelCpf      String?
+  responsavelEndereco String?
+  responsavelBairro   String?
+  responsavelEmail    String?
+  responsavelTelefone String?
+  atualizadoEm        DateTime @updatedAt
 }
 
 model Historico {
-  id              Int      @id @default(autoincrement())
-  descricao       String
-  anexo           String?
-  clienteId       Int?
+  id               Int             @id @default(autoincrement())
+  descricao        String
+  anexo            String?
+  clienteId        Int?
   empreendimentoId Int?
-  usuarioId       Int?
-  criadoEm        DateTime @default(now())
-
-  cliente      Cliente?      @relation(fields: [clienteId], references: [id])
-  empreendimento Empreendimento? @relation(fields: [empreendimentoId], references: [id])
-  usuario      Usuario?      @relation(fields: [usuarioId], references: [id])
+  usuarioId        Int?
+  criadoEm         DateTime        @default(now())
+  cliente          Cliente?        @relation(fields: [clienteId], references: [id])
+  empreendimento   Empreendimento? @relation(fields: [empreendimentoId], references: [id])
+  usuario          Usuario?        @relation(fields: [usuarioId], references: [id])
 }
 
 model Acesso {
-  id              Int      @id @default(autoincrement())
-  login           String
-  senha           String
-  descricao       String
-  clienteId       Int?
+  id               Int             @id @default(autoincrement())
+  login            String
+  senha            String
+  descricao        String
+  clienteId        Int?
   empreendimentoId Int?
-  criadoEm        DateTime @default(now())
-
-  cliente      Cliente?      @relation(fields: [clienteId], references: [id])
-  empreendimento Empreendimento? @relation(fields: [empreendimentoId], references: [id])
+  criadoEm         DateTime        @default(now())
+  cliente          Cliente?        @relation(fields: [clienteId], references: [id])
+  empreendimento   Empreendimento? @relation(fields: [empreendimentoId], references: [id])
 }
 
 model Proposta {
-  id              Int      @id @default(autoincrement())
-  titulo          String
-  clienteId       Int
+  id               Int             @id @default(autoincrement())
+  titulo           String
+  clienteId        Int
   empreendimentoId Int?
-  valor           Float?
-  status          String   @default("rascunho")
-  validadeDias    Int      @default(30)
-  servicos        Json?
-  observacoes     String?
-  criadoEm        DateTime @default(now())
-  atualizadoEm    DateTime @updatedAt
+  valor            Float?
+  status           String          @default("rascunho")
+  validadeDias     Int             @default(30)
+  servicos         Json?
+  observacoes      String?
+  criadoEm         DateTime        @default(now())
+  atualizadoEm     DateTime        @updatedAt
+  cliente          Cliente         @relation(fields: [clienteId], references: [id])
+  empreendimento   Empreendimento? @relation(fields: [empreendimentoId], references: [id])
+}
 
-  cliente        Cliente        @relation(fields: [clienteId], references: [id])
-  empreendimento Empreendimento? @relation(fields: [empreendimentoId], references: [id])
+model PropostaDemolicao {
+  id                 Int      @id @default(autoincrement())
+  numero             Int
+  ano                Int
+  revisao            Int      @default(0)
+  engenheiroNome     String
+  empresaNome        String
+  bairro             String
+  cidade             String
+  uf                 String
+  quantidadePgrcc    Int      @default(0)
+  quantidadeRgrcc    Int      @default(0)
+  valorUnitPgrcc     Float    @default(291.78)
+  valorUnitRgrcc     Float    @default(291.78)
+  percentualDesconto Float?   @default(18)
+  valorDesconto      Float?
+  totalCalculado     Float?
+  totalFinal         Float?
+  observacoes        String?
+  criadoEm           DateTime @default(now())
+  atualizadoEm       DateTime @updatedAt
 }

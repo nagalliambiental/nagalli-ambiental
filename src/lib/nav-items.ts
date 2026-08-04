@@ -48,6 +48,7 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Administrativo", icon: Settings,
     children: [
       { label: "Propostas", href: "/propostas", adminOnly: true },
+      { label: "Propostas Demolição", href: "/propostas/demolicao", adminOnly: true },
       { label: "Financeiro", href: "/financeiro", adminOnly: true },
       { label: "Contratos", href: "/contratos", adminOnly: true },
       { label: "Acessos", href: "/acessos" },
