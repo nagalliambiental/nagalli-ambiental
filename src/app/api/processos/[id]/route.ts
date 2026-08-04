@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { logAuditoria } from "@/lib/audit";
-import { parseCondicionantes } from "@/lib/templates/relatorio-condicionantes/generate";
 
 
 export async function GET(
@@ -67,20 +66,6 @@ export async function PUT(
     data,
   });
 
-  if (body.condicionantes !== undefined) {
-    await prisma.condicionante.deleteMany({ where: { processoId: proc.id } });
-    const itens = parseCondicionantes(body.condicionantes);
-    if (itens.length > 0) {
-      await prisma.condicionante.createMany({
-        data: itens.map((descricao) => ({
-          descricao,
-          processoId: proc.id,
-          status: "pendente",
-        })),
-      });
-    }
-  }
-
   await logAuditoria("ATUALIZAR", "processo", proc.id, body, Number((session.user as { id: string }).id));
   return NextResponse.json(proc);
 }
@@ -111,7 +96,6 @@ export async function DELETE(
 
     await prisma.$transaction([
       prisma.documento.deleteMany({ where: { OR: [{ processoId: pId }, { exigenciaId: { in: exigenciaIds } }] } }),
-      prisma.condicionante.deleteMany({ where: { processoId: pId } }),
       prisma.timelineProcesso.deleteMany({ where: { processoId: pId } }),
       prisma.alerta.deleteMany({ where: { processoId: pId } }),
       prisma.financeiro.deleteMany({ where: { processoId: pId } }),

@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAuditoria } from "@/lib/audit";
-import { parseCondicionantes } from "@/lib/templates/relatorio-condicionantes/generate";
 
 export async function GET() {
   const session = await auth();
@@ -48,19 +47,6 @@ export async function POST(request: Request) {
           prazoCompensacao: autorizacaoCorte.prazoCompensacao ? new Date(autorizacaoCorte.prazoCompensacao) : null,
         },
       });
-    }
-
-    if (processoData.condicionantes) {
-      const itens = parseCondicionantes(processoData.condicionantes);
-      if (itens.length > 0) {
-        await prisma.condicionante.createMany({
-          data: itens.map((descricao) => ({
-            descricao,
-            processoId: processo.id,
-            status: "pendente",
-          })),
-        });
-      }
     }
 
     await prisma.timelineProcesso.create({
