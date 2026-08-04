@@ -1,4 +1,4 @@
-import fs from "fs";
+﻿import fs from "fs";
 import path from "path";
 import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
@@ -8,9 +8,9 @@ export type CondicionanteLinha = {
   descricao: string;
 };
 
-const NUM_ITEM_RE = /^(?:\d{1,3}\.\s*|\d{1,3}\)\s*|\-\s*|•\s*|\*\s*)/;
-const PAGE_FOOTER_RE = /^página\s+\d+\//i;
-const BULLET_LETTER_RE = /^[a-záéíóú]\)\s*/i;
+const NUM_ITEM_RE = /^(?:\d{1,3}\.\s*|\d{1,3}\)\s*|\-\s*|ÔÇó\s*|\*\s*)/;
+const PAGE_FOOTER_RE = /^p├ígina\s+\d+\//i;
+const BULLET_LETTER_RE = /^[a-z├í├®├¡├│├║]\)\s*/i;
 
 export function parseCondicionantes(raw: string | null | undefined): string[] {
   if (!raw) return [];
@@ -30,7 +30,7 @@ export function parseCondicionantes(raw: string | null | undefined): string[] {
       if (current) items.push(current);
       current = line;
     } else if (current) {
-      // continua no item anterior (evita quebras de linha e espaços duplicados)
+      // continua no item anterior (evita quebras de linha e espa├ºos duplicados)
       const compact = line.replace(/^[-\u2022*]\s*/, "");
       current = `${current} ${compact}`;
     } else {
@@ -39,7 +39,7 @@ export function parseCondicionantes(raw: string | null | undefined): string[] {
   }
   if (current) items.push(current);
 
-  // garante numeração sequencial (1., 2., ...) em itens que ainda não têm
+  // garante numera├º├úo sequencial (1., 2., ...) em itens que ainda n├úo t├¬m
   const renumbered: string[] = [];
   let hasNumber = items.some((i) => NUM_ITEM_RE.test(i));
   items.forEach((item, i) => {

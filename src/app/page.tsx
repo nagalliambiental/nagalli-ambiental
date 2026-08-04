@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Building2, CalendarClock, Plus, Inbox, ArrowUpRight, FileCheck2, FileSpreadsheet, AlertTriangle, ClipboardList, BarChart3 } from "lucide-react";
+import { Building2, CalendarClock, Plus, Inbox, ArrowUpRight, FileCheck2, FileSpreadsheet, AlertTriangle, BarChart3 } from "lucide-react";
 import { Topbar } from "@/components/Topbar";
 import { StatCard } from "@/components/StatCard";
 import { prisma } from "@/lib/prisma";
@@ -8,7 +8,6 @@ import { ptBR } from "date-fns/locale";
 import { getTrimestreAtual, getDiasFimTrimestre } from "@/lib/dmr-parser";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { ProcessosChart } from "@/components/dashboard/ProcessosChart";
-import { CondicionantesChart } from "@/components/dashboard/CondicionantesChart";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Dashboard" };
@@ -35,12 +34,9 @@ export default async function DashboardPage() {
     totalClientes,
     totalEmpreendimentos,
     exigenciasPendentes,
-    totalCondicionantes,
-    condicionantesPendentes,
     clientesRecentes,
     processosRecentes,
     processosPorStatus,
-    condicionantesPorStatus,
   ] = await Promise.all([
     prisma.processo.count(),
     prisma.processo.findMany({
@@ -51,8 +47,6 @@ export default async function DashboardPage() {
     prisma.cliente.count(),
     prisma.empreendimento.count(),
     prisma.exigencia.count({ where: { cumprida: false } }),
-    prisma.condicionante.count(),
-    prisma.condicionante.count({ where: { status: { in: ["pendente", "em_andamento", "vencida"] } } }),
     prisma.cliente.findMany({ take: 5, orderBy: { criadoEm: "desc" }, include: { _count: { select: { empreendimentos: true } } } }),
     prisma.processo.findMany({
       take: 5,
@@ -60,7 +54,6 @@ export default async function DashboardPage() {
       include: { empreendimento: { select: { apelido: true } }, orgao: { select: { sigla: true } } },
     }),
     prisma.processo.groupBy({ by: ["status"], _count: { id: true } }),
-    prisma.condicionante.groupBy({ by: ["status"], _count: { id: true } }),
   ]);
 
   const totalVencendo = processosVencendo.length;
@@ -91,9 +84,6 @@ export default async function DashboardPage() {
         <StatCard label="Empreendimentos" value={totalEmpreendimentos} icon={Building2} accent="brand" />
         <Link href="/exigencias" className="block h-full">
           <StatCard label="Exigências Pendentes" value={exigenciasPendentes} icon={CalendarClock} accent={exigenciasPendentes > 0 ? "river" : "brand"} />
-        </Link>
-        <Link href="/condicionantes" className="block h-full">
-          <StatCard label="Condicionantes Pendentes" value={condicionantesPendentes} icon={ClipboardList} accent={condicionantesPendentes > 0 ? "river" : "brand"} hint={`${totalCondicionantes} total`} />
         </Link>
       </div>
 
@@ -128,20 +118,13 @@ export default async function DashboardPage() {
         );
       })()}
 
-      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-1">
         <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
           <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-4 flex items-center gap-2">
             <BarChart3 size={18} />
             Processos por Status
           </h2>
           <ProcessosChart data={processosPorStatus.map((s) => ({ name: statusLabels[s.status] || s.status, value: s._count.id }))} />
-        </div>
-        <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
-          <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-4 flex items-center gap-2">
-            <ClipboardList size={18} />
-            Condicionantes por Status
-          </h2>
-          <CondicionantesChart data={condicionantesPorStatus.map((s) => ({ name: statusLabels[s.status] || s.status, value: s._count.id }))} />
         </div>
       </div>
 

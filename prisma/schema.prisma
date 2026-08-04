@@ -188,7 +188,6 @@ model Processo {
   documentos    Documento[]
   timeline      TimelineProcesso[]
   autorizacaoCorte AutorizacaoCorte?
-  condicionantesReg Condicionante[]
 }
 
 model AutorizacaoCorte {
@@ -473,21 +472,6 @@ model Acesso {
 
   cliente      Cliente?      @relation(fields: [clienteId], references: [id])
   empreendimento Empreendimento? @relation(fields: [empreendimentoId], references: [id])
-}
-
-model Condicionante {
-  id              Int      @id @default(autoincrement())
-  descricao       String
-  status          String   @default("pendente")
-  prazo           DateTime?
-  dataCumprimento DateTime?
-  responsavel     String?
-  observacoes     String?
-  processoId      Int
-  criadoEm        DateTime @default(now())
-  atualizadoEm    DateTime @updatedAt
-
-  processo Processo @relation(fields: [processoId], references: [id])
 }
 
 model Proposta {
