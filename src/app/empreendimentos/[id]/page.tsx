@@ -139,15 +139,29 @@ export default async function EmpreendimentoDetailPage(props: { params: Promise<
                   </div>
                 )}
 
-                {emp.latitude != null && emp.longitude != null && (
+                {(emp.latitude != null && emp.longitude != null) || (emp.utmX != null && emp.utmY != null) ? (
                   <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
                     <div className="flex items-center gap-2 mb-3">
                       <Map size={18} className="text-[var(--color-ink-500)]" />
-                      <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Geolocalização</h2>
+                      <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Coordenadas</h2>
                     </div>
-                    <p className="text-sm text-[var(--color-ink-500)]">Lat: {emp.latitude} / Lon: {emp.longitude}</p>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      {emp.latitude != null && emp.longitude != null && (
+                        <>
+                          <div className="text-[var(--color-ink-500)]">Latitude: <span className="text-[var(--color-ink-700)]">{emp.latitude}</span></div>
+                          <div className="text-[var(--color-ink-500)]">Longitude: <span className="text-[var(--color-ink-700)]">{emp.longitude}</span></div>
+                        </>
+                      )}
+                      {emp.utmX != null && emp.utmY != null && (
+                        <>
+                          <div className="text-[var(--color-ink-500)]">UTM X (Easting): <span className="text-[var(--color-ink-700)]">{emp.utmX}</span></div>
+                          <div className="text-[var(--color-ink-500)]">UTM Y (Northing): <span className="text-[var(--color-ink-700)]">{emp.utmY}</span></div>
+                          {emp.utmZona != null && <div className="text-[var(--color-ink-500)]">UTM Zona: <span className="text-[var(--color-ink-700)]">{emp.utmZona}{emp.utmHemisferio || ""}</span></div>}
+                        </>
+                      )}
+                    </div>
                   </div>
-                )}
+                ) : null}
               </div>
             ),
           },

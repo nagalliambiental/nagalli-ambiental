@@ -123,6 +123,10 @@ model Empreendimento {
   descricao   String
   latitude    Float?
   longitude   Float?
+  utmX        Float?
+  utmY        Float?
+  utmZona     Int?
+  utmHemisferio String?
   poligono    String?
   clienteId   Int
   criadoEm    DateTime @default(now())
