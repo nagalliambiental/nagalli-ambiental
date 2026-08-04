@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { PDFDocument, StandardFonts, rgb, type PDFFont } from "pdf-lib";
+import { embedNagalliLogo, drawNagalliTopo, drawNagalliFooter } from "@/lib/report-branding";
 
 function wrapLines(text: string, f: PDFFont, size: number, maxWidth: number): string[] {
   const words = (text || "").split(/\s+/).filter(Boolean);
@@ -49,6 +50,7 @@ export async function GET(request: Request) {
   const pdf = await PDFDocument.create();
   const font = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const logo = await embedNagalliLogo(pdf);
 
   let page = pdf.addPage([842, 595]);
   const { width, height } = page.getSize();
@@ -75,6 +77,7 @@ export async function GET(request: Request) {
   const filtros = [status ? `Status: ${status}` : "", clienteId ? `Cliente ID: ${clienteId}` : "", dataInicio ? `De: ${dataInicio}` : "", dataFim ? `Até: ${dataFim}` : ""].filter(Boolean).join(" | ");
 
   function drawPageHeader() {
+    y = drawNagalliTopo(page, logo, font, bold);
     page.drawText("Relatório Financeiro", { x: marginX, y, size: 18, font: bold });
     y -= 20;
     if (filtros) { page.drawText(filtros, { x: marginX, y, size: 10, font }); y -= 14; }
@@ -89,6 +92,7 @@ export async function GET(request: Request) {
       x += colWidths[i];
     }
     y -= 14;
+    drawNagalliFooter(page, font, bold);
   }
 
   drawPageHeader();

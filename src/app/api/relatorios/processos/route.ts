@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { PDFDocument, StandardFonts, rgb, type PDFFont } from "pdf-lib";
+import { embedNagalliLogo, drawNagalliTopo, drawNagalliFooter } from "@/lib/report-branding";
 
 function wrapLines(text: string, f: PDFFont, size: number, maxWidth: number): string[] {
   const words = (text || "").split(/\s+/).filter(Boolean);
@@ -44,6 +45,7 @@ export async function GET(request: Request) {
   const pdf = await PDFDocument.create();
   const font = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const logo = await embedNagalliLogo(pdf);
 
   let page = pdf.addPage([842, 595]);
   const { width, height } = page.getSize();
@@ -69,6 +71,7 @@ export async function GET(request: Request) {
   const headers = ["Protocolo", "Cliente", "Tipo", "Empreendimento", "Órgão", "Status", "Validade"];
 
   function drawPageHeader() {
+    y = drawNagalliTopo(page, logo, font, bold);
     page.drawText("Relatório de Processos", { x: marginX, y, size: 18, font: bold });
     y -= 20;
     page.drawText(`Total: ${processos.length}`, { x: marginX, y, size: 11, font }); y -= 14;
@@ -83,6 +86,7 @@ export async function GET(request: Request) {
       x += colWidths[i];
     }
     y -= 14;
+    drawNagalliFooter(page, font, bold);
   }
 
   drawPageHeader();

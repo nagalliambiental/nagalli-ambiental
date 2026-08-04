@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { PDFDocument, StandardFonts, rgb, type PDFFont } from "pdf-lib";
+import { embedNagalliLogo, drawNagalliTopo, drawNagalliFooter } from "@/lib/report-branding";
 
 function wrapLines(text: string, f: PDFFont, size: number, maxWidth: number): string[] {
   const words = (text || "").split(/\s+/).filter(Boolean);
@@ -36,6 +37,7 @@ export async function GET(request: Request) {
   const pdf = await PDFDocument.create();
   const font = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const logo = await embedNagalliLogo(pdf);
 
   let page = pdf.addPage([842, 595]);
   const { width, height } = page.getSize();
@@ -61,6 +63,7 @@ export async function GET(request: Request) {
   const headers = ["Cliente", "Empreendimento", "T1 DMR", "T1 MTR", "T2 DMR", "T2 MTR", "T3 DMR", "T3 MTR", "T4 DMR", "T4 MTR"];
 
   function drawPageHeader() {
+    y = drawNagalliTopo(page, logo, font, bold);
     page.drawText("Relatório DMR", { x: marginX, y, size: 18, font: bold });
     y -= 20;
     page.drawText(`Ano: ${ano}`, { x: marginX, y, size: 11, font });
@@ -76,6 +79,7 @@ export async function GET(request: Request) {
       x += colWidths[i];
     }
     y -= 14;
+    drawNagalliFooter(page, font, bold);
   }
 
   drawPageHeader();
