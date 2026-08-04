@@ -25,16 +25,21 @@ export async function GET(
     return NextResponse.json({ error: "Processo não encontrado" }, { status: 404 });
   }
 
-  const dataEmissao = new Date().toLocaleDateString("pt-BR", {
+  const hoje = new Date();
+  const dataEmissao = hoje.toLocaleDateString("pt-BR", {
     day: "2-digit",
     month: "long",
     year: "numeric",
   });
+  const cidadeUf = [processo.empreendimento.municipio, processo.empreendimento.uf]
+    .filter(Boolean)
+    .join(", ");
+  const localidade = cidadeUf || "Localidade";
 
   const data = buildCondicionantesData(
     processo,
     { razaoSocial: processo.empreendimento.cliente.razaoSocial },
-    `Brasília, ${dataEmissao}`
+    `${localidade}, ${dataEmissao}`
   );
 
   let buffer: Buffer;
