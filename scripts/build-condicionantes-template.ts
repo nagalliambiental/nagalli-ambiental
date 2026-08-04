@@ -30,18 +30,18 @@ function makeTable() {
     return `<w:r><w:rPr>${fontTag}${boldTag}${sz20}</w:rPr><w:t xml:space="preserve">${text}</w:t></w:r>`;
   }
 
-  function dataCell(tags: string) {
-    return tags;
+  function descRun() {
+    return `<w:r><w:rPr>${fontTag}${sz20}</w:rPr><w:t xml:space="preserve">{descricao}</w:t></w:r>`;
+  }
+
+  function atendRun() {
+    return `<w:r><w:rPr>${fontTag}${sz20}</w:rPr><w:t xml:space="preserve">Item dispositivo/orientativo. Requisito atendido.</w:t></w:r>`;
   }
 
   const headerRow = `<w:tr>${tc("5665", headerCell("Requisito"))}${tc("3118", headerCell("Atendimento"))}</w:tr>`;
 
-  const loopStartTag = `<w:r><w:rPr>${fontTag}${sz20}<w:noProof/></w:rPr><w:t xml:space="preserve">{#condicionantes}</w:t></w:r>`;
-  const loopEndTag = `<w:r><w:rPr>${fontTag}${sz20}<w:noProof/></w:rPr><w:t xml:space="preserve">{/condicionantes}</w:t></w:r>`;
-  const descTag = `<w:r><w:rPr>${fontTag}${sz20}<w:noProof/></w:rPr><w:t xml:space="preserve">{descricao}</w:t></w:r>`;
-  const atendTag = `<w:r><w:rPr>${fontTag}${sz20}</w:rPr><w:t xml:space="preserve">Item dispositivo/orientativo. Requisito atendido.</w:t></w:r>`;
-
-  const dataRow = `<w:tr>${tc("5665", loopStartTag + descTag + loopEndTag, "left")}${tc("3118", loopStartTag + atendTag + loopEndTag, "center")}</w:tr>`;
+  // docxtemplater table row loop: {#} in first <w:tc>, {/} in last <w:tc>
+  const dataRow = `<w:tr>${tc("5665", `<w:r><w:rPr>${fontTag}${sz20}</w:rPr><w:t xml:space="preserve">{#condicionantes}</w:t></w:r>${descRun()}`, "left")}${tc("3118", `${atendRun()}<w:r><w:rPr>${fontTag}${sz20}</w:rPr><w:t xml:space="preserve">{/condicionantes}</w:t></w:r>`, "center")}</w:tr>`;
 
   return `<w:tbl><w:tblPr><w:tblStyle w:val="Tabelacomgrade"/><w:tblW w:w="8783" w:type="dxa"/><w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr><w:tblGrid><w:gridCol w:w="5665"/><w:gridCol w:w="3118"/></w:tblGrid>${headerRow}${dataRow}</w:tbl>`;
 }
