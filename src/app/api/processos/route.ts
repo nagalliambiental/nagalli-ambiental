@@ -31,7 +31,23 @@ export async function POST(request: Request) {
     const data = await request.json();
     const usuarioId = Number((session.user as { id: string }).id);
 
-    const processo = await prisma.processo.create({ data });
+    const { autorizacaoCorte, ...processoData } = data;
+
+    const processo = await prisma.processo.create({ data: processoData });
+
+    if (autorizacaoCorte) {
+      await prisma.autorizacaoCorte.create({
+        data: {
+          processoId: processo.id,
+          quantidadeIndividuos: autorizacaoCorte.quantidadeIndividuos ?? null,
+          compensacaoExigida: autorizacaoCorte.compensacaoExigida ?? false,
+          tipoCompensacao: autorizacaoCorte.tipoCompensacao ?? null,
+          quantidadeMudas: autorizacaoCorte.quantidadeMudas ?? null,
+          areaCompensacaoM2: autorizacaoCorte.areaCompensacaoM2 ?? null,
+          prazoCompensacao: autorizacaoCorte.prazoCompensacao ? new Date(autorizacaoCorte.prazoCompensacao) : null,
+        },
+      });
+    }
 
     await prisma.timelineProcesso.create({
       data: {

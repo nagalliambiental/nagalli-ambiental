@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Topbar } from "@/components/Topbar";
-import { Upload, Loader2, FileText, CheckCircle2, Search } from "lucide-react";
+import { Upload, Loader2, FileText, CheckCircle2, Search, Leaf } from "lucide-react";
 
 const TIPOS = [
   "Licença Prévia",
@@ -20,6 +20,13 @@ const TIPOS = [
 ];
 
 const SISTEMAS = ["SGA", "E-Protocolo", "SIMA"];
+
+const TIPOS_COMPENSACAO = [
+  "Reposição florestal",
+  "Plantio compensatório",
+  "Pagamento indenizatório",
+  "Outro",
+];
 
 interface Orgao {
   id: number;
@@ -63,6 +70,14 @@ export default function NovoProcessoPage() {
   const [extracting, setExtracting] = useState(false);
   const [extractedFile, setExtractedFile] = useState<string | null>(null);
   const [buscandoSia, setBuscandoSia] = useState(false);
+  const [corte, setCorte] = useState({
+    quantidadeIndividuos: "",
+    compensacaoExigida: false,
+    tipoCompensacao: "",
+    quantidadeMudas: "",
+    areaCompensacaoM2: "",
+    prazoCompensacao: "",
+  });
 
   useEffect(() => {
     fetch("/api/orgaos")
@@ -187,6 +202,14 @@ export default function NovoProcessoPage() {
         empreendimentoId: Number(form.empreendimentoId),
         responsavelId: form.responsavelId ? Number(form.responsavelId) : undefined,
         observacoes: form.observacoes,
+        autorizacaoCorte: getTipoFinal() === "Autorização Ambiental para Corte" ? {
+          quantidadeIndividuos: corte.quantidadeIndividuos ? Number(corte.quantidadeIndividuos) : null,
+          compensacaoExigida: corte.compensacaoExigida,
+          tipoCompensacao: corte.tipoCompensacao || null,
+          quantidadeMudas: corte.quantidadeMudas ? Number(corte.quantidadeMudas) : null,
+          areaCompensacaoM2: corte.areaCompensacaoM2 ? Number(corte.areaCompensacaoM2) : null,
+          prazoCompensacao: corte.prazoCompensacao ? new Date(corte.prazoCompensacao).toISOString() : null,
+        } : undefined,
       }),
     });
 
@@ -197,8 +220,7 @@ export default function NovoProcessoPage() {
       return;
     }
 
-    const processo = await res.json();
-    router.push(`/processos/${processo.id}`);
+    router.push("/processos");
     router.refresh();
   }
 
@@ -333,6 +355,49 @@ export default function NovoProcessoPage() {
             <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Observações</label>
             <textarea value={form.observacoes} onChange={(e) => setField("observacoes", e.target.value)} rows={3} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
           </div>
+
+          {tipo === "Autorização Ambiental para Corte" && (
+            <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5 space-y-4">
+              <h2 className="font-display text-sm font-semibold text-[var(--color-ink-900)] flex items-center gap-2">
+                <Leaf size={16} />
+                Compensação Ambiental
+              </h2>
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Quantidade de indivíduos</label>
+                <input type="number" min={0} value={corte.quantidadeIndividuos} onChange={(e) => setCorte((p) => ({ ...p, quantidadeIndividuos: e.target.value }))} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+              </div>
+              <label className="flex items-center gap-2 text-sm font-medium text-[var(--color-ink-700)]">
+                <input type="checkbox" checked={corte.compensacaoExigida} onChange={(e) => setCorte((p) => ({ ...p, compensacaoExigida: e.target.checked }))} />
+                Compensação ambiental exigida
+              </label>
+              {corte.compensacaoExigida && (
+                <div className="space-y-4 border-l-2 border-[var(--color-brand-100)] pl-4">
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Tipo de compensação</label>
+                    <select value={corte.tipoCompensacao} onChange={(e) => setCorte((p) => ({ ...p, tipoCompensacao: e.target.value }))} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]">
+                      <option value="">Selecione...</option>
+                      {TIPOS_COMPENSACAO.map((t) => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Quantidade de mudas</label>
+                      <input type="number" min={0} value={corte.quantidadeMudas} onChange={(e) => setCorte((p) => ({ ...p, quantidadeMudas: e.target.value }))} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Área de compensação (m²)</label>
+                      <input type="number" min={0} step="0.01" value={corte.areaCompensacaoM2} onChange={(e) => setCorte((p) => ({ ...p, areaCompensacaoM2: e.target.value }))} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Prazo de compensação</label>
+                    <input type="date" value={corte.prazoCompensacao} onChange={(e) => setCorte((p) => ({ ...p, prazoCompensacao: e.target.value }))} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+                    <p className="mt-1 text-xs text-[var(--color-ink-500)]">Gera automaticamente um alerta de prazo em Exigências.</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
           {error && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
               {error}
