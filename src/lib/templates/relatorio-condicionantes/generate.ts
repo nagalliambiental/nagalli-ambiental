@@ -4,20 +4,40 @@ import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
 import type { Processo } from "@prisma/client";
 
-export const CHECKBOX_VAZIO = `<w:sym w:font="Wingdings" w:char="F0A8"/>`;
-export const CHECKBOX_MARCADO = `<w:sym w:font="Wingdings" w:char="F0A9"/>`;
+export const ATENDIMENTO_DROPDOWN_XML = `<w:sdt><w:sdtPr><w:dropDownList><w:listItem w:displayText="Selecione..." w:value=""/><w:listItem w:displayText="Atendida" w:value="Atendida"/><w:listItem w:displayText="Não atendida" w:value="Não atendida"/></w:dropDownList></w:sdtPr><w:sdtContent><w:r><w:rPr><w:rFonts w:ascii="Ebrima" w:hAnsi="Ebrima"/><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr><w:t>Selecione...</w:t></w:r></w:sdtContent></w:sdt>`;
 
 export type CondicionanteLinha = {
   descricao: string;
-  checkbox: string;
+  atendimento: string;
 };
+
+const NUM_ITEM_RE = /^\d{1,3}\.\s/;
+const PAGE_FOOTER_RE = /^página\s+\d+\//i;
 
 export function parseCondicionantes(raw: string | null | undefined): string[] {
   if (!raw) return [];
-  return raw
+  const lines = raw
     .split(/\r?\n/)
     .map((l) => l.trim())
-    .filter(Boolean);
+    .filter((l) => l && !PAGE_FOOTER_RE.test(l));
+
+  const items: string[] = [];
+  let current: string | null = null;
+
+  for (const line of lines) {
+    if (NUM_ITEM_RE.test(line)) {
+      if (current) items.push(current);
+      current = line;
+    } else if (current) {
+      current = `${current} ${line}`;
+    } else {
+      current = line;
+    }
+  }
+  if (current) items.push(current);
+
+  if (items.length === 0) return lines;
+  return items;
 }
 
 export function buildCondicionantesData(
@@ -33,7 +53,7 @@ export function buildCondicionantesData(
     empresa: empresa.razaoSocial || "",
     condicionantes: condicionantes.map((descricao) => ({
       descricao,
-      checkbox: CHECKBOX_VAZIO,
+      atendimento: ATENDIMENTO_DROPDOWN_XML,
     })),
   };
 }
