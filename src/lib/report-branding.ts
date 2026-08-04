@@ -2,9 +2,35 @@ import fs from "fs";
 import path from "path";
 import { PDFDocument, rgb, type PDFFont, type PDFImage, type PDFPage } from "pdf-lib";
 
-export const NAGALLI_VERDE = rgb(0.21, 0.34, 0.14);
-export const NAGALLI_CINZA = rgb(0.42, 0.42, 0.42);
-export const NAGALLI_LINHA = rgb(0.75, 0.78, 0.72);
+export const PALETTE = {
+  brand: {
+    "50": rgb(0.933, 0.953, 0.906),
+    "500": rgb(0.325, 0.506, 0.212),
+    "600": rgb(0.267, 0.42, 0.173),
+    "700": rgb(0.212, 0.337, 0.137),
+  },
+  river: {
+    "100": rgb(0.906, 0.933, 0.976),
+    "500": rgb(0.557, 0.667, 0.855),
+    "700": rgb(0.298, 0.424, 0.627),
+  },
+  paper: {
+    "0": rgb(0.984, 0.98, 0.969),
+    "50": rgb(0.961, 0.953, 0.933),
+    "100": rgb(0.925, 0.914, 0.882),
+    "200": rgb(0.875, 0.859, 0.812),
+  },
+  ink: {
+    "300": rgb(0.639, 0.659, 0.588),
+    "500": rgb(0.42, 0.451, 0.384),
+    "700": rgb(0.239, 0.271, 0.212),
+    "900": rgb(0.118, 0.141, 0.094),
+  },
+};
+
+export const NAGALLI_VERDE = PALETTE.brand["600"];
+export const NAGALLI_CINZA = PALETTE.ink["500"];
+export const NAGALLI_LINHA = PALETTE.paper["200"];
 
 const MARGIN_X = 40;
 const COPYRIGHT = "Proibida a cópia e distribuição. Todos os direitos reservados.";

@@ -66,10 +66,10 @@ export default function RelatoriosPage() {
 
   return (
     <div>
-      <Topbar title="Relatórios" subtitle="Exporte relatórios em PDF" />
+      <Topbar title="Relatórios" subtitle="Visualize ou baixe relatórios em PDF com a situação de cada área" />
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <Card icon={FileSpreadsheet} title="Relatório DMR" description="Situação DMR/MTR por empreendimento e trimestre">
+        <Card icon={FileSpreadsheet} title="Controle DMR/MTR" description="Veja a situação de cada empreendimento por trimestre do ano: o que está em dia e o que está pendente">
           <div className="mb-4">
             <label className="block text-xs font-medium text-[var(--color-ink-500)] mb-1">Ano</label>
             <input type="number" value={ano} onChange={(e) => setAno(Number(e.target.value))}
@@ -88,12 +88,12 @@ export default function RelatoriosPage() {
           </div>
         </Card>
 
-        {podeVerFinanceiro && <Card icon={DollarSign} title="Relatório Financeiro" description="Registros financeiros com totais">
+        {podeVerFinanceiro && <Card icon={DollarSign} title="Financeiro" description="Acompanhe cobranças e recebimentos: valores, vencimentos e situação de cada pagamento">
           <div className="mb-4">
-            <label className="block text-xs font-medium text-[var(--color-ink-500)] mb-1">Status</label>
+            <label className="block text-xs font-medium text-[var(--color-ink-500)] mb-1">Filtrar por situação</label>
             <select value={finStatus} onChange={(e) => setFinStatus(e.target.value)}
               className="w-full rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]">
-              <option value="">Todos</option>
+              <option value="">Todas</option>
               <option value="pendente">Pendente</option>
               <option value="pago">Pago</option>
               <option value="atrasado">Atrasado</option>
@@ -113,9 +113,9 @@ export default function RelatoriosPage() {
           </div>
         </Card>}
 
-        <Card icon={FileCheck2} title="Relatório de Processos" description="Lista de processos com status e prazos">
+        <Card icon={FileCheck2} title="Processos Ambientais" description="Consulte os processos por empreendimento: órgão, situação e validade da licença">
           <div className="mb-4">
-            <label className="block text-xs font-medium text-[var(--color-ink-500)] mb-1">Status</label>
+            <label className="block text-xs font-medium text-[var(--color-ink-500)] mb-1">Filtrar por situação</label>
             <select value={procStatus} onChange={(e) => setProcStatus(e.target.value)}
               className="w-full rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]">
               <option value="">Todos</option>
@@ -140,7 +140,7 @@ export default function RelatoriosPage() {
           </div>
         </Card>
 
-        <Card icon={Building2} title="Relatório de Clientes" description="Lista completa de clientes cadastrados">
+        <Card icon={Building2} title="Clientes" description="Consulte o cadastro completo de clientes e os empreendimentos vinculados a cada um">
           <div className="flex gap-2">
             <button onClick={() => preview("/api/relatorios/clientes")}
               className="focus-ring transition-brand flex items-center gap-2 rounded-lg border border-[var(--color-paper-200)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]">
