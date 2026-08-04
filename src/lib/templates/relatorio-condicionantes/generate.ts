@@ -4,11 +4,8 @@ import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
 import type { Processo } from "@prisma/client";
 
-export const ATENDIMENTO_DROPDOWN_XML = `<w:sdt><w:sdtPr><w:dropDownList><w:listItem w:displayText="Selecione..." w:value=""/><w:listItem w:displayText="Atendida" w:value="Atendida"/><w:listItem w:displayText="Não atendida" w:value="Não atendida"/></w:dropDownList></w:sdtPr><w:sdtContent><w:r><w:rPr><w:rFonts w:ascii="Ebrima" w:hAnsi="Ebrima"/><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr><w:t>Selecione...</w:t></w:r></w:sdtContent></w:sdt>`;
-
 export type CondicionanteLinha = {
   descricao: string;
-  atendimento: string;
 };
 
 const NUM_ITEM_RE = /^(?:\d{1,3}\.\s*|\d{1,3}\)\s*|\-\s*|•\s*|\*\s*)/;
