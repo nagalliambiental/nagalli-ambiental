@@ -56,38 +56,42 @@ export async function GET(
   const safeName = `relatorio_condicionantes_${processo.numLicenca || processo.numProtocolo || processo.id}_${Date.now()}.docx`
     .replace(/[^a-zA-Z0-9._-]/g, "_");
 
-  const uploadDir = path.join(process.cwd(), "public", "uploads", "documentos");
-  await mkdir(uploadDir, { recursive: true });
-  const filePath = path.join(uploadDir, safeName);
-  await writeFile(filePath, buffer);
+  try {
+    const uploadDir = path.join(process.cwd(), "public", "uploads", "documentos");
+    await mkdir(uploadDir, { recursive: true });
+    const filePath = path.join(uploadDir, safeName);
+    await writeFile(filePath, buffer);
 
-  const caminho = `/uploads/documentos/${safeName}`;
+    const caminho = `/uploads/documentos/${safeName}`;
 
-  const docExistente = await prisma.documento.findFirst({
-    where: {
-      processoId: processo.id,
-      nome: { contains: "Relatório de condicionantes" },
-    },
-  });
-
-  if (!docExistente) {
-    const documento = await prisma.documento.create({
-      data: {
-        nome: "Relatório de condicionantes",
-        tipo: "relatorio",
-        caminho,
-        tamanho: buffer.length,
+    const docExistente = await prisma.documento.findFirst({
+      where: {
         processoId: processo.id,
+        nome: { contains: "Relatório de condicionantes" },
       },
     });
 
-    await logAuditoria(
-      "criar",
-      "documento",
-      documento.id,
-      { nome: "Relatório de condicionantes", caminho },
-      Number((session.user as { id: string }).id)
-    );
+    if (!docExistente) {
+      const documento = await prisma.documento.create({
+        data: {
+          nome: "Relatório de condicionantes",
+          tipo: "relatorio",
+          caminho,
+          tamanho: buffer.length,
+          processoId: processo.id,
+        },
+      });
+
+      await logAuditoria(
+        "criar",
+        "documento",
+        documento.id,
+        { nome: "Relatório de condicionantes", caminho },
+        Number((session.user as { id: string }).id)
+      );
+    }
+  } catch (saveErr) {
+    console.error("Erro ao salvar relatório em documentos (download continua):", saveErr);
   }
 
   return new NextResponse(new Uint8Array(buffer), {
