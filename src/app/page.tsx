@@ -1,13 +1,12 @@
 import Link from "next/link";
-import { Building2, CalendarClock, Plus, Inbox, ArrowUpRight, FileCheck2, FileSpreadsheet, AlertTriangle, BarChart3 } from "lucide-react";
+import { Building2, CalendarClock, Plus, Inbox, ArrowUpRight, FileCheck2, FileSpreadsheet } from "lucide-react";
 import { Topbar } from "@/components/Topbar";
 import { StatCard } from "@/components/StatCard";
 import { prisma } from "@/lib/prisma";
-import { format, differenceInDays } from "date-fns";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { getTrimestreAtual, getDiasFimTrimestre } from "@/lib/dmr-parser";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
-import { ProcessosChart } from "@/components/dashboard/ProcessosChart";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Dashboard" };
@@ -30,20 +29,13 @@ const statusColors: Record<string, string> = {
 export default async function DashboardPage() {
   const [
     totalProcessos,
-    processosVencendo,
     totalClientes,
     totalEmpreendimentos,
     exigenciasPendentes,
     clientesRecentes,
     processosRecentes,
-    processosPorStatus,
   ] = await Promise.all([
     prisma.processo.count(),
-    prisma.processo.findMany({
-      where: { validade: { not: null, gte: new Date() } },
-      include: { empreendimento: { select: { apelido: true } }, orgao: { select: { sigla: true } } },
-      orderBy: { validade: "asc" },
-    }),
     prisma.cliente.count(),
     prisma.empreendimento.count(),
     prisma.exigencia.count({ where: { cumprida: false } }),
@@ -53,10 +45,7 @@ export default async function DashboardPage() {
       orderBy: { criadoEm: "desc" },
       include: { empreendimento: { select: { apelido: true } }, orgao: { select: { sigla: true } } },
     }),
-    prisma.processo.groupBy({ by: ["status"], _count: { id: true } }),
   ]);
-
-  const totalVencendo = processosVencendo.length;
 
   return (
     <>
@@ -118,17 +107,7 @@ export default async function DashboardPage() {
         );
       })()}
 
-      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-1">
-        <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
-          <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-4 flex items-center gap-2">
-            <BarChart3 size={18} />
-            Processos por Status
-          </h2>
-          <ProcessosChart data={processosPorStatus.map((s) => ({ name: statusLabels[s.status] || s.status, value: s._count.id }))} />
-        </div>
-      </div>
-
-      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="mt-6">
         <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">
           <div className="flex items-center justify-between px-5 pt-5 pb-3">
             <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Últimos Processos</h2>
@@ -165,40 +144,6 @@ export default async function DashboardPage() {
               <p className="text-sm text-[var(--color-ink-500)]">Nenhum processo cadastrado</p>
             </div>
           )}
-        </div>
-
-        <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
-          <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-4">Prazos a Vencer</h2>
-          <div className="space-y-3">
-            {(() => {
-              const now = new Date();
-              const vencendo = processosVencendo.filter((p) => {
-                if (!p.validade) return false;
-                const diasRestantes = differenceInDays(p.validade, now);
-                return diasRestantes <= p.alertaDias;
-              });
-              return vencendo.length > 0 ? (
-                vencendo.map((p) => {
-                  const diasRestantes = p.validade ? differenceInDays(p.validade, now) : 0;
-                  const isUrgente = diasRestantes <= 7;
-                  return (
-                    <div key={p.id} className="flex items-center justify-between border-b border-[var(--color-paper-100)] pb-2 last:border-0">
-                      <div>
-                        <Link href={`/processos/${p.id}`} className="text-sm font-medium text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)]">{p.numProtocolo}</Link>
-                        <p className="text-xs text-[var(--color-ink-500)]">{p.empreendimento.apelido} - {p.orgao.sigla}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className={`text-sm font-medium ${isUrgente ? "text-red-600" : "text-[var(--color-ink-700)]"}`}>{p.validade ? format(p.validade, "dd/MM") : "—"}</p>
-                        <p className="text-xs text-[var(--color-ink-500)]">{diasRestantes >= 0 ? `${diasRestantes} dias` : "Vencido"}</p>
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <p className="text-sm text-[var(--color-ink-500)]">Nenhum prazo próximo do vencimento</p>
-              );
-            })()}
-          </div>
         </div>
       </div>
 
