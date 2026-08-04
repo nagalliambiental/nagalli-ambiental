@@ -43,7 +43,7 @@ export async function POST(request: Request) {
       payload.clienteId = cid;
     }
 
-    for (const key of ["latitude", "longitude"]) {
+    for (const key of ["latitude", "longitude", "utmX", "utmY"]) {
       if (payload[key] === undefined || payload[key] === null || payload[key] === "") {
         delete payload[key];
       } else {
@@ -53,6 +53,16 @@ export async function POST(request: Request) {
         }
         payload[key] = num;
       }
+    }
+
+    if (payload.utmZona !== undefined && payload.utmZona !== null && payload.utmZona !== "") {
+      const num = Number(payload.utmZona);
+      if (Number.isNaN(num)) {
+        return NextResponse.json({ error: "UTM Zona inválida" }, { status: 400 });
+      }
+      payload.utmZona = num;
+    } else {
+      delete payload.utmZona;
     }
 
     const empreendimento = await prisma.empreendimento.create({
