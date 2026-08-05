@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAuditoria } from "@/lib/audit";
-import { getModeloProposta } from "@/lib/propostas/modelos-server";
+import { getModeloProposta, validarDadosProposta } from "@/lib/propostas/modelos-server";
 
 export const dynamic = "force-dynamic";
 
@@ -35,8 +35,17 @@ export async function PUT(
   const existente = await prisma.propostaServico.findUnique({ where: { id: Number(id) } });
   if (!existente) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
 
-  if (!(await getModeloProposta(existente.modeloSlug))) {
+  const modelo = await getModeloProposta(existente.modeloSlug);
+  if (!modelo) {
     return NextResponse.json({ error: "Modelo de proposta não encontrado" }, { status: 400 });
+  }
+
+  const erros = validarDadosProposta(modelo, body.dados ?? {});
+  if (erros.length > 0) {
+    return NextResponse.json(
+      { error: `Preencha os campos obrigatórios: ${erros.join(", ")}` },
+      { status: 400 }
+    );
   }
 
   const isRevision = body.isRevision === true;

@@ -9,7 +9,7 @@ export function renderPropostaDemolicaoDocx(data: PropostaDemolicaoDocxData): Bu
     process.cwd(),
     "src/lib/templates/proposta-demolicao/template.docx"
   );
-  const content = fs.readFileSync(templatePath, "binary");
+  const content = fs.readFileSync(templatePath);
   const zip = new PizZip(content);
   const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
 

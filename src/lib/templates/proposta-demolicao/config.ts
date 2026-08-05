@@ -37,6 +37,10 @@ export interface PropostaDemolicaoDocxData {
   valorTotalRgrcc: number;
   valorTotalPgrccFormatado: string;
   valorTotalRgrccFormatado: string;
+  valorLiquidoPgrcc: number;
+  valorLiquidoRgrcc: number;
+  valorLiquidoPgrccFormatado: string;
+  valorLiquidoRgrccFormatado: string;
   percentualDesconto: number;
   valorDesconto: number;
   valorDescontoFormatado: string;
@@ -128,6 +132,9 @@ export function buildDocxData(form: PropostaDemolicaoFormData, meta: { numero: n
   const totalCalculado = valorTotalPgrcc + valorTotalRgrcc;
   const valorDesconto = totalCalculado * (percentualDesconto / 100);
   const totalFinal = form.totalFinal ?? (totalCalculado - valorDesconto);
+  const fatorLiquido = 1 - percentualDesconto / 100;
+  const valorLiquidoPgrcc = valorTotalPgrcc * fatorLiquido;
+  const valorLiquidoRgrcc = valorTotalRgrcc * fatorLiquido;
 
   return {
     numero: meta.numero,
@@ -152,6 +159,10 @@ export function buildDocxData(form: PropostaDemolicaoFormData, meta: { numero: n
     valorTotalRgrcc,
     valorTotalPgrccFormatado: formatarMoeda(valorTotalPgrcc),
     valorTotalRgrccFormatado: formatarMoeda(valorTotalRgrcc),
+    valorLiquidoPgrcc,
+    valorLiquidoRgrcc,
+    valorLiquidoPgrccFormatado: formatarMoeda(valorLiquidoPgrcc),
+    valorLiquidoRgrccFormatado: formatarMoeda(valorLiquidoRgrcc),
     percentualDesconto,
     valorDesconto,
     valorDescontoFormatado: formatarMoeda(valorDesconto),

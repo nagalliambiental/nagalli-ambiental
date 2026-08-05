@@ -32,6 +32,7 @@ export default function PropostaServicoForm({ modelo, propostaId, revisaoAtual, 
 
   const [submitting, setSubmitting] = useState(false);
   const [isRevision, setIsRevision] = useState(false);
+  const [camposInvalidos, setCamposInvalidos] = useState<Record<string, boolean>>({});
   const [dados, setDados] = useState<Record<string, unknown>>(() => {
     const estado: Record<string, unknown> = {};
     for (const campo of modelo?.campos ?? []) {
@@ -52,6 +53,26 @@ export default function PropostaServicoForm({ modelo, propostaId, revisaoAtual, 
 
   const handleChange = (name: string, value: string | number) => {
     setDados((prev) => ({ ...prev, [name]: value }));
+    setCamposInvalidos((prev) => {
+      if (!prev[name]) return prev;
+      const next = { ...prev };
+      delete next[name];
+      return next;
+    });
+  };
+
+  const validar = (): string[] => {
+    const invalidos: string[] = [];
+    for (const campo of modelo.campos) {
+      if (!campo.required) continue;
+      const valor = dados[campo.name];
+      const invalido =
+        campo.tipo === "numero" || campo.tipo === "moeda"
+          ? valor == null || Number(valor) <= 0
+          : valor == null || String(valor).trim() === "";
+      if (invalido) invalidos.push(campo.name);
+    }
+    return invalidos;
   };
 
   const buildPayload = () => ({ dados });
@@ -79,6 +100,12 @@ export default function PropostaServicoForm({ modelo, propostaId, revisaoAtual, 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const invalidos = validar();
+    if (invalidos.length > 0) {
+      setCamposInvalidos(Object.fromEntries(invalidos.map((n) => [n, true])));
+      toast("Preencha os campos obrigatórios indicados.", "error");
+      return;
+    }
     setSubmitting(true);
 
     try {
@@ -94,6 +121,12 @@ export default function PropostaServicoForm({ modelo, propostaId, revisaoAtual, 
 
   const handleGerar = async (e: React.FormEvent) => {
     e.preventDefault();
+    const invalidos = validar();
+    if (invalidos.length > 0) {
+      setCamposInvalidos(Object.fromEntries(invalidos.map((n) => [n, true])));
+      toast("Preencha os campos obrigatórios indicados.", "error");
+      return;
+    }
     setSubmitting(true);
 
     try {
@@ -130,6 +163,13 @@ export default function PropostaServicoForm({ modelo, propostaId, revisaoAtual, 
     const g = campo.grupo ?? "Geral";
     if (!grupos.includes(g)) grupos.push(g);
   }
+
+  const inputClass = (name: string) =>
+    `w-full rounded-lg border bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 ${
+      camposInvalidos[name]
+        ? "border-red-500 focus:ring-red-400"
+        : "focus:ring-[var(--color-brand-500)] border-[var(--color-paper-200)]"
+    }`;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-w-4xl mx-auto p-6">
@@ -175,14 +215,14 @@ export default function PropostaServicoForm({ modelo, propostaId, revisaoAtual, 
                         value={String(valor ?? "")}
                         onChange={(e) => handleChange(campo.name, e.target.value)}
                         rows={3}
-                        className="w-full rounded-lg border bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)] border-[var(--color-paper-200)]"
+                        className={inputClass(campo.name)}
                       />
                     ) : campo.tipo === "selecao" ? (
                       <select
                         value={String(valor ?? "")}
                         onChange={(e) => handleChange(campo.name, e.target.value)}
                         required={campo.required}
-                        className="w-full rounded-lg border bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)] border-[var(--color-paper-200)]"
+                        className={inputClass(campo.name)}
                       >
                         {(campo.opcoes ?? []).map((op) => (
                           <option key={op} value={op}>
@@ -197,7 +237,7 @@ export default function PropostaServicoForm({ modelo, propostaId, revisaoAtual, 
                         value={typeof valor === "number" && valor > 0 ? formatCurrencyInput(valor) : ""}
                         onChange={(e) => handleChange(campo.name, parseCurrencyInput(e.target.value))}
                         placeholder="R$ 0,00"
-                        className="w-full rounded-lg border bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)] border-[var(--color-paper-200)]"
+                        className={inputClass(campo.name)}
                       />
                     ) : (
                       <input
@@ -212,11 +252,14 @@ export default function PropostaServicoForm({ modelo, propostaId, revisaoAtual, 
                         }
                         placeholder={campo.placeholder}
                         required={campo.required}
-                        className="w-full rounded-lg border bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)] border-[var(--color-paper-200)]"
+                        className={inputClass(campo.name)}
                       />
                     )}
                     {campo.dica && (
                       <p className="text-xs text-[var(--color-ink-500)] mt-1">{campo.dica}</p>
+                    )}
+                    {camposInvalidos[campo.name] && (
+                      <p className="text-xs text-red-600 mt-1">Campo obrigatório</p>
                     )}
                   </div>
                 );

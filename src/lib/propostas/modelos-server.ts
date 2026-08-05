@@ -69,3 +69,20 @@ export async function getModeloTemplateBytes(
   });
   return m?.template ?? null;
 }
+
+export function validarDadosProposta(
+  modelo: ModeloPropostaData,
+  dados: Record<string, unknown>
+): string[] {
+  const erros: string[] = [];
+  for (const campo of modelo.campos) {
+    if (!campo.required) continue;
+    const valor = dados[campo.name];
+    const vazio =
+      campo.tipo === "numero" || campo.tipo === "moeda"
+        ? valor == null || !Number.isFinite(Number(valor)) || Number(valor) <= 0
+        : valor == null || String(valor).trim() === "";
+    if (vazio) erros.push(campo.label);
+  }
+  return erros;
+}
