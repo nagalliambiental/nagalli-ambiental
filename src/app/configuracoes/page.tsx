@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { Topbar } from "@/components/Topbar";
-import { Building2, Loader2, Save, Search, ClipboardList } from "lucide-react";
+import { Building2, Loader2, Save, Search, ClipboardList, Settings } from "lucide-react";
 import { useToast } from "@/components/Toast";
 
 type Tab = "empresa" | "logs";
@@ -24,7 +24,7 @@ export default function ConfiguracoesPage() {
 
   return (
     <div>
-      <Topbar title="Configurações" subtitle="Dados da empresa" />
+      <Topbar icon={Settings} title="Configurações" subtitle="Dados da empresa" />
 
       <div className="mx-auto max-w-4xl">
         <div className="mb-4 flex gap-1 border-b border-[var(--color-paper-200)]">

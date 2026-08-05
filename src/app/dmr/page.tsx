@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Topbar } from "@/components/Topbar";
-import { Plus, Trash2, Search } from "lucide-react";
+import { Plus, Trash2, Search, Recycle } from "lucide-react";
 import { useToast } from "@/components/Toast";
 
 interface Empreendimento {
@@ -139,7 +139,7 @@ export default function DmrPage() {
 
   return (
     <div>
-      <Topbar title="DMR — Controle Trimestral" subtitle="Gerencie os empreendimentos que precisam de declaração DMR/MTR" />
+      <Topbar icon={Recycle} title="DMR — Controle Trimestral" subtitle="Gerencie os empreendimentos que precisam de declaração DMR/MTR" />
 
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5 mb-6">
         <h2 className="font-display text-base font-semibold mb-3">Adicionar empreendimento ao controle (DMR)</h2>

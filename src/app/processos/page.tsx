@@ -3,7 +3,7 @@ import type { Prisma } from "@prisma/client";
 import Link from "next/link";
 import { Topbar } from "@/components/Topbar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
-import { Plus } from "lucide-react";
+import { FolderKanban, Plus } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
 import { FilterSelect } from "@/components/FilterSelect";
 import { ProcessosTable } from "@/components/tables/ProcessosTable";
@@ -44,6 +44,7 @@ export default async function ProcessosPage({
     <div>
       <Breadcrumbs items={[{ label: "Processos" }]} />
       <Topbar
+        icon={FolderKanban}
         title="Processos"
         actions={
           <div className="flex items-center gap-3">

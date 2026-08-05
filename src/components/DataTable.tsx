@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Trash2, ToggleLeft, ToggleRight, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { Trash2, ToggleLeft, ToggleRight, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Inbox } from "lucide-react";
 import { useToast } from "@/components/Toast";
 
 export interface Column<T extends { id: number }> {
@@ -98,8 +98,8 @@ export function DataTable<T extends { id: number }>({
   return (
     <>
       {selectedIds.size > 0 && (
-        <div className="flex items-center justify-between border-b border-[var(--color-paper-200)] bg-[var(--color-paper-50)] px-4 py-2">
-          <span className="text-sm text-[var(--color-ink-500)]">{selectedIds.size} selecionado(s)</span>
+        <div className="flex items-center justify-between border-b border-[var(--color-paper-200)] bg-[var(--color-brand-50)] px-4 py-2">
+          <span className="text-sm font-medium text-[var(--color-ink-700)]">{selectedIds.size} selecionado(s)</span>
           <div className="flex items-center gap-2">
             {typeof extraBulkActions === "function" ? extraBulkActions(Array.from(selectedIds)) : extraBulkActions}
             {hasAtivo && (
@@ -146,7 +146,7 @@ export function DataTable<T extends { id: number }>({
                 ))}
               </colgroup>
               <thead>
-                <tr className="border-b border-[var(--color-paper-200)] text-[var(--color-ink-500)]">
+                <tr className="border-b border-[var(--color-paper-200)] bg-[var(--color-paper-50)] text-[var(--color-ink-500)]">
                   <th className="p-4 text-center">
                     <input
                       type="checkbox"
@@ -223,8 +223,13 @@ export function DataTable<T extends { id: number }>({
           </div>
         </>
       ) : (
-        <div className="flex flex-col items-center gap-3 py-12 text-[var(--color-ink-500)]">
-          <p className="text-sm">{searchQuery ? "Nenhum registro encontrado para essa busca" : emptyMessage}</p>
+        <div className="flex flex-col items-center gap-2 py-14 text-[var(--color-ink-500)]">
+          <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-paper-100)] text-[var(--color-ink-300)]">
+            <Inbox size={18} />
+          </span>
+          <p className="text-sm font-medium text-[var(--color-ink-700)]">
+            {searchQuery ? "Nenhum registro encontrado para essa busca" : emptyMessage}
+          </p>
         </div>
       )}
     </>

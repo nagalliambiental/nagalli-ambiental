@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Building2, CalendarClock, Plus, Inbox, ArrowUpRight, FileCheck2, FileSpreadsheet } from "lucide-react";
+import { Building2, CalendarClock, Plus, Inbox, ArrowUpRight, FileCheck2, FileSpreadsheet, LayoutDashboard } from "lucide-react";
 import { Topbar } from "@/components/Topbar";
 import { StatCard } from "@/components/StatCard";
 import { prisma } from "@/lib/prisma";
@@ -51,6 +51,7 @@ export default async function DashboardPage() {
     <>
       <Breadcrumbs items={[{ label: "Dashboard" }]} />
       <Topbar
+        icon={LayoutDashboard}
         title="Dashboard"
         subtitle="Visão geral dos processos e cadastros"
         actions={

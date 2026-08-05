@@ -6,7 +6,7 @@ import { auth } from "@/lib/auth";
 import { Topbar } from "@/components/Topbar";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Building2, FileText, Calendar, Clock, Edit3, ArrowLeft } from "lucide-react";
+import { Building2, FileText, Calendar, Clock, Edit3, ArrowLeft, FileSignature } from "lucide-react";
 import Link from "next/link";
 import DeleteButton from "@/components/DeleteButton";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
@@ -59,6 +59,7 @@ export default async function ContratoDetailPage(props: { params: Promise<{ id: 
       </div>
 
       <Topbar
+        icon={FileSignature}
         title={contrato.cliente.apelido}
         subtitle={contrato.servicoProcesso}
         actions={

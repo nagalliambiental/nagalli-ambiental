@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import Link from "next/link";
 import { Topbar } from "@/components/Topbar";
-import { Plus } from "lucide-react";
+import { Plus, Building2 } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
 import { ClientesTable } from "@/components/tables/ClientesTable";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
@@ -47,6 +47,7 @@ export default async function ClientesPage({
     <div>
       <Breadcrumbs items={[{ label: "Clientes" }]} />
       <Topbar
+        icon={Building2}
         title="Clientes"
         actions={
           <div className="flex items-center gap-3">

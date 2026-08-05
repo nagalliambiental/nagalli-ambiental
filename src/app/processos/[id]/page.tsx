@@ -69,6 +69,7 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
       </div>
 
       <Topbar
+        icon={ClipboardList}
         title={`Processo ${processo.numProtocolo}`}
         subtitle={processo.tipo}
         actions={

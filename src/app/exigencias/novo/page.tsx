@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Topbar } from "@/components/Topbar";
+import { AlertTriangle } from "lucide-react";
 
 interface Processo {
   id: number;
@@ -48,7 +49,7 @@ export default function NovaExigenciaPage() {
 
   return (
     <div>
-      <Topbar title="Nova Exigência" subtitle="Registre uma nova exigência" />
+      <Topbar icon={AlertTriangle} title="Nova Exigência" subtitle="Registre uma nova exigência" />
       <div className="mx-auto max-w-2xl">
         <form onSubmit={handleSubmit} className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5 space-y-4">
           <div>

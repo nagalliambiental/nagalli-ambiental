@@ -11,6 +11,7 @@ export default function ModelosPage() {
     <div>
       <Breadcrumbs items={[{ label: "Modelos" }]} />
       <Topbar
+        icon={FileStack}
         title="Modelos de documento"
         subtitle="Modelos oficiais disponíveis para geração"
       />

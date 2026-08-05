@@ -56,6 +56,7 @@ export default async function DocumentoDetailPage(props: { params: Promise<{ id:
       </div>
 
       <Topbar
+        icon={FileText}
         title={doc.nome}
         subtitle="Detalhes do documento"
         actions={

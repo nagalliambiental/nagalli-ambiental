@@ -211,6 +211,7 @@ export function ClienteDetailClient({
         </Link>
       </div>
       <Topbar
+        icon={Building2}
         title={cliente.apelido}
         subtitle="Detalhes do cliente"
         actions={

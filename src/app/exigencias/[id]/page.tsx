@@ -56,6 +56,7 @@ export default async function ExigenciaDetailPage(props: { params: Promise<{ id:
       </div>
 
       <Topbar
+        icon={AlertTriangle}
         title="Exigência"
         subtitle={exigencia.descricao.length > 60 ? exigencia.descricao.slice(0, 60) + "..." : exigencia.descricao}
         actions={

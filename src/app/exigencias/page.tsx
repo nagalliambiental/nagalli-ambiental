@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Topbar } from "@/components/Topbar";
-import { Plus } from "lucide-react";
+import { AlertTriangle, Plus } from "lucide-react";
 import { ExigenciasTable } from "@/components/tables/ExigenciasTable";
 import { SearchBar } from "@/components/SearchBar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
@@ -42,6 +42,7 @@ export default async function ExigenciasPage({
     <div>
       <Breadcrumbs items={[{ label: "Exigências" }]} />
       <Topbar
+        icon={AlertTriangle}
         title="Exigências"
         actions={
           <div className="flex items-center gap-3">

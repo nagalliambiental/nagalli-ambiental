@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Topbar } from "@/components/Topbar";
-import { Loader2, Plus, Trash2, Key, Link as LinkIcon, Building2, Search } from "lucide-react";
+import { Loader2, Plus, Trash2, Key, Link as LinkIcon, Building2, Search, KeyRound } from "lucide-react";
 import { useToast } from "@/components/Toast";
 
 interface AcessoEntry {
@@ -113,6 +113,7 @@ export default function AcessosPage() {
   return (
     <div>
       <Topbar
+        icon={KeyRound}
         title="Acessos"
         subtitle="Gerencie logins e senhas"
         actions={

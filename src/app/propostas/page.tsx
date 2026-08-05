@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { Topbar } from "@/components/Topbar";
-import { Plus } from "lucide-react";
+import { Plus, FileSignature } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import PropostasServicoList from "@/components/propostas/PropostasServicoList";
@@ -54,6 +54,7 @@ export default async function PropostasPage({
     <div>
       <Breadcrumbs items={[{ label: "Propostas" }]} />
       <Topbar
+        icon={FileSignature}
         title="Propostas de Serviços"
         subtitle="Propostas comerciais por tipo de serviço, com numeração sequencial e revisões."
         actions={

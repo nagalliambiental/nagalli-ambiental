@@ -65,7 +65,7 @@ export default function NovoDocumentoPage() {
 
   return (
     <div>
-      <Topbar title="Novo Documento" subtitle="Faça upload de um novo documento" />
+      <Topbar icon={Upload} title="Novo Documento" subtitle="Faça upload de um novo documento" />
       <div className="mx-auto max-w-2xl">
         <form onSubmit={handleSubmit} className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5 space-y-4">
           <div className="grid grid-cols-2 gap-4">

@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Topbar } from "@/components/Topbar";
-import { Plus } from "lucide-react";
+import { DollarSign, Plus } from "lucide-react";
 import { FinanceiroTable } from "@/components/tables/FinanceiroTable";
 import { SearchBar } from "@/components/SearchBar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
@@ -44,6 +44,7 @@ export default async function FinanceiroPage({
     <div>
       <Breadcrumbs items={[{ label: "Financeiro" }]} />
       <Topbar
+        icon={DollarSign}
         title="Financeiro"
         actions={
           <div className="flex items-center gap-3">

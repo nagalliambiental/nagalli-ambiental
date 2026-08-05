@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Topbar } from "@/components/Topbar";
-import { Plus } from "lucide-react";
+import { Plus, ClipboardCheck } from "lucide-react";
 import { TarefasTable } from "@/components/tables/TarefasTable";
 import { SearchBar } from "@/components/SearchBar";
 import { FilterSelect } from "@/components/FilterSelect";
@@ -43,6 +43,7 @@ export default async function TarefasPage({
     <div>
       <Breadcrumbs items={[{ label: "Tarefas" }]} />
       <Topbar
+        icon={ClipboardCheck}
         title="Tarefas"
         actions={
           <div className="flex items-center gap-3">

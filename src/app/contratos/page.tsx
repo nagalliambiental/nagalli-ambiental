@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Topbar } from "@/components/Topbar";
-import { Plus } from "lucide-react";
+import { Plus, FileSignature } from "lucide-react";
 import { ContratoTable } from "@/components/tables/ContratoTable";
 import { SearchBar } from "@/components/SearchBar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
@@ -46,6 +46,7 @@ export default async function ContratosPage({
     <div>
       <Breadcrumbs items={[{ label: "Contratos" }]} />
       <Topbar
+        icon={FileSignature}
         title="Contratos"
         actions={
           <div className="flex items-center gap-3">

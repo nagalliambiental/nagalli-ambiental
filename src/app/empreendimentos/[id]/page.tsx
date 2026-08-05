@@ -80,6 +80,7 @@ export default async function EmpreendimentoDetailPage(props: { params: Promise<
       </div>
 
       <Topbar
+        icon={Building2}
         title={emp.apelido}
         subtitle="Detalhes do empreendimento"
         actions={

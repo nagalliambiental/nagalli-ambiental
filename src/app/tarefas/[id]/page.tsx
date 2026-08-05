@@ -68,6 +68,7 @@ export default async function TarefaDetailPage(props: { params: Promise<{ id: st
       </div>
 
       <Topbar
+        icon={ClipboardList}
         title={tarefa.titulo}
         subtitle="Detalhes da tarefa"
         actions={

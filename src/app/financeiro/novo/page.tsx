@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Topbar } from "@/components/Topbar";
+import { DollarSign } from "lucide-react";
 
 interface Cliente {
   id: number;
@@ -56,7 +57,7 @@ export default function NovaCobrancaPage() {
 
   return (
     <div>
-      <Topbar title="Nova Cobrança" subtitle="Registre uma nova cobrança" />
+      <Topbar icon={DollarSign} title="Nova Cobrança" subtitle="Registre uma nova cobrança" />
       <div className="mx-auto max-w-2xl">
         <form onSubmit={handleSubmit} className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5 space-y-4">
           <div className="grid grid-cols-2 gap-4">

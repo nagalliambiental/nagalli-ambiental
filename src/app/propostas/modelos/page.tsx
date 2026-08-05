@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { ehPrivilegiado } from "@/lib/perfil";
 import { Topbar } from "@/components/Topbar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
-import { Plus } from "lucide-react";
+import { Plus, FileStack } from "lucide-react";
 import ModelosList from "@/components/propostas/ModelosList";
 
 export const dynamic = "force-dynamic";
@@ -43,6 +43,7 @@ export default async function Page() {
     <div>
       <Breadcrumbs items={[{ label: "Propostas", href: "/propostas" }, { label: "Modelos de Proposta" }]} />
       <Topbar
+        icon={FileStack}
         title="Modelos de Proposta"
         subtitle="Cadastre novos tipos de proposta a partir de um DOCX e defina os campos editáveis."
         actions={

@@ -4,6 +4,7 @@ import { ehPrivilegiado } from "@/lib/perfil";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { Topbar } from "@/components/Topbar";
 import PropostaModeloForm from "@/components/propostas/PropostaModeloForm";
+import { FileStack } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Novo Modelo de Proposta" };
@@ -22,7 +23,7 @@ export default async function Page() {
           { label: "Novo" },
         ]}
       />
-      <Topbar title="Novo Modelo de Proposta" subtitle="Cadastre um novo tipo de proposta a partir de um DOCX." />
+      <Topbar icon={FileStack} title="Novo Modelo de Proposta" subtitle="Cadastre um novo tipo de proposta a partir de um DOCX." />
       <div className="mx-auto max-w-4xl">
         <PropostaModeloForm />
       </div>

@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import Link from "next/link";
 import { Topbar } from "@/components/Topbar";
-import { Plus } from "lucide-react";
+import { Plus, MapPin } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
 import { EmpreendimentosTable } from "@/components/tables/EmpreendimentosTable";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
@@ -46,6 +46,7 @@ export default async function EmpreendimentosPage({
     <div>
       <Breadcrumbs items={[{ label: "Empreendimentos" }]} />
       <Topbar
+        icon={MapPin}
         title="Empreendimentos"
         actions={
           <div className="flex items-center gap-3">

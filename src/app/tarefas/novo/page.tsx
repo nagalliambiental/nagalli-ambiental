@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Topbar } from "@/components/Topbar";
+import { ClipboardCheck } from "lucide-react";
 
 interface Usuario {
   id: number;
@@ -48,7 +49,7 @@ export default function NovaTarefaPage() {
 
   return (
     <div>
-      <Topbar title="Nova Tarefa" subtitle="Crie uma nova tarefa" />
+      <Topbar icon={ClipboardCheck} title="Nova Tarefa" subtitle="Crie uma nova tarefa" />
       <div className="mx-auto max-w-2xl">
         <form onSubmit={handleSubmit} className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5 space-y-4">
           <div>

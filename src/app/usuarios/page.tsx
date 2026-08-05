@@ -32,6 +32,7 @@ export default async function UsuariosPage() {
     <div>
       <Breadcrumbs items={[{ label: "Usuários" }]} />
       <Topbar
+        icon={Users}
         title="Usuários"
         actions={
           <Link

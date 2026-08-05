@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Topbar } from "@/components/Topbar";
+import { Users } from "lucide-react";
 
 export default function NovoUsuarioPage() {
   const router = useRouter();
@@ -28,7 +29,7 @@ export default function NovoUsuarioPage() {
 
   return (
     <div>
-      <Topbar title="Novo Usuário" subtitle="Cadastre um novo usuário no sistema" />
+      <Topbar icon={Users} title="Novo Usuário" subtitle="Cadastre um novo usuário no sistema" />
       <div className="mx-auto max-w-2xl">
         <form onSubmit={handleSubmit} className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5 space-y-4">
           <div className="grid grid-cols-2 gap-4">

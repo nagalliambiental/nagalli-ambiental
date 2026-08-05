@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { Topbar } from "@/components/Topbar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { PrazosView } from "@/components/PrazosView";
+import { CalendarClock } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Prazos" };
@@ -38,7 +39,7 @@ export default async function PrazosPage() {
   return (
     <div>
       <Breadcrumbs items={[{ label: "Prazos" }]} />
-      <Topbar title="Prazos" subtitle="Acompanhe os prazos de processos e exigências" />
+      <Topbar icon={CalendarClock} title="Prazos" subtitle="Acompanhe os prazos de processos e exigências" />
       <PrazosView
         processos={processosComValidade.map((p) => ({
           id: p.id,

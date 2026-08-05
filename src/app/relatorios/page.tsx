@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Topbar } from "@/components/Topbar";
 import { useSession } from "next-auth/react";
-import { FileSpreadsheet, DollarSign, Building2, FileCheck2, Download, Loader2, Eye } from "lucide-react";
+import { FileSpreadsheet, DollarSign, Building2, FileCheck2, Download, Loader2, Eye, BarChart3 } from "lucide-react";
 
 const currentYear = new Date().getFullYear();
 
@@ -66,7 +66,7 @@ export default function RelatoriosPage() {
 
   return (
     <div>
-      <Topbar title="Relatórios" subtitle="Visualize ou baixe relatórios em PDF com a situação de cada área" />
+      <Topbar icon={BarChart3} title="Relatórios" subtitle="Visualize ou baixe relatórios em PDF com a situação de cada área" />
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <Card icon={FileSpreadsheet} title="Controle DMR/MTR" description="Veja a situação de cada empreendimento por trimestre do ano: o que está em dia e o que está pendente">

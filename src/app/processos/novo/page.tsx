@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Topbar } from "@/components/Topbar";
-import { Upload, Loader2, FileText, CheckCircle2, Search, Leaf } from "lucide-react";
+import { FolderKanban, Upload, Loader2, FileText, CheckCircle2, Search, Leaf } from "lucide-react";
 
 const TIPOS = [
   "Licença Prévia",
@@ -226,7 +226,7 @@ export default function NovoProcessoPage() {
 
   return (
     <div>
-      <Topbar title="Novo Processo" subtitle="Cadastre um novo processo" />
+      <Topbar icon={FolderKanban} title="Novo Processo" subtitle="Cadastre um novo processo" />
       <div className="mx-auto max-w-2xl">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5 space-y-4">

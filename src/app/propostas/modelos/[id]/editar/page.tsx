@@ -5,6 +5,7 @@ import { ehPrivilegiado } from "@/lib/perfil";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { Topbar } from "@/components/Topbar";
 import PropostaModeloForm from "@/components/propostas/PropostaModeloForm";
+import { FileStack } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +38,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           { label: modelo.nome },
         ]}
       />
-      <Topbar title={`Editar ${modelo.nome}`} subtitle="Atualize o modelo de proposta." />
+      <Topbar icon={FileStack} title={`Editar ${modelo.nome}`} subtitle="Atualize o modelo de proposta." />
       <div className="mx-auto max-w-4xl">
         <PropostaModeloForm
           id={modelo.id}

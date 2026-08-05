@@ -6,7 +6,7 @@ import { auth } from "@/lib/auth";
 import { Topbar } from "@/components/Topbar";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { DollarSign, Building2, Calendar, FileText, Edit3, ArrowLeft } from "lucide-react";
+import { DollarSign, Building2, Calendar, FileText, Edit3, ArrowLeft, Wallet } from "lucide-react";
 import Link from "next/link";
 import DeleteButton from "@/components/DeleteButton";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
@@ -59,6 +59,7 @@ export default async function FinanceiroDetailPage(props: { params: Promise<{ id
       </div>
 
       <Topbar
+        icon={Wallet}
         title="Registro Financeiro"
         subtitle={`${reg.tipoCobranca} — ${reg.cliente.apelido}`}
         actions={

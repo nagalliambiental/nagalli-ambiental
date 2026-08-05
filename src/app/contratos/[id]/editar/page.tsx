@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useParams } from "next/navigation";
+import { FileSignature } from "lucide-react";
 import { Topbar } from "@/components/Topbar";
 
 interface Empreendimento {
@@ -102,7 +103,7 @@ export default function EditarContratoPage() {
 
   return (
     <div>
-      <Topbar title="Editar Contrato" subtitle={clientes.find((c) => String(c.id) === form.clienteId)?.apelido || "Contrato"} />
+      <Topbar icon={FileSignature} title="Editar Contrato" subtitle={clientes.find((c) => String(c.id) === form.clienteId)?.apelido || "Contrato"} />
       <div className="mx-auto max-w-2xl">
         <form onSubmit={handleSubmit} className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5 space-y-4">
           <div className="grid grid-cols-2 gap-4">
