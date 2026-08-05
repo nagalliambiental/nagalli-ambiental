@@ -6,7 +6,7 @@ import { useToast } from "@/components/Toast";
 import { FileText, Pencil, Trash2, Plus, FileStack } from "lucide-react";
 
 export interface ModeloLinha {
-  id: number;
+  id: number | null;
   slug: string;
   nome: string;
   descricao: string;
@@ -14,7 +14,8 @@ export interface ModeloLinha {
   campos: Record<string, unknown>[];
   ativo: boolean;
   temTemplate: boolean;
-  criadoEm: string;
+  criadoEm: string | null;
+  embutido?: boolean;
 }
 
 export default function ModelosList({ modelos }: { modelos: ModeloLinha[] }) {
@@ -65,7 +66,7 @@ export default function ModelosList({ modelos }: { modelos: ModeloLinha[] }) {
         </thead>
         <tbody className="divide-y divide-[var(--color-paper-200)]">
           {modelos.map((m) => (
-            <tr key={m.id} className="hover:bg-[var(--color-paper-50)]">
+            <tr key={m.embutido ? `emb-${m.slug}` : m.id} className="hover:bg-[var(--color-paper-50)]">
               <td className="p-3">
                 <div className="flex items-center gap-2">
                   <FileText size={15} className="shrink-0 text-[var(--color-brand-500)]" />
@@ -83,27 +84,41 @@ export default function ModelosList({ modelos }: { modelos: ModeloLinha[] }) {
                 )}
               </td>
               <td className="p-3 text-center">
-                {m.ativo ? (
+                {m.embutido ? (
+                  <span className="rounded-full bg-[var(--color-brand-50)] px-2.5 py-1 text-xs font-medium text-[var(--color-brand-700)]">Embutido</span>
+                ) : m.ativo ? (
                   <span className="rounded-full bg-[var(--color-brand-50)] px-2.5 py-1 text-xs font-medium text-[var(--color-brand-700)]">Ativo</span>
                 ) : (
                   <span className="rounded-full bg-[var(--color-paper-100)] px-2.5 py-1 text-xs font-medium text-[var(--color-ink-500)]">Inativo</span>
                 )}
               </td>
               <td className="p-3 text-center space-x-2">
-                <Link
-                  href={`/propostas/modelos/${m.id}/editar`}
-                  className="inline-flex items-center gap-1 rounded border border-[var(--color-paper-200)] px-2.5 py-1 text-xs text-[var(--color-ink-700)] hover:bg-[var(--color-paper-50)]"
-                >
-                  <Pencil size={12} />
-                  Editar
-                </Link>
-                <button
-                  onClick={() => handleExcluir(m.id, m.nome)}
-                  className="inline-flex items-center gap-1 rounded border border-red-300 px-2.5 py-1 text-xs text-red-700 hover:bg-red-50"
-                >
-                  <Trash2 size={12} />
-                  Excluir
-                </button>
+                {m.embutido ? (
+                  <Link
+                    href={`/propostas/nova/${m.slug}`}
+                    className="inline-flex items-center gap-1 rounded border border-[var(--color-paper-200)] px-2.5 py-1 text-xs text-[var(--color-ink-700)] hover:bg-[var(--color-paper-50)]"
+                  >
+                    <Plus size={12} />
+                    Usar
+                  </Link>
+                ) : (
+                  <>
+                    <Link
+                      href={`/propostas/modelos/${m.id}/editar`}
+                      className="inline-flex items-center gap-1 rounded border border-[var(--color-paper-200)] px-2.5 py-1 text-xs text-[var(--color-ink-700)] hover:bg-[var(--color-paper-50)]"
+                    >
+                      <Pencil size={12} />
+                      Editar
+                    </Link>
+                    <button
+                      onClick={() => handleExcluir(m.id!, m.nome)}
+                      className="inline-flex items-center gap-1 rounded border border-red-300 px-2.5 py-1 text-xs text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 size={12} />
+                      Excluir
+                    </button>
+                  </>
+                )}
               </td>
             </tr>
           ))}

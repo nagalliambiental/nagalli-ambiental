@@ -6,7 +6,8 @@ import { ehPrivilegiado } from "@/lib/perfil";
 import { Topbar } from "@/components/Topbar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { Plus, FileStack } from "lucide-react";
-import ModelosList from "@/components/propostas/ModelosList";
+import ModelosList, { type ModeloLinha } from "@/components/propostas/ModelosList";
+import { getModelosEmbutidos } from "@/lib/propostas/modelos";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Modelos de Proposta" };
@@ -31,13 +32,29 @@ export default async function Page() {
     },
   });
 
-  const serializados = modelos.map((m) => ({
+  const embutidos: ModeloLinha[] = getModelosEmbutidos().map((m) => ({
+    id: null,
+    slug: m.slug,
+    nome: m.nome,
+    descricao: m.descricao,
+    prefixoArquivo: m.prefixoArquivo,
+    campos: m.campos as unknown as Record<string, unknown>[],
+    ativo: true,
+    temTemplate: true,
+    criadoEm: null,
+    embutido: true,
+  }));
+
+  const serializados: ModeloLinha[] = modelos.map((m) => ({
     ...m,
     campos: (m.campos ?? []) as Record<string, unknown>[],
     temTemplate: Boolean(m.template),
     template: undefined,
     criadoEm: m.criadoEm.toISOString(),
+    embutido: false,
   }));
+
+  const linhas = [...embutidos, ...serializados];
 
   return (
     <div>
@@ -57,7 +74,7 @@ export default async function Page() {
         }
       />
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">
-        <ModelosList modelos={serializados} />
+        <ModelosList modelos={linhas} />
       </div>
     </div>
   );
