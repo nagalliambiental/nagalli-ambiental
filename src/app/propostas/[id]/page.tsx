@@ -6,7 +6,7 @@ import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { UltimaModificacao } from "@/components/UltimaModificacao";
 import DeleteButton from "@/components/DeleteButton";
 import { getModeloProposta } from "@/lib/propostas/modelos-server";
-import { calcularModelo } from "@/lib/propostas/modelos";
+import { calcularModelo, calcularItensModelo } from "@/lib/propostas/modelos";
 import type { CampoProposta } from "@/lib/propostas/modelos";
 
 export const dynamic = "force-dynamic";
@@ -38,6 +38,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
 
   const dados = (proposta.dados ?? {}) as Record<string, unknown>;
   const resumo = calcularModelo(modelo, dados);
+  const itens = calcularItensModelo(modelo, dados);
 
   const grupos: string[] = [];
   for (const campo of modelo.campos) {
@@ -104,28 +105,78 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
         </div>
       ))}
 
-      {resumo.length > 0 && (
-        <div className="bg-[var(--color-brand-50)] rounded-lg p-4">
-          <h3 className="font-semibold text-[var(--color-ink-900)] mb-3">Investimento</h3>
-          <table className="w-full text-sm">
-            <tbody className="divide-y divide-[var(--color-brand-200)]">
-              {resumo.map((linha, i) => (
-                <tr
-                  key={i}
-                  className={
-                    linha.destaque ? "font-bold" : ""
-                  }
-                >
-                  <td className={`py-2 ${linha.destaque ? "text-[var(--color-ink-900)]" : "text-[var(--color-ink-500)]"}`}>
-                    {linha.label}
-                  </td>
-                  <td className={`py-2 text-right ${linha.negativo ? "text-red-600" : "text-[var(--color-brand-700)]"}`}>
-                    {linha.valor}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {(itens.length > 0 || resumo.length > 0) && (
+        <div className="shadow-card overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">
+          <div className="border-b border-[var(--color-paper-200)] px-6 py-4">
+            <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">
+              Valores da Proposta
+            </h2>
+            <p className="text-xs text-[var(--color-ink-500)] mt-0.5">
+              Detalhamento dos itens e investimento previsto
+            </p>
+          </div>
+
+          <div className="p-6 space-y-8">
+            {itens.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-ink-700)] mb-3">
+                  Itens da Proposta
+                </h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-[var(--color-paper-200)] bg-[var(--color-paper-50)]">
+                        <th className="px-4 py-2.5 text-left font-medium text-[var(--color-ink-500)]">Descrição</th>
+                        <th className="px-4 py-2.5 text-center font-medium text-[var(--color-ink-500)]">Qtd.</th>
+                        <th className="px-4 py-2.5 text-right font-medium text-[var(--color-ink-500)]">Valor Unit.</th>
+                        <th className="px-4 py-2.5 text-right font-medium text-[var(--color-ink-500)]">Valor Total</th>
+                        <th className="px-4 py-2.5 text-right font-medium text-[var(--color-ink-500)]">Valor c/ Desconto</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[var(--color-paper-100)]">
+                      {itens.map((item, i) => (
+                        <tr key={i}>
+                          <td className={`px-4 py-3 text-[var(--color-ink-900)] ${item.incluso ? "italic" : ""}`}>
+                            {item.descricao}
+                          </td>
+                          <td className="px-4 py-3 text-center text-[var(--color-ink-700)]">{item.quantidade}</td>
+                          <td className="px-4 py-3 text-right text-[var(--color-ink-700)]">{item.valorUnitario}</td>
+                          <td className="px-4 py-3 text-right font-medium text-[var(--color-ink-900)]">{item.valorTotal}</td>
+                          <td className="px-4 py-3 text-right font-medium text-[var(--color-brand-700)]">
+                            {item.valorLiquido}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {resumo.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-ink-700)] mb-3">
+                  Resumo do Investimento
+                </h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <tbody className="divide-y divide-[var(--color-paper-100)]">
+                      {resumo.map((linha, i) => (
+                        <tr key={i} className={linha.destaque ? "bg-[var(--color-brand-100)]" : ""}>
+                          <td className={`px-4 py-3 ${linha.destaque ? "font-bold text-[var(--color-ink-900)]" : "text-[var(--color-ink-700)]"}`}>
+                            {linha.label}
+                          </td>
+                          <td className={`px-4 py-3 text-right ${linha.negativo ? "text-red-600" : "text-[var(--color-brand-700)]"} ${linha.destaque ? "font-bold" : "font-medium"}`}>
+                            {linha.valor}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

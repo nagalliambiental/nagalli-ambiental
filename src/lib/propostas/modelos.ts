@@ -19,6 +19,15 @@ export interface LinhaResumo {
   negativo?: boolean;
 }
 
+export interface ItemInvestimento {
+  descricao: string;
+  quantidade: string;
+  valorUnitario: string;
+  valorTotal: string;
+  valorLiquido: string;
+  incluso?: boolean;
+}
+
 export interface ModeloPropostaData {
   slug: string;
   nome: string;
@@ -175,6 +184,50 @@ export function calcularModelo(
   dados: Record<string, unknown>
 ): LinhaResumo[] {
   if (modelo.codigo === "demolicao") return calcularDemolicao(dados);
+  return [];
+}
+
+function calcularItensDemolicao(dados: Record<string, unknown>): ItemInvestimento[] {
+  const valorUnitPgrcc = numeroDe(dados, "valorUnitPgrcc", 291.78);
+  const valorUnitRgrcc = numeroDe(dados, "valorUnitRgrcc", 291.78);
+  const qtdPgrcc = numeroDe(dados, "quantidadePgrcc");
+  const qtdRgrcc = numeroDe(dados, "quantidadeRgrcc");
+  const percentual = numeroDe(dados, "percentualDesconto", 18);
+  const fator = 1 - percentual / 100;
+  const totalPgrcc = (valorUnitPgrcc * qtdPgrcc) / 0.82;
+  const totalRgrcc = (valorUnitRgrcc * qtdRgrcc) / 0.82;
+
+  return [
+    {
+      descricao: "Elaboração de PGRCC para obra de demolição",
+      quantidade: String(qtdPgrcc),
+      valorUnitario: formatarMoeda(valorUnitPgrcc),
+      valorTotal: formatarMoeda(totalPgrcc),
+      valorLiquido: formatarMoeda(totalPgrcc * fator),
+    },
+    {
+      descricao: "Elaboração de RGRCC para obra de demolição",
+      quantidade: String(qtdRgrcc),
+      valorUnitario: formatarMoeda(valorUnitRgrcc),
+      valorTotal: formatarMoeda(totalRgrcc),
+      valorLiquido: formatarMoeda(totalRgrcc * fator),
+    },
+    {
+      descricao: "Anotação de Responsabilidade Técnica CREA-PR",
+      quantidade: "1",
+      valorUnitario: "—",
+      valorTotal: "incluso",
+      valorLiquido: "incluso",
+      incluso: true,
+    },
+  ];
+}
+
+export function calcularItensModelo(
+  modelo: ModeloPropostaData,
+  dados: Record<string, unknown>
+): ItemInvestimento[] {
+  if (modelo.codigo === "demolicao") return calcularItensDemolicao(dados);
   return [];
 }
 

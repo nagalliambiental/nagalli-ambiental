@@ -269,25 +269,29 @@ export default function PropostaServicoForm({ modelo, propostaId, revisaoAtual, 
       ))}
 
       {resumo.length > 0 && (
-        <div className="border-t border-[var(--color-paper-200)] pt-6">
-          <h3 className="text-lg font-semibold text-[var(--color-ink-900)] mb-4">Resumo do Investimento</h3>
+        <div className="shadow-card overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">
+          <div className="border-b border-[var(--color-paper-200)] px-5 py-4">
+            <h3 className="font-display text-base font-semibold text-[var(--color-ink-900)]">
+              Resumo do Investimento
+            </h3>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <tbody className="divide-y divide-[var(--color-paper-200)]">
+              <tbody className="divide-y divide-[var(--color-paper-100)]">
                 {resumo.map((linha, i) => (
                   <tr
                     key={i}
                     className={
                       linha.destaque
-                        ? "bg-[var(--color-brand-100)] font-bold text-[var(--color-brand-700)]"
+                        ? "bg-[var(--color-brand-100)]"
                         : ""
                     }
                   >
-                    <td className="p-2 text-[var(--color-ink-700)]">{linha.label}</td>
+                    <td className={`px-4 py-3 ${linha.destaque ? "font-bold text-[var(--color-ink-900)]" : "text-[var(--color-ink-700)]"}`}>
+                      {linha.label}
+                    </td>
                     <td
-                      className={`p-2 text-right ${
-                        linha.negativo ? "text-red-600" : "text-[var(--color-ink-900)]"
-                      }`}
+                      className={`px-4 py-3 text-right ${linha.destaque ? "font-bold text-[var(--color-brand-700)]" : linha.negativo ? "text-red-600" : "text-[var(--color-ink-900)]"}`}
                     >
                       {linha.valor}
                     </td>
