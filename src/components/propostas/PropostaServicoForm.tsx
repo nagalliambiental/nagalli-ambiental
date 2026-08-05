@@ -4,11 +4,10 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useToast } from "@/components/Toast";
-import { getModeloProposta } from "@/lib/propostas/modelos";
-import type { CampoProposta } from "@/lib/propostas/modelos";
+import { calcularModelo, type ModeloPropostaData } from "@/lib/propostas/modelos";
 
 interface Props {
-  modeloSlug: string;
+  modelo: ModeloPropostaData;
   propostaId?: number;
   revisaoAtual?: number;
   inicial?: Record<string, unknown>;
@@ -22,15 +21,14 @@ const parseCurrencyInput = (value: string) => {
   return parseFloat(value.replace(/\./g, "").replace(",", ".")) || 0;
 };
 
-function valorInicial(campo: CampoProposta, inicial?: Record<string, unknown>): string | number {
+function valorInicial(campo: { name: string; defaultValue?: string | number }, inicial?: Record<string, unknown>): string | number {
   if (inicial?.[campo.name] != null) return inicial[campo.name] as string | number;
   return campo.defaultValue ?? "";
 }
 
-export default function PropostaServicoForm({ modeloSlug, propostaId, revisaoAtual, inicial }: Props) {
+export default function PropostaServicoForm({ modelo, propostaId, revisaoAtual, inicial }: Props) {
   const router = useRouter();
   const { toast } = useToast();
-  const modelo = getModeloProposta(modeloSlug);
 
   const [submitting, setSubmitting] = useState(false);
   const [isRevision, setIsRevision] = useState(false);
@@ -42,7 +40,7 @@ export default function PropostaServicoForm({ modeloSlug, propostaId, revisaoAtu
     return estado;
   });
 
-  const resumo = useMemo(() => (modelo ? modelo.calcular(dados) : []), [modelo, dados]);
+  const resumo = useMemo(() => (modelo ? calcularModelo(modelo, dados) : []), [modelo, dados]);
 
   if (!modelo) {
     return (
@@ -68,7 +66,7 @@ export default function PropostaServicoForm({ modeloSlug, propostaId, revisaoAtu
       : await fetch("/api/propostas-servico", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ modeloSlug, ...buildPayload() }),
+          body: JSON.stringify({ modeloSlug: modelo.slug, ...buildPayload() }),
         });
 
     if (!res.ok) {

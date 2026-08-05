@@ -5,7 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { UltimaModificacao } from "@/components/UltimaModificacao";
 import DeleteButton from "@/components/DeleteButton";
-import { getModeloProposta } from "@/lib/propostas/modelos";
+import { getModeloProposta } from "@/lib/propostas/modelos-server";
+import { calcularModelo } from "@/lib/propostas/modelos";
 import type { CampoProposta } from "@/lib/propostas/modelos";
 
 export const dynamic = "force-dynamic";
@@ -32,11 +33,11 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
   const proposta = await prisma.propostaServico.findUnique({ where: { id: Number(id) } });
   if (!proposta) notFound();
 
-  const modelo = getModeloProposta(proposta.modeloSlug);
+  const modelo = await getModeloProposta(proposta.modeloSlug);
   if (!modelo) notFound();
 
   const dados = (proposta.dados ?? {}) as Record<string, unknown>;
-  const resumo = modelo.calcular(dados);
+  const resumo = calcularModelo(modelo, dados);
 
   const grupos: string[] = [];
   for (const campo of modelo.campos) {

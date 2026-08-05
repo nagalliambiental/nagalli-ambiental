@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAuditoria } from "@/lib/audit";
-import { getModeloProposta } from "@/lib/propostas/modelos";
+import { getModeloProposta } from "@/lib/propostas/modelos-server";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
 
   const modeloSlug = body.modeloSlug;
-  if (!getModeloProposta(modeloSlug)) {
+  if (!(await getModeloProposta(modeloSlug))) {
     return NextResponse.json({ error: "Modelo de proposta não encontrado" }, { status: 400 });
   }
 

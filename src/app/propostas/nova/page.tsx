@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
-import { getModelosProposta } from "@/lib/propostas/modelos";
+import { getModelosProposta } from "@/lib/propostas/modelos-server";
 import { FileText } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +12,7 @@ export default async function Page() {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const modelos = getModelosProposta();
+  const modelos = await getModelosProposta();
 
   return (
     <div>

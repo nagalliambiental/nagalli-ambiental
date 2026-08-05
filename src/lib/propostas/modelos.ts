@@ -19,13 +19,13 @@ export interface LinhaResumo {
   negativo?: boolean;
 }
 
-export interface ModeloProposta {
+export interface ModeloPropostaData {
   slug: string;
   nome: string;
   descricao: string;
   prefixoArquivo: string;
+  codigo: string | null;
   campos: CampoProposta[];
-  calcular: (dados: Record<string, unknown>) => LinhaResumo[];
 }
 
 const numeroDe = (dados: Record<string, unknown>, chave: string, padrao = 0): number => {
@@ -33,12 +33,13 @@ const numeroDe = (dados: Record<string, unknown>, chave: string, padrao = 0): nu
   return typeof v === "number" ? v : Number(v ?? padrao) || padrao;
 };
 
-const MODELO_DEMOLICAO: ModeloProposta = {
+export const MODELO_DEMOLICAO: ModeloPropostaData = {
   slug: "demolicao",
   nome: "PGRCC e RGRCC (Demolição)",
   descricao:
     "Proposta para obras de demolição com elaboração de PGRCC e RGRCC, cálculo automático por hora técnica (HT SENGE-PR) e controle de revisões.",
   prefixoArquivo: "Proposta_Demolicao",
+  codigo: "demolicao",
   campos: [
     {
       name: "engenheiroNome",
@@ -130,50 +131,57 @@ const MODELO_DEMOLICAO: ModeloProposta = {
       grupo: "Observações",
     },
   ],
-  calcular(dados) {
-    const valorUnitPgrcc = numeroDe(dados, "valorUnitPgrcc", 291.78);
-    const valorUnitRgrcc = numeroDe(dados, "valorUnitRgrcc", 291.78);
-    const qtdPgrcc = numeroDe(dados, "quantidadePgrcc");
-    const qtdRgrcc = numeroDe(dados, "quantidadeRgrcc");
-    const percentual = numeroDe(dados, "percentualDesconto", 18);
-
-    const valorTotalPgrcc = (valorUnitPgrcc * qtdPgrcc) / 0.82;
-    const valorTotalRgrcc = (valorUnitRgrcc * qtdRgrcc) / 0.82;
-    const totalCalculado = valorTotalPgrcc + valorTotalRgrcc;
-    const valorDesconto = totalCalculado * (percentual / 100);
-    const totalComDesconto = totalCalculado - valorDesconto;
-    const totalFinal =
-      dados.totalFinal != null && String(dados.totalFinal) !== ""
-        ? numeroDe(dados, "totalFinal")
-        : totalComDesconto;
-
-    return [
-      {
-        label: `Elaboração de PGRCC (${qtdPgrcc} × ${formatarMoeda(valorUnitPgrcc)} / 0,82)`,
-        valor: formatarMoeda(valorTotalPgrcc),
-      },
-      {
-        label: `Elaboração de RGRCC (${qtdRgrcc} × ${formatarMoeda(valorUnitRgrcc)} / 0,82)`,
-        valor: formatarMoeda(valorTotalRgrcc),
-      },
-      { label: "Anotação de Responsabilidade Técnica CREA-PR", valor: "incluso" },
-      { label: "Total Calculado", valor: formatarMoeda(totalCalculado), destaque: true },
-      {
-        label: `Desconto (${percentual}%)`,
-        valor: `-${formatarMoeda(valorDesconto)}`,
-        negativo: true,
-      },
-      { label: "Total com Desconto", valor: formatarMoeda(totalFinal), destaque: true },
-    ];
-  },
 };
 
-const MODELOS: ModeloProposta[] = [MODELO_DEMOLICAO];
+function calcularDemolicao(dados: Record<string, unknown>): LinhaResumo[] {
+  const valorUnitPgrcc = numeroDe(dados, "valorUnitPgrcc", 291.78);
+  const valorUnitRgrcc = numeroDe(dados, "valorUnitRgrcc", 291.78);
+  const qtdPgrcc = numeroDe(dados, "quantidadePgrcc");
+  const qtdRgrcc = numeroDe(dados, "quantidadeRgrcc");
+  const percentual = numeroDe(dados, "percentualDesconto", 18);
 
-export function getModelosProposta(): ModeloProposta[] {
-  return MODELOS;
+  const valorTotalPgrcc = (valorUnitPgrcc * qtdPgrcc) / 0.82;
+  const valorTotalRgrcc = (valorUnitRgrcc * qtdRgrcc) / 0.82;
+  const totalCalculado = valorTotalPgrcc + valorTotalRgrcc;
+  const valorDesconto = totalCalculado * (percentual / 100);
+  const totalComDesconto = totalCalculado - valorDesconto;
+  const totalFinal =
+    dados.totalFinal != null && String(dados.totalFinal) !== ""
+      ? numeroDe(dados, "totalFinal")
+      : totalComDesconto;
+
+  return [
+    {
+      label: `Elaboração de PGRCC (${qtdPgrcc} × ${formatarMoeda(valorUnitPgrcc)} / 0,82)`,
+      valor: formatarMoeda(valorTotalPgrcc),
+    },
+    {
+      label: `Elaboração de RGRCC (${qtdRgrcc} × ${formatarMoeda(valorUnitRgrcc)} / 0,82)`,
+      valor: formatarMoeda(valorTotalRgrcc),
+    },
+    { label: "Anotação de Responsabilidade Técnica CREA-PR", valor: "incluso" },
+    { label: "Total Calculado", valor: formatarMoeda(totalCalculado), destaque: true },
+    {
+      label: `Desconto (${percentual}%)`,
+      valor: `-${formatarMoeda(valorDesconto)}`,
+      negativo: true,
+    },
+    { label: "Total com Desconto", valor: formatarMoeda(totalFinal), destaque: true },
+  ];
 }
 
-export function getModeloProposta(slug: string): ModeloProposta | undefined {
-  return MODELOS.find((m) => m.slug === slug);
+export function calcularModelo(
+  modelo: ModeloPropostaData,
+  dados: Record<string, unknown>
+): LinhaResumo[] {
+  if (modelo.codigo === "demolicao") return calcularDemolicao(dados);
+  return [];
+}
+
+export function getModelosEmbutidos(): ModeloPropostaData[] {
+  return [MODELO_DEMOLICAO];
+}
+
+export function getModeloEmbutido(slug: string): ModeloPropostaData | undefined {
+  return MODELO_DEMOLICAO.slug === slug ? MODELO_DEMOLICAO : undefined;
 }

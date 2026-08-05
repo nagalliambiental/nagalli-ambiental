@@ -8,7 +8,7 @@ import { Plus } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import PropostasServicoList from "@/components/propostas/PropostasServicoList";
-import { getModelosProposta } from "@/lib/propostas/modelos";
+import { getModelosProposta } from "@/lib/propostas/modelos-server";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Propostas de Serviços" };
@@ -24,7 +24,7 @@ export default async function PropostasPage({
   const { q } = await searchParams;
 
   const modeloNomes: Record<string, string> = {};
-  for (const modelo of getModelosProposta()) {
+  for (const modelo of await getModelosProposta()) {
     modeloNomes[modelo.slug] = modelo.nome;
   }
 

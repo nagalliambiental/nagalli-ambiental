@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getModeloProposta } from "@/lib/propostas/modelos";
+import { getModeloProposta, getModeloTemplateBytes } from "@/lib/propostas/modelos-server";
 import { gerarDocxModelo } from "@/lib/propostas/geradores";
 
 export const dynamic = "force-dynamic";
@@ -18,16 +18,17 @@ export async function POST(
 
   if (!proposta) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
 
-  const modelo = getModeloProposta(proposta.modeloSlug);
+  const modelo = await getModeloProposta(proposta.modeloSlug);
   if (!modelo) return NextResponse.json({ error: "Modelo de proposta não encontrado" }, { status: 400 });
 
+  const templateBytes = await getModeloTemplateBytes(proposta.modeloSlug);
   const dados = (proposta.dados ?? {}) as Record<string, unknown>;
 
-  const docxBuffer = gerarDocxModelo(proposta.modeloSlug, dados, {
+  const docxBuffer = gerarDocxModelo(modelo, dados, {
     numero: proposta.numero,
     ano: proposta.ano,
     revisao: proposta.revisao,
-  });
+  }, templateBytes);
 
   const bytes = new Uint8Array(docxBuffer);
 

@@ -1,12 +1,17 @@
+import PizZip from "pizzip";
+import Docxtemplater from "docxtemplater";
 import { gerarPropostaDemolicao } from "@/lib/templates/proposta-demolicao/generate";
 import type { PropostaDemolicaoFormData } from "@/lib/templates/proposta-demolicao/config";
+import { formatarMoeda, formatarDataBR } from "@/lib/templates/proposta-demolicao/config";
+import type { ModeloPropostaData } from "./modelos";
 
 export function gerarDocxModelo(
-  modeloSlug: string,
+  modelo: ModeloPropostaData,
   dados: Record<string, unknown>,
-  meta: { numero: number; ano: number; revisao: number }
+  meta: { numero: number; ano: number; revisao: number },
+  templateBytes?: Uint8Array | null
 ): Buffer {
-  if (modeloSlug === "demolicao") {
+  if (modelo.codigo === "demolicao") {
     const form: PropostaDemolicaoFormData = {
       engenheiroNome: String(dados.engenheiroNome ?? ""),
       empresaNome: String(dados.empresaNome ?? ""),
@@ -28,5 +33,41 @@ export function gerarDocxModelo(
     };
     return gerarPropostaDemolicao(form, meta);
   }
-  throw new Error(`Modelo sem gerador: ${modeloSlug}`);
+
+  if (!templateBytes) {
+    throw new Error(`Modelo sem template DOCX: ${modelo.slug}`);
+  }
+
+  return renderDocxGenerico(templateBytes, modelo, dados, meta);
+}
+
+function renderDocxGenerico(
+  templateBytes: Uint8Array,
+  modelo: ModeloPropostaData,
+  dados: Record<string, unknown>,
+  meta: { numero: number; ano: number; revisao: number }
+): Buffer {
+  const zip = new PizZip(templateBytes);
+  const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
+
+  const renderData: Record<string, unknown> = {
+    ...dados,
+    numero: meta.numero,
+    ano: meta.ano,
+    revisao: meta.revisao,
+    identificacao: `${meta.numero} / ${meta.ano} – REV. ${String(meta.revisao).padStart(2, "0")}`,
+    dataFormatada: formatarDataBR(),
+  };
+
+  for (const campo of modelo.campos) {
+    if (campo.tipo === "moeda") {
+      const v = Number(dados[campo.name]);
+      if (!Number.isNaN(v)) {
+        renderData[`${campo.name}Formatado`] = formatarMoeda(v);
+      }
+    }
+  }
+
+  doc.render(renderData);
+  return doc.getZip().generate({ type: "nodebuffer", compression: "DEFLATE" });
 }

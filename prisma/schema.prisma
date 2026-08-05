@@ -472,3 +472,16 @@ model PropostaServico {
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 }
+
+model PropostaModelo {
+  id             Int      @id @default(autoincrement())
+  slug           String   @unique
+  nome           String
+  descricao      String   @default("")
+  prefixoArquivo String
+  campos         Json     @default("[]")
+  template       Bytes?
+  ativo          Boolean  @default(true)
+  criadoEm       DateTime @default(now())
+  atualizadoEm   DateTime @updatedAt
+}

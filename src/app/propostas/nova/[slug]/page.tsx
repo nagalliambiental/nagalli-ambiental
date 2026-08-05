@@ -2,13 +2,13 @@ import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import PropostaServicoForm from "@/components/propostas/PropostaServicoForm";
-import { getModeloProposta } from "@/lib/propostas/modelos";
+import { getModeloProposta } from "@/lib/propostas/modelos-server";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata(props: { params: Promise<{ slug: string }> }) {
   const { slug } = await props.params;
-  const modelo = getModeloProposta(slug);
+  const modelo = await getModeloProposta(slug);
   return { title: modelo ? `Nova ${modelo.nome}` : "Nova Proposta" };
 }
 
@@ -17,7 +17,7 @@ export default async function Page(props: { params: Promise<{ slug: string }> })
   if (!session?.user) redirect("/login");
 
   const { slug } = await props.params;
-  const modelo = getModeloProposta(slug);
+  const modelo = await getModeloProposta(slug);
   if (!modelo) notFound();
 
   return (
@@ -29,7 +29,7 @@ export default async function Page(props: { params: Promise<{ slug: string }> })
           { label: modelo.nome },
         ]}
       />
-      <PropostaServicoForm modeloSlug={modelo.slug} />
+      <PropostaServicoForm modelo={modelo} />
     </div>
   );
 }

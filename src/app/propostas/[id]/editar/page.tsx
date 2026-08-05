@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import PropostaServicoForm from "@/components/propostas/PropostaServicoForm";
-import { getModeloProposta } from "@/lib/propostas/modelos";
+import { getModeloProposta } from "@/lib/propostas/modelos-server";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +21,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
   const proposta = await prisma.propostaServico.findUnique({ where: { id: Number(id) } });
   if (!proposta) notFound();
 
-  const modelo = getModeloProposta(proposta.modeloSlug);
+  const modelo = await getModeloProposta(proposta.modeloSlug);
   if (!modelo) notFound();
 
   return (
@@ -34,7 +34,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
         ]}
       />
       <PropostaServicoForm
-        modeloSlug={modelo.slug}
+        modelo={modelo}
         propostaId={proposta.id}
         revisaoAtual={proposta.revisao}
         inicial={(proposta.dados ?? {}) as Record<string, unknown>}
