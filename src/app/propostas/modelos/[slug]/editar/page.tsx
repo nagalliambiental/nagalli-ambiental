@@ -9,16 +9,17 @@ import { FileStack } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
-export default async function Page({ params }: { params: Promise<{ id: string }> }) {
+export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
   const session = await auth();
   if (!session?.user) redirect("/login");
   if (!ehPrivilegiado((session.user as { perfil?: string }).perfil)) redirect("/");
 
-  const { id } = await params;
+  const { slug } = await params;
   const modelo = await prisma.propostaModelo.findUnique({
-    where: { id: Number(id) },
+    where: { slug },
     select: {
       id: true,
+      slug: true,
       nome: true,
       descricao: true,
       prefixoArquivo: true,

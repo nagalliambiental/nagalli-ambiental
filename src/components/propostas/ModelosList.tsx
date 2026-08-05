@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/Toast";
-import { FileText, Pencil, Trash2, Plus, FileStack } from "lucide-react";
+import { FileText, Pencil, Trash2, Plus, FileStack, Eye, Copy } from "lucide-react";
 
 export interface ModeloLinha {
   id: number | null;
@@ -92,33 +92,51 @@ export default function ModelosList({ modelos }: { modelos: ModeloLinha[] }) {
                   <span className="rounded-full bg-[var(--color-paper-100)] px-2.5 py-1 text-xs font-medium text-[var(--color-ink-500)]">Inativo</span>
                 )}
               </td>
-              <td className="p-3 text-center space-x-2">
-                {m.embutido ? (
+              <td className="p-3">
+                <div className="flex items-center justify-center gap-1.5">
                   <Link
-                    href={`/propostas/nova/${m.slug}`}
+                    href={`/propostas/modelos/${m.slug}`}
                     className="inline-flex items-center gap-1 rounded border border-[var(--color-paper-200)] px-2.5 py-1 text-xs text-[var(--color-ink-700)] hover:bg-[var(--color-paper-50)]"
                   >
-                    <Plus size={12} />
-                    Usar
+                    <Eye size={12} />
+                    Ver
                   </Link>
-                ) : (
-                  <>
-                    <Link
-                      href={`/propostas/modelos/${m.id}/editar`}
-                      className="inline-flex items-center gap-1 rounded border border-[var(--color-paper-200)] px-2.5 py-1 text-xs text-[var(--color-ink-700)] hover:bg-[var(--color-paper-50)]"
-                    >
-                      <Pencil size={12} />
-                      Editar
-                    </Link>
-                    <button
-                      onClick={() => handleExcluir(m.id!, m.nome)}
-                      className="inline-flex items-center gap-1 rounded border border-red-300 px-2.5 py-1 text-xs text-red-700 hover:bg-red-50"
-                    >
-                      <Trash2 size={12} />
-                      Excluir
-                    </button>
-                  </>
-                )}
+                  {m.embutido ? (
+                    <>
+                      <Link
+                        href={`/propostas/modelos/novo?duplicar=${m.slug}`}
+                        className="inline-flex items-center gap-1 rounded border border-[var(--color-paper-200)] px-2.5 py-1 text-xs text-[var(--color-ink-700)] hover:bg-[var(--color-paper-50)]"
+                      >
+                        <Copy size={12} />
+                        Duplicar
+                      </Link>
+                      <Link
+                        href={`/propostas/nova/${m.slug}`}
+                        className="inline-flex items-center gap-1 rounded border border-[var(--color-paper-200)] px-2.5 py-1 text-xs text-[var(--color-ink-700)] hover:bg-[var(--color-paper-50)]"
+                      >
+                        <Plus size={12} />
+                        Usar
+                      </Link>
+                    </>
+                  ) : (
+                    <>
+                      <Link
+                        href={`/propostas/modelos/${m.slug}/editar`}
+                        className="inline-flex items-center gap-1 rounded border border-[var(--color-paper-200)] px-2.5 py-1 text-xs text-[var(--color-ink-700)] hover:bg-[var(--color-paper-50)]"
+                      >
+                        <Pencil size={12} />
+                        Editar
+                      </Link>
+                      <button
+                        onClick={() => handleExcluir(m.id!, m.nome)}
+                        className="inline-flex items-center gap-1 rounded border border-red-300 px-2.5 py-1 text-xs text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 size={12} />
+                        Excluir
+                      </button>
+                    </>
+                  )}
+                </div>
               </td>
             </tr>
           ))}
