@@ -53,8 +53,10 @@ export async function GET(
     return NextResponse.json({ error: "Erro ao gerar o relatório" }, { status: 500 });
   }
 
-  const safeName = `relatorio_condicionantes_${processo.numLicenca || processo.numProtocolo || processo.id}_${Date.now()}.docx`
-    .replace(/[^a-zA-Z0-9._-]/g, "_");
+  const safeName = `Relatorio_de_Condicionantes_${processo.empreendimento.apelido}.docx`.replace(
+    /[^a-zA-Z0-9._-]/g,
+    "_"
+  );
 
   let caminho = `/uploads/documentos/${safeName}`;
   try {
