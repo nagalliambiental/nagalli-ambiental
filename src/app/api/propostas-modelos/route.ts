@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAuditoria } from "@/lib/audit";
-import { ehPrivilegiado } from "@/lib/perfil";
+import { requerPerfil } from "@/lib/perfil";
 import type { Prisma } from "@prisma/client";
 import type { CampoProposta } from "@/lib/propostas/modelos";
 
@@ -31,8 +30,8 @@ async function slugUnico(nome: string): Promise<string> {
 }
 
 export async function GET() {
-  const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  const { erro } = await requerPerfil(["socio", "admin"]);
+  if (erro) return erro;
 
   const modelos = await prisma.propostaModelo.findMany({
     orderBy: { nome: "asc" },
@@ -55,13 +54,10 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-  if (!ehPrivilegiado((session.user as { perfil?: string }).perfil)) {
-    return NextResponse.json({ error: "Apenas administradores" }, { status: 403 });
-  }
+  const { user, erro } = await requerPerfil(["socio", "admin"]);
+  if (erro) return erro;
 
-  const userId = Number((session.user as { id?: string }).id);
+  const userId = Number(user.id);
 
   try {
     const formData = await req.formData();

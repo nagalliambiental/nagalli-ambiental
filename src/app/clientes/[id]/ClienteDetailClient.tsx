@@ -605,7 +605,7 @@ export function ClienteDetailClient({
                     <div className="flex items-center gap-3">
                       <span className="text-xs text-[var(--color-ink-500)]">{format(new Date(d.criadoEm), "dd/MM/yyyy")}</span>
                       <a
-                        href={d.caminho}
+                        href={`/api/documentos/${d.id}/download`}
                         target="_blank"
                         className="rounded p-1 text-[var(--color-ink-400)] hover:text-[var(--color-brand-600)]"
                         title="Download"

@@ -1,18 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requerPerfil } from "@/lib/perfil";
 import { logAuditoria } from "@/lib/audit";
 
 export async function GET() {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-  }
-
-  const perfil = (session.user as { perfil?: string }).perfil;
-  if (perfil !== "socio") {
-    return NextResponse.json({ error: "Acesso restrito a sócios" }, { status: 403 });
-  }
+  const { erro } = await requerPerfil(["socio", "admin"]);
+  if (erro) return erro;
 
   const financeiros = await prisma.financeiro.findMany({
     include: { cliente: true },
@@ -23,15 +16,8 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-  }
-
-  const perfil = (session.user as { perfil?: string }).perfil;
-  if (perfil !== "socio") {
-    return NextResponse.json({ error: "Acesso restrito a sócios" }, { status: 403 });
-  }
+  const { user, erro } = await requerPerfil(["socio", "admin"]);
+  if (erro) return erro;
 
   try {
     const data = await request.json();
@@ -42,11 +28,12 @@ export async function POST(request: Request) {
       "financeiro",
       financeiro.id,
       data,
-      Number((session.user as { id: string }).id)
+      Number(user.id)
     );
 
     return NextResponse.json(financeiro, { status: 201 });
   } catch (error) {
+    console.error("Erro ao criar registro financeiro:", error);
     return NextResponse.json(
       { error: "Erro ao criar registro financeiro" },
       { status: 400 }
@@ -55,25 +42,22 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-  const perfil = (session.user as { perfil?: string }).perfil;
-  if (perfil !== "socio") return NextResponse.json({ error: "Acesso restrito a sócios" }, { status: 403 });
+  const { erro } = await requerPerfil(["socio", "admin"]);
+  if (erro) return erro;
   const ids = req.nextUrl.searchParams.get("ids");
   if (!ids) return NextResponse.json({ error: "ids é obrigatório" }, { status: 400 });
   try {
     await prisma.financeiro.deleteMany({ where: { id: { in: ids.split(",").map(Number) } } });
     return NextResponse.json({ ok: true });
   } catch (e) {
+    console.error("Erro ao remover registros financeiros:", e);
     return NextResponse.json({ error: "Erro ao remover. Verifique se há registros vinculados." }, { status: 400 });
   }
 }
 
 export async function PATCH(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-  const perfil = (session.user as { perfil?: string }).perfil;
-  if (perfil !== "socio") return NextResponse.json({ error: "Acesso restrito a sócios" }, { status: 403 });
+  const { erro } = await requerPerfil(["socio", "admin"]);
+  if (erro) return erro;
   const ids = req.nextUrl.searchParams.get("ids");
   if (!ids) return NextResponse.json({ error: "ids é obrigatório" }, { status: 400 });
   const body = await req.json();

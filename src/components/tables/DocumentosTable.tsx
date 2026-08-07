@@ -63,7 +63,7 @@ export function DocumentosTable({ data, q }: { data: DocData[]; q?: string | nul
       header: "Ações",
       render: (d) => (
         <div className="flex items-center gap-2">
-          <a href={d.caminho} download className="text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)]" title="Download"><Download size={16} /></a>
+          <a href={`/api/documentos/${d.id}/download`} className="text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)]" title="Download"><Download size={16} /></a>
           <RowActions detailUrl={`/documentos/${d.id}`} editUrl={`/documentos/${d.id}/editar`} entity="documento" entityName="Documento" endpoint={`/api/documentos/${d.id}`} />
         </div>
       ),

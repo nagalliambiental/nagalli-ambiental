@@ -1,27 +1,18 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { requerAutenticado, requerPerfil } from "@/lib/perfil";
 
 export async function GET() {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-  }
+  const { erro } = await requerAutenticado();
+  if (erro) return erro;
 
   const config = await prisma.empresaConfig.findFirst();
   return NextResponse.json(config || {});
 }
 
 export async function PUT(request: Request) {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-  }
-
-  const perfil = (session.user as { perfil?: string }).perfil;
-  if (perfil !== "socio") {
-    return NextResponse.json({ error: "Apenas sócios podem alterar configurações" }, { status: 403 });
-  }
+  const { erro } = await requerPerfil(["socio", "admin"]);
+  if (erro) return erro;
 
   try {
     const body = await request.json();
@@ -32,7 +23,8 @@ export async function PUT(request: Request) {
       : await prisma.empresaConfig.create({ data: body });
 
     return NextResponse.json(config);
-  } catch {
+  } catch (error) {
+    console.error("Erro ao salvar configurações:", error);
     return NextResponse.json({ error: "Erro ao salvar configurações" }, { status: 400 });
   }
 }

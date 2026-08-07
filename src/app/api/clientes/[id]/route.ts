@@ -40,6 +40,7 @@ export async function GET(
 
     return NextResponse.json(cliente);
   } catch (error) {
+    console.error("Erro ao buscar cliente:", error);
     return NextResponse.json(
       { erro: "Erro ao buscar cliente" },
       { status: 500 }
@@ -115,6 +116,7 @@ export async function PUT(
 
     return NextResponse.json(cliente);
   } catch (error) {
+    console.error("Erro ao atualizar cliente:", error);
     return NextResponse.json(
       { erro: "Erro ao atualizar cliente" },
       { status: 500 }
@@ -161,6 +163,7 @@ export async function PATCH(
 
     return NextResponse.json(cliente);
   } catch (error) {
+    console.error("Erro ao atualizar visibilidade:", error);
     return NextResponse.json(
       { erro: "Erro ao atualizar visibilidade" },
       { status: 500 }
@@ -221,6 +224,7 @@ export async function DELETE(
 
     return NextResponse.json({ mensagem: "Cliente excluído com sucesso" });
   } catch (error) {
+    console.error("Erro ao excluir cliente:", error);
     return NextResponse.json(
       { erro: "Erro ao excluir cliente" },
       { status: 500 }

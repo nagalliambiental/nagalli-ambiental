@@ -105,6 +105,7 @@ export async function DELETE(req: NextRequest) {
     });
     return NextResponse.json({ ok: true });
   } catch (e) {
+    console.error("Erro ao remover empreendimentos:", e);
     return NextResponse.json({ error: "Erro ao remover. Verifique se há registros vinculados." }, { status: 400 });
   }
 }

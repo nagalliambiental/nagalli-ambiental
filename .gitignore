@@ -50,3 +50,7 @@ next-env.d.ts
 # Rust / Tauri build
 /src-tauri/target/
 temp_check/
+
+# runtime artifacts (fs efemero na Vercel; bytes ficam no banco)
+/public/uploads/
+/0

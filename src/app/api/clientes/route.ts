@@ -21,6 +21,7 @@ export async function GET() {
 
     return NextResponse.json(clientes);
   } catch (error) {
+    console.error("Erro ao listar clientes:", error);
     return NextResponse.json(
       { erro: "Erro ao listar clientes" },
       { status: 500 }
@@ -62,6 +63,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(cliente, { status: 201 });
   } catch (error) {
+    console.error("Erro ao criar cliente:", error);
     return NextResponse.json(
       { erro: "Erro ao criar cliente" },
       { status: 500 }
@@ -78,6 +80,7 @@ export async function DELETE(req: NextRequest) {
     await prisma.cliente.deleteMany({ where: { id: { in: ids.split(",").map(Number) } } });
     return NextResponse.json({ ok: true });
   } catch (e) {
+    console.error("Erro ao remover clientes:", e);
     return NextResponse.json({ error: "Erro ao remover. Verifique se há registros vinculados." }, { status: 400 });
   }
 }

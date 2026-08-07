@@ -228,6 +228,7 @@ model Documento {
   criadoEm    DateTime   @default(now())
   ativo       Boolean    @default(true)
   clienteId   Int?
+  conteudo    Bytes?
   cliente     Cliente?   @relation(fields: [clienteId], references: [id])
   exigencia   Exigencia? @relation(fields: [exigenciaId], references: [id])
   processo    Processo?  @relation(fields: [processoId], references: [id])

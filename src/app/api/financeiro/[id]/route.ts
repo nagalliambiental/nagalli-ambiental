@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { requerPerfil } from "@/lib/perfil";
 import { logAuditoria } from "@/lib/audit";
 
 
@@ -8,10 +8,8 @@ export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-  }
+  const { erro } = await requerPerfil(["socio", "admin"]);
+  if (erro) return erro;
 
   const { id } = await params;
   const fin = await prisma.financeiro.findUnique({
@@ -30,15 +28,8 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-  }
-
-  const perfilLogado = (session.user as { perfil?: string }).perfil;
-  if (perfilLogado !== "socio") {
-    return NextResponse.json({ error: "Apenas sócios podem alterar financeiro" }, { status: 403 });
-  }
+  const { user, erro } = await requerPerfil(["socio", "admin"]);
+  if (erro) return erro;
 
   const { id } = await params;
   const body = await request.json();
@@ -57,7 +48,7 @@ export async function PUT(
     },
   });
 
-  await logAuditoria("ATUALIZAR", "financeiro", fin.id, body, Number((session.user as { id: string }).id));
+  await logAuditoria("ATUALIZAR", "financeiro", fin.id, body, Number(user.id));
   return NextResponse.json(fin);
 }
 
@@ -65,15 +56,8 @@ export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-  }
-
-  const perfilLogado = (session.user as { perfil?: string }).perfil;
-  if (perfilLogado !== "socio") {
-    return NextResponse.json({ error: "Apenas sócios podem excluir financeiro" }, { status: 403 });
-  }
+  const { user, erro } = await requerPerfil(["socio", "admin"]);
+  if (erro) return erro;
 
   const { id } = await params;
 
@@ -84,6 +68,6 @@ export async function DELETE(
 
   await prisma.financeiro.delete({ where: { id: Number(id) } });
 
-  await logAuditoria("EXCLUIR", "financeiro", Number(id), { descricao: fin.descricao }, Number((session.user as { id: string }).id));
+  await logAuditoria("EXCLUIR", "financeiro", Number(id), { descricao: fin.descricao }, Number(user.id));
   return NextResponse.json({ mensagem: "Financeiro excluído" });
 }

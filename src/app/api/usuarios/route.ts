@@ -1,14 +1,12 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAuditoria } from "@/lib/audit";
+import { requerPerfil } from "@/lib/perfil";
 import bcrypt from "bcryptjs";
 
 export async function GET() {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-  }
+  const { erro } = await requerPerfil(["socio", "admin"]);
+  if (erro) return erro;
 
   const usuarios = await prisma.usuario.findMany({
     select: {
@@ -27,10 +25,8 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-  }
+  const { user, erro } = await requerPerfil(["socio", "admin"]);
+  if (erro) return erro;
 
   try {
     const data = await request.json();
@@ -60,11 +56,12 @@ export async function POST(request: Request) {
       "usuario",
       usuario.id,
       { nome: usuario.nome, email: usuario.email, perfil: usuario.perfil },
-      Number((session.user as { id: string }).id)
+      Number(user.id)
     );
 
     return NextResponse.json(usuario, { status: 201 });
   } catch (error) {
+    console.error("Erro ao criar usuário:", error);
     return NextResponse.json(
       { error: "Erro ao criar usuário" },
       { status: 400 }

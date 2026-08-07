@@ -1,22 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requerPerfil } from "@/lib/perfil";
 import { logAuditoria } from "@/lib/audit";
 
-function isAdmin(perfil?: string) {
-  return perfil === "socio" || perfil === "admin";
-}
-
 export async function GET() {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-  }
-
-  const perfil = (session.user as { perfil?: string }).perfil;
-  if (!isAdmin(perfil)) {
-    return NextResponse.json({ error: "Acesso restrito a sócios/administradores" }, { status: 403 });
-  }
+  const { erro } = await requerPerfil(["socio", "admin"]);
+  if (erro) return erro;
 
   const contratos = await prisma.contrato.findMany({
     include: {
@@ -30,15 +19,8 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-  }
-
-  const perfil = (session.user as { perfil?: string }).perfil;
-  if (!isAdmin(perfil)) {
-    return NextResponse.json({ error: "Acesso restrito a sócios/administradores" }, { status: 403 });
-  }
+  const { user, erro } = await requerPerfil(["socio", "admin"]);
+  if (erro) return erro;
 
   try {
     const body = await request.json();
@@ -70,11 +52,12 @@ export async function POST(request: Request) {
       "contrato",
       contrato.id,
       body,
-      Number((session.user as { id: string }).id)
+      Number(user.id)
     );
 
     return NextResponse.json(contrato, { status: 201 });
-  } catch {
+  } catch (error) {
+    console.error("Erro ao criar contrato:", error);
     return NextResponse.json(
       { error: "Erro ao criar contrato" },
       { status: 400 }
@@ -83,26 +66,23 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-  const perfil = (session.user as { perfil?: string }).perfil;
-  if (!isAdmin(perfil)) return NextResponse.json({ error: "Acesso restrito a sócios/administradores" }, { status: 403 });
+  const { erro } = await requerPerfil(["socio", "admin"]);
+  if (erro) return erro;
 
   const ids = req.nextUrl.searchParams.get("ids");
   if (!ids) return NextResponse.json({ error: "ids é obrigatório" }, { status: 400 });
   try {
     await prisma.contrato.deleteMany({ where: { id: { in: ids.split(",").map(Number) } } });
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (error) {
+    console.error("Erro ao remover contratos:", error);
     return NextResponse.json({ error: "Erro ao remover. Verifique se há registros vinculados." }, { status: 400 });
   }
 }
 
 export async function PATCH(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-  const perfil = (session.user as { perfil?: string }).perfil;
-  if (!isAdmin(perfil)) return NextResponse.json({ error: "Acesso restrito a sócios/administradores" }, { status: 403 });
+  const { erro } = await requerPerfil(["socio", "admin"]);
+  if (erro) return erro;
 
   const ids = req.nextUrl.searchParams.get("ids");
   if (!ids) return NextResponse.json({ error: "ids é obrigatório" }, { status: 400 });

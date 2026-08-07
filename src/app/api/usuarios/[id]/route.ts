@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAuditoria } from "@/lib/audit";
+import { requerPerfil } from "@/lib/perfil";
 import bcrypt from "bcryptjs";
 
 
@@ -46,10 +47,8 @@ export async function PUT(
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
 
-  const perfilLogado = (session.user as { perfil?: string }).perfil;
-  if (perfilLogado !== "socio") {
-    return NextResponse.json({ error: "Apenas sócios podem alterar usuários" }, { status: 403 });
-  }
+  const { user, erro } = await requerPerfil(["socio", "admin"]);
+  if (erro) return erro;
 
   const { id } = await params;
   const body = await _req.json();
@@ -70,9 +69,10 @@ export async function PUT(
       select: { id: true, nome: true, email: true, perfil: true, ativo: true, cpf: true, conselho: true },
     });
 
-    await logAuditoria("ATUALIZAR", "usuario", usuario.id, data, Number((session.user as { id: string }).id));
+    await logAuditoria("ATUALIZAR", "usuario", usuario.id, data, Number(user.id));
     return NextResponse.json(usuario);
   } catch (error) {
+    console.error("Erro ao atualizar usuário:", error);
     return NextResponse.json({ error: "Erro ao atualizar usuário" }, { status: 400 });
   }
 }
@@ -81,15 +81,8 @@ export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-  }
-
-  const perfilLogado = (session.user as { perfil?: string }).perfil;
-  if (perfilLogado !== "socio") {
-    return NextResponse.json({ error: "Apenas sócios podem excluir usuários" }, { status: 403 });
-  }
+  const { user, erro } = await requerPerfil(["socio", "admin"]);
+  if (erro) return erro;
 
   const { id } = await params;
   const usuario = await prisma.usuario.findUnique({ where: { id: Number(id) } });
@@ -99,6 +92,6 @@ export async function DELETE(
 
   await prisma.usuario.delete({ where: { id: Number(id) } });
 
-  await logAuditoria("EXCLUIR", "usuario", Number(id), { email: usuario.email }, Number((session.user as { id: string }).id));
+  await logAuditoria("EXCLUIR", "usuario", Number(id), { email: usuario.email }, Number(user.id));
   return NextResponse.json({ mensagem: "Usuário excluído" });
 }

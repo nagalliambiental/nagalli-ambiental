@@ -133,7 +133,7 @@ export default async function DocumentoDetailPage(props: { params: Promise<{ id:
             content: (
               <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
                 <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-3">Arquivo</h2>
-                <a href={doc.caminho} download className="focus-ring transition-brand inline-flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)]">
+                <a href={`/api/documentos/${doc.id}/download`} className="focus-ring transition-brand inline-flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)]">
                   <Download size={16} />
                   Baixar arquivo
                 </a>

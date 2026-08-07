@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { criptografar, descriptografar } from "@/lib/crypto";
 
 export async function GET(request: Request) {
   const session = await auth();
@@ -28,7 +29,9 @@ export async function GET(request: Request) {
     include: { cliente: { select: { apelido: true } }, empreendimento: { select: { apelido: true } } },
   });
 
-  return NextResponse.json(acessos);
+  return NextResponse.json(
+    acessos.map((a) => ({ ...a, senha: descriptografar(a.senha) }))
+  );
 }
 
 export async function POST(request: Request) {
@@ -44,7 +47,7 @@ export async function POST(request: Request) {
     const acesso = await prisma.acesso.create({
       data: {
         login: json.login.trim(),
-        senha: json.senha.trim(),
+        senha: criptografar(json.senha.trim()),
         descricao: json.descricao.trim(),
         clienteId: json.clienteId ? Number(json.clienteId) : null,
         empreendimentoId: json.empreendimentoId ? Number(json.empreendimentoId) : null,
@@ -52,8 +55,12 @@ export async function POST(request: Request) {
       include: { cliente: { select: { apelido: true } }, empreendimento: { select: { apelido: true } } },
     });
 
-    return NextResponse.json(acesso, { status: 201 });
-  } catch {
+    return NextResponse.json(
+      { ...acesso, senha: descriptografar(acesso.senha) },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error("Erro ao criar acesso:", error);
     return NextResponse.json({ error: "Erro ao criar acesso" }, { status: 400 });
   }
 }

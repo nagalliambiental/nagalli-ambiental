@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAuditoria } from "@/lib/audit";
-import { ehPrivilegiado } from "@/lib/perfil";
+import { requerPerfil } from "@/lib/perfil";
 import type { Prisma } from "@prisma/client";
 import type { CampoProposta } from "@/lib/propostas/modelos";
 
@@ -12,8 +11,8 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  const { erro } = await requerPerfil(["socio", "admin"]);
+  if (erro) return erro;
 
   const { id } = await params;
   const modelo = await prisma.propostaModelo.findUnique({
@@ -40,13 +39,10 @@ export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-  if (!ehPrivilegiado((session.user as { perfil?: string }).perfil)) {
-    return NextResponse.json({ error: "Apenas administradores" }, { status: 403 });
-  }
+  const { user, erro } = await requerPerfil(["socio", "admin"]);
+  if (erro) return erro;
 
-  const userId = Number((session.user as { id?: string }).id);
+  const userId = Number(user.id);
   const { id } = await params;
 
   const existente = await prisma.propostaModelo.findUnique({ where: { id: Number(id) } });
@@ -103,13 +99,10 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-  if (!ehPrivilegiado((session.user as { perfil?: string }).perfil)) {
-    return NextResponse.json({ error: "Apenas administradores" }, { status: 403 });
-  }
+  const { user, erro } = await requerPerfil(["socio", "admin"]);
+  if (erro) return erro;
 
-  const userId = Number((session.user as { id?: string }).id);
+  const userId = Number(user.id);
   const { id } = await params;
 
   await prisma.propostaModelo.delete({ where: { id: Number(id) } });

@@ -236,7 +236,7 @@ export default async function EmpreendimentoDetailPage(props: { params: Promise<
                         </div>
                         <div className="flex items-center gap-3">
                           <span className="text-xs text-[var(--color-ink-500)]">{format(new Date(d.criadoEm), "dd/MM/yyyy", { locale: ptBR })}</span>
-                          <a href={d.caminho} target="_blank" className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)] hover:underline">
+                          <a href={`/api/documentos/${d.id}/download`} target="_blank" className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)] hover:underline">
                             <Download size={14} />
                             Download
                           </a>

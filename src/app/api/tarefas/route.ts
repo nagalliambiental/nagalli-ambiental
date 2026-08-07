@@ -37,6 +37,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(tarefa, { status: 201 });
   } catch (error) {
+    console.error("Erro ao criar tarefa:", error);
     return NextResponse.json(
       { error: "Erro ao criar tarefa" },
       { status: 400 }
@@ -53,6 +54,7 @@ export async function DELETE(req: NextRequest) {
     await prisma.tarefa.deleteMany({ where: { id: { in: ids.split(",").map(Number) } } });
     return NextResponse.json({ ok: true });
   } catch (e) {
+    console.error("Erro ao remover tarefas:", e);
     return NextResponse.json({ error: "Erro ao remover. Verifique se há registros vinculados." }, { status: 400 });
   }
 }

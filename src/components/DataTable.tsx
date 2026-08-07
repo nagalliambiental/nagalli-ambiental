@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { Trash2, ToggleLeft, ToggleRight, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Inbox } from "lucide-react";
 import { useToast } from "@/components/Toast";
 
@@ -35,6 +36,7 @@ export function DataTable<T extends { id: number }>({
   pageSize = 20,
 }: DataTableProps<T>) {
   const { toast } = useToast();
+  const router = useRouter();
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [sortKey, setSortKey] = useState<string>("");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
@@ -64,7 +66,7 @@ export function DataTable<T extends { id: number }>({
       if (!res.ok) throw new Error("Erro na operação em lote");
       setSelectedIds(new Set());
       toast(`${ids.length} registro(s) atualizado(s) com sucesso`, "success");
-      window.location.reload();
+      router.refresh();
     } catch {
       toast("Erro ao executar operação em lote.", "error");
     }

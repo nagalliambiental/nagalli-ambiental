@@ -37,6 +37,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(exigencia, { status: 201 });
   } catch (error) {
+    console.error("Erro ao criar exigência:", error);
     return NextResponse.json(
       { error: "Erro ao criar exigência" },
       { status: 400 }
@@ -53,6 +54,7 @@ export async function DELETE(req: NextRequest) {
     await prisma.exigencia.deleteMany({ where: { id: { in: ids.split(",").map(Number) } } });
     return NextResponse.json({ ok: true });
   } catch (e) {
+    console.error("Erro ao remover exigências:", e);
     return NextResponse.json({ error: "Erro ao remover. Verifique se há registros vinculados." }, { status: 400 });
   }
 }

@@ -4,6 +4,7 @@ import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 
 export const INTERVALO_BACKUP_DIAS = 15;
+export const MAX_BACKUPS = 30;
 
 function fmtData(v: Date | string | null | undefined): string {
   if (!v) return "";
@@ -40,7 +41,7 @@ function fmtJson(v: unknown): string {
   }
 }
 
-function diasAte(v: Date | null | undefined): number | string {
+export function diasAte(v: Date | null | undefined): number | string {
   if (!v) return "";
   const diff = Math.ceil((v.getTime() - Date.now()) / 86400000);
   return diff;
@@ -73,6 +74,18 @@ export async function registrarBackup(buf: Buffer, origem: string, usuarioId?: n
     data: { arquivo: caminho, tamanho: buf.length, origem, usuarioId: usuarioId ?? null, conteudo: new Uint8Array(buf) },
   });
 
+  // Retenção: mantém apenas os MAX_BACKUPS mais recentes
+  const antigos = await prisma.backup.findMany({
+    where: { conteudo: { not: null } },
+    orderBy: { criadoEm: "desc" },
+    select: { id: true, criadoEm: true },
+    skip: MAX_BACKUPS,
+  });
+  if (antigos.length > 0) {
+    const idsAntigos = antigos.map((b) => b.id);
+    await prisma.backup.deleteMany({ where: { id: { in: idsAntigos } } });
+  }
+
   const cfg = await prisma.configuracao.findFirst();
   if (cfg) {
     await prisma.configuracao.update({ where: { id: cfg.id }, data: { ultimoBackupEm: agora } });
@@ -86,45 +99,97 @@ export async function registrarBackup(buf: Buffer, origem: string, usuarioId?: n
 export async function buildBackupWorkbook() {
   const wb = XLSX.utils.book_new();
 
-  const [clientes, empreendimentos, processos, exigencias, financeiros, contratos, controlesDmr] =
-    await Promise.all([
-      prisma.cliente.findMany({ orderBy: { id: "asc" } }),
-      prisma.empreendimento.findMany({
-        include: { cliente: { select: { apelido: true } } },
-        orderBy: { id: "asc" },
-      }),
-      prisma.processo.findMany({
-        include: {
-          empreendimento: { select: { apelido: true, cliente: { select: { apelido: true } } } },
-          orgao: { select: { sigla: true, nome: true } },
-          responsavel: { select: { nome: true } },
-        },
-        orderBy: { id: "asc" },
-      }),
-      prisma.exigencia.findMany({
-        include: {
-          processo: {
-            select: {
-              numProtocolo: true,
-              empreendimento: { select: { apelido: true, cliente: { select: { apelido: true } } } },
-            },
+  const [
+    clientes, empreendimentos, processos, exigencias, financeiros, contratos, controlesDmr,
+    tarefas, usuarios, acessos, propostas, responsaveis, orgaos, residuosItems,
+    residuosAnuais, empresasContratadas, documentos, historicos, configuracoes, modelosProposta,
+  ] = await Promise.all([
+    prisma.cliente.findMany({ orderBy: { id: "asc" } }),
+    prisma.empreendimento.findMany({
+      include: { cliente: { select: { apelido: true } } },
+      orderBy: { id: "asc" },
+    }),
+    prisma.processo.findMany({
+      include: {
+        empreendimento: { select: { apelido: true, cliente: { select: { apelido: true } } } },
+        orgao: { select: { sigla: true, nome: true } },
+        responsavel: { select: { nome: true } },
+      },
+      orderBy: { id: "asc" },
+    }),
+    prisma.exigencia.findMany({
+      include: {
+        processo: {
+          select: {
+            numProtocolo: true,
+            empreendimento: { select: { apelido: true, cliente: { select: { apelido: true } } } },
           },
         },
-        orderBy: { id: "asc" },
-      }),
-      prisma.financeiro.findMany({
-        include: { cliente: { select: { apelido: true } } },
-        orderBy: { id: "asc" },
-      }),
-      prisma.contrato.findMany({
-        include: { cliente: { select: { apelido: true } }, empreendimento: { select: { apelido: true } } },
-        orderBy: { id: "asc" },
-      }),
-      prisma.controleDmr.findMany({
-        include: { empreendimento: { select: { apelido: true, cliente: { select: { apelido: true } } } } },
-        orderBy: { id: "asc" },
-      }),
-    ]);
+      },
+      orderBy: { id: "asc" },
+    }),
+    prisma.financeiro.findMany({
+      include: { cliente: { select: { apelido: true } } },
+      orderBy: { id: "asc" },
+    }),
+    prisma.contrato.findMany({
+      include: { cliente: { select: { apelido: true } }, empreendimento: { select: { apelido: true } } },
+      orderBy: { id: "asc" },
+    }),
+    prisma.controleDmr.findMany({
+      include: { empreendimento: { select: { apelido: true, cliente: { select: { apelido: true } } } } },
+      orderBy: { id: "asc" },
+    }),
+    prisma.tarefa.findMany({
+      include: {
+        responsavel: { select: { nome: true } },
+        usuario: { select: { nome: true } },
+      },
+      orderBy: { id: "asc" },
+    }),
+    prisma.usuario.findMany({
+      select: { id: true, nome: true, email: true, perfil: true, ativo: true, criadoEm: true, atualizadoEm: true, cpf: true, conselho: true, termosAceitosEm: true },
+      orderBy: { id: "asc" },
+    }),
+    prisma.acesso.findMany({
+      include: { cliente: { select: { apelido: true } }, empreendimento: { select: { apelido: true } } },
+      orderBy: { id: "asc" },
+    }),
+    prisma.proposta.findMany({
+      include: { cliente: { select: { apelido: true } }, empreendimento: { select: { apelido: true } } },
+      orderBy: { id: "asc" },
+    }),
+    prisma.responsavel.findMany({
+      include: { usuario: { select: { nome: true } } },
+      orderBy: { id: "asc" },
+    }),
+    prisma.orgao.findMany({ orderBy: { id: "asc" } }),
+    prisma.residuoItem.findMany({
+      include: { cliente: { select: { apelido: true } } },
+      orderBy: { id: "asc" },
+    }),
+    prisma.residuoAnual.findMany({
+      include: { cliente: { select: { apelido: true } } },
+      orderBy: { id: "asc" },
+    }),
+    prisma.empresaContratada.findMany({
+      include: { cliente: { select: { apelido: true } } },
+      orderBy: { id: "asc" },
+    }),
+    prisma.documento.findMany({
+      select: { id: true, nome: true, tipo: true, caminho: true, tamanho: true, criadoEm: true, ativo: true, processoId: true, exigenciaId: true, clienteId: true },
+      orderBy: { id: "asc" },
+    }),
+    prisma.historico.findMany({
+      include: { cliente: { select: { apelido: true } }, empreendimento: { select: { apelido: true } }, usuario: { select: { nome: true } } },
+      orderBy: { id: "asc" },
+    }),
+    prisma.configuracao.findMany({ orderBy: { id: "asc" } }),
+    prisma.propostaModelo.findMany({
+      select: { id: true, slug: true, nome: true, descricao: true, prefixoArquivo: true, campos: true, ativo: true, criadoEm: true, atualizadoEm: true },
+      orderBy: { id: "asc" },
+    }),
+  ]);
 
   addSheet(wb, "Clientes", clientes.map((c) => ({
     ID: c.id,
@@ -258,6 +323,168 @@ export async function buildBackupWorkbook() {
     "4º Trim DMR": c.t4Dmr,
     "4º Trim MTR": c.t4Mtr,
     CriadoEm: fmtDataHora(c.criadoEm),
+  })));
+
+  addSheet(wb, "Tarefas", tarefas.map((t) => ({
+    ID: t.id,
+    Título: t.titulo,
+    Descrição: t.descricao || "",
+    Status: t.status,
+    Prioridade: t.prioridade,
+    "Data Vencimento": fmtData(t.dataVencimento),
+    "Dias p/ Vencimento": diasAte(t.dataVencimento),
+    Responsável: t.responsavel?.nome || "",
+    Usuário: t.usuario?.nome || "",
+    Observações: t.statusObs || "",
+    Ativo: fmtSimNao(t.ativo),
+    CriadoEm: fmtDataHora(t.criadoEm),
+  })));
+
+  addSheet(wb, "Usuários", usuarios.map((u) => ({
+    ID: u.id,
+    Nome: u.nome,
+    Email: u.email,
+    Perfil: u.perfil,
+    CPF: u.cpf || "",
+    Conselho: u.conselho || "",
+    Ativo: fmtSimNao(u.ativo),
+    "Termos Aceitos Em": fmtDataHora(u.termosAceitosEm),
+    CriadoEm: fmtDataHora(u.criadoEm),
+    AtualizadoEm: fmtDataHora(u.atualizadoEm),
+  })));
+
+  addSheet(wb, "Acessos", acessos.map((a) => ({
+    ID: a.id,
+    Login: a.login,
+    Descrição: a.descricao,
+    Cliente: a.cliente?.apelido || "",
+    Empreendimento: a.empreendimento?.apelido || "",
+    CriadoEm: fmtDataHora(a.criadoEm),
+  })));
+
+  addSheet(wb, "Propostas", propostas.map((p) => ({
+    ID: p.id,
+    Título: p.titulo,
+    Cliente: p.cliente.apelido,
+    Empreendimento: p.empreendimento?.apelido || "",
+    Valor: p.valor ?? "",
+    Status: p.status,
+    "Validade Dias": p.validadeDias,
+    Serviços: fmtJson(p.servicos),
+    Observações: p.observacoes || "",
+    CriadoEm: fmtDataHora(p.criadoEm),
+    AtualizadoEm: fmtDataHora(p.atualizadoEm),
+  })));
+
+  addSheet(wb, "Responsáveis", responsaveis.map((r) => ({
+    ID: r.id,
+    Nome: r.nome,
+    Email: r.email,
+    Telefone: r.telefone || "",
+    Função: r.funcao,
+    "Carga Horária": r.cargaHoras,
+    Usuário: r.usuario?.nome || "",
+    CriadoEm: fmtDataHora(r.criadoEm),
+  })));
+
+  addSheet(wb, "Órgãos", orgaos.map((o) => ({
+    ID: o.id,
+    Nome: o.nome,
+    Sigla: o.sigla,
+  })));
+
+  addSheet(wb, "Resíduos Item", residuosItems.map((r) => ({
+    ID: r.id,
+    Cliente: r.cliente.apelido,
+    Categoria: r.categoria,
+    Ordem: r.ordem,
+    "Ponto de Geração": r.pontoGeracao || "",
+    "Resíduos Gerados": r.residuosGerados || "",
+    Quantificação: r.quantificacao || "",
+    Acondicionamento: r.acondicionamento || "",
+    Armazenamento: r.armazenamento || "",
+    "Coleta Interna": r.coletaInterna || "",
+    "Empresa Transporte": r.empresaTransporte || "",
+    "Empresa Disposição Final": r.empresaDisposicaoFinal || "",
+  })));
+
+  addSheet(wb, "Resíduos Anual", residuosAnuais.map((r) => ({
+    ID: r.id,
+    Cliente: r.cliente.apelido,
+    Categoria: r.categoria,
+    Ordem: r.ordem,
+    "Ponto de Geração": r.pontoGeracao || "",
+    Resíduo: r.residuo || "",
+    "Estado Físico": r.estadoFisico || "",
+    "Código IBAMA": r.codIbama || "",
+    "Classificação Resíduo": r.classificacaoResiduo || "",
+    "Código NBR 10004": r.codigoNbr10004 || "",
+    "Código Conama LGR": r.codigoConamaLgr || "",
+    Entrada: r.entrada || "",
+    "Geração Anual": r.geracaoAnual || "",
+    Acondicionamento: r.acondicionamento || "",
+    Transportadora: r.transportadora || "",
+    Tratamento: r.tratamento || "",
+    Destino: r.destino || "",
+  })));
+
+  addSheet(wb, "Empresas Contratadas", empresasContratadas.map((e) => ({
+    ID: e.id,
+    Cliente: e.cliente.apelido,
+    Ordem: e.ordem,
+    "Nome Fantasia": e.nomeFantasia || "",
+    "Razão Social": e.razaoSocial || "",
+    CNPJ: e.cnpj || "",
+    "Nº/Data/Validade Licença": e.numeroDataValidadeLicenca || "",
+  })));
+
+  addSheet(wb, "Documentos", documentos.map((d) => ({
+    ID: d.id,
+    Nome: d.nome,
+    Tipo: d.tipo,
+    Caminho: d.caminho,
+    Tamanho: d.tamanho,
+    ProcessoId: d.processoId ?? "",
+    ExigenciaId: d.exigenciaId ?? "",
+    ClienteId: d.clienteId ?? "",
+    Ativo: fmtSimNao(d.ativo),
+    CriadoEm: fmtDataHora(d.criadoEm),
+  })));
+
+  addSheet(wb, "Históricos", historicos.map((h) => ({
+    ID: h.id,
+    Descrição: h.descricao,
+    Anexo: h.anexo || "",
+    Cliente: h.cliente?.apelido || "",
+    Empreendimento: h.empreendimento?.apelido || "",
+    Usuário: h.usuario?.nome || "",
+    CriadoEm: fmtDataHora(h.criadoEm),
+  })));
+
+  addSheet(wb, "Configurações", configuracoes.map((c) => ({
+    ID: c.id,
+    "Nome Empresa": c.nomeEmpresa || "",
+    CNPJ: c.cnpj || "",
+    "Registro CRQ": c.registroCrq || "",
+    "Registro Órgão": c.registroOrgao || "",
+    "Responsável Nome": c.responsavelNome || "",
+    "Responsável CPF": c.responsavelCpf || "",
+    "Responsável Email": c.responsavelEmail || "",
+    "Responsável Telefone": c.responsavelTelefone || "",
+    "Último Backup Em": fmtDataHora(c.ultimoBackupEm),
+    AtualizadoEm: fmtDataHora(c.atualizadoEm),
+  })));
+
+  addSheet(wb, "Modelos de Proposta", modelosProposta.map((m) => ({
+    ID: m.id,
+    Slug: m.slug,
+    Nome: m.nome,
+    Descrição: m.descricao,
+    "Prefixo Arquivo": m.prefixoArquivo,
+    Campos: fmtJson(m.campos),
+    Ativo: fmtSimNao(m.ativo),
+    CriadoEm: fmtDataHora(m.criadoEm),
+    AtualizadoEm: fmtDataHora(m.atualizadoEm),
   })));
 
   return wb;
