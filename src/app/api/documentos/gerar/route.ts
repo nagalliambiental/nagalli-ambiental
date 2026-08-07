@@ -3,8 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { buildDocxData as buildPinhais, renderDocx as renderPinhais } from "@/lib/templates/pgrs-pinhais/generate";
 import { buildDocxData as buildCuritiba, renderDocx as renderCuritiba } from "@/lib/templates/pgrs-curitiba/generate";
+import { buildDocxData as buildPgrccIat, renderDocx as renderPgrccIat } from "@/lib/templates/pgrcc-iat/generate";
 import { PgrsPinhaisFormData } from "@/lib/templates/pgrs-pinhais/config";
 import { PgrsCuritibaFormData } from "@/lib/templates/pgrs-curitiba/config";
+import { PgrccIatFormData } from "@/lib/templates/pgrcc-iat/config";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -45,6 +47,10 @@ export async function POST(req: NextRequest) {
       const data = buildCuritiba(cliente, formData as PgrsCuritibaFormData, configuracao);
       buffer = renderCuritiba(data);
       filename = `PGRS_Curitiba_${cliente.razaoSocial.replace(/[^a-zA-Z0-9]/g, "_")}.docx`;
+    } else if (templateSlug === "pgrcc-iat") {
+      const data = buildPgrccIat(formData as PgrccIatFormData);
+      buffer = renderPgrccIat(data);
+      filename = `PGRCC_IAT_${cliente.razaoSocial.replace(/[^a-zA-Z0-9]/g, "_")}.docx`;
     } else {
       return NextResponse.json({ error: "Modelo de documento desconhecido" }, { status: 400 });
     }
@@ -58,23 +64,25 @@ export async function POST(req: NextRequest) {
       data: { clienteId: Number(clienteId), templateSlug, dadosSnapshot: formData },
     });
 
-    await tx.residuoItem.deleteMany({ where: { clienteId: Number(clienteId) } });
-    const residuosParaSalvar = [
-      ...(formData.residuosPerigosos || []).map((r: any, i: number) => ({ ...r, categoria: "PERIGOSO", ordem: i })),
-      ...(formData.residuosNaoReciclaveis || []).map((r: any, i: number) => ({ ...r, categoria: "NAO_RECICLAVEL", ordem: i })),
-      ...(formData.residuosReciclaveis || []).map((r: any, i: number) => ({ ...r, categoria: "RECICLAVEL", ordem: i })),
-    ];
-    if (residuosParaSalvar.length) {
-      await tx.residuoItem.createMany({
-        data: residuosParaSalvar.map((r: any) => ({ ...r, clienteId: Number(clienteId) })),
-      });
-    }
+    if (templateSlug === "pgrs-pinhais" || templateSlug === "pgrs-curitiba") {
+      await tx.residuoItem.deleteMany({ where: { clienteId: Number(clienteId) } });
+      const residuosParaSalvar = [
+        ...(formData.residuosPerigosos || []).map((r: any, i: number) => ({ ...r, categoria: "PERIGOSO", ordem: i })),
+        ...(formData.residuosNaoReciclaveis || []).map((r: any, i: number) => ({ ...r, categoria: "NAO_RECICLAVEL", ordem: i })),
+        ...(formData.residuosReciclaveis || []).map((r: any, i: number) => ({ ...r, categoria: "RECICLAVEL", ordem: i })),
+      ];
+      if (residuosParaSalvar.length) {
+        await tx.residuoItem.createMany({
+          data: residuosParaSalvar.map((r: any) => ({ ...r, clienteId: Number(clienteId) })),
+        });
+      }
 
-    await tx.empresaContratada.deleteMany({ where: { clienteId: Number(clienteId) } });
-    if (formData.empresasContratadas?.length) {
-      await tx.empresaContratada.createMany({
-        data: formData.empresasContratadas.map((e: any, i: number) => ({ ...e, ordem: i, clienteId: Number(clienteId) })),
-      });
+      await tx.empresaContratada.deleteMany({ where: { clienteId: Number(clienteId) } });
+      if (formData.empresasContratadas?.length) {
+        await tx.empresaContratada.createMany({
+          data: formData.empresasContratadas.map((e: any, i: number) => ({ ...e, ordem: i, clienteId: Number(clienteId) })),
+        });
+      }
     }
   });
 

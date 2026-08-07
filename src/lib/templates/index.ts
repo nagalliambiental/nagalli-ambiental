@@ -6,6 +6,12 @@ export interface TemplateMeta {
 
 export const TEMPLATES: TemplateMeta[] = [
   {
+    slug: "pgrcc-iat",
+    nome: "PGRCC — IAT",
+    descricao:
+      "Projeto Simplificado de Gerenciamento de Resíduos da Construção Civil (PGRCC), conforme Termo de Referência do IAT.",
+  },
+  {
     slug: "pgrs-pinhais",
     nome: "PGRS Simplificado — Prefeitura de Pinhais",
     descricao:

@@ -602,6 +602,7 @@ export function ClienteDetailClient({
                     <span className="text-[var(--color-ink-700)]">
                       {d.templateSlug === "pgrs-pinhais" ? "PGRS Pinhais"
                         : d.templateSlug === "pgrs-curitiba" ? "PGRS Curitiba"
+                        : d.templateSlug === "pgrcc-iat" ? "PGRCC IAT"
                         : d.templateSlug}
                     </span>
                     <span className="text-xs text-[var(--color-ink-500)]">
