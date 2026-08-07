@@ -47,17 +47,21 @@ function addSheet(wb: XLSX.WorkBook, nome: string, linhas: Record<string, unknow
 }
 
 export async function registrarBackup(buf: Buffer, origem: string, usuarioId?: number) {
-  const uploadDir = path.join(process.cwd(), "public", "uploads", "backups");
-  await mkdir(uploadDir, { recursive: true });
-
   const agora = new Date();
   const stamp = agora.toISOString().replace(/[:.]/g, "-");
   const nomeArquivo = `backup-nagalli-${stamp}.xlsx`;
   const caminho = `/uploads/backups/${nomeArquivo}`;
-  await writeFile(path.join(uploadDir, nomeArquivo), buf);
+
+  try {
+    const uploadDir = path.join(process.cwd(), "public", "uploads", "backups");
+    await mkdir(uploadDir, { recursive: true });
+    await writeFile(path.join(uploadDir, nomeArquivo), buf);
+  } catch {
+    // ambiente sem escrita em disco (ex.: Vercel) - o conteúdo fica no banco
+  }
 
   await prisma.backup.create({
-    data: { arquivo: caminho, tamanho: buf.length, origem, usuarioId: usuarioId ?? null },
+    data: { arquivo: caminho, tamanho: buf.length, origem, usuarioId: usuarioId ?? null, conteudo: new Uint8Array(buf) },
   });
 
   const cfg = await prisma.configuracao.findFirst();

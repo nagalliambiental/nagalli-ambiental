@@ -23,7 +23,11 @@ export async function GET(_req: Request, { params }: Params) {
   let buffer: Buffer | null = null;
   let filename = "";
 
-  if (doc.caminho) {
+  if (doc.conteudo) {
+    buffer = Buffer.from(doc.conteudo);
+  }
+
+  if (!buffer && doc.caminho) {
     try {
       buffer = await readFile(path.join(process.cwd(), "public", doc.caminho));
       filename = path.basename(doc.caminho);
@@ -48,14 +52,19 @@ export async function GET(_req: Request, { params }: Params) {
       buffer = resultado.buffer;
       filename = resultado.filename;
 
-      const uploadDir = path.join(process.cwd(), "public", "uploads", "documentos-gerados");
-      await mkdir(uploadDir, { recursive: true });
-      const safeName = `${Date.now()}-${filename}`;
-      const caminhoRelativo = `/uploads/documentos-gerados/${safeName}`;
-      await writeFile(path.join(uploadDir, safeName), buffer);
+      let caminhoRelativo: string | null = doc.caminho;
+      try {
+        const uploadDir = path.join(process.cwd(), "public", "uploads", "documentos-gerados");
+        await mkdir(uploadDir, { recursive: true });
+        const safeName = `${Date.now()}-${filename}`;
+        caminhoRelativo = `/uploads/documentos-gerados/${safeName}`;
+        await writeFile(path.join(uploadDir, safeName), buffer);
+      } catch {
+        // ambiente sem escrita em disco - o conteúdo fica no banco
+      }
       await prisma.documentoGerado.update({
         where: { id: doc.id },
-        data: { caminho: caminhoRelativo },
+        data: { caminho: caminhoRelativo, conteudo: new Uint8Array(buffer) },
       });
     } catch (err) {
       console.error("Erro ao regenerar o documento:", err);

@@ -34,18 +34,22 @@ export async function POST(req: NextRequest) {
 
   let buffer: Buffer;
   let filename: string;
-  let caminhoRelativo: string;
+  let caminhoRelativo = "";
 
   try {
     const resultado = gerarDocumentoBuffer(templateSlug, cliente, formData, configuracao);
     buffer = resultado.buffer;
     filename = resultado.filename;
 
-    const uploadDir = path.join(process.cwd(), "public", "uploads", "documentos-gerados");
-    await mkdir(uploadDir, { recursive: true });
-    const safeName = `${Date.now()}-${filename}`;
-    caminhoRelativo = `/uploads/documentos-gerados/${safeName}`;
-    await writeFile(path.join(uploadDir, safeName), buffer);
+    try {
+      const uploadDir = path.join(process.cwd(), "public", "uploads", "documentos-gerados");
+      await mkdir(uploadDir, { recursive: true });
+      const safeName = `${Date.now()}-${filename}`;
+      caminhoRelativo = `/uploads/documentos-gerados/${safeName}`;
+      await writeFile(path.join(uploadDir, safeName), buffer);
+    } catch {
+      // ambiente sem escrita em disco (ex.: Vercel) - o conteúdo fica no banco
+    }
   } catch (err) {
     console.error("Erro ao renderizar o documento:", err);
     return NextResponse.json({ error: "Erro ao gerar o documento" }, { status: 500 });
@@ -53,7 +57,13 @@ export async function POST(req: NextRequest) {
 
   await prisma.$transaction(async (tx) => {
     await tx.documentoGerado.create({
-      data: { clienteId: Number(clienteId), templateSlug, dadosSnapshot: formData, caminho: caminhoRelativo },
+      data: {
+        clienteId: Number(clienteId),
+        templateSlug,
+        dadosSnapshot: formData,
+        caminho: caminhoRelativo || null,
+        conteudo: new Uint8Array(buffer),
+      },
     });
 
     if (templateSlug === "pgrs-pinhais" || templateSlug === "pgrs-curitiba") {

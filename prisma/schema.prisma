@@ -404,6 +404,7 @@ model DocumentoGerado {
   templateSlug  String
   dadosSnapshot Json
   caminho       String?
+  conteudo      Bytes?
   createdAt     DateTime @default(now())
   cliente       Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
 }
@@ -430,6 +431,7 @@ model Backup {
   tamanho   Int
   origem    String    @default("automatico")
   usuarioId Int?
+  conteudo  Bytes?
   criadoEm  DateTime  @default(now())
   usuario   Usuario?  @relation(fields: [usuarioId], references: [id])
 }

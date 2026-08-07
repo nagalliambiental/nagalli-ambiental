@@ -22,18 +22,28 @@ export async function GET(_req: Request, { params }: Params) {
     return NextResponse.json({ error: "Backup não encontrado" }, { status: 404 });
   }
 
-  try {
-    const filePath = path.join(process.cwd(), "public", backup.arquivo);
-    const buffer = await readFile(filePath);
-    const filename = path.basename(backup.arquivo);
-    return new NextResponse(new Uint8Array(buffer), {
-      status: 200,
-      headers: {
-        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "Content-Disposition": `attachment; filename="${filename}"`,
-      },
-    });
-  } catch {
+  const filename = path.basename(backup.arquivo);
+
+  let buffer: Buffer | null = null;
+  if (backup.conteudo) {
+    buffer = Buffer.from(backup.conteudo);
+  } else {
+    try {
+      buffer = await readFile(path.join(process.cwd(), "public", backup.arquivo));
+    } catch {
+      buffer = null;
+    }
+  }
+
+  if (!buffer) {
     return NextResponse.json({ error: "Arquivo não encontrado" }, { status: 404 });
   }
+
+  return new NextResponse(new Uint8Array(buffer), {
+    status: 200,
+    headers: {
+      "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "Content-Disposition": `attachment; filename="${filename}"`,
+    },
+  });
 }
