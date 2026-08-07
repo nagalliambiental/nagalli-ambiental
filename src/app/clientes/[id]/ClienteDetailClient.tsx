@@ -638,15 +638,13 @@ export function ClienteDetailClient({
                       <span className="text-xs text-[var(--color-ink-500)]">
                         {format(new Date(d.createdAt), "dd/MM/yyyy")}
                       </span>
-                      {d.caminho && (
-                        <a
-                          href={`/api/documentos-gerados/${d.id}`}
-                          className="rounded p-1 text-[var(--color-ink-400)] hover:text-[var(--color-brand-600)]"
-                          title="Baixar documento"
-                        >
-                          <Download size={14} />
-                        </a>
-                      )}
+                      <a
+                        href={`/api/documentos-gerados/${d.id}`}
+                        className="rounded p-1 text-[var(--color-ink-400)] hover:text-[var(--color-brand-600)]"
+                        title="Baixar documento"
+                      >
+                        <Download size={14} />
+                      </a>
                       <button
                         type="button"
                         onClick={() => setConfirmDeleteDocId(d.id)}

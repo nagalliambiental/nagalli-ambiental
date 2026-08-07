@@ -3,12 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
-import { buildDocxData as buildPinhais, renderDocx as renderPinhais } from "@/lib/templates/pgrs-pinhais/generate";
-import { buildDocxData as buildCuritiba, renderDocx as renderCuritiba } from "@/lib/templates/pgrs-curitiba/generate";
-import { buildDocxData as buildPgrccIat, renderDocx as renderPgrccIat } from "@/lib/templates/pgrcc-iat/generate";
-import { PgrsPinhaisFormData } from "@/lib/templates/pgrs-pinhais/config";
-import { PgrsCuritibaFormData } from "@/lib/templates/pgrs-curitiba/config";
-import { PgrccIatFormData } from "@/lib/templates/pgrcc-iat/config";
+import { gerarDocumentoBuffer } from "@/lib/documentos-gerados";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -42,21 +37,9 @@ export async function POST(req: NextRequest) {
   let caminhoRelativo: string;
 
   try {
-    if (templateSlug === "pgrs-pinhais") {
-      const data = buildPinhais(cliente, formData as PgrsPinhaisFormData, configuracao);
-      buffer = renderPinhais(data);
-      filename = `PGRS_Pinhais_${cliente.razaoSocial.replace(/[^a-zA-Z0-9]/g, "_")}.docx`;
-    } else if (templateSlug === "pgrs-curitiba") {
-      const data = buildCuritiba(cliente, formData as PgrsCuritibaFormData, configuracao);
-      buffer = renderCuritiba(data);
-      filename = `PGRS_Curitiba_${cliente.razaoSocial.replace(/[^a-zA-Z0-9]/g, "_")}.docx`;
-    } else if (templateSlug === "pgrcc-iat") {
-      const data = buildPgrccIat(formData as PgrccIatFormData);
-      buffer = renderPgrccIat(data);
-      filename = `PGRCC_IAT_${cliente.razaoSocial.replace(/[^a-zA-Z0-9]/g, "_")}.docx`;
-    } else {
-      return NextResponse.json({ error: "Modelo de documento desconhecido" }, { status: 400 });
-    }
+    const resultado = gerarDocumentoBuffer(templateSlug, cliente, formData, configuracao);
+    buffer = resultado.buffer;
+    filename = resultado.filename;
 
     const uploadDir = path.join(process.cwd(), "public", "uploads", "documentos-gerados");
     await mkdir(uploadDir, { recursive: true });

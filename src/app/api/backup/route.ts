@@ -22,6 +22,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ultimoBackupEm: cfg?.ultimoBackupEm ?? null });
   }
 
+  const origem = url.searchParams.get("origem") === "manual" ? "manual" : "automatico";
+
   let wb: XLSX.WorkBook;
   try {
     wb = await buildBackupWorkbook();
@@ -34,7 +36,7 @@ export async function GET(req: NextRequest) {
 
   const usuarioId = Number((session.user as { id?: string }).id) || undefined;
   try {
-    await registrarBackup(buf, "automatico", usuarioId);
+    await registrarBackup(buf, origem, usuarioId);
   } catch (err) {
     console.error("Erro ao registrar backup:", err);
     return NextResponse.json({ error: "Erro ao registrar backup" }, { status: 500 });

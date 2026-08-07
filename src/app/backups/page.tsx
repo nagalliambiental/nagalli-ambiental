@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { Topbar } from "@/components/Topbar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { DatabaseBackup, Download } from "lucide-react";
+import GerarBackupButton from "@/components/GerarBackupButton";
 import { formatDataHora, formatTamanho } from "./lib";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +30,7 @@ export default async function BackupsPage() {
         icon={DatabaseBackup}
         title="Backups"
         subtitle="Histórico de backups gerados automaticamente pelo sistema"
+        actions={<GerarBackupButton />}
       />
 
       {backups.length === 0 ? (
