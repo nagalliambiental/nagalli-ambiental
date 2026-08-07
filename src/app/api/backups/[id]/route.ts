@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { ehPrivilegiado } from "@/lib/perfil";
-import { readFile } from "fs/promises";
+import { logAuditoria } from "@/lib/audit";
+import { readFile, unlink } from "fs/promises";
 import path from "path";
 
 type Params = { params: Promise<{ id: string }> };
@@ -46,4 +47,38 @@ export async function GET(_req: Request, { params }: Params) {
       "Content-Disposition": `attachment; filename="${filename}"`,
     },
   });
+}
+
+export async function DELETE(_req: Request, { params }: Params) {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  }
+  if (!ehPrivilegiado((session.user as { perfil?: string }).perfil)) {
+    return NextResponse.json({ error: "Acesso restrito" }, { status: 403 });
+  }
+
+  const { id } = await params;
+  const backup = await prisma.backup.findUnique({ where: { id: Number(id) } });
+  if (!backup) {
+    return NextResponse.json({ error: "Backup não encontrado" }, { status: 404 });
+  }
+
+  try {
+    await unlink(path.join(process.cwd(), "public", backup.arquivo));
+  } catch {
+    // arquivo não existe em disco (ex.: Vercel) - segue para remover o registro
+  }
+
+  await prisma.backup.delete({ where: { id: Number(id) } });
+
+  await logAuditoria(
+    "delete",
+    "backup",
+    Number(id),
+    { arquivo: backup.arquivo },
+    Number((session.user as { id: string }).id)
+  );
+
+  return NextResponse.json({ ok: true });
 }

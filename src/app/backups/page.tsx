@@ -5,6 +5,7 @@ import { Topbar } from "@/components/Topbar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { DatabaseBackup, Download } from "lucide-react";
 import GerarBackupButton from "@/components/GerarBackupButton";
+import ExcluirBackupButton from "@/components/ExcluirBackupButton";
 import { formatDataHora, formatTamanho } from "./lib";
 
 export const dynamic = "force-dynamic";
@@ -63,13 +64,16 @@ export default async function BackupsPage() {
                     <td className="px-5 py-3 text-[var(--color-ink-600)]">{b.usuario?.nome || "—"}</td>
                     <td className="px-5 py-3 text-[var(--color-ink-600)]">{formatTamanho(b.tamanho)}</td>
                     <td className="px-5 py-3 text-right">
-                      <a
-                        href={`/api/backups/${b.id}`}
-                        className="inline-flex items-center gap-2 rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]"
-                        title="Baixar backup"
-                      >
-                        <Download size={14} /> Baixar
-                      </a>
+                      <div className="flex items-center justify-end gap-2">
+                        <a
+                          href={`/api/backups/${b.id}`}
+                          className="inline-flex items-center gap-2 rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]"
+                          title="Baixar backup"
+                        >
+                          <Download size={14} /> Baixar
+                        </a>
+                        <ExcluirBackupButton id={b.id} />
+                      </div>
                     </td>
                   </tr>
                 ))}
