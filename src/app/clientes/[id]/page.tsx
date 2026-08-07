@@ -46,7 +46,7 @@ export default async function ClienteDetailPage(props: { params: Promise<{ id: s
         },
         documentosGerados: {
           orderBy: { createdAt: "desc" }, take: 20,
-          select: { id: true, templateSlug: true, createdAt: true },
+          select: { id: true, templateSlug: true, createdAt: true, caminho: true },
         },
       },
     }),

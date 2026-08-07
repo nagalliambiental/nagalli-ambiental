@@ -4,6 +4,7 @@ import { AppChrome } from "@/components/AppChrome";
 import SessionProvider from "@/components/SessionProvider";
 import { ToastProvider } from "@/components/Toast";
 import { SyncStatusBar } from "@/lib/tauri/SyncStatusBar";
+import BackupAutomatico from "@/components/BackupAutomatico";
 import "./globals.css";
 
 const inter = Inter({
@@ -32,7 +33,10 @@ export default function RootLayout({
       <body>
         <SessionProvider>
           <AppChrome>
-            <ToastProvider>{children}</ToastProvider>
+            <ToastProvider>
+              {children}
+              <BackupAutomatico />
+            </ToastProvider>
           </AppChrome>
           <SyncStatusBar />
         </SessionProvider>

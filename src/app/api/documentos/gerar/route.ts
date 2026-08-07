@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { writeFile, mkdir } from "fs/promises";
+import path from "path";
 import { buildDocxData as buildPinhais, renderDocx as renderPinhais } from "@/lib/templates/pgrs-pinhais/generate";
 import { buildDocxData as buildCuritiba, renderDocx as renderCuritiba } from "@/lib/templates/pgrs-curitiba/generate";
 import { buildDocxData as buildPgrccIat, renderDocx as renderPgrccIat } from "@/lib/templates/pgrcc-iat/generate";
@@ -37,6 +39,7 @@ export async function POST(req: NextRequest) {
 
   let buffer: Buffer;
   let filename: string;
+  let caminhoRelativo: string;
 
   try {
     if (templateSlug === "pgrs-pinhais") {
@@ -54,6 +57,12 @@ export async function POST(req: NextRequest) {
     } else {
       return NextResponse.json({ error: "Modelo de documento desconhecido" }, { status: 400 });
     }
+
+    const uploadDir = path.join(process.cwd(), "public", "uploads", "documentos-gerados");
+    await mkdir(uploadDir, { recursive: true });
+    const safeName = `${Date.now()}-${filename}`;
+    caminhoRelativo = `/uploads/documentos-gerados/${safeName}`;
+    await writeFile(path.join(uploadDir, safeName), buffer);
   } catch (err) {
     console.error("Erro ao renderizar o documento:", err);
     return NextResponse.json({ error: "Erro ao gerar o documento" }, { status: 500 });
@@ -61,7 +70,7 @@ export async function POST(req: NextRequest) {
 
   await prisma.$transaction(async (tx) => {
     await tx.documentoGerado.create({
-      data: { clienteId: Number(clienteId), templateSlug, dadosSnapshot: formData },
+      data: { clienteId: Number(clienteId), templateSlug, dadosSnapshot: formData, caminho: caminhoRelativo },
     });
 
     if (templateSlug === "pgrs-pinhais" || templateSlug === "pgrs-curitiba") {

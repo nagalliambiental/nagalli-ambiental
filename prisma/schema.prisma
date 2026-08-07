@@ -20,6 +20,7 @@ model Usuario {
   conselho        String?
   termosAceitosEm DateTime?
   alertas         Alerta[]
+  backups         Backup[]
   historicos      Historico[]
   logs            LogAuditoria[]
   responsaveis    Responsavel[]
@@ -402,6 +403,7 @@ model DocumentoGerado {
   clienteId     Int
   templateSlug  String
   dadosSnapshot Json
+  caminho       String?
   createdAt     DateTime @default(now())
   cliente       Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
 }
@@ -418,7 +420,18 @@ model Configuracao {
   responsavelBairro   String?
   responsavelEmail    String?
   responsavelTelefone String?
+  ultimoBackupEm      DateTime?
   atualizadoEm        DateTime @updatedAt
+}
+
+model Backup {
+  id        Int       @id @default(autoincrement())
+  arquivo   String
+  tamanho   Int
+  origem    String    @default("automatico")
+  usuarioId Int?
+  criadoEm  DateTime  @default(now())
+  usuario   Usuario?  @relation(fields: [usuarioId], references: [id])
 }
 
 model Historico {

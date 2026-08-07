@@ -75,6 +75,7 @@ interface DocData {
   id: number;
   templateSlug: string;
   createdAt: string;
+  caminho: string | null;
 }
 
 interface DocumentoUploaded {
@@ -113,6 +114,8 @@ export function ClienteDetailClient({
   const [tab, setTab] = useState<Tab>("info");
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmDeleteDocId, setConfirmDeleteDocId] = useState<number | null>(null);
+  const [deletingDoc, setDeletingDoc] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [gerarOpen, setGerarOpen] = useState(false);
@@ -139,6 +142,29 @@ export function ClienteDetailClient({
       toast("Erro ao excluir cliente", "error");
       setDeleting(false);
       setConfirmDelete(false);
+    }
+  }
+
+  async function handleDeleteDocumentoGerado() {
+    if (!confirmDeleteDocId) return;
+    setDeletingDoc(true);
+    try {
+      const res = await fetch(`/api/documentos-gerados/${confirmDeleteDocId}`, { method: "DELETE" });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        toast(err.error || "Erro ao excluir documento", "error");
+        setDeletingDoc(false);
+        setConfirmDeleteDocId(null);
+        return;
+      }
+      toast("Documento excluído com sucesso", "success");
+      setDeletingDoc(false);
+      setConfirmDeleteDocId(null);
+      router.refresh();
+    } catch {
+      toast("Erro ao excluir documento", "error");
+      setDeletingDoc(false);
+      setConfirmDeleteDocId(null);
     }
   }
 
@@ -598,16 +624,38 @@ export function ClienteDetailClient({
               <h2 className="font-display text-base font-semibold mb-4">Documentos gerados</h2>
               <div className="space-y-2">
                 {cliente.documentosGerados.map((d) => (
-                  <div key={d.id} className="flex items-center justify-between border-b border-[var(--color-paper-200)] pb-2 text-sm">
-                    <span className="text-[var(--color-ink-700)]">
-                      {d.templateSlug === "pgrs-pinhais" ? "PGRS Pinhais"
-                        : d.templateSlug === "pgrs-curitiba" ? "PGRS Curitiba"
-                        : d.templateSlug === "pgrcc-iat" ? "PGRCC IAT"
-                        : d.templateSlug}
-                    </span>
-                    <span className="text-xs text-[var(--color-ink-500)]">
-                      {format(new Date(d.createdAt), "dd/MM/yyyy")}
-                    </span>
+                  <div key={d.id} className="flex items-center justify-between gap-3 border-b border-[var(--color-paper-200)] pb-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <FileText size={14} className="text-[var(--color-ink-400)]" />
+                      <span className="text-[var(--color-ink-700)]">
+                        {d.templateSlug === "pgrs-pinhais" ? "PGRS Pinhais"
+                          : d.templateSlug === "pgrs-curitiba" ? "PGRS Curitiba"
+                          : d.templateSlug === "pgrcc-iat" ? "PGRCC IAT"
+                          : d.templateSlug}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-[var(--color-ink-500)]">
+                        {format(new Date(d.createdAt), "dd/MM/yyyy")}
+                      </span>
+                      {d.caminho && (
+                        <a
+                          href={`/api/documentos-gerados/${d.id}`}
+                          className="rounded p-1 text-[var(--color-ink-400)] hover:text-[var(--color-brand-600)]"
+                          title="Baixar documento"
+                        >
+                          <Download size={14} />
+                        </a>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDeleteDocId(d.id)}
+                        className="rounded p-1 text-[var(--color-ink-400)] hover:text-red-600"
+                        title="Excluir documento"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -709,6 +757,36 @@ export function ClienteDetailClient({
               <button onClick={handleDelete} disabled={deleting} className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50">
                 {deleting && <Loader2 size={14} className="animate-spin" />}
                 {deleting ? "Excluindo..." : "Excluir"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmDeleteDocId !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="mx-4 w-full max-w-sm rounded-xl bg-white p-6 shadow-lg">
+            <div className="flex items-start gap-4">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100">
+                <AlertTriangle size={20} className="text-red-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-[var(--color-ink-900)]">Excluir documento gerado</h3>
+                <p className="mt-1 text-sm text-[var(--color-ink-500)]">
+                  Tem certeza? O arquivo será removido e não poderá ser baixado novamente.
+                </p>
+              </div>
+              <button onClick={() => setConfirmDeleteDocId(null)} className="shrink-0 text-[var(--color-ink-400)] hover:text-[var(--color-ink-600)]">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="mt-6 flex justify-end gap-3">
+              <button onClick={() => setConfirmDeleteDocId(null)} className="rounded-lg border border-[var(--color-paper-200)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]" disabled={deletingDoc}>
+                Cancelar
+              </button>
+              <button onClick={handleDeleteDocumentoGerado} disabled={deletingDoc} className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50">
+                {deletingDoc && <Loader2 size={14} className="animate-spin" />}
+                {deletingDoc ? "Excluindo..." : "Excluir"}
               </button>
             </div>
           </div>
