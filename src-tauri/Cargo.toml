@@ -1,6 +1,6 @@
 [package]
 name = "nagalli-ambiental"
-version = "0.1.0"
+version = "0.1.1"
 description = "Nagalli Ambiental - Gestão Ambiental Desktop"
 authors = ["Nagalli Ambiental"]
 edition = "2021"
