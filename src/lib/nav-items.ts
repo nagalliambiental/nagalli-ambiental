@@ -5,6 +5,7 @@ import {
   FileCheck2,
   BarChart3,
   ListTodo,
+  DatabaseBackup,
   Shield,
   ClipboardList,
   type LucideIcon,
@@ -44,6 +45,7 @@ export const NAV_ITEMS: NavItem[] = [
     ],
   },
   { label: "Tarefas", href: "/tarefas", icon: ListTodo },
+  { label: "Backups", href: "/backups", icon: DatabaseBackup, adminOnly: true },
   {
     label: "Administrativo", icon: Settings,
     children: [
@@ -52,7 +54,6 @@ export const NAV_ITEMS: NavItem[] = [
       { label: "Financeiro", href: "/financeiro", adminOnly: true },
       { label: "Contratos", href: "/contratos", adminOnly: true },
       { label: "Acessos", href: "/acessos" },
-      { label: "Backups", href: "/backups", adminOnly: true },
       { label: "Usuários", href: "/usuarios", adminOnly: true },
       { label: "Configurações", href: "/configuracoes", adminOnly: true },
     ],
