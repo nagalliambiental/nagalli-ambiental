@@ -8,6 +8,7 @@ import {
   DatabaseBackup,
   Shield,
   ClipboardList,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 
@@ -47,11 +48,16 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Tarefas", href: "/tarefas", icon: ListTodo },
   { label: "Backups", href: "/backups", icon: DatabaseBackup, adminOnly: true },
   {
-    label: "Administrativo", icon: Settings,
+    label: "Financeiro e Orçamentos", icon: Wallet,
     children: [
       { label: "Propostas", href: "/propostas", adminOnly: true },
       { label: "Modelos de Proposta", href: "/propostas/modelos", adminOnly: true },
       { label: "Financeiro", href: "/financeiro", adminOnly: true },
+    ],
+  },
+  {
+    label: "Administrativo", icon: Settings,
+    children: [
       { label: "Contratos", href: "/contratos", adminOnly: true },
       { label: "Acessos", href: "/acessos" },
       { label: "Usuários", href: "/usuarios", adminOnly: true },
