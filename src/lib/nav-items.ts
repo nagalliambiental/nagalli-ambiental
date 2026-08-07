@@ -48,7 +48,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Tarefas", href: "/tarefas", icon: ListTodo },
   { label: "Backups", href: "/backups", icon: DatabaseBackup, adminOnly: true },
   {
-    label: "Financeiro e Orçamentos", icon: Wallet,
+    label: "Financeiro/Propostas", icon: Wallet,
     children: [
       { label: "Propostas", href: "/propostas", adminOnly: true },
       { label: "Modelos de Proposta", href: "/propostas/modelos", adminOnly: true },
