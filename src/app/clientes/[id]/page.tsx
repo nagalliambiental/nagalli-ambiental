@@ -28,7 +28,7 @@ export default async function ClienteDetailPage(props: { params: Promise<{ id: s
     prisma.cliente.findUnique({
       where: { id: Number(id) },
       select: {
-        id: true, apelido: true, razaoSocial: true, cnpj: true, visibilidade: true, criadoEm: true,
+        id: true, apelido: true, razaoSocial: true, cnpj: true, telefone: true, email: true, respLegal: true, visibilidade: true, criadoEm: true,
         empreendimentos: {
           select: {
             id: true, apelido: true, municipio: true, uf: true, rua: true, numero: true, bairro: true,
