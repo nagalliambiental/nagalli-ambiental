@@ -233,6 +233,18 @@ export function PgrccIatForm({ clienteId, clienteApelido, cliente, configuracoes
   const totalSolo = charTotalLinha("solo");
   const totalGeral = tA + tB + tC + tD;
 
+  const reutilTotalClasse = (ids: string[]) =>
+    ids.reduce((acc, id) => acc + numero(form.reutilizacao.find((r) => r.id === id)?.quantidade), 0);
+  const reutilA = reutilTotalClasse(classeIds.A);
+  const reutilB = reutilTotalClasse(classeIds.B);
+  const reutilSolo = numero(form.reutilizacao.find((r) => r.id === "solo")?.quantidade);
+  const volumeClasse = {
+    A: Math.max(0, tA - reutilA),
+    B: Math.max(0, tB - reutilB),
+    C: Math.max(0, tC - reutilTotalClasse(classeIds.C)),
+    D: Math.max(0, tD - reutilTotalClasse(classeIds.D)),
+  } as const;
+
   const empreendimentos = (cliente.empreendimentos as Record<string, unknown>[]) || [];
 
   async function handleSubmit(e: React.FormEvent) {
@@ -547,14 +559,14 @@ export function PgrccIatForm({ clienteId, clienteApelido, cliente, configuracoes
             <Campo label="Quantidade C (m³)" value={form.transportesQuantidades.c} onChange={(v) => setField("transportesQuantidades", { ...form.transportesQuantidades, c: v })} />
             <Campo label="Quantidade D (m³)" value={form.transportesQuantidades.d} onChange={(v) => setField("transportesQuantidades", { ...form.transportesQuantidades, d: v })} />
           </div>
-          <p className="mt-2 text-xs text-[var(--color-ink-500)]">Deixe em branco para usar os totais calculados na caracterização.</p>
+          <p className="mt-2 text-xs text-[var(--color-ink-500)]">Deixe em branco para usar os totais líquidos (caracterização − reutilização/reciclagem).</p>
         </SectionCard>
 
-        <SectionCard icon={CircleCheck} title="Destinação final dos RCD" subtitle="Por classe de resíduo — volumes preenchidos automaticamente">
+        <SectionCard icon={CircleCheck} title="Destinação final dos RCD" subtitle="Por classe de resíduo — volumes = total da caracterização − reutilização/reciclagem">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {DESTINACAO_ROWS.map((row) => {
               const d = form.destinacao.find((r) => r.id === row.id)!;
-              const volume = row.id === "a" ? tA : row.id === "b" ? tB : row.id === "c" ? tC : tD;
+              const volume = volumeClasse[row.id.toUpperCase() as keyof typeof volumeClasse];
               return (
                 <div key={row.id} className="rounded-lg border border-[var(--color-paper-200)] bg-[var(--color-paper-50)] p-4">
                   <h4 className="mb-3 text-sm font-semibold text-[var(--color-ink-900)]">{row.label}</h4>

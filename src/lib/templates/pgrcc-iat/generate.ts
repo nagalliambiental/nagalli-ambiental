@@ -129,14 +129,31 @@ export function buildDocxData(form: PgrccIatFormData): Record<string, string> {
     put(`transp_${row.id}_licenca`, row.licenca);
   }
 
-  const q = form.transportesQuantidades;
-  put("transp_quant_solo", q.solo || fmt(totalSolo));
-  put("transp_quant_exceto_solo", q.excetoSolo || fmt(tA - totalSolo));
-  put("transp_quant_b", q.b || fmt(tB));
-  put("transp_quant_c", q.c || fmt(tC));
-  put("transp_quant_d", q.d || fmt(tD));
+  const reutilTotalClasse = (ids: string[]): number =>
+    ids.reduce((acc, id) => {
+      const row = form.reutilizacao.find((r) => r.id === id);
+      return acc + numero(row?.quantidade);
+    }, 0);
 
-  const volumeClasse = { a: tA, b: tB, c: tC, d: tD } as const;
+  const reutilA = reutilTotalClasse(CLASSE_IDS.a);
+  const reutilB = reutilTotalClasse(CLASSE_IDS.b);
+  const reutilC = reutilTotalClasse(CLASSE_IDS.c);
+  const reutilD = reutilTotalClasse(CLASSE_IDS.d);
+  const reutilSolo = numero(form.reutilizacao.find((r) => r.id === "solo")?.quantidade);
+
+  const volumeClasse = {
+    a: Math.max(0, tA - reutilA),
+    b: Math.max(0, tB - reutilB),
+    c: Math.max(0, tC - reutilC),
+    d: Math.max(0, tD - reutilD),
+  } as const;
+
+  const q = form.transportesQuantidades;
+  put("transp_quant_solo", q.solo || fmt(Math.max(0, totalSolo - reutilSolo)));
+  put("transp_quant_exceto_solo", q.excetoSolo || fmt(Math.max(0, volumeClasse.a - (totalSolo - reutilSolo))));
+  put("transp_quant_b", q.b || fmt(volumeClasse.b));
+  put("transp_quant_c", q.c || fmt(volumeClasse.c));
+  put("transp_quant_d", q.d || fmt(volumeClasse.d));
   for (const row of form.destinacao) {
     put(`dest_${row.id}_empresa`, row.empresa);
     put(`dest_${row.id}_licenca`, row.licenca);
