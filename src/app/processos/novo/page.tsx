@@ -103,6 +103,16 @@ export default function NovoProcessoPage() {
     return sistema === "Outro" ? sistemaOutro : sistema;
   }
 
+  function alertaPadraoPara(tipoAtual: string): string {
+    if (tipoAtual.startsWith("Licença") || tipoAtual.startsWith("Renovação de Licença")) return "180";
+    if (tipoAtual.includes("Outorga") && !tipoAtual.startsWith("Dispensa")) return "45";
+    return "30";
+  }
+
+  function ehOutorga(tipoAtual: string): boolean {
+    return tipoAtual.includes("Outorga") || tipoAtual.includes("SIGARH");
+  }
+
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -149,36 +159,72 @@ export default function NovoProcessoPage() {
     return m ? `${m[3]}-${m[2]}-${m[1]}` : "";
   }
 
-  async function buscarSia() {
+  async function buscarDadosPublicos() {
+    const tipoFinal = getTipoFinal();
     const protocolo = form.numProtocolo.replace(/\D/g, "");
-    if (!protocolo) {
-      setError("Informe o nº do protocolo para buscar no SIA/IAP");
+    const portaria = form.numLicenca.replace(/\D/g, "");
+
+    if (!protocolo && !portaria) {
+      setError("Informe o nº do protocolo (ou da portaria) para buscar");
       return;
     }
-    setBuscandoSia(true);
-    setError("");
-    try {
-      const res = await fetch(`/api/sia/consulta?protocolo=${protocolo}`);
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        setError(data.error || "Nenhuma licença encontrada no SIA/IAP");
-        return;
-      }
-      const d = await res.json();
+
+    const urls = (ehOutorga: boolean) =>
+      ehOutorga
+        ? `/api/outorga/consulta?${protocolo ? `protocolo=${protocolo}` : `portaria=${portaria}`}`
+        : `/api/sia/consulta?protocolo=${protocolo}`;
+
+    const primarioSigarh = ehOutorga(tipoFinal);
+    const ordem: boolean[] = primarioSigarh ? [true, false] : [false, true];
+
+    const preencherOutorga = (d: Record<string, unknown>) => {
       setForm((prev) => ({
         ...prev,
-        numProtocolo: d.protocolo || prev.numProtocolo,
-        numLicenca: d.numLicenca || prev.numLicenca,
-        validade: toDateInput(d.dataValidade) || prev.validade,
-        dataProtocolo: toDateInput(d.dataEmissao) || prev.dataProtocolo,
-        condicionantes: d.condicionantes || prev.condicionantes,
+        numProtocolo: String(d.portaria || prev.numProtocolo),
+        numLicenca: String(d.portaria || prev.numLicenca),
+        validade: toDateInput(String(d.dataVencimento || "").split(" ")[0]) || prev.validade,
+        dataProtocolo: toDateInput(String(d.dataPublicacao || "")) || prev.dataProtocolo,
+        observacoes: [prev.observacoes, `SIGARH: ${d.usuario}`].filter(Boolean).join("\n"),
+      }));
+      setExtractedFile(`Dados do SIGARH (${d.tipoDocumento || "outorga"})`);
+    };
+
+    const preencherLicenca = (d: Record<string, unknown>) => {
+      setForm((prev) => ({
+        ...prev,
+        numProtocolo: String(d.protocolo || prev.numProtocolo),
+        numLicenca: String(d.numLicenca || prev.numLicenca),
+        validade: toDateInput(String(d.dataValidade || "")) || prev.validade,
+        dataProtocolo: toDateInput(String(d.dataEmissao || "")) || prev.dataProtocolo,
+        condicionantes: String(d.condicionantes || prev.condicionantes || ""),
       }));
       setExtractedFile(`Dados do SIA/IAP (${d.modalidade || "licença"})`);
-    } catch {
-      setError("Falha ao consultar o SIA/IAP");
-    } finally {
-      setBuscandoSia(false);
+    };
+
+    for (const usarSigarh of ordem) {
+      setBuscandoSia(true);
+      setError("");
+      try {
+        const res = await fetch(urls(usarSigarh));
+        if (!res.ok) continue;
+        const dados = await res.json();
+        const d = usarSigarh ? (Array.isArray(dados) ? dados[0] : null) : dados;
+        if (!d) continue;
+        if (usarSigarh) {
+          preencherOutorga(d);
+        } else {
+          preencherLicenca(d);
+        }
+        return;
+      } catch {
+        // tenta o próximo sistema
+      }
     }
+
+    setBuscandoSia(false);
+    setError(primarioSigarh
+      ? "Nenhuma outorga encontrada no SIGARH"
+      : "Nenhuma licença encontrada no SIA/IAP");
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -235,7 +281,7 @@ export default function NovoProcessoPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Tipo</label>
-                <select value={tipo} onChange={(e) => setTipo(e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" required>
+                <select value={tipo} onChange={(e) => { setTipo(e.target.value); setField("alertaDias", alertaPadraoPara(e.target.value)); }} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" required>
                   <option value="">Selecione...</option>
                   {TIPOS.map((t) => <option key={t} value={t}>{t}</option>)}
                   <option value="Outros">Outros</option>
@@ -270,13 +316,13 @@ export default function NovoProcessoPage() {
                   <input value={form.numProtocolo} onChange={(e) => setField("numProtocolo", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" required />
                   <button
                     type="button"
-                    onClick={buscarSia}
+                    onClick={buscarDadosPublicos}
                     disabled={buscandoSia}
                     className="focus-ring transition-brand flex shrink-0 items-center gap-1.5 rounded-lg bg-[var(--color-brand-500)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
-                    title="Buscar dados da licença no SIA/IAP pelo nº do protocolo"
+                    title="Buscar dados automaticamente: SIA/IAP para licenças ou SIGARH para outorgas"
                   >
                     {buscandoSia ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
-                    Buscar no SIA
+                    Buscar
                   </button>
                 </div>
               </div>
