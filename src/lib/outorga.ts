@@ -160,7 +160,7 @@ export async function consultarOutorga(opts: {
     valor = opts.protocolo.replace(/\D/g, "");
   } else if (opts.portaria) {
     filtro = "NUMERO_PORTARIA";
-    valor = opts.portaria.replace(/\D/g, "");
+    valor = opts.portaria.trim();
   } else if (opts.nome) {
     filtro = "NOME_USUARIO";
     valor = opts.nome.trim();

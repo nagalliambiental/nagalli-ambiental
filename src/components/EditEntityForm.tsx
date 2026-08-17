@@ -171,21 +171,44 @@ export default function EditEntityForm({
     try {
       if (field.search === "sia") {
         if (!clean) return toast("Informe o nº do protocolo", "error");
-        const res = await fetch(`/api/sia/consulta?protocolo=${clean}`);
-        if (!res.ok) return toast("Licença não encontrada no SIA/IAP", "error");
-        const d = await res.json();
-        setForm((prev) => {
-          const next = { ...prev };
-          if (d.protocolo && "numProtocolo" in next) next.numProtocolo = d.protocolo;
-          if (d.numLicenca && "numLicenca" in next) next.numLicenca = d.numLicenca;
-          if (d.dataValidade && "validade" in next) next.validade = toDateInput(d.dataValidade);
-          if (d.dataEmissao && "dataProtocolo" in next) next.dataProtocolo = toDateInput(d.dataEmissao);
-          if (d.condicionantes && "condicionantes" in next) next.condicionantes = d.condicionantes;
-          return next;
-        });
-        setDirty(true);
-        toast("Dados do SIA/IAP preenchidos", "success");
-        return;
+
+        const preencher = (d: Record<string, unknown>, origem: string) => {
+          setForm((prev) => {
+            const next = { ...prev };
+            if (origem === "sigarh") {
+              if (d.portaria && "numProtocolo" in next) next.numProtocolo = String(d.portaria);
+              if (d.portaria && "numLicenca" in next) next.numLicenca = String(d.portaria);
+              if (d.dataVencimento && "validade" in next)
+                next.validade = toDateInput(String(d.dataVencimento).split(" ")[0]);
+              if (d.dataPublicacao && "dataProtocolo" in next)
+                next.dataProtocolo = toDateInput(String(d.dataPublicacao));
+              if (d.usuario && "observacoes" in next)
+                next.observacoes = [String(next.observacoes || ""), `SIGARH: ${d.usuario}`].filter(Boolean).join("\n");
+            } else {
+              if (d.protocolo && "numProtocolo" in next) next.numProtocolo = String(d.protocolo);
+              if (d.numLicenca && "numLicenca" in next) next.numLicenca = String(d.numLicenca);
+              if (d.dataValidade && "validade" in next) next.validade = toDateInput(String(d.dataValidade));
+              if (d.dataEmissao && "dataProtocolo" in next) next.dataProtocolo = toDateInput(String(d.dataEmissao));
+              if (d.condicionantes && "condicionantes" in next) next.condicionantes = String(d.condicionantes);
+            }
+            return next;
+          });
+          setDirty(true);
+          toast(origem === "sigarh" ? "Dados do SIGARH preenchidos" : "Dados do SIA/IAP preenchidos", "success");
+        };
+
+        let res = await fetch(`/api/sia/consulta?protocolo=${clean}`);
+        if (res.ok) {
+          const d = await res.json();
+          if (d) return preencher(d, "sia");
+        }
+        res = await fetch(`/api/outorga/consulta?protocolo=${clean}`);
+        if (res.ok) {
+          const lista = await res.json();
+          const d = Array.isArray(lista) ? lista[0] : null;
+          if (d) return preencher(d, "sigarh");
+        }
+        return toast("Licença/outorga não encontrada no SIA/IAP ou SIGARH", "error");
       }
       const res = await fetch(`/api/${field.search}/${clean}`);
       if (!res.ok) return toast("Não encontrado", "error");
