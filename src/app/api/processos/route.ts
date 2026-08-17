@@ -52,10 +52,11 @@ export async function POST(request: Request) {
       });
     }
 
+    const status = (processoData.status as string) || "protocolado";
     await prisma.timelineProcesso.create({
       data: {
-        status: "protocolado",
-        descricao: "Processo protocolado",
+        status,
+        descricao: `Processo ${status}`,
         processoId: processo.id,
         usuarioId,
       },

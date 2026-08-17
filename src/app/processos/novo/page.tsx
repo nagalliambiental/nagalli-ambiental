@@ -22,6 +22,15 @@ const TIPOS = [
 
 const SISTEMAS = ["SGA", "E-Protocolo", "SIMA"];
 
+const STATUSES = [
+  { value: "protocolado", label: "Protocolado" },
+  { value: "em_andamento", label: "Em Andamento" },
+  { value: "exigencia_recebida", label: "Exigência Recebida" },
+  { value: "deferido", label: "Deferido" },
+  { value: "indeferido", label: "Indeferido" },
+  { value: "arquivado", label: "Arquivado" },
+];
+
 const TIPOS_COMPENSACAO = [
   "Reposição florestal",
   "Plantio compensatório",
@@ -65,6 +74,7 @@ export default function NovoProcessoPage() {
     empreendimentoId: "",
     responsavelId: "",
     observacoes: "",
+    status: "protocolado",
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -239,6 +249,7 @@ export default function NovoProcessoPage() {
         tipo: getTipoFinal(),
         orgaoId: Number(form.orgaoId),
         sistema: getSistemaFinal(),
+        status: form.status || "protocolado",
         numProtocolo: form.numProtocolo,
         numLicenca: form.numLicenca || undefined,
         validade: form.validade ? new Date(form.validade).toISOString() : undefined,
@@ -309,6 +320,12 @@ export default function NovoProcessoPage() {
                 {sistema === "Outro" && (
                   <input value={sistemaOutro} onChange={(e) => setSistemaOutro(e.target.value)} placeholder="Especifique o sistema" className="mt-2 w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" required />
                 )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Status</label>
+                <select value={form.status} onChange={(e) => setField("status", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" required>
+                  {STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Nº Protocolo</label>
