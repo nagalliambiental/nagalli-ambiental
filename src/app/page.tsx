@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { Building2, CalendarClock, Plus, Inbox, ArrowUpRight, FileCheck2, FileSpreadsheet, LayoutDashboard } from "lucide-react";
+import { Building2, CalendarClock, Plus, Inbox, ArrowUpRight, FileCheck2, FileSpreadsheet, LayoutDashboard, AlertTriangle } from "lucide-react";
 import { Topbar } from "@/components/Topbar";
 import { StatCard } from "@/components/StatCard";
 import { prisma } from "@/lib/prisma";
-import { format } from "date-fns";
+import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { getTrimestreAtual, getDiasFimTrimestre } from "@/lib/dmr-parser";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
@@ -34,6 +34,8 @@ export default async function DashboardPage() {
     exigenciasPendentes,
     clientesRecentes,
     processosRecentes,
+    processosComValidade,
+    exigenciasComPrazo,
   ] = await Promise.all([
     prisma.processo.count(),
     prisma.cliente.count(),
@@ -44,6 +46,16 @@ export default async function DashboardPage() {
       take: 5,
       orderBy: { criadoEm: "desc" },
       include: { empreendimento: { select: { apelido: true } }, orgao: { select: { sigla: true } } },
+    }),
+    prisma.processo.findMany({
+      where: { validade: { not: null }, ativo: true },
+      include: { empreendimento: { select: { apelido: true } }, orgao: { select: { sigla: true } } },
+      orderBy: { validade: "asc" },
+    }),
+    prisma.exigencia.findMany({
+      where: { cumprida: false },
+      include: { processo: { select: { numProtocolo: true, empreendimento: { select: { apelido: true } } } } },
+      orderBy: { prazo: "asc" },
     }),
   ]);
 
@@ -76,6 +88,77 @@ export default async function DashboardPage() {
           <StatCard label="Exigências Pendentes" value={exigenciasPendentes} icon={CalendarClock} accent={exigenciasPendentes > 0 ? "river" : "brand"} />
         </Link>
       </div>
+
+      {(() => {
+        const hoje = new Date();
+        const alertasProcessos = processosComValidade
+          .filter((p) => p.validade && differenceInDays(p.validade, hoje) <= p.alertaDias)
+          .map((p) => ({
+            id: p.id,
+            tipo: p.tipo,
+            numProtocolo: p.numProtocolo,
+            apelido: p.empreendimento.apelido,
+            orgao: p.orgao.sigla,
+            validade: p.validade!,
+            diasRestantes: differenceInDays(p.validade!, hoje),
+          }));
+        const alertasExigencias = exigenciasComPrazo
+          .filter((e) => differenceInDays(e.prazo, hoje) <= 7)
+          .map((e) => ({
+            id: e.id,
+            descricao: e.descricao,
+            processo: e.processo.numProtocolo,
+            apelido: e.processo.empreendimento.apelido,
+            prazo: e.prazo,
+            diasRestantes: differenceInDays(e.prazo, hoje),
+          }));
+        const totalAlertas = alertasProcessos.length + alertasExigencias.length;
+        if (totalAlertas === 0) return null;
+        return (
+          <div className="mt-6 rounded-[var(--radius-card)] border border-red-200 bg-red-50 p-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="rounded-full bg-red-100 p-2">
+                  <AlertTriangle size={18} className="text-red-700" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-red-900">Alertas de prazos a vencer ({totalAlertas})</p>
+                  <p className="text-xs text-red-700">Processos e exigências com vencimento próximo ou vencido</p>
+                </div>
+              </div>
+              <Link href="/prazos" className="focus-ring transition-brand rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">
+                Ver todos
+              </Link>
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              {alertasProcessos.slice(0, 4).map((a) => (
+                <Link key={`p-${a.id}`} href={`/processos/${a.id}`} className={`focus-ring transition-brand flex items-center justify-between rounded-lg border bg-white p-3 ${a.diasRestantes < 0 ? "border-red-300" : "border-amber-200"}`}>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-[var(--color-ink-900)]">{a.tipo} — {a.apelido}</p>
+                    <p className="text-xs text-[var(--color-ink-500)]">{a.numProtocolo} · {a.orgao}</p>
+                  </div>
+                  <div className={`shrink-0 text-right text-xs font-semibold ${a.diasRestantes < 0 ? "text-red-700" : "text-amber-700"}`}>
+                    {format(a.validade, "dd/MM/yyyy", { locale: ptBR })}
+                    <div>{a.diasRestantes < 0 ? `Vencido há ${Math.abs(a.diasRestantes)} dia(s)` : `${a.diasRestantes} dia(s)`}</div>
+                  </div>
+                </Link>
+              ))}
+              {alertasExigencias.slice(0, 4).map((a) => (
+                <Link key={`e-${a.id}`} href={`/exigencias/${a.id}`} className={`focus-ring transition-brand flex items-center justify-between rounded-lg border bg-white p-3 ${a.diasRestantes < 0 ? "border-red-300" : "border-amber-200"}`}>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-[var(--color-ink-900)]">{a.descricao}</p>
+                    <p className="text-xs text-[var(--color-ink-500)]">{a.processo} · {a.apelido}</p>
+                  </div>
+                  <div className={`shrink-0 text-right text-xs font-semibold ${a.diasRestantes < 0 ? "text-red-700" : "text-amber-700"}`}>
+                    {format(a.prazo, "dd/MM/yyyy", { locale: ptBR })}
+                    <div>{a.diasRestantes < 0 ? `Vencido há ${Math.abs(a.diasRestantes)} dia(s)` : `${a.diasRestantes} dia(s)`}</div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {(() => {
         const dias = getDiasFimTrimestre();

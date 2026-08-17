@@ -11,6 +11,7 @@ import { ptBR } from "date-fns/locale";
 import { FileText, Building2, Map, Calendar, Users, ClipboardList, FileCheck2, Clock, AlertTriangle, Edit3, ArrowLeft, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import DeleteButton from "@/components/DeleteButton";
+import RenovarButton from "@/components/RenovarButton";
 import { Tabs } from "@/components/Tabs";
 import { UltimaModificacao } from "@/components/UltimaModificacao";
 import CompensacaoCorteCard from "@/components/CompensacaoCorteCard";
@@ -82,6 +83,7 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
               Editar
             </Link>
             <DeleteButton entity="Processo" endpoint={`/api/processos/${processo.id}`} redirectTo="/processos" />
+            <RenovarButton processoId={processo.id} numProtocolo={processo.numProtocolo} />
             <a
               href={`/api/processos/${processo.id}/relatorio-condicionantes`}
               target="_blank"
