@@ -125,6 +125,7 @@ export default function RelatoriosPage() {
               <option value="deferido">Deferido</option>
               <option value="indeferido">Indeferido</option>
               <option value="arquivado">Arquivado</option>
+              <option value="vencido">Vencido</option>
             </select>
           </div>
           <div className="flex gap-2">

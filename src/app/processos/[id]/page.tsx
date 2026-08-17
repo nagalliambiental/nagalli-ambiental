@@ -25,6 +25,7 @@ const statusLabels: Record<string, string> = {
   deferido: "Deferido",
   indeferido: "Indeferido",
   arquivado: "Arquivado",
+  vencido: "Vencido",
 };
 
 const statusColors: Record<string, string> = {
@@ -34,6 +35,7 @@ const statusColors: Record<string, string> = {
   deferido: "bg-[var(--color-brand-50)] text-[var(--color-brand-600)]",
   indeferido: "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]",
   arquivado: "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]",
+  vencido: "bg-red-50 text-red-700",
 };
 
 export async function generateMetadata(props: { params: Promise<{ id: string }> }): Promise<Metadata> {

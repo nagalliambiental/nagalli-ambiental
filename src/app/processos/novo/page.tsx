@@ -29,6 +29,7 @@ const STATUSES = [
   { value: "deferido", label: "Deferido" },
   { value: "indeferido", label: "Indeferido" },
   { value: "arquivado", label: "Arquivado" },
+  { value: "vencido", label: "Vencido" },
 ];
 
 const TIPOS_COMPENSACAO = [

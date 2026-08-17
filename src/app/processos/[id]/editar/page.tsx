@@ -44,6 +44,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
           { value: "deferido", label: "Deferido" },
           { value: "indeferido", label: "Indeferido" },
           { value: "arquivado", label: "Arquivado" },
+          { value: "vencido", label: "Vencido" },
         ] },
         { name: "validade", label: "Validade", type: "date" },
         { name: "dataProtocolo", label: "Data Protocolo", type: "date" },

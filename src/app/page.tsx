@@ -14,7 +14,7 @@ export const metadata = { title: "Dashboard" };
 const statusLabels: Record<string, string> = {
   protocolado: "Protocolado", em_andamento: "Em Andamento",
   exigencia_recebida: "Exigência Recebida", deferido: "Deferido",
-  indeferido: "Indeferido", arquivado: "Arquivado",
+  indeferido: "Indeferido", arquivado: "Arquivado", vencido: "Vencido",
 };
 
 const statusColors: Record<string, string> = {
@@ -24,6 +24,7 @@ const statusColors: Record<string, string> = {
   deferido: "bg-green-50 text-green-800",
   indeferido: "bg-red-50 text-red-800",
   arquivado: "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]",
+  vencido: "bg-red-100 text-red-700",
 };
 
 export default async function DashboardPage() {

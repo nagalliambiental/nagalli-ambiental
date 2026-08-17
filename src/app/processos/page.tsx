@@ -3,10 +3,11 @@ import type { Prisma } from "@prisma/client";
 import Link from "next/link";
 import { Topbar } from "@/components/Topbar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
-import { FolderKanban, Plus } from "lucide-react";
+import { FolderKanban, Plus, Clock3 } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
 import { FilterSelect } from "@/components/FilterSelect";
 import { ProcessosTable } from "@/components/tables/ProcessosTable";
+import { atualizarProcessosVencidos } from "@/lib/vencidos";
 
 export const dynamic = "force-dynamic";
 
@@ -15,9 +16,11 @@ export const metadata = { title: "Processos" };
 export default async function ProcessosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string }>;
+  searchParams: Promise<{ q?: string; status?: string; tab?: string }>;
 }) {
-  const { q, status } = await searchParams;
+  const { q, status, tab } = await searchParams;
+
+  await atualizarProcessosVencidos();
 
   const where: Prisma.ProcessoWhereInput = {};
   if (q) {
@@ -27,8 +30,14 @@ export default async function ProcessosPage({
       { empreendimento: { apelido: { contains: q, mode: "insensitive" } } },
     ];
   }
-  if (status) {
-    where.status = status;
+  if (tab === "vencidos") {
+    where.status = "vencido";
+  } else {
+    if (status) {
+      where.status = status;
+    } else {
+      where.status = { not: "vencido" };
+    }
   }
 
   const processos = await prisma.processo.findMany({
@@ -40,6 +49,8 @@ export default async function ProcessosPage({
     orderBy: { criadoEm: "desc" },
   });
 
+  const totalVencidos = await prisma.processo.count({ where: { status: "vencido", ativo: true } });
+
   return (
     <div>
       <Breadcrumbs items={[{ label: "Processos" }]} />
@@ -47,7 +58,7 @@ export default async function ProcessosPage({
         icon={FolderKanban}
         title="Processos"
         actions={
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <SearchBar placeholder="Buscar por protocolo, tipo ou empreendimento..." />
             <FilterSelect
               paramName="status"
@@ -72,8 +83,37 @@ export default async function ProcessosPage({
         }
       />
 
+      <div className="mb-4 flex gap-2 border-b border-[var(--color-paper-200)]">
+        <Link
+          href={`/processos${q ? `?q=${encodeURIComponent(q)}` : ""}`}
+          className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
+            tab !== "vencidos"
+              ? "border-[var(--color-brand-500)] text-[var(--color-brand-600)]"
+              : "border-transparent text-[var(--color-ink-500)] hover:text-[var(--color-ink-700)]"
+          }`}
+        >
+          Ativos
+        </Link>
+        <Link
+          href={`/processos?tab=vencidos${q ? `&q=${encodeURIComponent(q)}` : ""}`}
+          className={`flex items-center gap-1.5 pb-3 text-sm font-medium border-b-2 transition-colors ${
+            tab === "vencidos"
+              ? "border-[var(--color-brand-500)] text-[var(--color-brand-600)]"
+              : "border-transparent text-[var(--color-ink-500)] hover:text-[var(--color-ink-700)]"
+          }`}
+        >
+          <Clock3 size={14} />
+          Vencidos
+          {totalVencidos > 0 && (
+            <span className={`ml-1 rounded px-1.5 py-0.5 text-xs ${tab === "vencidos" ? "bg-[var(--color-brand-50)] text-[var(--color-brand-600)]" : "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]"}`}>
+              {totalVencidos}
+            </span>
+          )}
+        </Link>
+      </div>
+
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">
-        <ProcessosTable data={processos} q={q} status={status} />
+        <ProcessosTable data={processos} q={q} status={tab === "vencidos" ? "vencido" : status} />
       </div>
     </div>
   );
