@@ -17,7 +17,10 @@ interface FieldConfig {
   required?: boolean;
   adminOnly?: boolean;
   options?: { value: string; label: string }[];
+  optionsUrl?: string;
+  optionLabelKey?: string;
   search?: "cep" | "cnpj" | "sia";
+  upload?: boolean;
   step?: string;
   validate?: (value: string | boolean) => string | null;
 }
@@ -52,6 +55,9 @@ export default function EditEntityForm({
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [dirty, setDirty] = useState(false);
+  const [uploading, setUploading] = useState<string | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<string | null>(null);
+  const [opcoesDinamicas, setOpcoesDinamicas] = useState<Record<string, { value: string; label: string }[]>>({});
   const [form, setForm] = useState<Record<string, string | boolean>>(() => {
     const initial: Record<string, string | boolean> = {};
     for (const f of fields) {
@@ -74,6 +80,25 @@ export default function EditEntityForm({
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
   }, [dirty]);
+
+  useEffect(() => {
+    for (const f of fields) {
+      if (!f.optionsUrl || f.options) continue;
+      fetch(f.optionsUrl)
+        .then((r) => r.json())
+        .then((itens: Record<string, unknown>[]) => {
+          const chave = f.optionLabelKey || "apelido";
+          setOpcoesDinamicas((prev) => ({
+            ...prev,
+            [f.name]: (itens || []).map((i) => ({
+              value: String(i.id),
+              label: String(i[chave] ?? i.nome ?? i.apelido ?? i.id),
+            })),
+          }));
+        })
+        .catch(() => {});
+    }
+  }, [fields]);
 
   const validate = useCallback(() => {
     const errors: Record<string, string> = {};
@@ -227,6 +252,39 @@ export default function EditEntityForm({
     }
   }
 
+  async function handleUpload(field: FieldConfig, e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(field.name);
+    setUploadedFile(null);
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      const res = await fetch("/api/documentos/extract", {
+        method: "POST",
+        body,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast(data.error || "Erro ao processar documento", "error");
+        return;
+      }
+      const valor = data.condicionantes || "";
+      if (valor) {
+        setForm((prev) => ({ ...prev, [field.name]: valor }));
+        setDirty(true);
+        setUploadedFile(file.name);
+        toast("Condicionantes extraídas do documento", "success");
+      } else {
+        toast("Nenhuma condicionante detectada no documento", "info");
+      }
+    } catch {
+      toast("Erro ao processar documento", "error");
+    } finally {
+      setUploading(null);
+    }
+  }
+
   return (
     <div>
       <Topbar
@@ -272,17 +330,40 @@ export default function EditEntityForm({
                       required={f.required}
                     >
                       <option value="">Selecione...</option>
-                      {(f.options || []).map((o) => (
+                      {(f.optionsUrl ? opcoesDinamicas[f.name] : f.options || []).map((o) => (
                         <option key={o.value} value={o.value}>{o.label}</option>
                       ))}
                     </select>
                   ) : f.type === "textarea" ? (
-                    <textarea
-                      value={form[f.name] as string || ""}
-                      onChange={(e) => setField(f.name, e.target.value)}
-                      rows={5}
-                      className={`input-field resize-none ${fieldErrors[f.name] ? "input-error" : ""}`}
-                    />
+                    <div className="space-y-2">
+                      <textarea
+                        value={form[f.name] as string || ""}
+                        onChange={(e) => setField(f.name, e.target.value)}
+                        rows={5}
+                        className={`input-field resize-none ${fieldErrors[f.name] ? "input-error" : ""}`}
+                      />
+                      {f.upload && (
+                        <label className={`focus-ring transition-brand flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-[var(--color-paper-200)] px-3 py-3 text-sm text-[var(--color-ink-500)] hover:border-[var(--color-brand-300)] hover:text-[var(--color-brand-600)] ${uploading === f.name ? "opacity-60" : ""}`}>
+                          {uploading === f.name ? (
+                            <>
+                              <Loader2 size={16} className="animate-spin" />
+                              Processando documento...
+                            </>
+                          ) : uploadedFile ? (
+                            <>
+                              <FileText size={16} className="text-green-600" />
+                              <span className="text-green-700">Documento processado: {uploadedFile}</span>
+                            </>
+                          ) : (
+                            <>
+                              <FileText size={16} />
+                              <span>Upload do documento para extrair condicionantes</span>
+                            </>
+                          )}
+                          <input type="file" accept="image/*,.pdf" onChange={(e) => handleUpload(f, e)} className="hidden" disabled={uploading === f.name} />
+                        </label>
+                      )}
+                    </div>
                   ) : (
                     <div className="flex gap-2">
                       <input
