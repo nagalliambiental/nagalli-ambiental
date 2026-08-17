@@ -11,6 +11,7 @@ const TIPOS = [
   "Licença de Operação",
   "Autorização Ambiental para Corte",
   "Autorização Ambiental para Obra",
+  "Outorga Prévia",
   "Outorga de Direito de Uso",
   "Dispensa de Licença",
   "Dispensa de Outorga",
