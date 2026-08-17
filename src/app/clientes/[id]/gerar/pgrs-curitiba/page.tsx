@@ -1,12 +1,33 @@
 export function generateStaticParams() { return []; }
 
-export default function Page() {
+import { notFound, redirect } from "next/navigation";
+import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { PgrsForm } from "@/components/PgrsForm";
+
+export const dynamic = "force-dynamic";
+
+export default async function GerarPgrsCuritibaPage(props: { params: Promise<{ id: string }> }) {
+  const session = await auth();
+  if (!session?.user) redirect("/login");
+
+  const { id } = await props.params;
+
+  const cliente = await prisma.cliente.findUnique({
+    where: { id: Number(id) },
+    include: {
+      residuos: { orderBy: { ordem: "asc" } },
+      empresasContratadas: { orderBy: { ordem: "asc" } },
+    },
+  });
+  if (!cliente) notFound();
+
   return (
-    <div className="flex items-center justify-center p-12">
-      <div className="text-center text-sm text-[var(--color-ink-500)]">
-        <p className="font-medium text-[var(--color-ink-700)]">PGRS Curitiba</p>
-        <p className="mt-1">Disponível apenas na versão web.</p>
-      </div>
-    </div>
+    <PgrsForm
+      clienteId={cliente.id}
+      clienteApelido={cliente.apelido}
+      cliente={JSON.parse(JSON.stringify(cliente))}
+      templateSlug="pgrs-curitiba"
+    />
   );
 }
