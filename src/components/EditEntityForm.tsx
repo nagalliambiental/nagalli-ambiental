@@ -330,7 +330,7 @@ export default function EditEntityForm({
                       required={f.required}
                     >
                       <option value="">Selecione...</option>
-                      {(f.optionsUrl ? opcoesDinamicas[f.name] : f.options || []).map((o) => (
+                      {(f.optionsUrl ? (opcoesDinamicas[f.name] || []) : f.options || []).map((o) => (
                         <option key={o.value} value={o.value}>{o.label}</option>
                       ))}
                     </select>
