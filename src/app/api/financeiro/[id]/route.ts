@@ -34,17 +34,23 @@ export async function PUT(
   const { id } = await params;
   const body = await request.json();
 
+  const atual = await prisma.financeiro.findUnique({ where: { id: Number(id) } });
+  if (!atual) {
+    return NextResponse.json({ error: "Financeiro não encontrado" }, { status: 404 });
+  }
+
   const fin = await prisma.financeiro.update({
     where: { id: Number(id) },
     data: {
-      tipoCobranca: body.tipoCobranca,
-      valor: Number(body.valor),
-      formaPagamento: body.formaPagamento,
-      statusPagamento: body.statusPagamento,
-      dataVencimento: body.dataVencimento ? new Date(body.dataVencimento) : null,
-      dataPagamento: body.dataPagamento ? new Date(body.dataPagamento) : null,
-      descricao: body.descricao ?? null,
-      clienteId: Number(body.clienteId),
+      tipoCobranca: body.tipoCobranca ?? atual.tipoCobranca,
+      valor: body.valor !== undefined && body.valor !== null && body.valor !== "" ? Number(body.valor) : atual.valor,
+      formaPagamento: body.formaPagamento ?? atual.formaPagamento,
+      statusPagamento: body.statusPagamento ?? atual.statusPagamento,
+      dataVencimento: body.dataVencimento !== undefined ? (body.dataVencimento ? new Date(body.dataVencimento) : null) : atual.dataVencimento,
+      dataPagamento: body.dataPagamento !== undefined ? (body.dataPagamento ? new Date(body.dataPagamento) : null) : atual.dataPagamento,
+      descricao: body.descricao !== undefined ? body.descricao ?? null : atual.descricao,
+      clienteId: body.clienteId !== undefined && body.clienteId !== null && body.clienteId !== "" ? Number(body.clienteId) : atual.clienteId,
+      ativo: body.ativo !== undefined ? Boolean(body.ativo) : atual.ativo,
     },
   });
 

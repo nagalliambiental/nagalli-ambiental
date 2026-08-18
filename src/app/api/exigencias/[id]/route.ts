@@ -41,14 +41,22 @@ export async function PUT(
   const { id } = await params;
   const body = await request.json();
 
+  const atual = await prisma.exigencia.findUnique({ where: { id: Number(id) } });
+  if (!atual) {
+    return NextResponse.json({ error: "Exigência não encontrada" }, { status: 404 });
+  }
+
+  const cumprida = body.cumprida === true || body.cumprida === "true";
+
   const exigencia = await prisma.exigencia.update({
     where: { id: Number(id) },
     data: {
-      descricao: body.descricao,
-      prazo: new Date(body.prazo),
-      antecedenciaDias: Number(body.antecedenciaDias),
-      cumprida: body.cumprida ?? false,
-      processoId: Number(body.processoId),
+      descricao: body.descricao ?? atual.descricao,
+      prazo: body.prazo ? new Date(body.prazo) : atual.prazo,
+      antecedenciaDias: body.antecedenciaDias !== undefined ? Number(body.antecedenciaDias) : atual.antecedenciaDias,
+      cumprida: body.cumprida !== undefined ? cumprida : atual.cumprida,
+      processoId: body.processoId !== undefined ? Number(body.processoId) : atual.processoId,
+      ativo: body.ativo !== undefined ? Boolean(body.ativo) : atual.ativo,
     },
   });
 

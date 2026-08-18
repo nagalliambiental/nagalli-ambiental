@@ -28,19 +28,23 @@ export async function PUT(
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
 
-  const { id } = await params;
+const { id } = await params;
   const body = await request.json();
+
+  const atual = await prisma.tarefa.findUnique({ where: { id: Number(id) } });
+  if (!atual) return NextResponse.json({ error: "Tarefa não encontrada" }, { status: 404 });
 
   const tarefa = await prisma.tarefa.update({
     where: { id: Number(id) },
     data: {
-      titulo: body.titulo,
-      descricao: body.descricao ?? null,
-      status: body.status,
-      prioridade: body.prioridade,
-      dataVencimento: body.dataVencimento ? new Date(body.dataVencimento) : null,
-      responsavelId: Number(body.responsavelId),
-      statusObs: body.statusObs ?? null,
+      titulo: body.titulo ?? atual.titulo,
+      descricao: body.descricao !== undefined ? body.descricao ?? null : atual.descricao,
+      status: body.status ?? atual.status,
+      prioridade: body.prioridade ?? atual.prioridade,
+      dataVencimento: body.dataVencimento !== undefined ? (body.dataVencimento ? new Date(body.dataVencimento) : null) : atual.dataVencimento,
+      responsavelId: body.responsavelId !== undefined && body.responsavelId !== null && body.responsavelId !== "" ? Number(body.responsavelId) : atual.responsavelId,
+      statusObs: body.statusObs !== undefined ? body.statusObs ?? null : atual.statusObs,
+      ativo: body.ativo !== undefined ? Boolean(body.ativo) : atual.ativo,
     },
   });
 
