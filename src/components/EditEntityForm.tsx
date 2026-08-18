@@ -399,6 +399,9 @@ export default function EditEntityForm({
                       )}
                     </div>
                   )}
+                  {f.search === "sia" && !fieldErrors[f.name] && (
+                    <p className="mt-1 text-xs text-[var(--color-ink-500)]">A busca consulta apenas os sistemas SIGARH, SIA/SGA e IMA/SC. Demais órgãos devem ser preenchidos manualmente.</p>
+                  )}
                   {fieldErrors[f.name] && (
                     <p className="mt-1 flex items-center gap-1 text-xs text-red-600">
                       <AlertCircle size={12} />

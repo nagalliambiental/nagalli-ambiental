@@ -381,6 +381,7 @@ export default function NovoProcessoPage() {
                     Buscar
                   </button>
                 </div>
+                <p className="mt-1 text-xs text-[var(--color-ink-500)]">A busca consulta apenas os sistemas SIGARH, SIA/SGA e IMA/SC. Demais órgãos devem ser preenchidos manualmente.</p>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
