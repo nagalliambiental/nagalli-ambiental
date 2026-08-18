@@ -28,7 +28,12 @@ export default async function PrazosPage() {
     }),
     prisma.processo.findMany({
       where: { validade: { not: null } },
-      include: {
+      select: {
+        id: true,
+        numProtocolo: true,
+        tipo: true,
+        validade: true,
+        alertaDias: true,
         orgao: { select: { sigla: true } },
         empreendimento: { select: { apelido: true } },
       },
@@ -44,6 +49,7 @@ export default async function PrazosPage() {
         processos={processosComValidade.map((p) => ({
           id: p.id,
           numProtocolo: p.numProtocolo,
+          tipo: p.tipo,
           validade: p.validade!.toISOString(),
           alertaDias: p.alertaDias,
           orgao: p.orgao,
@@ -56,6 +62,7 @@ export default async function PrazosPage() {
           processo: {
             id: e.processo.id,
             numProtocolo: e.processo.numProtocolo,
+            tipo: e.processo.tipo,
             orgao: e.processo.orgao,
             empreendimento: e.processo.empreendimento,
           },

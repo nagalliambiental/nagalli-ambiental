@@ -9,6 +9,7 @@ import Link from "next/link";
 interface ProcessoPrazo {
   id: number;
   numProtocolo: string;
+  tipo: string;
   validade: string;
   alertaDias: number;
   orgao: { sigla: string };
@@ -19,7 +20,7 @@ interface ExigenciaPrazo {
   id: number;
   descricao: string;
   prazo: string;
-  processo: { id: number; numProtocolo: string; orgao: { sigla: string }; empreendimento: { apelido: string; cliente: { apelido: string } } };
+  processo: { id: number; numProtocolo: string; tipo: string; orgao: { sigla: string }; empreendimento: { apelido: string; cliente: { apelido: string } } };
 }
 
 export function PrazosView({ processos, exigencias }: { processos: ProcessoPrazo[]; exigencias: ExigenciaPrazo[] }) {
@@ -78,7 +79,7 @@ function ListView({ processos, exigencias }: { processos: ProcessoPrazo[]; exige
                         {isVencido && <span className="inline-flex items-center gap-1 rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">Vencido</span>}
                         {isAlert && !isVencido && <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">Alerta</span>}
                       </div>
-                      <div className="mt-1 text-xs text-[var(--color-ink-500)]">{p.orgao.sigla} · {p.empreendimento.apelido}</div>
+                      <div className="mt-1 text-xs text-[var(--color-ink-500)]">{p.tipo} · {p.orgao.sigla} · {p.empreendimento.apelido}</div>
                     </div>
                     <div className="flex flex-col items-end gap-1">
                       <div className={`text-right text-sm font-semibold ${isVencido ? "text-red-700" : isAlert ? "text-amber-700" : "text-[var(--color-ink-700)]"}`}>
@@ -117,6 +118,7 @@ function ListView({ processos, exigencias }: { processos: ProcessoPrazo[]; exige
                     </div>
                     <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-sm text-[var(--color-ink-500)]">
                       <span>Processo: <span className="font-mono text-[var(--color-ink-700)]">{e.processo.numProtocolo}</span></span>
+                      <span>Tipo: <span className="text-[var(--color-ink-700)]">{e.processo.tipo}</span></span>
                       <span>Órgão: <span className="text-[var(--color-ink-700)]">{e.processo.orgao.sigla}</span></span>
                       <span>Empreendimento: <span className="text-[var(--color-ink-700)]">{e.processo.empreendimento.apelido}</span></span>
                       <span>Cliente: <span className="text-[var(--color-ink-700)]">{e.processo.empreendimento.cliente.apelido}</span></span>
