@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { List, Calendar as CalendarIcon } from "lucide-react";
-import { format, differenceInDays, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameDay } from "date-fns";
+import { List, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { format, differenceInDays, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameDay, isSameMonth, addMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import Link from "next/link";
 
@@ -147,10 +147,12 @@ function ListView({ processos, exigencias }: { processos: ProcessoPrazo[]; exige
 
 function CalendarView({ processos, exigencias }: { processos: ProcessoPrazo[]; exigencias: ExigenciaPrazo[] }) {
   const now = new Date();
-  const monthStart = startOfMonth(now);
-  const monthEnd = endOfMonth(now);
+  const [mesAtual, setMesAtual] = useState(() => startOfMonth(now));
+  const monthStart = startOfMonth(mesAtual);
+  const monthEnd = endOfMonth(mesAtual);
   const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
   const startDay = getDay(monthStart);
+  const isMesAtual = isSameMonth(mesAtual, now);
 
   const allEvents: { date: Date; label: string; href: string; type: "processo" | "exigencia"; vencido: boolean }[] = [
     ...processos.map((p) => ({ date: new Date(p.validade), label: `Proc: ${p.numProtocolo}`, href: `/processos/${p.id}`, type: "processo" as const, vencido: differenceInDays(new Date(p.validade), now) < 0 })),
@@ -163,9 +165,38 @@ function CalendarView({ processos, exigencias }: { processos: ProcessoPrazo[]; e
 
   return (
     <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
-      <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-4 text-center">
-        {format(now, "MMMM 'de' yyyy", { locale: ptBR })}
-      </h2>
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={() => setMesAtual((m) => addMonths(m, -1))}
+          className="focus-ring transition-brand flex items-center gap-1 rounded-lg border border-[var(--color-paper-200)] px-3 py-1.5 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]"
+          title="Mês anterior"
+        >
+          <ChevronLeft size={16} />
+        </button>
+        <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] capitalize">
+          {format(mesAtual, "MMMM 'de' yyyy", { locale: ptBR })}
+        </h2>
+        <div className="flex items-center gap-2">
+          {!isMesAtual && (
+            <button
+              type="button"
+              onClick={() => setMesAtual(startOfMonth(now))}
+              className="focus-ring transition-brand rounded-lg border border-[var(--color-paper-200)] px-3 py-1.5 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]"
+            >
+              Hoje
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setMesAtual((m) => addMonths(m, 1))}
+            className="focus-ring transition-brand flex items-center gap-1 rounded-lg border border-[var(--color-paper-200)] px-3 py-1.5 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]"
+            title="Próximo mês"
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      </div>
       <div className="grid grid-cols-7 gap-px bg-[var(--color-paper-200)]">
         {dayNames.map((name) => (
           <div key={name} className="bg-[var(--color-paper-50)] p-2 text-center text-xs font-medium text-[var(--color-ink-500)]">
