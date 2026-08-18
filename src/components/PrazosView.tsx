@@ -56,13 +56,13 @@ function ListView({ processos, exigencias }: { processos: ProcessoPrazo[]; exige
   const now = new Date();
 
   return (
-    <div>
-      {processos.length > 0 && (
-        <div className="mb-8">
-          <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-4 flex items-center gap-2">
-            <CalendarIcon size={18} />
-            Prazos de Processos
-          </h2>
+    <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+      <div>
+        <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-4 flex items-center gap-2">
+          <CalendarIcon size={18} />
+          Prazos de Processos
+        </h2>
+        {processos.length > 0 ? (
           <div className="grid gap-3">
             {processos.map((p) => {
               const validade = new Date(p.validade);
@@ -94,55 +94,61 @@ function ListView({ processos, exigencias }: { processos: ProcessoPrazo[]; exige
               );
             })}
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="flex flex-col items-center gap-3 py-10 text-[var(--color-ink-500)]">
+            <p className="font-display text-base font-medium text-[var(--color-ink-900)]">Nenhum processo com prazo</p>
+          </div>
+        )}
+      </div>
 
-      <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-4 flex items-center gap-2">Exigências Pendentes</h2>
+      <div>
+        <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-4 flex items-center gap-2">Exigências Pendentes</h2>
 
-      {exigencias.length > 0 ? (
-        <div className="grid gap-4">
-          {exigencias.map((e) => {
-            const prazo = new Date(e.prazo);
-            const diasRestantes = differenceInDays(prazo, now);
-            const isVencido = diasRestantes < 0;
-            const isUrgente = diasRestantes >= 0 && diasRestantes <= 7;
+        {exigencias.length > 0 ? (
+          <div className="grid gap-4">
+            {exigencias.map((e) => {
+              const prazo = new Date(e.prazo);
+              const diasRestantes = differenceInDays(prazo, now);
+              const isVencido = diasRestantes < 0;
+              const isUrgente = diasRestantes >= 0 && diasRestantes <= 7;
 
-            return (
-              <div key={e.id} className={`shadow-card rounded-[var(--radius-card)] border bg-white p-5 ${isVencido ? "border-red-300 bg-red-50" : isUrgente ? "border-amber-200" : "border-[var(--color-paper-200)]"}`}>
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-display text-base font-semibold text-[var(--color-ink-900)]">{e.descricao}</h3>
-                      {isVencido && <span className="inline-flex items-center gap-1 rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">Vencido</span>}
-                      {isUrgente && !isVencido && <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">Urgente</span>}
+              return (
+                <div key={e.id} className={`shadow-card rounded-[var(--radius-card)] border bg-white p-5 ${isVencido ? "border-red-300 bg-red-50" : isUrgente ? "border-amber-200" : "border-[var(--color-paper-200)]"}`}>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-display text-base font-semibold text-[var(--color-ink-900)]">{e.descricao}</h3>
+                        {isVencido && <span className="inline-flex items-center gap-1 rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">Vencido</span>}
+                        {isUrgente && !isVencido && <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">Urgente</span>}
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-sm text-[var(--color-ink-500)]">
+                        <span>Processo: <span className="font-mono text-[var(--color-ink-700)]">{e.processo.numProtocolo}</span></span>
+                        <span>Tipo: <span className="text-[var(--color-ink-700)]">{e.processo.tipo}</span></span>
+                        <span>Órgão: <span className="text-[var(--color-ink-700)]">{e.processo.orgao.sigla}</span></span>
+                        <span>Empreendimento: <span className="text-[var(--color-ink-700)]">{e.processo.empreendimento.apelido}</span></span>
+                        <span>Cliente: <span className="text-[var(--color-ink-700)]">{e.processo.empreendimento.cliente.apelido}</span></span>
+                      </div>
                     </div>
-                    <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-sm text-[var(--color-ink-500)]">
-                      <span>Processo: <span className="font-mono text-[var(--color-ink-700)]">{e.processo.numProtocolo}</span></span>
-                      <span>Tipo: <span className="text-[var(--color-ink-700)]">{e.processo.tipo}</span></span>
-                      <span>Órgão: <span className="text-[var(--color-ink-700)]">{e.processo.orgao.sigla}</span></span>
-                      <span>Empreendimento: <span className="text-[var(--color-ink-700)]">{e.processo.empreendimento.apelido}</span></span>
-                      <span>Cliente: <span className="text-[var(--color-ink-700)]">{e.processo.empreendimento.cliente.apelido}</span></span>
+                    <div className="flex flex-col items-end gap-2">
+                      <div className={`text-right ${isVencido ? "text-red-700" : "text-[var(--color-ink-700)]"}`}>
+                        <p className="font-display text-lg font-semibold">{format(prazo, "dd/MM/yyyy", { locale: ptBR })}</p>
+                        <p className="text-xs">{isVencido ? `Vencido há ${Math.abs(diasRestantes)} dias` : `${diasRestantes} dias restantes`}</p>
+                      </div>
+                      <Link href={`/exigencias/${e.id}`} className="focus-ring transition-brand inline-flex items-center gap-1 rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]">
+                        Ver Exigência
+                      </Link>
                     </div>
-                  </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <div className={`text-right ${isVencido ? "text-red-700" : "text-[var(--color-ink-700)]"}`}>
-                      <p className="font-display text-lg font-semibold">{format(prazo, "dd/MM/yyyy", { locale: ptBR })}</p>
-                      <p className="text-xs">{isVencido ? `Vencido há ${Math.abs(diasRestantes)} dias` : `${diasRestantes} dias restantes`}</p>
-                    </div>
-                    <Link href={`/exigencias/${e.id}`} className="focus-ring transition-brand inline-flex items-center gap-1 rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]">
-                      Ver Exigência
-                    </Link>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="flex flex-col items-center gap-3 py-16 text-[var(--color-ink-500)]">
-          <p className="font-display text-lg font-medium text-[var(--color-ink-900)]">Todas as exigências foram cumpridas</p>
-        </div>
-      )}
+              );
+            })}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-3 py-10 text-[var(--color-ink-500)]">
+            <p className="font-display text-base font-medium text-[var(--color-ink-900)]">Todas as exigências foram cumpridas</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
