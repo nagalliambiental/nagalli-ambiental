@@ -209,6 +209,13 @@ export default function EditEntityForm({
                 next.dataProtocolo = toDateInput(String(d.dataPublicacao));
               if (d.usuario && "observacoes" in next)
                 next.observacoes = [String(next.observacoes || ""), `SIGARH: ${d.usuario}`].filter(Boolean).join("\n");
+            } else if (origem === "ima") {
+              if (d.protocolo && "numProtocolo" in next) next.numProtocolo = String(d.protocolo);
+              if (d.licenca && "numLicenca" in next) next.numLicenca = String(d.licenca);
+              if (d.validade && "validade" in next) next.validade = toDateInput(String(d.validade).split(" ")[0]);
+              if (d.emissao && "dataProtocolo" in next) next.dataProtocolo = toDateInput(String(d.emissao).split(" ")[0]);
+              if (d.razaoSocial && "observacoes" in next)
+                next.observacoes = [String(next.observacoes || ""), `IMA/SC: ${d.modalidade || "licença"} — ${d.razaoSocial}`].filter(Boolean).join("\n");
             } else {
               if (d.protocolo && "numProtocolo" in next) next.numProtocolo = String(d.protocolo);
               if (d.numLicenca && "numLicenca" in next) next.numLicenca = String(d.numLicenca);
@@ -219,7 +226,7 @@ export default function EditEntityForm({
             return next;
           });
           setDirty(true);
-          toast(origem === "sigarh" ? "Dados do SIGARH preenchidos" : "Dados do SIA/IAP preenchidos", "success");
+          toast(origem === "sigarh" ? "Dados do SIGARH preenchidos" : origem === "ima" ? "Dados do IMA/SC preenchidos" : "Dados do SIA/IAP preenchidos", "success");
         };
 
         let res = await fetch(`/api/sia/consulta?protocolo=${clean}`);
@@ -233,7 +240,13 @@ export default function EditEntityForm({
           const d = Array.isArray(lista) ? lista[0] : null;
           if (d) return preencher(d, "sigarh");
         }
-        return toast("Licença/outorga não encontrada no SIA/IAP ou SIGARH", "error");
+        res = await fetch(`/api/ima/consulta?protocolo=${clean}`);
+        if (res.ok) {
+          const lista = await res.json();
+          const d = Array.isArray(lista) ? lista[0] : null;
+          if (d) return preencher(d, "ima");
+        }
+        return toast("Licença/outorga não encontrada no SIA/IAP, SIGARH ou IMA/SC", "error");
       }
       const res = await fetch(`/api/${field.search}/${clean}`);
       if (!res.ok) return toast("Não encontrado", "error");

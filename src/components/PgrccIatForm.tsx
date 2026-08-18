@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import { Topbar } from "@/components/Topbar";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { useToast } from "@/components/Toast";
-import { Loader2, ArrowLeft, FileText, User, Building2, MapPin, Recycle, Truck, Package, Download, HardHat, CircleCheck, PenLine } from "lucide-react";
+import { BuscaLicencaIatModal } from "@/components/BuscaLicencaIatModal";
+import type { DadosLicenca } from "@/lib/iat";
+import { Loader2, ArrowLeft, FileText, User, Building2, MapPin, Recycle, Truck, Package, Download, HardHat, CircleCheck, PenLine, Search } from "lucide-react";
 import {
   emptyPgrccIatFormData,
   CARACTERIZACAO_ROWS,
@@ -113,6 +115,7 @@ export function PgrccIatForm({ clienteId, clienteApelido, cliente, configuracoes
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [buscaAberta, setBuscaAberta] = useState<{ tipo: "transporte" | "destinacao"; id: string } | null>(null);
   const [form, setForm] = useState<PgrccIatFormData>(() => {
     const base = emptyPgrccIatFormData();
     const c = String;
@@ -196,6 +199,41 @@ export function PgrccIatForm({ clienteId, clienteApelido, cliente, configuracoes
       destinacao: prev.destinacao.map((r) => (r.id === id ? { ...r, [field]: value } : r)),
     }));
     setDirty(true);
+  };
+
+  const aplicarLicenca = (dados: DadosLicenca) => {
+    if (!buscaAberta) return;
+    const { tipo, id } = buscaAberta;
+    if (tipo === "transporte") {
+      setForm((prev) => ({
+        ...prev,
+        transporte: prev.transporte.map((r) =>
+          r.id === id
+            ? { ...r, empresa: dados.razaoSocial || prev.transporte.find((x) => x.id === id)?.empresa || "", licenca: dados.licenca || prev.transporte.find((x) => x.id === id)?.licenca || "" }
+            : r
+        ),
+      }));
+    } else {
+      setForm((prev) => ({
+        ...prev,
+        destinacao: prev.destinacao.map((r) =>
+          r.id === id
+            ? {
+                ...r,
+                empresa: dados.razaoSocial || r.empresa,
+                licenca: dados.licenca || r.licenca,
+                endereco: dados.endereco || r.endereco,
+                orgao: dados.orgao || r.orgao,
+                municipio: dados.municipio ? `${dados.municipio}/${dados.uf}` : r.municipio,
+                validade: dados.validade || r.validade,
+              }
+            : r
+        ),
+      }));
+    }
+    setBuscaAberta(null);
+    setDirty(true);
+    toast("Licença aplicada ao formulário", "success");
   };
 
   const aplicarEmpreendimento = (id: string) => {
@@ -532,7 +570,17 @@ export function PgrccIatForm({ clienteId, clienteApelido, cliente, configuracoes
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             {TRANSPORTE_ROWS.map((row) => (
               <div key={row.id} className="rounded-lg border border-[var(--color-paper-200)] bg-[var(--color-paper-50)] p-3">
-                <p className="mb-2 text-xs font-semibold text-[var(--color-ink-700)]">{row.label}</p>
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="text-xs font-semibold text-[var(--color-ink-700)]">{row.label}</p>
+                  <button
+                    type="button"
+                    onClick={() => setBuscaAberta({ tipo: "transporte", id: row.id })}
+                    className="focus-ring transition-brand flex items-center gap-1 rounded bg-[var(--color-brand-500)] px-2 py-1 text-xs font-medium text-white hover:bg-[var(--color-brand-600)]"
+                  >
+                    <Search size={12} />
+                    Buscar licença
+                  </button>
+                </div>
                 <div className="space-y-2">
                   <input
                     type="text"
@@ -569,7 +617,17 @@ export function PgrccIatForm({ clienteId, clienteApelido, cliente, configuracoes
               const volume = volumeClasse[row.id.toUpperCase() as keyof typeof volumeClasse];
               return (
                 <div key={row.id} className="rounded-lg border border-[var(--color-paper-200)] bg-[var(--color-paper-50)] p-4">
-                  <h4 className="mb-3 text-sm font-semibold text-[var(--color-ink-900)]">{row.label}</h4>
+                  <div className="mb-3 flex items-center justify-between">
+                    <h4 className="text-sm font-semibold text-[var(--color-ink-900)]">{row.label}</h4>
+                    <button
+                      type="button"
+                      onClick={() => setBuscaAberta({ tipo: "destinacao", id: row.id })}
+                      className="focus-ring transition-brand flex items-center gap-1 rounded bg-[var(--color-brand-500)] px-2 py-1 text-xs font-medium text-white hover:bg-[var(--color-brand-600)]"
+                    >
+                      <Search size={12} />
+                      Buscar licença
+                    </button>
+                  </div>
                   <div className="grid grid-cols-1 gap-3">
                     <Campo label="Local de destinação" value={d.empresa} onChange={(v) => setDest(row.id, "empresa", v)} />
                     <Campo label="Licença/Autorização Ambiental nº" value={d.licenca} onChange={(v) => setDest(row.id, "licenca", v)} />
@@ -619,6 +677,12 @@ export function PgrccIatForm({ clienteId, clienteApelido, cliente, configuracoes
           </button>
         </div>
       </form>
+
+      <BuscaLicencaIatModal
+        open={buscaAberta !== null}
+        onClose={() => setBuscaAberta(null)}
+        onSelecionar={aplicarLicenca}
+      />
     </div>
   );
 }

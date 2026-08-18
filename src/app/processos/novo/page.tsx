@@ -174,9 +174,45 @@ export default function NovoProcessoPage() {
     const tipoFinal = getTipoFinal();
     const protocolo = form.numProtocolo.replace(/\D/g, "");
     const portaria = form.numLicenca.replace(/\D/g, "");
+    const orgaoSelecionado = orgaos.find((o) => o.id === Number(form.orgaoId));
+    const ehIma = orgaoSelecionado?.sigla?.toUpperCase() === "IMA";
 
     if (!protocolo && !portaria) {
       setError("Informe o nº do protocolo (ou da portaria) para buscar");
+      return;
+    }
+
+    const preencherIma = (d: Record<string, unknown>) => {
+      setForm((prev) => ({
+        ...prev,
+        numProtocolo: String(d.protocolo || prev.numProtocolo),
+        numLicenca: String(d.licenca || prev.numLicenca),
+        validade: toDateInput(String(d.validade || "")) || prev.validade,
+        dataProtocolo: toDateInput(String(d.emissao || "")) || prev.dataProtocolo,
+        observacoes: [prev.observacoes, `IMA/SC: ${d.modalidade || "licença"} — ${d.razaoSocial || ""}`].filter(Boolean).join("\n"),
+      }));
+      setExtractedFile(`Dados do IMA/SC (${d.modalidade || "licença"})`);
+    };
+
+    if (ehIma) {
+      setBuscandoSia(true);
+      setError("");
+      try {
+        const res = await fetch(`/api/ima/consulta?${protocolo ? `protocolo=${protocolo}` : `licenca=${encodeURIComponent(portaria)}`}`);
+        if (res.ok) {
+          const dados = await res.json();
+          const d = Array.isArray(dados) ? dados[0] : null;
+          if (d) {
+            preencherIma(d);
+            setBuscandoSia(false);
+            return;
+          }
+        }
+      } catch {
+        // cai no fallback abaixo
+      }
+      setBuscandoSia(false);
+      setError("Nenhuma licença encontrada no IMA/SC");
       return;
     }
 
@@ -337,7 +373,9 @@ export default function NovoProcessoPage() {
                     onClick={buscarDadosPublicos}
                     disabled={buscandoSia}
                     className="focus-ring transition-brand flex shrink-0 items-center gap-1.5 rounded-lg bg-[var(--color-brand-500)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
-                    title="Buscar dados automaticamente: SIA/IAP para licenças ou SIGARH para outorgas"
+                    title={orgaos.find((o) => o.id === Number(form.orgaoId))?.sigla?.toUpperCase() === "IMA"
+                      ? "Buscar dados automaticamente no IMA/SC"
+                      : "Buscar dados automaticamente: SIA/IAP para licenças ou SIGARH para outorgas"}
                   >
                     {buscandoSia ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
                     Buscar
