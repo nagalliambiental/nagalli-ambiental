@@ -143,7 +143,7 @@ export function PgrccIatForm({ clienteId, clienteApelido, cliente, configuracoes
     base.respElabEmail = c(cfg.responsavelEmail ?? "");
     base.respElabConselho = c(cfg.registroOrgao ?? "");
     base.respElabArt = "";
-    base.respImplNome = c(cfg.responsavelNome ?? "");
+    base.respImplNome = "";
     base.respImplConselho = c(cfg.registroOrgao ?? "");
 
     return base;
