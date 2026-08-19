@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { createNagalliReport, type NagalliCell } from "@/lib/report-layout";
+import { buildXlsx, xlsxResponse } from "@/lib/report-xlsx";
 
 const statusLabels: Record<string, string> = {
   pendente: "Pendente", pago: "Pago", atrasado: "Atrasado", cancelado: "Cancelado",
@@ -20,6 +21,7 @@ export async function GET(request: Request) {
   const clienteId = searchParams.get("clienteId");
   const dataInicio = searchParams.get("dataInicio");
   const dataFim = searchParams.get("dataFim");
+  const formato = searchParams.get("formato");
 
   const where: Prisma.FinanceiroWhereInput = {};
   if (status) where.statusPagamento = status;
@@ -47,13 +49,6 @@ export async function GET(request: Request) {
     dataFim ? `até ${new Date(dataFim).toLocaleDateString("pt-BR")}` : "",
   ].filter(Boolean).join(" · ");
 
-  const { report } = await createNagalliReport({
-    title: "Relatório Financeiro",
-    subtitle: filtros
-      ? `Cobranças e recebimentos — ${filtros}.`
-      : "Cobranças e recebimentos: valores, vencimentos e situação de pagamento.",
-  });
-
   const cols = [
     { header: "Cliente", weight: 1.6 },
     { header: "Descrição", weight: 2.2 },
@@ -74,13 +69,28 @@ export async function GET(request: Request) {
     { text: r.dataPagamento ? new Date(r.dataPagamento).toLocaleDateString("pt-BR") : "—", align: "center" },
   ]);
 
-  report.table(cols, rows, { cellSize: 8, headerSize: 8 });
-
-  report.summary([
+  const summary = [
     { label: "Total de registros", value: String(registros.length) },
     { label: "Total geral", value: totalGeral.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) },
     { label: "Em aberto (pendente/atrasado)", value: totalPendente.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) },
-  ]);
+  ];
+
+  if (formato === "xlsx") {
+    return xlsxResponse(
+      buildXlsx({ title: "Relatório Financeiro", subtitle: filtros || "Cobranças e recebimentos.", cols, rows, summary }),
+      "relatorio-financeiro"
+    );
+  }
+
+  const { report } = await createNagalliReport({
+    title: "Relatório Financeiro",
+    subtitle: filtros
+      ? `Cobranças e recebimentos — ${filtros}.`
+      : "Cobranças e recebimentos: valores, vencimentos e situação de pagamento.",
+  });
+
+  report.table(cols, rows, { cellSize: 8, headerSize: 8 });
+  report.summary(summary);
 
   const pdfBytes = await report.bytes();
   return new NextResponse(new Uint8Array(pdfBytes), {

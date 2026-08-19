@@ -57,7 +57,31 @@ export function HistoricoTab({ clienteId, empreendimentoId, empreendimentos }: P
     }
   }, [clienteId, empreendimentoId, empreendimentos]);
 
-  useEffect(() => { fetchHistoricos(); }, [fetchHistoricos]);
+  useEffect(() => {
+    const controller = new AbortController();
+    async function load() {
+      const params = new URLSearchParams();
+      if (clienteId && empreendimentos) {
+        params.set("clienteId", String(clienteId));
+        params.set("empreendimentoIds", empreendimentos.map((e) => e.id).join(","));
+      } else if (clienteId) {
+        params.set("clienteId", String(clienteId));
+      } else if (empreendimentoId) {
+        params.set("empreendimentoId", String(empreendimentoId));
+      }
+      try {
+        const res = await fetch(`/api/historico?${params}`, { signal: controller.signal });
+        const data = await res.json();
+        setHistoricos(data);
+      } catch {
+        if (!controller.signal.aborted) setHistoricos([]);
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    }
+    load();
+    return () => controller.abort();
+  }, [clienteId, empreendimentoId, empreendimentos]);
 
   async function handleAdd() {
     if (!descricao.trim()) { toast("Descreva o ocorrido", "error"); return; }

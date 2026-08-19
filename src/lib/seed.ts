@@ -32,13 +32,13 @@ async function seed() {
     create: { nome: "Instituto Água e Terra", sigla: "IAP" },
   });
 
-  const orgao2 = await prisma.orgao.upsert({
+  await prisma.orgao.upsert({
     where: { sigla: "IBAMA" },
     update: {},
     create: { nome: "Instituto Brasileiro do Meio Ambiente", sigla: "IBAMA" },
   });
 
-  const orgao3 = await prisma.orgao.upsert({
+  await prisma.orgao.upsert({
     where: { sigla: "SEMA" },
     update: {},
     create: { nome: "Secretaria do Meio Ambiente", sigla: "SEMA" },

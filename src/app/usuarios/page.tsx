@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Topbar } from "@/components/Topbar";
-import { Plus, Inbox, Eye, Users, Check, X } from "lucide-react";
+import { Plus, Users, Check, X } from "lucide-react";
 import RowActions from "@/components/RowActions";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 

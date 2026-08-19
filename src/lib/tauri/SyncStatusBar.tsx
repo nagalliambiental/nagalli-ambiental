@@ -4,7 +4,7 @@
  */
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { isTauri, isOnline, forcePushAll, checkForUpdates } from "./index";
 import { Cloud, CloudOff, RefreshCw, Loader2, Download } from "lucide-react";
 
@@ -13,28 +13,36 @@ export function SyncStatusBar() {
   const [syncing, setSyncing] = useState(false);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const handleCheckUpdateRef = useRef<() => void>(() => {});
 
-  const check = useCallback(async () => {
-    if (!isTauri()) return;
-    const ok = await isOnline();
-    setOnline(ok);
-  }, []);
+  useEffect(() => {
+    handleCheckUpdateRef.current = handleCheckUpdate;
+  });
 
   useEffect(() => {
     if (!isTauri()) return;
-    check();
+    let active = true;
+    (async () => {
+      const ok = await isOnline();
+      if (active) setOnline(ok);
+    })();
     // Auto-check for updates 10s after startup
-    const t = setTimeout(() => handleCheckUpdate(), 10_000);
-    const interval = setInterval(check, 30_000);
-    window.addEventListener("online", () => setOnline(true));
-    window.addEventListener("offline", () => setOnline(false));
+    const t = setTimeout(() => handleCheckUpdateRef.current(), 10_000);
+    const interval = setInterval(() => {
+      isOnline().then((ok) => { if (active) setOnline(ok); });
+    }, 30_000);
+    const onOnline = () => setOnline(true);
+    const onOffline = () => setOnline(false);
+    window.addEventListener("online", onOnline);
+    window.addEventListener("offline", onOffline);
     return () => {
+      active = false;
       clearTimeout(t);
       clearInterval(interval);
-      window.removeEventListener("online", () => setOnline(true));
-      window.removeEventListener("offline", () => setOnline(false));
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", onOffline);
     };
-  }, [check]);
+  }, []);
 
   async function handleCheckUpdate() {
     if (!isTauri() || checkingUpdate) return;

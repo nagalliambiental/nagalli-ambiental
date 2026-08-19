@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
+import { logAuditoria } from "./audit";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
@@ -66,6 +67,33 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   pages: {
     signIn: "/login",
+  },
+  events: {
+    async signIn({ user }) {
+      const id = Number((user as { id?: string }).id);
+      if (id) {
+        await logAuditoria(
+          "LOGIN",
+          "Sessao",
+          id,
+          { email: user.email },
+          id
+        );
+      }
+    },
+    async signOut(message) {
+      const token = "token" in message ? message.token : null;
+      const id = Number((token as { id?: string } | null)?.id);
+      if (id) {
+        await logAuditoria(
+          "LOGOUT",
+          "Sessao",
+          id,
+          undefined,
+          id
+        );
+      }
+    },
   },
   session: {
     strategy: "jwt",

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logAuditoria } from "@/lib/audit";
 import { readFile } from "fs/promises";
 import path from "path";
 
@@ -50,6 +51,14 @@ export async function GET(_req: Request, { params }: Params) {
   const ext = path.extname(doc.nome).slice(1).toLowerCase();
   const contentType = MIME_BY_EXT[ext] || "application/octet-stream";
   const filename = encodeURIComponent(doc.nome).replace(/'/g, "%27");
+
+  await logAuditoria(
+    "DOWNLOAD",
+    "Documento",
+    doc.id,
+    { nome: doc.nome },
+    session.user?.id ? Number(session.user.id) : undefined
+  );
 
   return new NextResponse(new Uint8Array(buffer), {
     status: 200,

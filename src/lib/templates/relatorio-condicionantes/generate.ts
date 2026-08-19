@@ -39,7 +39,7 @@ export function parseCondicionantes(raw: string | null | undefined): string[] {
   if (current) items.push(current);
 
   const renumbered: string[] = [];
-  let hasNumber = items.some((i) => NUM_ITEM_RE.test(i));
+  const hasNumber = items.some((i) => NUM_ITEM_RE.test(i));
   items.forEach((item, i) => {
     if (hasNumber && NUM_ITEM_RE.test(item)) {
       renumbered.push(item);

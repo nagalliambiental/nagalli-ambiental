@@ -7,9 +7,9 @@ import { Topbar } from "@/components/Topbar";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
-  Building2, Mail, Phone, User, FileText, MapPin, Map, Globe, FileSpreadsheet,
+  Building2, Mail, Phone, User, FileText, MapPin, Map, Globe,
   Edit3, Trash2, Plus, ExternalLink, CheckCircle2, Clock, AlertTriangle,
-  Loader2, X, AlertCircle, Upload, Download, FolderArchive, ArrowLeft, ChevronDown as ChevronDownIcon
+  Loader2, X, Upload, Download, FolderArchive, ArrowLeft, ChevronDown as ChevronDownIcon
 } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/components/Toast";

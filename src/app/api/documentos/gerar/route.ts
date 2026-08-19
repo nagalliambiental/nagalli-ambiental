@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { gerarDocumentoBuffer } from "@/lib/documentos-gerados";
+import type { ResiduoInput, EmpresaContratadaInput } from "@/lib/templates/pgrs-pinhais/config";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -69,20 +70,20 @@ export async function POST(req: NextRequest) {
     if (templateSlug === "pgrs-pinhais" || templateSlug === "pgrs-curitiba") {
       await tx.residuoItem.deleteMany({ where: { clienteId: Number(clienteId) } });
       const residuosParaSalvar = [
-        ...(formData.residuosPerigosos || []).map((r: any, i: number) => ({ ...r, categoria: "PERIGOSO", ordem: i })),
-        ...(formData.residuosNaoReciclaveis || []).map((r: any, i: number) => ({ ...r, categoria: "NAO_RECICLAVEL", ordem: i })),
-        ...(formData.residuosReciclaveis || []).map((r: any, i: number) => ({ ...r, categoria: "RECICLAVEL", ordem: i })),
+        ...(formData.residuosPerigosos || []).map((r: ResiduoInput, i: number) => ({ ...r, categoria: "PERIGOSO", ordem: i })),
+        ...(formData.residuosNaoReciclaveis || []).map((r: ResiduoInput, i: number) => ({ ...r, categoria: "NAO_RECICLAVEL", ordem: i })),
+        ...(formData.residuosReciclaveis || []).map((r: ResiduoInput, i: number) => ({ ...r, categoria: "RECICLAVEL", ordem: i })),
       ];
       if (residuosParaSalvar.length) {
         await tx.residuoItem.createMany({
-          data: residuosParaSalvar.map((r: any) => ({ ...r, clienteId: Number(clienteId) })),
+          data: residuosParaSalvar.map((r: ResiduoInput & { categoria: string; ordem: number }) => ({ ...r, clienteId: Number(clienteId) })),
         });
       }
 
       await tx.empresaContratada.deleteMany({ where: { clienteId: Number(clienteId) } });
       if (formData.empresasContratadas?.length) {
         await tx.empresaContratada.createMany({
-          data: formData.empresasContratadas.map((e: any, i: number) => ({ ...e, ordem: i, clienteId: Number(clienteId) })),
+          data: formData.empresasContratadas.map((e: EmpresaContratadaInput, i: number) => ({ ...e, ordem: i, clienteId: Number(clienteId) })),
         });
       }
     }

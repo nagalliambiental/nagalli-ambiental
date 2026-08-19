@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createNagalliReport, type NagalliCell } from "@/lib/report-layout";
+import { buildXlsx, xlsxResponse } from "@/lib/report-xlsx";
 
 function statusCell(raw: string | undefined): NagalliCell {
   const val = (raw || "").trim();
@@ -13,6 +14,7 @@ function statusCell(raw: string | undefined): NagalliCell {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const ano = Number(searchParams.get("ano")) || new Date().getFullYear();
+  const formato = searchParams.get("formato");
 
   const registros = await prisma.controleDmr.findMany({
     where: { ano },
@@ -22,11 +24,6 @@ export async function GET(request: Request) {
       },
     },
     orderBy: { empreendimento: { cliente: { apelido: "asc" } } },
-  });
-
-  const { report } = await createNagalliReport({
-    title: "Relatório de Controle DMR/MTR",
-    subtitle: `Situação das declarações DMR e MTR de cada empreendimento por trimestre de ${ano}.`,
   });
 
   const cols = [
@@ -51,8 +48,6 @@ export async function GET(request: Request) {
     return cells;
   });
 
-  report.table(cols, rows, { cellSize: 8, headerSize: 8 });
-
   const totalOk = registros.filter((r) => {
     for (const tri of [1, 2, 3, 4]) {
       const dmr = (r[`t${tri}Dmr` as keyof typeof r] as string) || "";
@@ -63,10 +58,32 @@ export async function GET(request: Request) {
     return false;
   }).length;
 
-  report.summary([
+  const summary = [
     { label: "Empreendimentos no relatório", value: String(registros.length) },
     { label: "Com pendências DMR/MTR", value: String(totalOk) },
-  ]);
+  ];
+
+  if (formato === "xlsx") {
+    return xlsxResponse(
+      buildXlsx({
+        title: "Relatório de Controle DMR/MTR",
+        subtitle: `Situação das declarações DMR e MTR de cada empreendimento por trimestre de ${ano}.`,
+        cols,
+        rows,
+        summary,
+        sheetName: `DMR/MTR ${ano}`,
+      }),
+      `relatorio-dmr-${ano}`
+    );
+  }
+
+  const { report } = await createNagalliReport({
+    title: "Relatório de Controle DMR/MTR",
+    subtitle: `Situação das declarações DMR e MTR de cada empreendimento por trimestre de ${ano}.`,
+  });
+
+  report.table(cols, rows, { cellSize: 8, headerSize: 8 });
+  report.summary(summary);
 
   const pdfBytes = await report.bytes();
   return new NextResponse(new Uint8Array(pdfBytes), {

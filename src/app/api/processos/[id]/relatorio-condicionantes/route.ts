@@ -58,7 +58,7 @@ export async function GET(
     "_"
   );
 
-  let caminho = `/uploads/documentos/${safeName}`;
+  const caminho = `/uploads/documentos/${safeName}`;
   try {
     const uploadDir = path.join(process.cwd(), "public", "uploads", "documentos");
     await mkdir(uploadDir, { recursive: true });

@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logAuditoria } from "@/lib/audit";
 import { Topbar } from "@/components/Topbar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { format } from "date-fns";
@@ -59,6 +60,14 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
     },
   });
   if (!processo) notFound();
+
+  await logAuditoria(
+    "VISUALIZAR",
+    "Processo",
+    processo.id,
+    { numProtocolo: processo.numProtocolo },
+    session.user?.id ? Number(session.user.id) : undefined
+  );
 
   return (
     <div>

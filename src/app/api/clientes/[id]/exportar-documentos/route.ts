@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { logAuditoria } from "@/lib/audit";
 import { readFile } from "fs/promises";
 import path from "path";
 import PizZip from "pizzip";
@@ -50,9 +51,18 @@ export async function GET(
 
   const nodeBuf = zip.generate({ type: "nodebuffer" });
   const zipBytes = new Uint8Array(nodeBuf.length);
-  zipBytes.set(nodeBuf);
+zipBytes.set(nodeBuf);
 
   const safeName = cliente.apelido.replace(/\s+/g, "_");
+
+  await logAuditoria(
+    "DOWNLOAD",
+    "ClienteDocumentos",
+    Number(id),
+    { apelido: cliente.apelido, documentos: documentos.length },
+    session.user?.id ? Number(session.user.id) : undefined
+  );
+
   return new NextResponse(zipBytes, {
     headers: {
       "Content-Type": "application/zip",

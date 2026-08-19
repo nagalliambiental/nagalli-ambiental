@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
+import Image from "next/image";
 import { Topbar } from "@/components/Topbar";
 import { Building2, Loader2, Save, Search, ClipboardList, Settings } from "lucide-react";
 import { useToast } from "@/components/Toast";
@@ -19,7 +20,6 @@ interface LogEntry {
 }
 
 export default function ConfiguracoesPage() {
-  const { toast } = useToast();
   const [tab, setTab] = useState<Tab>("empresa");
 
   return (
@@ -250,7 +250,7 @@ function EmpresaTab() {
         <p className="text-xs text-[var(--color-ink-500)] mb-2">URL da imagem da logo (ex: /Logo.jpeg)</p>
         <div className="flex items-center gap-3">
           <input value={form.logo} onChange={(e) => setField("logo", e.target.value)} placeholder="/Logo.jpeg" className="flex-1 rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
-          {form.logo && <img src={form.logo} alt="logo" className="h-10 w-10 rounded object-contain border" />}
+          {form.logo && <Image src={form.logo} alt="logo" width={40} height={40} className="h-10 w-10 rounded object-contain border" />}
         </div>
       </div>
 
@@ -269,29 +269,63 @@ function EmpresaTab() {
   );
 }
 
+const ACOES = ["LOGIN", "LOGOUT", "VISUALIZAR", "DOWNLOAD", "CRIAR", "ATUALIZAR", "EXCLUIR"];
+
 function LogsTab() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [usuarios, setUsuarios] = useState<{ id: number; nome: string }[]>([]);
+  const [filtroUsuario, setFiltroUsuario] = useState("");
+  const [filtroEntidade, setFiltroEntidade] = useState("");
+  const [filtroAcao, setFiltroAcao] = useState("");
+  const [dataInicio, setDataInicio] = useState("");
+  const [dataFim, setDataFim] = useState("");
 
-  const fetchLogs = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/auditoria?page=${page}&limit=50`);
-      const data = await res.json();
-      setLogs(data.logs);
-      setTotal(data.total);
-      setTotalPages(data.totalPages);
-    } catch {
-      setLogs([]);
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    const controller = new AbortController();
+    async function loadUsuarios() {
+      try {
+        const res = await fetch("/api/usuarios", { signal: controller.signal });
+        if (res.ok) {
+          const data = await res.json();
+          setUsuarios((data || []).map((u: { id: number; nome: string }) => ({ id: u.id, nome: u.nome })));
+        }
+      } catch {
+        // lista de usuários é opcional; segue sem o filtro
+      }
     }
-  }, [page]);
+    loadUsuarios();
+    return () => controller.abort();
+  }, []);
 
-  useEffect(() => { fetchLogs(); }, [fetchLogs]);
+  useEffect(() => {
+    const controller = new AbortController();
+    async function load() {
+      setLoading(true);
+      try {
+        const params = new URLSearchParams({ page: String(page), limit: "50" });
+        if (filtroUsuario) params.set("usuarioId", filtroUsuario);
+        if (filtroEntidade) params.set("entidade", filtroEntidade);
+        if (filtroAcao) params.set("acao", filtroAcao);
+        if (dataInicio) params.set("dataInicio", dataInicio);
+        if (dataFim) params.set("dataFim", dataFim);
+        const res = await fetch(`/api/auditoria?${params}`, { signal: controller.signal });
+        const data = await res.json();
+        setLogs(data.logs);
+        setTotal(data.total);
+        setTotalPages(data.totalPages);
+      } catch {
+        if (!controller.signal.aborted) setLogs([]);
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    }
+    load();
+    return () => controller.abort();
+  }, [page, filtroUsuario, filtroEntidade, filtroAcao, dataInicio, dataFim]);
 
   function formatDate(iso: string) {
     const d = new Date(iso);
@@ -299,10 +333,16 @@ function LogsTab() {
   }
 
   const acaoColors: Record<string, string> = {
+    LOGIN: "text-green-600 bg-green-50",
+    LOGOUT: "text-orange-600 bg-orange-50",
+    VISUALIZAR: "text-violet-600 bg-violet-50",
+    DOWNLOAD: "text-river-600 bg-river-50",
     CRIAR: "text-green-600 bg-green-50",
     ATUALIZAR: "text-blue-600 bg-blue-50",
     EXCLUIR: "text-red-600 bg-red-50",
   };
+
+  const inputCls = "rounded-lg border border-[var(--color-paper-200)] px-2.5 py-1.5 text-xs text-[var(--color-ink-700)] focus:border-[var(--color-brand-400)] focus:outline-none";
 
   return (
     <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5 space-y-4">
@@ -310,6 +350,54 @@ function LogsTab() {
         <ClipboardList size={20} className="text-[var(--color-brand-500)]" />
         <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Auditoria</h2>
         <span className="text-xs text-[var(--color-ink-500)] ml-auto">{total} registro(s)</span>
+      </div>
+
+      <div className="flex flex-wrap items-end gap-2">
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-[var(--color-ink-500)]">Usuário</label>
+          <select value={filtroUsuario} onChange={(e) => { setPage(1); setFiltroUsuario(e.target.value); }} className={inputCls}>
+            <option value="">Todos</option>
+            {usuarios.map((u) => (
+              <option key={u.id} value={u.id}>{u.nome}</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-[var(--color-ink-500)]">Entidade</label>
+          <input value={filtroEntidade} onChange={(e) => { setPage(1); setFiltroEntidade(e.target.value); }} placeholder="Ex.: Cliente" className={inputCls} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-[var(--color-ink-500)]">Ação</label>
+          <select value={filtroAcao} onChange={(e) => { setPage(1); setFiltroAcao(e.target.value); }} className={inputCls}>
+            <option value="">Todas</option>
+            {ACOES.map((a) => (
+              <option key={a} value={a}>{a}</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-[var(--color-ink-500)]">De</label>
+          <input type="date" value={dataInicio} onChange={(e) => { setPage(1); setDataInicio(e.target.value); }} className={inputCls} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-[var(--color-ink-500)]">Até</label>
+          <input type="date" value={dataFim} onChange={(e) => { setPage(1); setDataFim(e.target.value); }} className={inputCls} />
+        </div>
+        {(filtroUsuario || filtroEntidade || filtroAcao || dataInicio || dataFim) && (
+          <button
+            onClick={() => {
+              setPage(1);
+              setFiltroUsuario("");
+              setFiltroEntidade("");
+              setFiltroAcao("");
+              setDataInicio("");
+              setDataFim("");
+            }}
+            className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-[var(--color-ink-500)] hover:text-[var(--color-ink-700)]"
+          >
+            Limpar filtros
+          </button>
+        )}
       </div>
 
       {loading ? (
@@ -328,6 +416,7 @@ function LogsTab() {
                 <th className="text-left py-2 px-2 font-medium text-[var(--color-ink-700)]">Entidade</th>
                 <th className="text-left py-2 px-2 font-medium text-[var(--color-ink-700)]">ID</th>
                 <th className="text-left py-2 px-2 font-medium text-[var(--color-ink-700)]">Usuário</th>
+                <th className="text-left py-2 px-2 font-medium text-[var(--color-ink-700)]">Detalhes</th>
               </tr>
             </thead>
             <tbody>
@@ -335,13 +424,16 @@ function LogsTab() {
                 <tr key={log.id} className="border-b border-[var(--color-paper-100)] hover:bg-[var(--color-paper-50)]">
                   <td className="py-2 px-2 text-[var(--color-ink-600)] whitespace-nowrap">{formatDate(log.criadoEm)}</td>
                   <td className="py-2 px-2">
-                    <span className={`inline-block rounded px-1.5 py-0.5 text-xs font-medium ${acaoColors[log.acao] || "text-[var(--color-ink-600)] bg-[var(--color-paper-100)]"}`}>
-                      {log.acao}
+                    <span className={`inline-block rounded px-1.5 py-0.5 text-xs font-medium ${acaoColors[log.acao.toUpperCase()] || "text-[var(--color-ink-600)] bg-[var(--color-paper-100)]"}`}>
+                      {log.acao.toUpperCase()}
                     </span>
                   </td>
                   <td className="py-2 px-2 text-[var(--color-ink-600)] capitalize">{log.entidade}</td>
                   <td className="py-2 px-2 text-[var(--color-ink-600)]">{log.entidadeId}</td>
                   <td className="py-2 px-2 text-[var(--color-ink-600)]">{log.usuario?.nome || "—"}</td>
+                  <td className="py-2 px-2 text-[var(--color-ink-500)] max-w-[220px] truncate">
+                    {log.dados ? <span title={log.dados} className="cursor-help font-mono text-xs">{log.dados}</span> : "—"}
+                  </td>
                 </tr>
               ))}
             </tbody>

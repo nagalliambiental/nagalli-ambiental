@@ -61,12 +61,10 @@ function extractCondicionantes(text: string): string | null {
   if (!text) return null;
 
   let start = -1;
-  let headerLen = 0;
   for (const re of CONDICIONANTES_HEADERS) {
     const m = text.match(re);
     if (m && m.index !== undefined) {
       start = m.index + m[0].length;
-      headerLen = m[0].length;
       break;
     }
   }

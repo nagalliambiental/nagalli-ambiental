@@ -68,25 +68,41 @@ export default function DmrPage() {
 
   async function carregar() {
     setLoading(true);
-    const res = await fetch("/api/controle-dmr");
-    const data = await res.json();
-    setRegistros(data);
-    setLoading(false);
-  }
-
-  async function carregarDisponiveis() {
-    const resEmps = await fetch("/api/empreendimentos");
-    const emps: Empreendimento[] = await resEmps.json();
-    setDisponiveis(emps.filter((e) => !registros.some((r) => r.empreendimentoId === e.id)));
+    try {
+      const res = await fetch("/api/controle-dmr");
+      const data = await res.json();
+      setRegistros(data);
+    } catch {
+      setRegistros([]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
-    carregar();
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const [res, resEmps] = await Promise.all([
+          fetch("/api/controle-dmr", { signal: controller.signal }),
+          fetch("/api/empreendimentos", { signal: controller.signal }),
+        ]);
+        const data = await res.json();
+        const emps: Empreendimento[] = await resEmps.json();
+        setRegistros(data);
+        setDisponiveis(emps);
+      } catch {
+        if (!controller.signal.aborted) setDisponiveis([]);
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    })();
+    return () => controller.abort();
   }, []);
 
-  useEffect(() => {
-    carregarDisponiveis();
-  }, [registros]);
+  const disponiveisFiltrados = disponiveis.filter(
+    (e) => !registros.some((r) => r.empreendimentoId === e.id)
+  );
 
   async function adicionar() {
     if (!selectedId) return;
@@ -123,12 +139,12 @@ export default function DmrPage() {
   }
 
   const filtrados = busca
-    ? disponiveis.filter(
+    ? disponiveisFiltrados.filter(
         (e) =>
           e.apelido.toLowerCase().includes(busca.toLowerCase()) ||
           e.cliente.apelido.toLowerCase().includes(busca.toLowerCase())
       )
-    : disponiveis;
+    : disponiveisFiltrados;
 
   const trimestres = [
     { key: "t1", label: "1º Trim" },

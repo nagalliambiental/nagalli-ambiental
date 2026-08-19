@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Topbar } from "@/components/Topbar";
-import { FolderKanban, Upload, Loader2, FileText, CheckCircle2, Search, Leaf } from "lucide-react";
+import { FolderKanban, Upload, Loader2, CheckCircle2, Search, Leaf } from "lucide-react";
 
 const TIPOS = [
   "Licença Prévia",

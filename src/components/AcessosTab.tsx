@@ -54,7 +54,24 @@ export function AcessosTab({ clienteId, empreendimentos }: Props) {
     }
   }, [clienteId, search]);
 
-  useEffect(() => { fetchAcessos(); }, [fetchAcessos]);
+  useEffect(() => {
+    const controller = new AbortController();
+    async function load() {
+      const params = new URLSearchParams({ clienteId: String(clienteId) });
+      if (search) params.set("q", search);
+      try {
+        const res = await fetch(`/api/acessos?${params}`, { signal: controller.signal });
+        const data = await res.json();
+        setAcessos(data);
+      } catch {
+        if (!controller.signal.aborted) setAcessos([]);
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    }
+    load();
+    return () => controller.abort();
+  }, [clienteId, search]);
 
   async function handleCreate() {
     if (!formLogin.trim() || !formSenha.trim() || !formDescricao.trim()) {

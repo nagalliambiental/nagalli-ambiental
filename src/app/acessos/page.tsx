@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Topbar } from "@/components/Topbar";
-import { Loader2, Plus, Trash2, Key, Link as LinkIcon, Building2, Search, KeyRound } from "lucide-react";
+import { Loader2, Plus, Trash2, Key, Link as LinkIcon, Building2, KeyRound } from "lucide-react";
 import { useToast } from "@/components/Toast";
 
 interface AcessoEntry {
@@ -50,21 +50,43 @@ export default function AcessosPage() {
     }
   }, [search, tipo]);
 
-  useEffect(() => { fetchAcessos(); }, [fetchAcessos]);
+  useEffect(() => {
+    const controller = new AbortController();
+    async function load() {
+      const params = new URLSearchParams();
+      if (search) params.set("q", search);
+      if (tipo) params.set("tipo", tipo);
+      try {
+        const res = await fetch(`/api/acessos?${params}`, { signal: controller.signal });
+        const data = await res.json();
+        setAcessos(data);
+      } catch {
+        if (!controller.signal.aborted) setAcessos([]);
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    }
+    load();
+    return () => controller.abort();
+  }, [search, tipo]);
 
   useEffect(() => {
-    fetch("/api/clientes?limit=999")
+    const controller = new AbortController();
+    fetch("/api/clientes?limit=999", { signal: controller.signal })
       .then((r) => r.json())
-      .then((d) => setClientes(Array.isArray(d) ? d : d.data ?? []))
-      .catch(() => setClientes([]));
+      .then((d) => { if (!controller.signal.aborted) setClientes(Array.isArray(d) ? d : d.data ?? []); })
+      .catch(() => { if (!controller.signal.aborted) setClientes([]); });
+    return () => controller.abort();
   }, []);
 
   useEffect(() => {
-    if (!formClienteId) { setEmpreendimentos([]); return; }
-    fetch(`/api/empreendimentos?clienteId=${formClienteId}&limit=999`)
+    if (!formClienteId) return;
+    const controller = new AbortController();
+    fetch(`/api/empreendimentos?clienteId=${formClienteId}&limit=999`, { signal: controller.signal })
       .then((r) => r.json())
-      .then((d) => setEmpreendimentos(Array.isArray(d) ? d : d.data ?? []))
-      .catch(() => setEmpreendimentos([]));
+      .then((d) => { if (!controller.signal.aborted) setEmpreendimentos(Array.isArray(d) ? d : d.data ?? []); })
+      .catch(() => { if (!controller.signal.aborted) setEmpreendimentos([]); });
+    return () => controller.abort();
   }, [formClienteId]);
 
   async function handleCreate() {
@@ -167,7 +189,7 @@ export default function AcessosPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Vincular a cliente <span className="text-[var(--color-ink-400)] font-normal">(opcional)</span></label>
-                <select value={formClienteId} onChange={(e) => { setFormClienteId(e.target.value); setFormEmpId(""); }}
+                <select value={formClienteId} onChange={(e) => { setFormClienteId(e.target.value); setFormEmpId(""); setEmpreendimentos([]); }}
                   className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]"
                 >
                   <option value="">Nenhum</option>
@@ -191,7 +213,7 @@ export default function AcessosPage() {
               )}
             </div>
             <div className="mt-6 flex justify-end gap-3">
-              <button onClick={() => { setShowModal(false); setFormClienteId(""); setFormEmpId(""); }} className="rounded-lg border border-[var(--color-paper-200)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]">Cancelar</button>
+              <button onClick={() => { setShowModal(false); setFormClienteId(""); setFormEmpId(""); setEmpreendimentos([]); }} className="rounded-lg border border-[var(--color-paper-200)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]">Cancelar</button>
               <button onClick={handleCreate} disabled={saving}
                 className="flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">
                 {saving ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}

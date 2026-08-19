@@ -72,6 +72,14 @@ export async function GET(_req: Request, { params }: Params) {
     }
   }
 
+  await logAuditoria(
+    "DOWNLOAD",
+    "DocumentoGerado",
+    doc.id,
+    { templateSlug: doc.templateSlug },
+    session.user?.id ? Number(session.user.id) : undefined
+  );
+
   return new NextResponse(new Uint8Array(buffer), {
     status: 200,
     headers: {
@@ -104,8 +112,8 @@ export async function DELETE(_req: Request, { params }: Params) {
   await prisma.documentoGerado.delete({ where: { id: Number(id) } });
 
   await logAuditoria(
-    "delete",
-    "documentoGerado",
+    "EXCLUIR",
+    "DocumentoGerado",
     Number(id),
     { templateSlug: doc.templateSlug },
     Number((session.user as { id: string }).id)

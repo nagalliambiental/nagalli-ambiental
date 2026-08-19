@@ -3,6 +3,7 @@ export function generateStaticParams() { return []; }
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logAuditoria } from "@/lib/audit";
 import { ehPrivilegiado } from "@/lib/perfil";
 import { getDiasFimTrimestre, getTrimestreAtual } from "@/lib/dmr-parser";
 import { ClienteDetailClient } from "./ClienteDetailClient";
@@ -71,6 +72,14 @@ export default async function ClienteDetailPage(props: { params: Promise<{ id: s
       </div>
     );
   }
+
+  await logAuditoria(
+    "VISUALIZAR",
+    "Cliente",
+    cliente.id,
+    { apelido: cliente.apelido },
+    session.user?.id ? Number(session.user.id) : undefined
+  );
 
   const diasFimTrimestre = getDiasFimTrimestre();
   const trimestre = getTrimestreAtual();

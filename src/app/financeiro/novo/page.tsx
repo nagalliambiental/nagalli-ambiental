@@ -98,7 +98,7 @@ export default function NovaCobrancaPage() {
           </div>
           <label className="flex items-center gap-2 text-sm text-[var(--color-ink-700)] cursor-pointer">
             <input type="checkbox" checked={quitado} onChange={(e) => setQuitado(e.target.checked)} className="rounded border-[var(--color-paper-200)] text-[var(--color-brand-500)] focus:ring-[var(--color-brand-500)]" />
-            Marcar como quitado (status "pago" com data atual)
+            Marcar como quitado (status &quot;pago&quot; com data atual)
           </label>
           <div className="flex gap-3 pt-4">
             <button type="submit" disabled={saving} className="focus-ring transition-brand flex items-center gap-2 rounded-[var(--radius-card)] bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">

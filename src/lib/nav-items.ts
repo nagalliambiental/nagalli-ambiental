@@ -6,8 +6,6 @@ import {
   BarChart3,
   ListTodo,
   DatabaseBackup,
-  Shield,
-  ClipboardList,
   Wallet,
   type LucideIcon,
 } from "lucide-react";

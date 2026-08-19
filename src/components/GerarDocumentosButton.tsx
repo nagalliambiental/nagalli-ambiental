@@ -85,7 +85,7 @@ export function GerarDocumentosButton({ empreendimentoMode = false }: Props) {
     ? TEMPLATES.find((t) => t.slug === selectedTemplate)?.nome ?? ""
     : "";
 
-  const filteredOptions = options.filter((o: any) => {
+  const filteredOptions = options.filter((o) => {
     const q = search.toLowerCase();
     if (empreendimentoMode) {
       const e = o as EmpreendimentoOption;
@@ -149,11 +149,11 @@ export function GerarDocumentosButton({ empreendimentoMode = false }: Props) {
               ) : filteredOptions.length === 0 ? (
                 <p className="text-center text-sm text-[var(--color-ink-500)] py-6">Nenhum resultado encontrado.</p>
               ) : (
-                filteredOptions.map((o: any) => {
+                filteredOptions.map((o) => {
                   const isSelected = selectedId === o.id;
                   const label = empreendimentoMode
-                    ? `${o.apelido} — ${o.cliente.apelido}`
-                    : `${o.apelido}${o.razaoSocial ? ` (${o.razaoSocial})` : ""}`;
+                    ? `${(o as EmpreendimentoOption).apelido} — ${(o as EmpreendimentoOption).cliente.apelido}`
+                    : `${(o as ClienteOption).apelido}${(o as ClienteOption).razaoSocial ? ` (${(o as ClienteOption).razaoSocial})` : ""}`;
                   return (
                     <button
                       key={o.id}

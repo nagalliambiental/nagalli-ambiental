@@ -3,6 +3,7 @@ export function generateStaticParams() { return []; }
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logAuditoria } from "@/lib/audit";
 import { ehPrivilegiado } from "@/lib/perfil";
 import { Topbar } from "@/components/Topbar";
 import { format } from "date-fns";
@@ -53,6 +54,14 @@ export default async function EmpreendimentoDetailPage(props: { params: Promise<
       </div>
     );
   }
+
+  await logAuditoria(
+    "VISUALIZAR",
+    "Empreendimento",
+    emp.id,
+    { apelido: emp.apelido },
+    session.user?.id ? Number(session.user.id) : undefined
+  );
 
   const [processos, documentos] = await Promise.all([
     prisma.processo.findMany({

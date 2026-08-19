@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     const safeName = `${timestamp}-${file.name}`;
     const buffer = Buffer.from(await file.arrayBuffer());
 
-    let caminho = `/uploads/${safeName}`;
+    const caminho = `/uploads/${safeName}`;
     try {
       const uploadDir = path.join(process.cwd(), "public", "uploads");
       await mkdir(uploadDir, { recursive: true });

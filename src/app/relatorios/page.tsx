@@ -3,21 +3,22 @@
 import { useState } from "react";
 import { Topbar } from "@/components/Topbar";
 import { useSession } from "next-auth/react";
-import { FileSpreadsheet, DollarSign, Building2, FileCheck2, Download, Loader2, Eye, BarChart3 } from "lucide-react";
+import { FileSpreadsheet, DollarSign, Building2, FileCheck2, Download, Loader2, Eye, BarChart3, FileText } from "lucide-react";
 
 const currentYear = new Date().getFullYear();
 
 function useDownload(url: string) {
   const [loading, setLoading] = useState(false);
 
-  async function download() {
+  async function download(ext = "pdf") {
     setLoading(true);
     try {
-      const res = await fetch(url);
+      const sep = url.includes("?") ? "&" : "?";
+      const res = await fetch(`${url}${sep}formato=${ext}`);
       const blob = await res.blob();
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = url.split("?")[0].split("/").pop() + ".pdf";
+      a.download = url.split("?")[0].split("/").pop() + "." + ext;
       a.click();
       URL.revokeObjectURL(a.href);
     } catch {
@@ -32,6 +33,26 @@ function useDownload(url: string) {
 
 function preview(url: string) {
   window.open(url, "_blank");
+}
+
+function DownloadButtons({ url, hook }: { url: string; hook: ReturnType<typeof useDownload> }) {
+  return (
+    <div className="flex gap-2">
+      <button onClick={() => preview(url)}
+        className="focus-ring transition-brand flex items-center gap-2 rounded-lg border border-[var(--color-paper-200)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]">
+        <Eye size={16} /> Visualizar
+      </button>
+      <button onClick={() => hook.download("pdf")} disabled={hook.loading}
+        className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">
+        {hook.loading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+        {hook.loading ? "Gerando..." : "Baixar PDF"}
+      </button>
+      <button onClick={() => hook.download("xlsx")} disabled={hook.loading}
+        className="focus-ring transition-brand flex items-center gap-2 rounded-lg border border-[var(--color-green-600)] bg-green-50 px-4 py-2.5 text-sm font-medium text-[var(--color-green-700)] hover:bg-green-100 disabled:opacity-50">
+        <FileText size={16} /> Excel
+      </button>
+    </div>
+  );
 }
 
 function Card({ icon: Icon, title, description, children }: { icon: React.ElementType; title: string; description: string; children?: React.ReactNode }) {
@@ -75,17 +96,7 @@ export default function RelatoriosPage() {
             <input type="number" value={ano} onChange={(e) => setAno(Number(e.target.value))}
               className="w-32 rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
           </div>
-          <div className="flex gap-2">
-            <button onClick={() => preview(`/api/relatorios/dmr?ano=${ano}`)}
-              className="focus-ring transition-brand flex items-center gap-2 rounded-lg border border-[var(--color-paper-200)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]">
-              <Eye size={16} /> Visualizar
-            </button>
-            <button onClick={dmr.download} disabled={dmr.loading}
-              className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">
-              {dmr.loading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-              {dmr.loading ? "Gerando..." : "Baixar PDF"}
-            </button>
-          </div>
+          <DownloadButtons url={`/api/relatorios/dmr?ano=${ano}`} hook={dmr} />
         </Card>
 
         {podeVerFinanceiro && <Card icon={DollarSign} title="Financeiro" description="Acompanhe cobranças e recebimentos: valores, vencimentos e situação de cada pagamento">
@@ -100,17 +111,7 @@ export default function RelatoriosPage() {
               <option value="cancelado">Cancelado</option>
             </select>
           </div>
-          <div className="flex gap-2">
-            <button onClick={() => preview(`/api/relatorios/financeiro?status=${finStatus}`)}
-              className="focus-ring transition-brand flex items-center gap-2 rounded-lg border border-[var(--color-paper-200)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]">
-              <Eye size={16} /> Visualizar
-            </button>
-            <button onClick={financeiro.download} disabled={financeiro.loading}
-              className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">
-              {financeiro.loading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-              {financeiro.loading ? "Gerando..." : "Baixar PDF"}
-            </button>
-          </div>
+          <DownloadButtons url={`/api/relatorios/financeiro?status=${finStatus}`} hook={financeiro} />
         </Card>}
 
         <Card icon={FileCheck2} title="Processos Ambientais" description="Consulte os processos por empreendimento: órgão, situação e validade da licença">
@@ -128,31 +129,11 @@ export default function RelatoriosPage() {
               <option value="vencido">Vencido</option>
             </select>
           </div>
-          <div className="flex gap-2">
-            <button onClick={() => preview(`/api/relatorios/processos?status=${procStatus}`)}
-              className="focus-ring transition-brand flex items-center gap-2 rounded-lg border border-[var(--color-paper-200)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]">
-              <Eye size={16} /> Visualizar
-            </button>
-            <button onClick={processos.download} disabled={processos.loading}
-              className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">
-              {processos.loading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-              {processos.loading ? "Gerando..." : "Baixar PDF"}
-            </button>
-          </div>
+          <DownloadButtons url={`/api/relatorios/processos?status=${procStatus}`} hook={processos} />
         </Card>
 
         <Card icon={Building2} title="Clientes" description="Consulte o cadastro completo de clientes e os empreendimentos vinculados a cada um">
-          <div className="flex gap-2">
-            <button onClick={() => preview("/api/relatorios/clientes")}
-              className="focus-ring transition-brand flex items-center gap-2 rounded-lg border border-[var(--color-paper-200)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]">
-              <Eye size={16} /> Visualizar
-            </button>
-            <button onClick={clientes.download} disabled={clientes.loading}
-              className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">
-              {clientes.loading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-              {clientes.loading ? "Gerando..." : "Baixar PDF"}
-            </button>
-          </div>
+          <DownloadButtons url="/api/relatorios/clientes" hook={clientes} />
         </Card>
       </div>
     </div>
