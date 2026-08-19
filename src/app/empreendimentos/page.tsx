@@ -3,7 +3,6 @@ import type { Prisma } from "@prisma/client";
 import Link from "next/link";
 import { Topbar } from "@/components/Topbar";
 import { Plus, MapPin } from "lucide-react";
-import { SearchBar } from "@/components/SearchBar";
 import { EmpreendimentosTable } from "@/components/tables/EmpreendimentosTable";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { GerarDocumentosButton } from "@/components/GerarDocumentosButton";
@@ -14,24 +13,12 @@ export const dynamic = "force-dynamic";
 
 export const metadata = { title: "Empreendimentos" };
 
-export default async function EmpreendimentosPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ q?: string }>;
-}) {
-  const { q } = await searchParams;
+export default async function EmpreendimentosPage() {
   const session = await auth();
   const perfil = (session?.user as { perfil?: string } | undefined)?.perfil;
 
   const where: Prisma.EmpreendimentoWhereInput = {};
   if (!ehPrivilegiado(perfil)) where.visibilidade = "publico";
-  if (q) {
-    where.OR = [
-      { apelido: { contains: q, mode: "insensitive" } },
-      { descricao: { contains: q, mode: "insensitive" } },
-      { cliente: { apelido: { contains: q, mode: "insensitive" } } },
-    ];
-  }
 
   const empreendimentos = await prisma.empreendimento.findMany({
     where,
@@ -50,7 +37,6 @@ export default async function EmpreendimentosPage({
         title="Empreendimentos"
         actions={
           <div className="flex items-center gap-3">
-            <SearchBar placeholder="Buscar por nome, cliente ou descrição..." />
             <GerarDocumentosButton empreendimentoMode />
             <Link
               href="/empreendimentos/novo"
@@ -64,7 +50,7 @@ export default async function EmpreendimentosPage({
       />
 
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">
-        <EmpreendimentosTable data={empreendimentos} q={q} />
+        <EmpreendimentosTable data={empreendimentos} />
       </div>
     </div>
   );

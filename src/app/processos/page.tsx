@@ -4,7 +4,6 @@ import Link from "next/link";
 import { Topbar } from "@/components/Topbar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { FolderKanban, Plus, Clock3 } from "lucide-react";
-import { SearchBar } from "@/components/SearchBar";
 import { FilterSelect } from "@/components/FilterSelect";
 import { ProcessosTable } from "@/components/tables/ProcessosTable";
 import { atualizarProcessosVencidos } from "@/lib/vencidos";
@@ -16,20 +15,13 @@ export const metadata = { title: "Processos" };
 export default async function ProcessosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string; tab?: string }>;
+  searchParams: Promise<{ status?: string; tab?: string }>;
 }) {
-  const { q, status, tab } = await searchParams;
+  const { status, tab } = await searchParams;
 
   await atualizarProcessosVencidos();
 
   const where: Prisma.ProcessoWhereInput = {};
-  if (q) {
-    where.OR = [
-      { numProtocolo: { contains: q, mode: "insensitive" } },
-      { tipo: { contains: q, mode: "insensitive" } },
-      { empreendimento: { apelido: { contains: q, mode: "insensitive" } } },
-    ];
-  }
   if (tab === "vencidos") {
     where.status = "vencido";
   } else {
@@ -59,7 +51,6 @@ export default async function ProcessosPage({
         title="Processos"
         actions={
           <div className="flex flex-wrap items-center gap-3">
-            <SearchBar placeholder="Buscar por protocolo, tipo ou empreendimento..." />
             <FilterSelect
               paramName="status"
               options={[
@@ -85,7 +76,7 @@ export default async function ProcessosPage({
 
       <div className="mb-4 flex gap-2 border-b border-[var(--color-paper-200)]">
         <Link
-          href={`/processos${q ? `?q=${encodeURIComponent(q)}` : ""}`}
+          href="/processos"
           className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
             tab !== "vencidos"
               ? "border-[var(--color-brand-500)] text-[var(--color-brand-600)]"
@@ -95,7 +86,7 @@ export default async function ProcessosPage({
           Ativos
         </Link>
         <Link
-          href={`/processos?tab=vencidos${q ? `&q=${encodeURIComponent(q)}` : ""}`}
+          href="/processos?tab=vencidos"
           className={`flex items-center gap-1.5 pb-3 text-sm font-medium border-b-2 transition-colors ${
             tab === "vencidos"
               ? "border-[var(--color-brand-500)] text-[var(--color-brand-600)]"
@@ -113,7 +104,7 @@ export default async function ProcessosPage({
       </div>
 
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">
-        <ProcessosTable data={processos} q={q} status={tab === "vencidos" ? "vencido" : status} />
+        <ProcessosTable data={processos} />
       </div>
     </div>
   );

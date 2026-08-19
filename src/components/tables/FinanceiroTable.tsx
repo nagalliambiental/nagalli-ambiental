@@ -3,7 +3,7 @@
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import Link from "next/link";
-import { DataTable, type Column } from "@/components/DataTable";
+import { FilterableDataTable, type Column } from "@/components/FilterableDataTable";
 import RowActions from "@/components/RowActions";
 
 interface FinanceiroData {
@@ -13,6 +13,7 @@ interface FinanceiroData {
   formaPagamento: string | null;
   statusPagamento: string;
   dataVencimento: Date | null;
+  descricao?: string | null;
   cliente: { id: number; apelido: string };
 }
 
@@ -41,5 +42,14 @@ export function FinanceiroTable({ data }: { data: FinanceiroData[] }) {
     },
     { header: "Ações", render: (r) => <RowActions detailUrl={`/financeiro/${r.id}`} editUrl={`/financeiro/${r.id}/editar`} entity="financeiro" entityName="Registro Financeiro" endpoint={`/api/financeiro/${r.id}`} /> },
   ];
-  return <DataTable data={data} columns={columns} endpoint="/api/financeiro" emptyMessage="Nenhum registro financeiro cadastrado" />;
+  return (
+    <FilterableDataTable
+      data={data}
+      columns={columns}
+      endpoint="/api/financeiro"
+      emptyMessage="Nenhum registro financeiro cadastrado"
+      placeholder="Buscar por descrição, cliente ou tipo..."
+      searchFields={[(r) => r.descricao || "", (r) => r.cliente.apelido, (r) => r.tipoCobranca, (r) => r.formaPagamento || ""]}
+    />
+  );
 }

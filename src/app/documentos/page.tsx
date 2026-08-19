@@ -4,7 +4,6 @@ import Link from "next/link";
 import { Topbar } from "@/components/Topbar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { FolderOpen, Plus } from "lucide-react";
-import { SearchBar } from "@/components/SearchBar";
 import { FilterSelect } from "@/components/FilterSelect";
 import { DocumentosTable } from "@/components/tables/DocumentosTable";
 
@@ -15,17 +14,11 @@ export const metadata = { title: "Documentos" };
 export default async function DocumentosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; tipo?: string }>;
+  searchParams: Promise<{ tipo?: string }>;
 }) {
-  const { q, tipo } = await searchParams;
+  const { tipo } = await searchParams;
 
   const where: Prisma.DocumentoWhereInput = {};
-  if (q) {
-    where.OR = [
-      { nome: { contains: q, mode: "insensitive" } },
-      { processo: { numProtocolo: { contains: q, mode: "insensitive" } } },
-    ];
-  }
   if (tipo) {
     where.tipo = tipo;
   }
@@ -47,7 +40,6 @@ export default async function DocumentosPage({
         title="Documentos"
         actions={
           <div className="flex items-center gap-3">
-            <SearchBar placeholder="Buscar por nome ou processo..." />
             <FilterSelect
               paramName="tipo"
               options={[
@@ -74,7 +66,7 @@ export default async function DocumentosPage({
       />
 
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">
-        <DocumentosTable data={documentos} q={q} />
+        <DocumentosTable data={documentos} />
       </div>
     </div>
   );

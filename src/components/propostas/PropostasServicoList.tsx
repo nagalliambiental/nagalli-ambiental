@@ -1,8 +1,10 @@
 "use client";
 
+import { useState, useDeferredValue, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/Toast";
+import { Search, X } from "lucide-react";
 
 export interface PropostaLinha {
   id: number;
@@ -22,6 +24,18 @@ interface Props {
 export default function PropostasServicoList({ propostas, modeloNomes }: Props) {
   const router = useRouter();
   const { toast } = useToast();
+  const [query, setQuery] = useState("");
+  const deferredQuery = useDeferredValue(query);
+  const q = deferredQuery.trim().toLowerCase();
+
+  const filtradas = useMemo(() => {
+    if (!q) return propostas;
+    return propostas.filter((p) => {
+      const ident = `${p.numero} ${p.ano} REV ${String(p.revisao).padStart(2, "0")}`;
+      const modelo = modeloNomes[p.modeloSlug] ?? p.modeloSlug;
+      return ident.toLowerCase().includes(q) || modelo.toLowerCase().includes(q);
+    });
+  }, [propostas, modeloNomes, q]);
 
   const handleGerar = async (id: number, e: React.MouseEvent) => {
     e.preventDefault();
@@ -76,6 +90,25 @@ export default function PropostasServicoList({ propostas, modeloNomes }: Props) 
   }
 
   return (
+    <div>
+      <div className="relative border-b border-[var(--color-paper-200)]">
+        <Search size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-ink-500)]" />
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Buscar por modelo, número..."
+          className="w-full bg-white py-3 pl-10 pr-10 text-sm text-[var(--color-ink-900)] placeholder:text-[var(--color-ink-500)] focus:outline-none"
+        />
+        {query && (
+          <button
+            type="button"
+            onClick={() => setQuery("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 rounded p-0.5 text-[var(--color-ink-500)] hover:text-[var(--color-ink-900)]"
+          >
+            <X size={14} />
+          </button>
+        )}
+      </div>
     <div className="overflow-x-auto rounded-lg border border-[var(--color-paper-200)]">
       <table className="w-full text-sm">
         <thead className="bg-[var(--color-paper-50)]">
@@ -87,7 +120,7 @@ export default function PropostasServicoList({ propostas, modeloNomes }: Props) 
           </tr>
         </thead>
         <tbody className="divide-y divide-[var(--color-paper-200)]">
-          {propostas.map((p) => (
+          {filtradas.map((p) => (
             <tr key={p.id} className="hover:bg-[var(--color-paper-50)] cursor-pointer">
               <td className="p-3 font-mono text-[var(--color-brand-700)]">
                 {p.numero} / {p.ano} – REV. {String(p.revisao).padStart(2, "0")}
@@ -126,6 +159,7 @@ export default function PropostasServicoList({ propostas, modeloNomes }: Props) 
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

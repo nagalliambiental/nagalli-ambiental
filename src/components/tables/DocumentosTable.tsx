@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { DataTable, type Column } from "@/components/DataTable";
+import { FilterableDataTable, type Column } from "@/components/FilterableDataTable";
 import RowActions from "@/components/RowActions";
 import { Download } from "lucide-react";
 
@@ -35,7 +35,7 @@ function formatBytes(bytes: number) {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${["B", "KB", "MB", "GB"][i]}`;
 }
 
-export function DocumentosTable({ data, q }: { data: DocData[]; q?: string | null }) {
+export function DocumentosTable({ data }: { data: DocData[] }) {
   const columns: Column<DocData>[] = [
     {
       header: "Nome",
@@ -69,5 +69,14 @@ export function DocumentosTable({ data, q }: { data: DocData[]; q?: string | nul
       ),
     },
   ];
-  return <DataTable data={data} columns={columns} endpoint="/api/documentos" searchQuery={q} emptyMessage="Nenhum documento cadastrado" />;
+  return (
+    <FilterableDataTable
+      data={data}
+      columns={columns}
+      endpoint="/api/documentos"
+      emptyMessage="Nenhum documento cadastrado"
+      placeholder="Buscar por nome ou processo..."
+      searchFields={[(d) => d.nome, (d) => d.tipo, (d) => d.processo?.numProtocolo || ""]}
+    />
+  );
 }

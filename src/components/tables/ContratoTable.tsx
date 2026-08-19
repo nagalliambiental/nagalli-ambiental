@@ -3,7 +3,7 @@
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import Link from "next/link";
-import { DataTable, type Column } from "@/components/DataTable";
+import { FilterableDataTable, type Column } from "@/components/FilterableDataTable";
 import RowActions from "@/components/RowActions";
 
 interface ContratoData {
@@ -45,5 +45,14 @@ export function ContratoTable({ data }: { data: ContratoData[] }) {
     },
     { header: "Ações", render: (r) => <RowActions detailUrl={`/contratos/${r.id}`} editUrl={`/contratos/${r.id}/editar`} entity="contrato" entityName="Contrato" endpoint={`/api/contratos/${r.id}`} /> },
   ];
-  return <DataTable data={data} columns={columns} endpoint="/api/contratos" emptyMessage="Nenhum contrato cadastrado" />;
+  return (
+    <FilterableDataTable
+      data={data}
+      columns={columns}
+      endpoint="/api/contratos"
+      emptyMessage="Nenhum contrato cadastrado"
+      placeholder="Buscar por cliente, serviço ou empreendimento..."
+      searchFields={[(r) => r.cliente.apelido, (r) => r.servicoProcesso, (r) => r.empreendimento?.apelido || ""]}
+    />
+  );
 }

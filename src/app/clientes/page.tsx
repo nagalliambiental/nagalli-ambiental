@@ -3,7 +3,6 @@ import type { Prisma } from "@prisma/client";
 import Link from "next/link";
 import { Topbar } from "@/components/Topbar";
 import { Plus, Building2 } from "lucide-react";
-import { SearchBar } from "@/components/SearchBar";
 import { ClientesTable } from "@/components/tables/ClientesTable";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { GerarDocumentosButton } from "@/components/GerarDocumentosButton";
@@ -14,25 +13,12 @@ export const dynamic = "force-dynamic";
 
 export const metadata = { title: "Clientes" };
 
-export default async function ClientesPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ q?: string }>;
-}) {
-  const { q } = await searchParams;
+export default async function ClientesPage() {
   const session = await auth();
   const perfil = (session?.user as { perfil?: string } | undefined)?.perfil;
 
   const where: Prisma.ClienteWhereInput = {};
   if (!ehPrivilegiado(perfil)) where.visibilidade = "publico";
-  if (q) {
-    where.OR = [
-      { apelido: { contains: q, mode: "insensitive" } },
-      { razaoSocial: { contains: q, mode: "insensitive" } },
-      { cnpj: { contains: q } },
-      { email: { contains: q, mode: "insensitive" } },
-    ];
-  }
 
   const clientes = await prisma.cliente.findMany({
     where,
@@ -51,7 +37,6 @@ export default async function ClientesPage({
         title="Clientes"
         actions={
           <div className="flex items-center gap-3">
-            <SearchBar placeholder="Buscar por nome, CNPJ ou email..." />
             <GerarDocumentosButton />
             <Link
               href="/clientes/novo"
@@ -65,7 +50,7 @@ export default async function ClientesPage({
       />
 
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">
-        <ClientesTable data={clientes} q={q} />
+        <ClientesTable data={clientes} />
       </div>
     </div>
   );

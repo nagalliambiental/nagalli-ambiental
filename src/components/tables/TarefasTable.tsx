@@ -3,12 +3,13 @@
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import Link from "next/link";
-import { DataTable, type Column } from "@/components/DataTable";
+import { FilterableDataTable, type Column } from "@/components/FilterableDataTable";
 import RowActions from "@/components/RowActions";
 
 interface TarefaData {
   id: number;
   titulo: string;
+  descricao?: string | null;
   prioridade: string;
   status: string;
   dataVencimento: Date | null;
@@ -50,5 +51,14 @@ export function TarefasTable({ data }: { data: TarefaData[] }) {
     },
     { header: "Ações", render: (t) => <RowActions detailUrl={`/tarefas/${t.id}`} editUrl={`/tarefas/${t.id}/editar`} entity="tarefa" entityName="Tarefa" endpoint={`/api/tarefas/${t.id}`} /> },
   ];
-  return <DataTable data={data} columns={columns} endpoint="/api/tarefas" emptyMessage="Nenhuma tarefa cadastrada" />;
+  return (
+    <FilterableDataTable
+      data={data}
+      columns={columns}
+      endpoint="/api/tarefas"
+      emptyMessage="Nenhuma tarefa cadastrada"
+      placeholder="Buscar por título, descrição ou responsável..."
+      searchFields={[(t) => t.titulo, (t) => t.descricao || "", (t) => t.responsavel.nome, (t) => t.usuario.nome]}
+    />
+  );
 }

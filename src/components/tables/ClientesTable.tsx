@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { DataTable, type Column } from "@/components/DataTable";
+import { FilterableDataTable, type Column } from "@/components/FilterableDataTable";
 import RowActions from "@/components/RowActions";
 import { ChevronRight, ChevronDown, MapPin, FileText, ChevronDown as ChevronDownIcon } from "lucide-react";
 import Link from "next/link";
@@ -17,7 +17,7 @@ interface ClienteData {
   empreendimentos: { id: number; apelido: string }[];
 }
 
-export function ClientesTable({ data, q }: { data: ClienteData[]; q?: string | null }) {
+export function ClientesTable({ data }: { data: ClienteData[] }) {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -58,12 +58,19 @@ export function ClientesTable({ data, q }: { data: ClienteData[]; q?: string | n
 
   return (
     <div>
-      <DataTable
+      <FilterableDataTable
         data={data}
         columns={columns}
         endpoint="/api/clientes"
-        searchQuery={q}
         emptyMessage="Nenhum cliente cadastrado"
+        placeholder="Buscar por nome, CNPJ ou email..."
+        searchFields={[
+          (c) => c.apelido,
+          (c) => c.razaoSocial,
+          (c) => c.cnpj,
+          (c) => c.telefone,
+          (c) => c.empreendimentos.map((e) => e.apelido).join(" "),
+        ]}
         extraBulkActions={(selectedIds) => (
           <div ref={dropdownRef} className="relative">
             <button

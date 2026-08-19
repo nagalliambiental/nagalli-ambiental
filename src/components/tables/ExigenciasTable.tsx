@@ -3,7 +3,7 @@
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import Link from "next/link";
-import { DataTable, type Column } from "@/components/DataTable";
+import { FilterableDataTable, type Column } from "@/components/FilterableDataTable";
 import RowActions from "@/components/RowActions";
 import { Check, AlertTriangle } from "lucide-react";
 
@@ -50,5 +50,20 @@ export function ExigenciasTable({ data }: { data: ExigenciaData[] }) {
     },
     { header: "Ações", render: (e) => <RowActions detailUrl={`/exigencias/${e.id}`} editUrl={`/exigencias/${e.id}/editar`} entity="exigencia" entityName="Exigência" endpoint={`/api/exigencias/${e.id}`} /> },
   ];
-  return <DataTable data={data} columns={columns} endpoint="/api/exigencias" emptyMessage="Nenhuma exigência cadastrada" />;
+  return (
+    <FilterableDataTable
+      data={data}
+      columns={columns}
+      endpoint="/api/exigencias"
+      emptyMessage="Nenhuma exigência cadastrada"
+      placeholder="Buscar por descrição, protocolo ou empreendimento..."
+      searchFields={[
+        (e) => e.descricao,
+        (e) => e.processo.numProtocolo,
+        (e) => e.processo.tipo,
+        (e) => e.processo.orgao.sigla,
+        (e) => e.processo.empreendimento.apelido,
+      ]}
+    />
+  );
 }

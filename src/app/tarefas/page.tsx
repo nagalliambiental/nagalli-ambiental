@@ -3,7 +3,6 @@ import Link from "next/link";
 import { Topbar } from "@/components/Topbar";
 import { Plus, ClipboardCheck } from "lucide-react";
 import { TarefasTable } from "@/components/tables/TarefasTable";
-import { SearchBar } from "@/components/SearchBar";
 import { FilterSelect } from "@/components/FilterSelect";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import type { Prisma } from "@prisma/client";
@@ -15,13 +14,10 @@ export const metadata = { title: "Tarefas" };
 export default async function TarefasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string }>;
+  searchParams: Promise<{ status?: string }>;
 }) {
-  const { q, status } = await searchParams;
+  const { status } = await searchParams;
   const where: Prisma.TarefaWhereInput = {};
-  if (q) {
-    where.descricao = { contains: q, mode: "insensitive" };
-  }
   if (status) {
     where.status = status;
   }
@@ -47,7 +43,6 @@ export default async function TarefasPage({
         title="Tarefas"
         actions={
           <div className="flex items-center gap-3">
-            <SearchBar placeholder="Buscar por descrição..." />
             <FilterSelect
               paramName="status"
               options={[

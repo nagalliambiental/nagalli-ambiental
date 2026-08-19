@@ -3,7 +3,7 @@
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import Link from "next/link";
-import { DataTable, type Column } from "@/components/DataTable";
+import { FilterableDataTable, type Column } from "@/components/FilterableDataTable";
 import RowActions from "@/components/RowActions";
 
 interface ProcessoData {
@@ -29,7 +29,7 @@ const statusColors: Record<string, string> = {
   vencido: "bg-red-50 text-red-700",
 };
 
-export function ProcessosTable({ data, q, status }: { data: ProcessoData[]; q?: string | null; status?: string | null }) {
+export function ProcessosTable({ data }: { data: ProcessoData[] }) {
   const columns: Column<ProcessoData>[] = [
     { header: "Protocolo", sortable: true, sortKey: "numProtocolo", render: (p) => <Link href={`/processos/${p.id}`} className="font-mono text-sm text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)] hover:underline">{p.numProtocolo}</Link> },
     { header: "Tipo", sortable: true, sortKey: "tipo", render: (p) => p.tipo },
@@ -50,5 +50,14 @@ export function ProcessosTable({ data, q, status }: { data: ProcessoData[]; q?: 
     },
     { header: "Ações", render: (p) => <RowActions detailUrl={`/processos/${p.id}`} editUrl={`/processos/${p.id}/editar`} entity="processo" entityName="Processo" endpoint={`/api/processos/${p.id}`} /> },
   ];
-  return <DataTable data={data} columns={columns} endpoint="/api/processos" searchQuery={q} emptyMessage="Nenhum processo cadastrado" />;
+  return (
+    <FilterableDataTable
+      data={data}
+      columns={columns}
+      endpoint="/api/processos"
+      emptyMessage="Nenhum processo cadastrado"
+      placeholder="Buscar por protocolo, tipo ou empreendimento..."
+      searchFields={[(p) => p.numProtocolo, (p) => p.tipo, (p) => p.orgao.sigla, (p) => p.empreendimento.apelido]}
+    />
+  );
 }
