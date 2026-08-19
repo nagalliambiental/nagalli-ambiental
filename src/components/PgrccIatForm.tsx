@@ -146,6 +146,11 @@ export function PgrccIatForm({ clienteId, clienteApelido, cliente, configuracoes
     base.respImplNome = "";
     base.respImplConselho = c(cfg.registroOrgao ?? "");
 
+    const hoje = new Date();
+    base.assinaturaDia = String(hoje.getDate());
+    base.assinaturaMes = hoje.toLocaleDateString("pt-BR", { month: "long" });
+    base.assinaturaAno = String(hoje.getFullYear());
+
     return base;
   });
 
@@ -248,6 +253,7 @@ export function PgrccIatForm({ clienteId, clienteApelido, cliente, configuracoes
       empBairro: String(emp.bairro ?? ""),
       empMunicipio: String(emp.municipio ?? ""),
       empIndicacaoFiscal: prev.empIndicacaoFiscal,
+      assinaturaCidade: String(emp.municipio ?? prev.assinaturaCidade),
     }));
     setDirty(true);
     toast("Dados do empreendimento preenchidos", "success");
