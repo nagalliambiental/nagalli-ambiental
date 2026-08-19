@@ -136,7 +136,7 @@ export function PgrccIatForm({ clienteId, clienteApelido, cliente, configuracoes
     base.elabTelefone = c(cfg.responsavelTelefone ?? "");
     base.elabEmail = c(cfg.responsavelEmail ?? "");
 
-    base.respElabNome = c(cfg.responsavelNome ?? "");
+    base.respElabNome = "";
     base.respElabEmpresa = c(cfg.nomeEmpresa ?? "");
     base.respElabEndereco = [c(cfg.responsavelEndereco ?? ""), c(cfg.responsavelBairro ?? "")].filter(Boolean).join(", ");
     base.respElabTelefone = c(cfg.responsavelTelefone ?? "");
