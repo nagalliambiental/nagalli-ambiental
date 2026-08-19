@@ -1,24 +1,10 @@
 import type { Metadata } from "next";
-import { Inter, Sora } from "next/font/google";
 import { AppChrome } from "@/components/AppChrome";
 import SessionProvider from "@/components/SessionProvider";
 import { ToastProvider } from "@/components/Toast";
 import { SyncStatusBar } from "@/lib/tauri/SyncStatusBar";
 import BackupAutomatico from "@/components/BackupAutomatico";
 import "./globals.css";
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-sans",
-  display: "swap",
-});
-
-const sora = Sora({
-  subsets: ["latin"],
-  variable: "--font-display",
-  weight: ["600", "700"],
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "Nagalli Ambiental - Sistema de Gestão",
@@ -29,7 +15,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="pt-BR" className={`${inter.variable} ${sora.variable}`}>
+    <html lang="pt-BR">
       <body>
         <SessionProvider>
           <AppChrome>
