@@ -13,7 +13,7 @@ export default async function PgrccIatPage(props: { params: Promise<{ id: string
 
   const { id } = await props.params;
 
-  const [cliente, configuracao] = await Promise.all([
+  const [cliente, configuracao, empresaConfig] = await Promise.all([
     prisma.cliente.findUnique({
       where: { id: Number(id) },
       select: {
@@ -59,15 +59,28 @@ export default async function PgrccIatPage(props: { params: Promise<{ id: string
       },
     }),
     prisma.configuracao.findFirst(),
+    prisma.empresaConfig.findFirst(),
   ]);
   if (!cliente) notFound();
+
+  const empresa = (empresaConfig ?? {}) as Record<string, string | null | undefined>;
+  const configCombinada = {
+    ...(configuracao ?? {}),
+    nomeEmpresa: empresa.razaoSocial ?? configuracao?.nomeEmpresa ?? "",
+    cnpj: empresa.cnpj ?? configuracao?.cnpj ?? "",
+    responsavelNome: "Claudia da Silva Leite Nagalli",
+    responsavelEndereco: [empresa.rua, empresa.numero].filter(Boolean).join(", ") || configuracao?.responsavelEndereco || "",
+    responsavelBairro: empresa.bairro ?? configuracao?.responsavelBairro ?? "",
+    responsavelTelefone: empresa.telefone ?? configuracao?.responsavelTelefone ?? "",
+    responsavelEmail: empresa.email ?? configuracao?.responsavelEmail ?? "",
+  };
 
   return (
     <PgrccIatForm
       clienteId={cliente.id}
       clienteApelido={cliente.apelido}
       cliente={JSON.parse(JSON.stringify(cliente))}
-      configuracoes={configuracao ? JSON.parse(JSON.stringify(configuracao)) : null}
+      configuracoes={JSON.parse(JSON.stringify(configCombinada))}
     />
   );
 }
