@@ -170,6 +170,12 @@ export function PgrccIatForm({ clienteId, clienteApelido, cliente, configuracoes
     setForm((prev) => ({
       ...prev,
       caracterizacao: prev.caracterizacao.map((r) => (r.id === id ? { ...r, [field]: value } : r)),
+      ...(field === "especificar"
+        ? {
+            reutilizacao: prev.reutilizacao.map((r) => (r.id === id ? { ...r, especificar: value } : r)),
+            acondicionamento: prev.acondicionamento.map((r) => (r.id === id ? { ...r, especificar: value } : r)),
+          }
+        : {}),
     }));
     setDirty(true);
   };
@@ -288,6 +294,9 @@ export function PgrccIatForm({ clienteId, clienteApelido, cliente, configuracoes
     C: Math.max(0, tC - reutilTotalClasse(classeIds.C)),
     D: Math.max(0, tD - reutilTotalClasse(classeIds.D)),
   } as const;
+
+  const netSolo = Math.max(0, totalSolo - reutilSolo);
+  const netExcetoSolo = Math.max(0, volumeClasse.A - netSolo);
 
   const empreendimentos = (cliente.empreendimentos as Record<string, unknown>[]) || [];
 
@@ -471,13 +480,6 @@ export function PgrccIatForm({ clienteId, clienteApelido, cliente, configuracoes
                   </tr>
                 ))}
               </tbody>
-              <tfoot>
-                <tr className="border-t border-[var(--color-paper-200)] font-semibold text-[var(--color-ink-900)]">
-                  <td className="py-2 pr-2" colSpan={3}>TOTAL Classe A</td>
-                  <td className="py-2 pr-2 text-right">{fmt(tA)}</td>
-                  <td className="py-2 pr-2 text-right" colSpan={2} />
-                </tr>
-              </tfoot>
             </table>
           </div>
           <div className="mt-4 grid grid-cols-2 gap-3 text-sm md:grid-cols-6">
@@ -607,13 +609,13 @@ export function PgrccIatForm({ clienteId, clienteApelido, cliente, configuracoes
             ))}
           </div>
           <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-5">
-            <Campo label="Quantidade solo (m³)" value={form.transportesQuantidades.solo} onChange={(v) => setField("transportesQuantidades", { ...form.transportesQuantidades, solo: v })} />
-            <Campo label="Quantidade A exceto solo (m³)" value={form.transportesQuantidades.excetoSolo} onChange={(v) => setField("transportesQuantidades", { ...form.transportesQuantidades, excetoSolo: v })} />
-            <Campo label="Quantidade B (m³)" value={form.transportesQuantidades.b} onChange={(v) => setField("transportesQuantidades", { ...form.transportesQuantidades, b: v })} />
-            <Campo label="Quantidade C (m³)" value={form.transportesQuantidades.c} onChange={(v) => setField("transportesQuantidades", { ...form.transportesQuantidades, c: v })} />
-            <Campo label="Quantidade D (m³)" value={form.transportesQuantidades.d} onChange={(v) => setField("transportesQuantidades", { ...form.transportesQuantidades, d: v })} />
+            <Campo label="Quantidade solo (m³)" value={form.transportesQuantidades.solo} onChange={(v) => setField("transportesQuantidades", { ...form.transportesQuantidades, solo: v })} placeholder={fmt(netSolo)} />
+            <Campo label="Quantidade A exceto solo (m³)" value={form.transportesQuantidades.excetoSolo} onChange={(v) => setField("transportesQuantidades", { ...form.transportesQuantidades, excetoSolo: v })} placeholder={fmt(netExcetoSolo)} />
+            <Campo label="Quantidade B (m³)" value={form.transportesQuantidades.b} onChange={(v) => setField("transportesQuantidades", { ...form.transportesQuantidades, b: v })} placeholder={fmt(volumeClasse.B)} />
+            <Campo label="Quantidade C (m³)" value={form.transportesQuantidades.c} onChange={(v) => setField("transportesQuantidades", { ...form.transportesQuantidades, c: v })} placeholder={fmt(volumeClasse.C)} />
+            <Campo label="Quantidade D (m³)" value={form.transportesQuantidades.d} onChange={(v) => setField("transportesQuantidades", { ...form.transportesQuantidades, d: v })} placeholder={fmt(volumeClasse.D)} />
           </div>
-          <p className="mt-2 text-xs text-[var(--color-ink-500)]">Deixe em branco para usar os totais líquidos (caracterização − reutilização/reciclagem).</p>
+          <p className="mt-2 text-xs text-[var(--color-ink-500)]">Em branco usa os totais líquidos (caracterização − reutilização/reciclagem), exibidos como sugestão acima.</p>
         </SectionCard>
 
         <SectionCard icon={CircleCheck} title="Destinação final dos RCD" subtitle="Por classe de resíduo — volumes = total da caracterização − reutilização/reciclagem">
