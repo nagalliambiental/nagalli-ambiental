@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useSession } from "next-auth/react";
 import { Topbar } from "@/components/Topbar";
 import { Truck, RefreshCw, Send, Link2, Loader2, CheckCircle2, AlertTriangle, XCircle, FileDown, Trash2, Ban, ShieldCheck, Clock, Search, Plus, X, Pencil, PackagePlus, Bookmark, Save } from "lucide-react";
 import { useToast } from "@/components/Toast";
@@ -931,6 +932,8 @@ function MeusMtrsTab(props: {
 
 function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: EmpreendimentoOpcao[]; modelos: ModeloMtr[]; onEmitido: () => void; onModelosChanged: () => void; toast: ToastFn }) {
   const { conexoes, empreendimentos, modelos, onEmitido, onModelosChanged, toast } = props;
+  const { data: session } = useSession();
+  const nomeUsuario = session?.user?.name || "";
   const [form, setForm] = useState({
     conexaoId: "",
     empreendimentoId: "",
@@ -999,6 +1002,7 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
   });
 
   const conexaoEfetiva = conexoes.some((c) => c.id === Number(form.conexaoId)) ? form.conexaoId : conexoes.length ? String(conexoes[0].id) : "";
+  const responsavel = form.nomeResponsavel || nomeUsuario;
 
   useEffect(() => {
     if (!conexaoEfetiva) return;
@@ -1156,7 +1160,7 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
           conexaoId: Number(conexaoEfetiva),
           clienteNome: form.clienteNome,
           empreendNome: form.empreendNome,
-          nomeResponsavel: form.nomeResponsavel,
+          nomeResponsavel: responsavel,
           transportadorCnpj: form.transportadorCnpj,
           transportadorNome: form.transportadorNome,
           transportadorEndereco: form.transportadorEndereco,
@@ -1287,6 +1291,7 @@ function abrirModalResiduo(indice?: number) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
+          nomeResponsavel: responsavel,
           conexaoId: Number(conexaoEfetiva),
           resumo,
           quantidade: quantidadeTotal,
@@ -1393,7 +1398,7 @@ function abrirModalResiduo(indice?: number) {
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-[var(--color-ink-500)]">Responsável *</label>
-          <input value={form.nomeResponsavel} onChange={(e) => setCampo("nomeResponsavel", e.target.value)} className={inputCls} />
+          <input value={responsavel} onChange={(e) => setCampo("nomeResponsavel", e.target.value)} className={inputCls} />
         </div>
         <div className="flex flex-col gap-1 md:col-span-2">
           <label className="text-xs font-medium text-[var(--color-ink-500)]">Endereço</label>
