@@ -203,8 +203,9 @@ async function apiFetch(
 // ---------- Catálogos (resíduos, unidades, estados, classes, acondicionamento, tratamento) ----------
 
 function listaDeResposta(resultado: unknown): unknown[] {
-  const env = (resultado || {}) as { erro?: boolean; objetoResposta?: unknown };
+  const env = (resultado || {}) as { erro?: boolean; objeto?: unknown; objetoResposta?: unknown };
   if (Array.isArray(env.objetoResposta)) return env.objetoResposta;
+  if (Array.isArray(env.objeto)) return env.objeto;
   if (Array.isArray(env)) return env as unknown[];
   return [];
 }

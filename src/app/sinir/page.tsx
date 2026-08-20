@@ -930,6 +930,74 @@ function MeusMtrsTab(props: {
 
 // ---------- Emitir ----------
 
+function BuscaResiduo(props: {
+  catalogos: SinirCatalogosFront | null;
+  valor: string;
+  onChange: (codigo: string) => void;
+  inputCls: string;
+}) {
+  const { catalogos, valor, onChange, inputCls } = props;
+  const [aberto, setAberto] = useState(false);
+  const [texto, setTexto] = useState(valor);
+
+  const lista = (catalogos?.residuos || []).filter((r) => {
+    const t = texto.trim().toLowerCase();
+    if (!t) return true;
+    return r.resCodigoIbama.toLowerCase().includes(t) || r.resNome.toLowerCase().includes(t);
+  }).slice(0, 50);
+
+  const selecionado = catalogos?.residuos.find((r) => r.resCodigoIbama === valor);
+
+  return (
+    <div className="relative">
+      <input
+        value={texto}
+        onFocus={() => setAberto(true)}
+        onBlur={() => setTimeout(() => setAberto(false), 150)}
+        onChange={(e) => {
+          setTexto(e.target.value);
+          onChange(e.target.value);
+          setAberto(true);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") setAberto(false);
+        }}
+        className={inputCls}
+        placeholder="Digite o código ou descrição do resíduo para filtrar..."
+      />
+      {aberto && (
+        <div className="absolute left-0 right-0 z-20 mt-1 max-h-56 overflow-y-auto rounded-lg border border-[var(--color-paper-200)] bg-white shadow-lg">
+          {lista.length === 0 ? (
+            <p className="px-3 py-2 text-sm text-[var(--color-ink-500)]">Nenhum resíduo encontrado.</p>
+          ) : (
+            lista.map((r) => (
+              <button
+                key={r.resCodigoIbama}
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  setTexto(r.resCodigoIbama);
+                  onChange(r.resCodigoIbama);
+                  setAberto(false);
+                }}
+                className="block w-full px-3 py-2 text-left hover:bg-[var(--color-paper-50)]"
+              >
+                <span className="font-medium text-[var(--color-ink-800)]">{r.resCodigoIbama}</span>
+                <span className="ml-2 text-xs text-[var(--color-ink-500)]">{r.resNome}</span>
+              </button>
+            ))
+          )}
+        </div>
+      )}
+      {selecionado && (
+        <p className="rounded bg-[var(--color-paper-50)] px-2 py-1 text-xs text-[var(--color-ink-600)]">
+          {selecionado.resNome}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: EmpreendimentoOpcao[]; modelos: ModeloMtr[]; onEmitido: () => void; onModelosChanged: () => void; toast: ToastFn }) {
   const { conexoes, empreendimentos, modelos, onEmitido, onModelosChanged, toast } = props;
   const { data: session } = useSession();
@@ -1636,23 +1704,12 @@ function abrirModalResiduo(indice?: number) {
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <div className="flex flex-col gap-1 md:col-span-2">
                 <label className="text-xs font-medium text-[var(--color-ink-500)]">Resíduo / Código IBAMA *</label>
-                <input
-                  list="lista-residuos-sinir"
-                  value={residuoForm.resCodigoIbama}
-                  onChange={(e) => setResiduoForm((f) => ({ ...f, resCodigoIbama: e.target.value }))}
-                  className={inputCls}
-                  placeholder="Digite o código ou descrição do resíduo para filtrar..."
+                <BuscaResiduo
+                  catalogos={catalogos}
+                  valor={residuoForm.resCodigoIbama}
+                  onChange={(codigo) => setResiduoForm((f) => ({ ...f, resCodigoIbama: codigo }))}
+                  inputCls={inputCls}
                 />
-                <datalist id="lista-residuos-sinir">
-                  {catalogos?.residuos.map((r) => (
-                    <option key={r.resCodigoIbama} value={r.resCodigoIbama}>{r.resNome}</option>
-                  ))}
-                </datalist>
-                {residuoForm.resCodigoIbama && catalogos?.residuos.some((r) => r.resCodigoIbama === residuoForm.resCodigoIbama) && (
-                  <p className="rounded bg-[var(--color-paper-50)] px-2 py-1 text-xs text-[var(--color-ink-600)]">
-                    {nomeResiduo(residuoForm.resCodigoIbama)}
-                  </p>
-                )}
                 {carregandoCatalogos && <p className="text-xs text-[var(--color-ink-500)]">Carregando catálogos do SINIR...</p>}
               </div>
               <div className="flex flex-col gap-1">
