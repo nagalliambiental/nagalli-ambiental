@@ -50,6 +50,11 @@ export interface EmitirManifestoInput {
   unidade: string;
   transportadorCnpj: string;
   destinadorCnpj: string;
+  nomeResponsavel?: string;
+  nomeMotorista?: string;
+  placaVeiculo?: string;
+  dataExpedicao?: number;
+  observacoes?: string;
 }
 
 export class SinirError extends Error {
@@ -542,14 +547,14 @@ export async function emitirManifesto(
     body: [
       {
         possuiArmazenamentoTemporario: false,
-        nomeResponsavel: "Responsavel Tecnico",
+        nomeResponsavel: input.nomeResponsavel || "Responsavel Tecnico",
         gerador: { cpfCnpj: conexao.cnpj, unidade: Number(conexao.unidade) || conexao.unidade },
         transportador: { cpfCnpj: input.transportadorCnpj, unidade: Number(input.transportadorCnpj) || input.transportadorCnpj },
         destinador: { cpfCnpj: input.destinadorCnpj, unidade: Number(input.destinadorCnpj) || input.destinadorCnpj },
-        nomeMotorista: null,
-        placaVeiculo: null,
-        dataExpedicao: Date.now(),
-        observacoes: input.resumo,
+        nomeMotorista: input.nomeMotorista || null,
+        placaVeiculo: input.placaVeiculo || null,
+        dataExpedicao: input.dataExpedicao || Date.now(),
+        observacoes: input.observacoes || input.resumo,
         tipoManifesto: 0,
         listaManifestoResiduos: [
           {

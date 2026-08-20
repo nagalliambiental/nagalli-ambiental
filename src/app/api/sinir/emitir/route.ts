@@ -11,7 +11,11 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { conexaoId, clienteNome, empreendNome, resumo, quantidade, unidade, transportadorCnpj, destinadorCnpj } = body;
+  const {
+    conexaoId, clienteNome, empreendNome, resumo, quantidade, unidade,
+    transportadorCnpj, destinadorCnpj,
+    nomeResponsavel, nomeMotorista, placaVeiculo, dataExpedicao, observacoes,
+  } = body;
 
   if (!conexaoId) {
     return NextResponse.json({ error: "conexaoId é obrigatório" }, { status: 400 });
@@ -46,6 +50,11 @@ export async function POST(req: NextRequest) {
       unidade: unidade || "kg",
       transportadorCnpj: String(transportadorCnpj || ""),
       destinadorCnpj: String(destinadorCnpj || ""),
+      nomeResponsavel: nomeResponsavel ? String(nomeResponsavel) : undefined,
+      nomeMotorista: nomeMotorista ? String(nomeMotorista) : undefined,
+      placaVeiculo: placaVeiculo ? String(placaVeiculo) : undefined,
+      dataExpedicao: dataExpedicao ? Number(dataExpedicao) : undefined,
+      observacoes: observacoes ? String(observacoes) : undefined,
     });
 
     await prisma.sinirConexao.update({

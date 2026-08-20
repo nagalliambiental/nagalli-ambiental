@@ -129,6 +129,10 @@ export default async function EmpreendimentoDetailPage(props: { params: Promise<
                       <FileText size={16} />
                       <span className="font-mono">{emp.cnpj}</span>
                     </div>}
+                    {emp.unidadeSinir && <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
+                      <Hash size={16} />
+                      <span>Unidade do SINIR: <span className="font-mono">{emp.unidadeSinir}</span></span>
+                    </div>}
                     <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
                       <Calendar size={16} />
                       <span>Cadastro em {format(emp.criadoEm, "dd/MM/yyyy", { locale: ptBR })}</span>

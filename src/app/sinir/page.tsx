@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { Topbar } from "@/components/Topbar";
-import { Truck, RefreshCw, Send, Link2, Loader2, CheckCircle2, AlertTriangle, XCircle, FileDown, Trash2, Ban, ShieldCheck, Clock } from "lucide-react";
+import { Truck, RefreshCw, Send, Link2, Loader2, CheckCircle2, AlertTriangle, XCircle, FileDown, Trash2, Ban, ShieldCheck, Clock, Search } from "lucide-react";
 import { useToast } from "@/components/Toast";
 
 type ToastFn = (message: string, type?: "success" | "error" | "info" | "warning") => void;
@@ -832,13 +832,46 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
     resumo: "",
     quantidade: "",
     unidade: "kg",
+    // Gerador
+    geradorCnpj: "",
+    geradorEndereco: "",
+    geradorNumero: "",
+    geradorUf: "",
+    geradorCidade: "",
+    nomeResponsavel: "",
+    // Transportador
     transportadorCnpj: "",
+    transportadorNome: "",
+    transportadorEndereco: "",
+    transportadorNumero: "",
+    transportadorUf: "",
+    transportadorCidade: "",
+    transportadorCep: "",
+    transportadorLicenca: "",
+    transportadorOrgao: "",
+    nomeMotorista: "",
+    placaVeiculo: "",
+    dataExpedicao: "",
+    // Destinador
     destinadorCnpj: "",
+    destinadorNome: "",
+    destinadorEndereco: "",
+    destinadorNumero: "",
+    destinadorUf: "",
+    destinadorCidade: "",
+    destinadorCep: "",
+    destinadorLicenca: "",
+    destinadorOrgao: "",
+    observacoes: "",
   });
   const [enviando, setEnviando] = useState(false);
   const [resultado, setResultado] = useState<{ numero: string; simulacao: boolean } | null>(null);
+  const [buscandoTransp, setBuscandoTransp] = useState(false);
+  const [buscandoDest, setBuscandoDest] = useState(false);
 
   const conexaoEfetiva = conexoes.some((c) => c.id === Number(form.conexaoId)) ? form.conexaoId : conexoes.length ? String(conexoes[0].id) : "";
+
+  const inputCls = "w-full rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]";
 
   function selecionarEmpreendimento(id: string) {
     const emp = empreendimentos.find((e) => e.id === Number(id));
@@ -849,9 +882,64 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
       empreendimentoId: id,
       clienteNome: emp.cliente.razaoSocial || emp.cliente.apelido,
       empreendNome: emp.apelido,
+      geradorCnpj: cnpj || f.geradorCnpj,
       resumo: emp.descricao ? `Resíduo — ${emp.descricao}` : f.resumo,
     }));
     toast(`Empreendimento ${emp.apelido} preenchido automaticamente (CNPJ ${cnpj || "não informado"} — informe transportador e destinador manualmente)`, "info");
+  }
+
+  async function buscarParceiro(tipo: "transp" | "dest") {
+    const cnpj = (tipo === "transp" ? form.transportadorCnpj : form.destinadorCnpj).replace(/\D/g, "");
+    if (cnpj.length !== 14) {
+      toast("Informe um CNPJ com 14 dígitos para buscar", "error");
+      return;
+    }
+    if (tipo === "transp") {
+      setBuscandoTransp(true);
+    } else {
+      setBuscandoDest(true);
+    }
+    try {
+      const res = await fetch(`/api/cnpj/${cnpj}`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        toast(data?.error || "CNPJ não encontrado", "error");
+        return;
+      }
+      const d = await res.json();
+      setForm((f) =>
+        tipo === "transp"
+          ? {
+              ...f,
+              transportadorCnpj: cnpj,
+              transportadorNome: d.razaoSocial || f.transportadorNome,
+              transportadorEndereco: d.enderecoRua || f.transportadorEndereco,
+              transportadorNumero: d.enderecoNumero || f.transportadorNumero,
+              transportadorUf: d.uf || f.transportadorUf,
+              transportadorCidade: d.municipio || f.transportadorCidade,
+              transportadorCep: d.cep || f.transportadorCep,
+            }
+          : {
+              ...f,
+              destinadorCnpj: cnpj,
+              destinadorNome: d.razaoSocial || f.destinadorNome,
+              destinadorEndereco: d.enderecoRua || f.destinadorEndereco,
+              destinadorNumero: d.enderecoNumero || f.destinadorNumero,
+              destinadorUf: d.uf || f.destinadorUf,
+              destinadorCidade: d.municipio || f.destinadorCidade,
+              destinadorCep: d.cep || f.destinadorCep,
+            }
+      );
+      toast(`Empresa encontrada: ${d.razaoSocial}`, "success");
+    } catch {
+      toast("Falha ao buscar o CNPJ", "error");
+    } finally {
+      if (tipo === "transp") {
+      setBuscandoTransp(false);
+    } else {
+      setBuscandoDest(false);
+    }
+    }
   }
 
   async function emitir() {
@@ -865,7 +953,12 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
       const res = await fetch("/api/sinir/emitir", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, conexaoId: Number(conexaoEfetiva), quantidade: Number(form.quantidade) }),
+        body: JSON.stringify({
+          ...form,
+          conexaoId: Number(conexaoEfetiva),
+          quantidade: Number(form.quantidade),
+          dataExpedicao: form.dataExpedicao ? new Date(`${form.dataExpedicao}T12:00:00`).getTime() : undefined,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -882,16 +975,25 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
     }
   }
 
-  const inputCls = "w-full rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]";
+  function setCampo(nome: keyof typeof form, valor: string) {
+    setForm((f) => ({ ...f, [nome]: valor }));
+  }
+
+  const secaoTitulo = (titulo: string, sub: string) => (
+    <div className="mt-6 mb-3 border-b border-[var(--color-paper-200)] pb-2">
+      <h3 className="font-display text-sm font-semibold text-[var(--color-ink-900)]">{titulo}</h3>
+      <p className="text-xs text-[var(--color-ink-500)]">{sub}</p>
+    </div>
+  );
 
   return (
     <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
       <h2 className="font-display mb-1 text-base font-semibold text-[var(--color-ink-900)]">Emitir Manifesto (MTR)</h2>
-      <p className="mb-4 text-sm text-[var(--color-ink-500)]">Em modo simulação gera um MTR fictício. Em modo real envia ao SINIR com o token da conexão.</p>
+      <p className="mb-2 text-sm text-[var(--color-ink-500)]">Em modo simulação gera um MTR fictício. Em modo real envia ao SINIR com o token da conexão. Busque transportador e destinador pelo CNPJ — os dados de endereço são preenchidos automaticamente.</p>
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <div className="flex flex-col gap-1 md:col-span-2">
-          <label className="text-xs font-medium text-[var(--color-ink-500)]">Empreendimento (preenche automaticamente)</label>
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">Empreendimento (preenche os dados do gerador)</label>
           <select value={form.empreendimentoId} onChange={(e) => selecionarEmpreendimento(e.target.value)} className={inputCls}>
             <option value="">Selecione um empreendimento cadastrado...</option>
             {empreendimentos.map((e) => (
@@ -907,9 +1009,127 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
             ))}
           </select>
         </div>
+      </div>
+
+      {secaoTitulo("Dados do Gerador", "Empresa que gera o resíduo — preenchida pelo empreendimento")}
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+        <div className="flex flex-col gap-1 md:col-span-2">
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">Gerador (razão social)</label>
+          <input value={form.clienteNome} onChange={(e) => setCampo("clienteNome", e.target.value)} className={inputCls} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">CNPJ</label>
+          <input value={form.geradorCnpj} onChange={(e) => setCampo("geradorCnpj", e.target.value.replace(/\D/g, ""))} className={inputCls} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">Responsável *</label>
+          <input value={form.nomeResponsavel} onChange={(e) => setCampo("nomeResponsavel", e.target.value)} className={inputCls} />
+        </div>
+        <div className="flex flex-col gap-1 md:col-span-2">
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">Endereço</label>
+          <input value={form.geradorEndereco} onChange={(e) => setCampo("geradorEndereco", e.target.value)} className={inputCls} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">Nº</label>
+          <input value={form.geradorNumero} onChange={(e) => setCampo("geradorNumero", e.target.value)} className={inputCls} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">UF</label>
+          <input value={form.geradorUf} onChange={(e) => setCampo("geradorUf", e.target.value)} className={inputCls} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">Cidade</label>
+          <input value={form.geradorCidade} onChange={(e) => setCampo("geradorCidade", e.target.value)} className={inputCls} />
+        </div>
+      </div>
+
+      {secaoTitulo("Dados do Transportador", "Pesquise o transportador por CNPJ")}
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+        <div className="flex flex-col gap-1 md:col-span-2">
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">Transportador (razão social)</label>
+          <input value={form.transportadorNome} onChange={(e) => setCampo("transportadorNome", e.target.value)} className={inputCls} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">CNPJ</label>
+          <div className="flex gap-2">
+            <input value={form.transportadorCnpj} onChange={(e) => setCampo("transportadorCnpj", e.target.value.replace(/\D/g, ""))} className={inputCls} placeholder="00000000000000" />
+            <button
+              onClick={() => buscarParceiro("transp")}
+              disabled={buscandoTransp}
+              title="Buscar empresa pelo CNPJ"
+              className="focus-ring transition-brand flex shrink-0 items-center gap-1.5 rounded-lg bg-[var(--color-paper-100)] px-3 py-2 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-200)] disabled:opacity-50"
+            >
+              {buscandoTransp ? <Loader2 size={15} className="animate-spin" /> : <Search size={15} />}
+              {buscandoTransp ? "Buscando..." : "Buscar"}
+            </button>
+          </div>
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">Placa do veículo</label>
+          <input value={form.placaVeiculo} onChange={(e) => setCampo("placaVeiculo", e.target.value.toUpperCase())} className={inputCls} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">Motorista</label>
+          <input value={form.nomeMotorista} onChange={(e) => setCampo("nomeMotorista", e.target.value)} className={inputCls} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">Data de expedição</label>
+          <input type="date" value={form.dataExpedicao} onChange={(e) => setCampo("dataExpedicao", e.target.value)} className={inputCls} />
+        </div>
+        <div className="flex flex-col gap-1 md:col-span-2">
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">Endereço</label>
+          <input value={form.transportadorEndereco} onChange={(e) => setCampo("transportadorEndereco", e.target.value)} className={inputCls} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">Nº</label>
+          <input value={form.transportadorNumero} onChange={(e) => setCampo("transportadorNumero", e.target.value)} className={inputCls} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">UF</label>
+          <input value={form.transportadorUf} onChange={(e) => setCampo("transportadorUf", e.target.value)} className={inputCls} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">Cidade</label>
+          <input value={form.transportadorCidade} onChange={(e) => setCampo("transportadorCidade", e.target.value)} className={inputCls} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">CEP</label>
+          <input value={form.transportadorCep} onChange={(e) => setCampo("transportadorCep", e.target.value.replace(/\D/g, ""))} className={inputCls} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">Licença</label>
+          <input value={form.transportadorLicenca} onChange={(e) => setCampo("transportadorLicenca", e.target.value)} className={inputCls} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">Órgão Emissor</label>
+          <input value={form.transportadorOrgao} onChange={(e) => setCampo("transportadorOrgao", e.target.value)} className={inputCls} />
+        </div>
+      </div>
+
+      {secaoTitulo("Dados do Destinador", "Pesquise o destinador por CNPJ")}
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+        <div className="flex flex-col gap-1 md:col-span-2">
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">Destinador (razão social)</label>
+          <input value={form.destinadorNome} onChange={(e) => setCampo("destinadorNome", e.target.value)} className={inputCls} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">CNPJ</label>
+          <div className="flex gap-2">
+            <input value={form.destinadorCnpj} onChange={(e) => setCampo("destinadorCnpj", e.target.value.replace(/\D/g, ""))} className={inputCls} placeholder="00000000000000" />
+            <button
+              onClick={() => buscarParceiro("dest")}
+              disabled={buscandoDest}
+              title="Buscar empresa pelo CNPJ"
+              className="focus-ring transition-brand flex shrink-0 items-center gap-1.5 rounded-lg bg-[var(--color-paper-100)] px-3 py-2 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-200)] disabled:opacity-50"
+            >
+              {buscandoDest ? <Loader2 size={15} className="animate-spin" /> : <Search size={15} />}
+              {buscandoDest ? "Buscando..." : "Buscar"}
+            </button>
+          </div>
+        </div>
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-[var(--color-ink-500)]">Unidade de medida</label>
-          <select value={form.unidade} onChange={(e) => setForm((f) => ({ ...f, unidade: e.target.value }))} className={inputCls}>
+          <select value={form.unidade} onChange={(e) => setCampo("unidade", e.target.value)} className={inputCls}>
             <option value="kg">kg</option>
             <option value="t">t</option>
             <option value="m3">m³</option>
@@ -918,33 +1138,53 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
           </select>
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-[var(--color-ink-500)]">Cliente (gerador)</label>
-          <input value={form.clienteNome} onChange={(e) => setForm((f) => ({ ...f, clienteNome: e.target.value }))} className={inputCls} placeholder="Nome do cliente" />
-        </div>
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-[var(--color-ink-500)]">Empreendimento</label>
-          <input value={form.empreendNome} onChange={(e) => setForm((f) => ({ ...f, empreendNome: e.target.value }))} className={inputCls} placeholder="Nome do empreendimento" />
-        </div>
-        <div className="flex flex-col gap-1 md:col-span-2">
-          <label className="text-xs font-medium text-[var(--color-ink-500)]">Resumo dos resíduos</label>
-          <input value={form.resumo} onChange={(e) => setForm((f) => ({ ...f, resumo: e.target.value }))} className={inputCls} placeholder="Ex.: Resíduo classe II — entulho de obra" />
-        </div>
-        <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-[var(--color-ink-500)]">Quantidade</label>
-          <input type="number" step="0.01" value={form.quantidade} onChange={(e) => setForm((f) => ({ ...f, quantidade: e.target.value }))} className={inputCls} />
-        </div>
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-[var(--color-ink-500)]">CNPJ transportador (14 dígitos)</label>
-          <input value={form.transportadorCnpj} onChange={(e) => setForm((f) => ({ ...f, transportadorCnpj: e.target.value.replace(/\D/g, "") }))} className={inputCls} placeholder="00000000000000" />
+          <input type="number" step="0.01" value={form.quantidade} onChange={(e) => setCampo("quantidade", e.target.value)} className={inputCls} />
         </div>
         <div className="flex flex-col gap-1 md:col-span-2">
-          <label className="text-xs font-medium text-[var(--color-ink-500)]">CNPJ destinador (14 dígitos)</label>
-          <input value={form.destinadorCnpj} onChange={(e) => setForm((f) => ({ ...f, destinadorCnpj: e.target.value.replace(/\D/g, "") }))} className={inputCls} placeholder="00000000000000" />
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">Endereço</label>
+          <input value={form.destinadorEndereco} onChange={(e) => setCampo("destinadorEndereco", e.target.value)} className={inputCls} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">Nº</label>
+          <input value={form.destinadorNumero} onChange={(e) => setCampo("destinadorNumero", e.target.value)} className={inputCls} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">UF</label>
+          <input value={form.destinadorUf} onChange={(e) => setCampo("destinadorUf", e.target.value)} className={inputCls} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">Cidade</label>
+          <input value={form.destinadorCidade} onChange={(e) => setCampo("destinadorCidade", e.target.value)} className={inputCls} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">CEP</label>
+          <input value={form.destinadorCep} onChange={(e) => setCampo("destinadorCep", e.target.value.replace(/\D/g, ""))} className={inputCls} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">Licença</label>
+          <input value={form.destinadorLicenca} onChange={(e) => setCampo("destinadorLicenca", e.target.value)} className={inputCls} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">Órgão Emissor</label>
+          <input value={form.destinadorOrgao} onChange={(e) => setCampo("destinadorOrgao", e.target.value)} className={inputCls} />
+        </div>
+      </div>
+
+      {secaoTitulo("Resíduo e Observações", "Descreva o resíduo transportado")}
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">Resumo do resíduo</label>
+          <input value={form.resumo} onChange={(e) => setCampo("resumo", e.target.value)} className={inputCls} placeholder="Ex.: Resíduo classe II — entulho de obra" />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">Observações (0/4000)</label>
+          <input value={form.observacoes} onChange={(e) => setCampo("observacoes", e.target.value.slice(0, 4000))} className={inputCls} placeholder="Observações adicionais" />
         </div>
       </div>
 
       <button onClick={emitir} disabled={enviando || conexoes.length === 0}
-        className="focus-ring transition-brand mt-4 flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">
+        className="focus-ring transition-brand mt-6 flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">
         {enviando ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
         {enviando ? "Emitindo..." : "Emitir MTR"}
       </button>
