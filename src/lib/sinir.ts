@@ -63,27 +63,90 @@ function tokenReal(conexao: SinirConexaoCompleta): string {
   return descriptografar(conexao.token);
 }
 
+// Token de Acesso (8h) obtido a partir do Token de Integração via POST /token
+const cacheTokenAcesso = new Map<number, { token: string; expiraEm: number }>();
+
+function expDoJwt(jwt: string): number | null {
+  try {
+    const payload = jwt.split(".")[1];
+    const base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const json = Buffer.from(base64, "base64").toString("utf8");
+    const exp = Number(JSON.parse(json).exp);
+    return Number.isFinite(exp) ? exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
+async function obterTokenAcesso(conexao: SinirConexaoCompleta): Promise<string> {
+  const cacheado = cacheTokenAcesso.get(conexao.id);
+  if (cacheado && cacheado.expiraEm > Date.now() + 60000) return cacheado.token;
+
+  const tokenIntegracao = tokenReal(conexao);
+  const res = await fetch(`${SINIR_API_BASE}/token`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${tokenIntegracao}`,
+      Accept: "application/json",
+    },
+    cache: "no-store",
+  });
+
+  const dados = (await res.json().catch(() => ({}))) as {
+    erro?: boolean;
+    mensagem?: string;
+    objetoResposta?: unknown;
+  };
+
+  if (res.status === 401 || dados.erro) {
+    cacheTokenAcesso.delete(conexao.id);
+    throw new SinirError(dados.mensagem || "Token de integração inválido, expirado ou revogado — gere um novo token no SINIR", 401);
+  }
+  if (!res.ok) {
+    throw new SinirError(`Erro ao gerar token de acesso no SINIR (HTTP ${res.status})`, res.status);
+  }
+
+  const raw = typeof dados.objetoResposta === "string" ? dados.objetoResposta : "";
+  const tokenAcesso = raw.replace(/^Bearer\s+/i, "").trim();
+  if (!tokenAcesso) {
+    throw new SinirError("O SINIR não retornou um token de acesso", 502);
+  }
+
+  const expMs = expDoJwt(tokenAcesso) ?? Date.now() + 8 * 3600 * 1000;
+  cacheTokenAcesso.set(conexao.id, { token: tokenAcesso, expiraEm: expMs });
+  return tokenAcesso;
+}
+
 async function apiFetch(
   conexao: SinirConexaoCompleta,
   path: string,
   options: { method?: string; body?: unknown; query?: Record<string, string> } = {}
 ): Promise<unknown> {
-  const token = tokenReal(conexao);
   const url = new URL(`${SINIR_API_BASE}${path}`);
   if (options.query) {
     for (const [k, v] of Object.entries(options.query)) url.searchParams.set(k, v);
   }
 
-  const res = await fetch(url.toString(), {
-    method: options.method || "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: options.body ? JSON.stringify(options.body) : undefined,
-    cache: "no-store",
-  });
+  const enviar = async () => {
+    const token = await obterTokenAcesso(conexao);
+    return fetch(url.toString(), {
+      method: options.method || "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: options.body ? JSON.stringify(options.body) : undefined,
+      cache: "no-store",
+    });
+  };
+
+  let res = await enviar();
+
+  if (res.status === 401) {
+    cacheTokenAcesso.delete(conexao.id);
+    res = await enviar();
+  }
 
   if (res.status === 401) {
     throw new SinirError("Token do SINIR expirado ou inválido — gere um novo token", 401);
@@ -523,7 +586,7 @@ export async function baixarManifestoPdf(
 ): Promise<{ buffer: Uint8Array; filename: string }> {
   if (!numero) throw new SinirError("Número do manifesto é obrigatório", 400);
 
-  const token = tokenReal(conexao);
+  const token = await obterTokenAcesso(conexao);
   const res = await fetch(`${SINIR_API_BASE}/downloadManifesto/${encodeURIComponent(numero)}`, {
     method: "POST",
     headers: {
