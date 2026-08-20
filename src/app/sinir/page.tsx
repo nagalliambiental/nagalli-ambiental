@@ -199,7 +199,7 @@ export default function SinirPage() {
       )}
 
       {tab === "meusMtrs" && (
-        <MeusMtrsTab conexoes={conexoes} manifestos={manifestos} loading={manifestosLoading} filtro={filtro} setFiltro={setFiltro} onVerificar={() => carregarManifestos()} toast={toast} />
+        <MeusMtrsTab conexoes={conexoes} filtro={filtro} setFiltro={setFiltro} onVerificar={() => carregarManifestos()} toast={toast} />
       )}
 
       {tab === "emitir" && (
@@ -557,17 +557,16 @@ function diasEmSalvo(m: Manifesto) {
 
 function MeusMtrsTab(props: {
   conexoes: Conexao[];
-  manifestos: Manifesto[];
-  loading: boolean;
   filtro: string;
   setFiltro: (f: string) => void;
   onVerificar: () => void;
   toast: ToastFn;
 }) {
-  const { conexoes, manifestos, loading, filtro, setFiltro, onVerificar, toast } = props;
+  const { conexoes, filtro, setFiltro, onVerificar, toast } = props;
   const [conexaoId, setConexaoId] = useState("");
   const [gerandoAlerta, setGerandoAlerta] = useState(false);
   const [consultando, setConsultando] = useState(false);
+  const [lista, setLista] = useState<Manifesto[]>([]);
 
   const pad = (n: number) => String(n).padStart(2, "0");
   const hoje = new Date();
@@ -578,13 +577,14 @@ function MeusMtrsTab(props: {
   const limiteDias = 7;
   const conexaoEfetiva = conexoes.some((c) => c.id === Number(conexaoId)) ? conexaoId : conexoes.length ? String(conexoes[0].id) : "";
 
-  const salvos = manifestos.filter(
+  const salvos = lista.filter(
     (m) => (m.status === "SALVO" || m.status === "EMITIDO") && !m.certificado
   );
   const emAtraso = salvos.filter((m) => diasEmSalvo(m) > limiteDias);
 
-  async function consultarSinir() {
-    if (!conexaoEfetiva) {
+  async function consultarSinir(idConexao?: string) {
+    const conexaoUsar = idConexao || conexaoEfetiva;
+    if (!conexaoUsar) {
       toast("Selecione uma conexão", "error");
       return;
     }
@@ -601,13 +601,14 @@ function MeusMtrsTab(props: {
       const res = await fetch("/api/sinir/meus-mtrs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conexaoId: Number(conexaoEfetiva), dataInicial, dataFinal }),
+        body: JSON.stringify({ conexaoId: Number(conexaoUsar), dataInicial, dataFinal }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) {
         toast(data?.error || "Falha ao consultar o SINIR", "error");
         return;
       }
+      setLista(data.manifestos || []);
       onVerificar();
       toast(`SINIR consultado: ${data.total} MTR(s) de ${dataInicial} a ${dataFinal} (${data.papeis?.join(", ")})`, "success");
     } catch {
@@ -661,7 +662,11 @@ function MeusMtrsTab(props: {
           <div className="flex items-center gap-2">
             <select
               value={conexaoEfetiva}
-              onChange={(e) => setConexaoId(e.target.value)}
+              onChange={(e) => {
+                setConexaoId(e.target.value);
+                setLista([]);
+                consultarSinir(e.target.value);
+              }}
               className="rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm"
             >
               {conexoes.map((c) => (
@@ -684,7 +689,7 @@ function MeusMtrsTab(props: {
               />
             </div>
             <button
-              onClick={consultarSinir}
+              onClick={() => consultarSinir()}
               disabled={consultando || conexoes.length === 0}
               className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
             >
@@ -711,10 +716,10 @@ function MeusMtrsTab(props: {
 
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Lista de MTRs ({manifestos.length})</h2>
+          <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Lista de MTRs ({lista.length})</h2>
           <div className="flex gap-2 text-xs">
             <button onClick={() => setFiltro("todos")} className={`rounded-full px-3 py-1 font-medium ${filtro === "todos" ? "bg-[var(--color-brand-500)] text-white" : "bg-[var(--color-paper-100)] text-[var(--color-ink-600)]"}`}>
-              Todos ({manifestos.length})
+              Todos ({lista.length})
             </button>
             <button onClick={() => setFiltro("pendentes")} className={`rounded-full px-3 py-1 font-medium ${filtro === "pendentes" ? "bg-amber-500 text-white" : "bg-[var(--color-paper-100)] text-[var(--color-ink-600)]"}`}>
               Sem recebimento ({salvos.length})
@@ -722,13 +727,13 @@ function MeusMtrsTab(props: {
           </div>
         </div>
 
-        {loading ? (
+        {consultando ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 size={24} className="animate-spin text-[var(--color-brand-500)]" />
           </div>
-        ) : manifestos.length === 0 ? (
+        ) : lista.length === 0 ? (
           <p className="py-8 text-center text-sm text-[var(--color-ink-500)]">
-            Nenhum MTR ainda. Clique em &quot;Consultar SINIR&quot; para buscar todos os MTRs dos últimos 30 dias (incluindo os emitidos pelos clientes).
+            Nenhum MTR para o período informado. Ajuste as datas e clique em &quot;Consultar SINIR&quot;.
           </p>
         ) : (
           <div className="overflow-x-auto">
@@ -745,7 +750,7 @@ function MeusMtrsTab(props: {
                 </tr>
               </thead>
               <tbody>
-                {manifestos
+                {lista
                   .filter((m) => (filtro === "pendentes" ? (m.status === "SALVO" || m.status === "EMITIDO") && !m.certificado : true))
                   .map((m) => {
                     const salvo = (m.status === "SALVO" || m.status === "EMITIDO") && !m.certificado;
