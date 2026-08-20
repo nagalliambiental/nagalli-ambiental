@@ -18,7 +18,6 @@ export interface SinirManifestoDados {
   numero: string;
   status: SinirStatus | string;
   certificado: boolean;
-  cdfNumero?: string;
   clienteNome?: string;
   empreendNome?: string;
   resumo?: string;
@@ -137,12 +136,12 @@ function dataDeMs(v: unknown): Date | undefined {
   return new Date(n * 1000);
 }
 
-function statusDeManifestoReal(obj: Record<string, unknown>): { status: SinirStatus | string; certificado: boolean; cdfNumero?: string } {
+function statusDeManifestoReal(obj: Record<string, unknown>): { status: SinirStatus | string; certificado: boolean } {
   const s = String(obj.manSituacao || obj.situacao || obj.status || "").toUpperCase();
-  const temCdf = obj.cdfCodigo != null || obj.cdfNumero != null || String(obj.manCertificado || "").toUpperCase() === "S";
+  const certificado = obj.cdfCodigo != null || obj.cdfNumero != null || String(obj.manCertificado || "").toUpperCase() === "S" || s.includes("CERTIF");
 
   if (s.includes("CANCEL")) return { status: SINIR_STATUS.CANCELADO, certificado: false };
-  if (temCdf || s.includes("CERTIF")) return { status: SINIR_STATUS.CERTIFICADO, certificado: true, cdfNumero: numeroString(obj.cdfNumero || obj.cdfCodigo) };
+  if (certificado) return { status: SINIR_STATUS.CERTIFICADO, certificado: true };
   if (s.includes("RECEB")) return { status: SINIR_STATUS.RECEBIDO, certificado: false };
   if (s.includes("SALVO")) return { status: SINIR_STATUS.SALVO, certificado: false };
   return { status: SINIR_STATUS.EMITIDO, certificado: false };
@@ -176,14 +175,13 @@ async function listarManifestosReais(
     const numero = numeroString(obj.manNumero || obj.manifestoNumeroNacional || obj.manNumeroNacional);
     if (!numero) continue;
 
-    const { status, certificado, cdfNumero } = statusDeManifestoReal(obj);
+    const { status, certificado } = statusDeManifestoReal(obj);
     const gerador = extrairParceiro(obj.gerador || obj.dadosGerador);
 
     manifestos.push({
       numero,
       status,
       certificado,
-      cdfNumero,
       clienteNome: gerador.nome || numeroString(obj.clienteNome),
       empreendNome: typeof obj.empreendimento === "string" ? obj.empreendimento : numeroString(obj.empreendNome),
       resumo: typeof obj.resumoResiduos === "string" ? obj.resumoResiduos : numeroString(obj.resumo),
@@ -276,7 +274,6 @@ async function gerarManifestosMock(
       numero,
       status: SINIR_STATUS.CERTIFICADO,
       certificado: true,
-      cdfNumero: `CDF-${dataInicial.getFullYear()}-${String(500000 + e.id * 19).padStart(6, "0")}`,
       clienteNome: cliente,
       empreendNome: e.apelido,
       resumo: `Resíduo classe II — ${quantidade.toLocaleString("pt-BR")} ${unidade}`,
@@ -322,7 +319,6 @@ export async function consultarManifesto(
       numero: existente.numero,
       status: existente.status,
       certificado: existente.certificado,
-      cdfNumero: existente.cdfNumero || undefined,
       clienteNome: existente.clienteNome || undefined,
       empreendNome: existente.empreendNome || undefined,
       resumo: existente.resumo || undefined,
@@ -338,14 +334,13 @@ export async function consultarManifesto(
   if (env.erro) throw new SinirError(env.mensagem || "Manifesto não encontrado no SINIR", 404);
 
   const obj = (env.objeto || env) as Record<string, unknown>;
-  const { status, certificado, cdfNumero } = statusDeManifestoReal(obj);
+  const { status, certificado } = statusDeManifestoReal(obj);
   const gerador = extrairParceiro(obj.gerador || obj.dadosGerador);
 
   return {
     numero: numeroString(obj.manNumero) || numero,
     status,
     certificado,
-    cdfNumero,
     clienteNome: gerador.nome || numeroString(obj.clienteNome),
     empreendNome: typeof obj.empreendimento === "string" ? obj.empreendimento : numeroString(obj.empreendNome),
     resumo: typeof obj.resumoResiduos === "string" ? obj.resumoResiduos : numeroString(obj.resumo),
@@ -487,7 +482,7 @@ export async function cancelarManifesto(
 
   const existente = await prisma.sinirManifesto.findFirst({ where: { conexaoId: conexao.id, numero } });
   if (existente && existente.certificado) {
-    throw new SinirError("MTR já certificado (CDF emitido) não pode ser cancelado", 400);
+    throw new SinirError("MTR já certificado não pode ser cancelado", 400);
   }
 
   if (conexao.modo === "mock") {
@@ -511,100 +506,6 @@ export async function cancelarManifesto(
   return { numero, simulacao: false };
 }
 
-// ---------- CDF ----------
-
-export async function emitirCdf(
-  conexao: SinirConexaoCompleta,
-  numeros: string[],
-  nomeResponsavel: string
-): Promise<{ cdfNumero: string; cdfCodigo?: string; quantidade: number; simulacao: boolean }> {
-  if (!numeros.length) throw new SinirError("Informe ao menos um MTR para o CDF", 400);
-  if (!nomeResponsavel.trim()) throw new SinirError("Nome do responsável pelo CDF é obrigatório", 400);
-
-  if (conexao.modo === "mock") {
-    const manifestos = await prisma.sinirManifesto.findMany({
-      where: { conexaoId: conexao.id, numero: { in: numeros } },
-    });
-    if (!manifestos.length) throw new SinirError("Nenhum MTR encontrado para o CDF", 404);
-
-    const quantidade = manifestos.reduce((acc, m) => acc + (m.quantidade || 0), 0);
-    const cdfNumero = `CDF-${new Date().getFullYear()}-${String(Math.floor(100000 + Math.random() * 899999))}`;
-    const cdfCodigo = String(Math.floor(1000000 + Math.random() * 8999999));
-
-    await prisma.sinirManifesto.updateMany({
-      where: { id: { in: manifestos.map((m) => m.id) } },
-      data: {
-        certificado: true,
-        status: SINIR_STATUS.CERTIFICADO,
-        cdfNumero,
-        cdfCodigo,
-        dataRecebimento: new Date(),
-      },
-    });
-
-    return { cdfNumero, cdfCodigo, quantidade, simulacao: true };
-  }
-
-  const resultado = await apiFetch(conexao, "/emiteCDF", {
-    method: "POST",
-    body: { listaManifestos: numeros, dataEmissao: Date.now(), nomeResponsavel },
-  });
-
-  const env = (resultado || {}) as { erro?: boolean; mensagem?: string; objeto?: { cdfCodigo?: number; cdfNumero?: string } };
-  if (env.erro || !env.objeto) {
-    throw new SinirError(env.mensagem || "SINIR não confirmou a emissão do CDF", 502);
-  }
-
-  const cdfNumero = env.objeto.cdfNumero || `CDF-${env.objeto.cdfCodigo ?? "?"}`;
-  const cdfCodigo = env.objeto.cdfCodigo != null ? String(env.objeto.cdfCodigo) : undefined;
-
-  await prisma.sinirManifesto.updateMany({
-    where: { conexaoId: conexao.id, numero: { in: numeros } },
-    data: {
-      certificado: true,
-      status: SINIR_STATUS.CERTIFICADO,
-      cdfNumero,
-      cdfCodigo,
-      dataRecebimento: new Date(),
-    },
-  });
-
-  const manifestos = await prisma.sinirManifesto.findMany({
-    where: { conexaoId: conexao.id, numero: { in: numeros } },
-  });
-  const quantidade = manifestos.reduce((acc, m) => acc + (m.quantidade || 0), 0);
-
-  return { cdfNumero, cdfCodigo, quantidade, simulacao: false };
-}
-
-export async function baixarCdfPdf(
-  conexao: SinirConexaoCompleta,
-  cdf: { cdfNumero?: string | null; cdfCodigo?: string | null; clienteNome?: string | null; empreendNome?: string | null; resumo?: string | null; quantidade?: number | null; unidade?: string | null; dataRecebimento?: Date | null; numero?: string | null }
-): Promise<{ buffer: Uint8Array; filename: string }> {
-  if (!cdf.cdfCodigo && conexao.modo !== "mock") {
-    throw new SinirError("CDF sem código para download", 400);
-  }
-
-  if (conexao.modo === "mock") {
-    const r = await gerarPdfCdfSimulado(cdf);
-    return { buffer: r.buffer, filename: r.nomeArquivo };
-  }
-
-  const token = tokenReal(conexao);
-  const res = await fetch(`${SINIR_API_BASE}/downloadCertificado/${encodeURIComponent(String(cdf.cdfCodigo))}?formato=pdf`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}`, Accept: "application/pdf" },
-    cache: "no-store",
-  });
-
-  if (!res.ok) {
-    throw new SinirError(`Erro ao baixar PDF do CDF (HTTP ${res.status})`, res.status);
-  }
-
-  const buffer = new Uint8Array(await res.arrayBuffer());
-  return { buffer, filename: `${cdf.cdfNumero || "CDF"}.pdf` };
-}
-
 // ---------- PDF simulado ----------
 
 export async function gerarPdfSimulado(
@@ -612,7 +513,6 @@ export async function gerarPdfSimulado(
     numero: string;
     status: string;
     certificado: boolean;
-    cdfNumero?: string | null;
     clienteNome?: string | null;
     empreendNome?: string | null;
     resumo?: string | null;
@@ -665,7 +565,7 @@ export async function gerarPdfSimulado(
   rotulo("DATA DE EXPEDIÇÃO", fmt(manifesto.dataExpedicao), 180);
   page.drawText("SITUAÇÃO", { x: 430, y: y + 40, size: 8, font: bold, color: ink500 });
   page.drawText(
-    manifesto.certificado && manifesto.cdfNumero ? `CERTIFICADO (CDF ${manifesto.cdfNumero})` : manifesto.status,
+    manifesto.certificado ? `CERTIFICADO` : manifesto.status,
     { x: 430, y: y + 27, size: 11, font: bold, color: manifesto.certificado ? PALETTE.brand["600"] : ink700, maxWidth: 350 }
   );
 
@@ -685,84 +585,6 @@ export async function gerarPdfSimulado(
 
   const bytes = await pdf.save();
   return { buffer: new Uint8Array(bytes), nomeArquivo: `MTR-${manifesto.numero}.pdf` };
-}
-
-// ---------- PDF CDF simulado ----------
-
-interface CdfSimuladoDados {
-  cdfNumero?: string | null;
-  cdfCodigo?: string | null;
-  clienteNome?: string | null;
-  empreendNome?: string | null;
-  resumo?: string | null;
-  quantidade?: number | null;
-  unidade?: string | null;
-  dataRecebimento?: Date | null;
-  numero?: string | null;
-}
-
-export async function gerarPdfCdfSimulado(
-  cdf: CdfSimuladoDados
-): Promise<{ buffer: Uint8Array; nomeArquivo: string }> {
-  const { PDFDocument, StandardFonts } = await import("pdf-lib");
-  const { embedNagalliLogo, drawNagalliTopo, drawNagalliFooter, PALETTE } = await import("./report-branding");
-
-  const pdf = await PDFDocument.create();
-  const font = await pdf.embedFont(StandardFonts.Helvetica);
-  const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
-  const logo = await embedNagalliLogo(pdf);
-  const page = pdf.addPage([842, 595]);
-
-  const topo = drawNagalliTopo(page, logo, font, bold);
-  const ink900 = PALETTE.ink["900"];
-  const ink700 = PALETTE.ink["700"];
-  const ink500 = PALETTE.ink["500"];
-  const brand700 = PALETTE.brand["700"];
-
-  let y = topo - 30;
-
-  page.drawText("CERTIFICADO DE DESTINAÇÃO FINAL (SIMULAÇÃO)", { x: 40, y, size: 15, font: bold, color: brand700 });
-  y -= 18;
-  page.drawText("Documento fictício gerado pelo sistema — sem validade no SINIR", { x: 40, y, size: 9, font, color: ink500 });
-
-  y -= 30;
-
-  const rotulo = (label: string, valor: string, largura = 370) => {
-    page.drawText(label, { x: 40, y, size: 8, font: bold, color: ink500 });
-    page.drawText(valor, { x: 40, y: y - 13, size: 11, font: bold, color: ink900, maxWidth: largura });
-    y -= 40;
-  };
-
-  rotulo("NÚMERO DO CDF", cdf.cdfNumero || cdf.cdfCodigo || "—");
-  rotulo("MTR REFERENCIADO", cdf.numero || "—");
-  rotulo("CLIENTE", cdf.clienteNome || "—");
-  rotulo("EMPREENDIMENTO", cdf.empreendNome || "—");
-
-  page.drawText("RESÍDUO", { x: 40, y, size: 8, font: bold, color: ink500 });
-  page.drawText(cdf.resumo || "—", { x: 40, y: y - 13, size: 10, font, color: ink900, maxWidth: 760 });
-  y -= 44;
-
-  rotulo("QUANTIDADE", cdf.quantidade != null ? `${cdf.quantidade.toLocaleString("pt-BR")} ${cdf.unidade || ""}`.trim() : "—");
-  rotulo("DATA DE RECEBIMENTO", cdf.dataRecebimento ? cdf.dataRecebimento.toLocaleDateString("pt-BR") : "—", 180);
-  page.drawText("SITUAÇÃO", { x: 430, y: y + 40, size: 8, font: bold, color: ink500 });
-  page.drawText("CERTIFICADO", { x: 430, y: y + 27, size: 11, font: bold, color: PALETTE.brand["600"] });
-
-  y -= 16;
-  page.drawRectangle({ x: 40, y, width: 762, height: 0.6, color: PALETTE.paper["200"] });
-  y -= 20;
-  page.drawText("Atenção: este documento é apenas uma simulação para teste do fluxo. Quando a conexão estiver em modo real, o CDF é baixado diretamente do SINIR.", {
-    x: 40,
-    y,
-    size: 8.5,
-    font,
-    color: ink500,
-    maxWidth: 760,
-  });
-
-  drawNagalliFooter(page, font, bold);
-
-  const bytes = await pdf.save();
-  return { buffer: new Uint8Array(bytes), nomeArquivo: `${cdf.cdfNumero || "CDF"}.pdf` };
 }
 
 // ---------- DMR (relatório no modelo do SINIR) ----------

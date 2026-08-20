@@ -36,7 +36,6 @@ interface Manifesto {
   numero: string;
   status: string;
   certificado: boolean;
-  cdfNumero: string | null;
   clienteNome: string | null;
   empreendNome: string | null;
   resumo: string | null;
@@ -63,6 +62,96 @@ function fmtData(v: string | null) {
 function fmtQtd(v: number | null, u: string | null) {
   if (v == null) return "—";
   return `${v.toLocaleString("pt-BR")} ${u || ""}`.trim();
+}
+
+// ---------- Lembretes de prazos ----------
+
+interface PrazoItem {
+  titulo: string;
+  descricao: string;
+  data: Date;
+  diasRestantes: number;
+}
+
+function prazoDmr(trimestre: number, ano: number): Date {
+  switch (trimestre) {
+    case 1: return new Date(ano, 3, 30);
+    case 2: return new Date(ano, 6, 31);
+    case 3: return new Date(ano, 9, 31);
+    case 4: return new Date(ano + 1, 0, 31);
+    default: return new Date(ano, 3, 30);
+  }
+}
+
+function calcularPrazos(): PrazoItem[] {
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  const anoAtual = hoje.getFullYear();
+  const prazos: PrazoItem[] = [];
+
+  for (const ano of [anoAtual - 1, anoAtual, anoAtual + 1]) {
+    for (let t = 1; t <= 4; t++) {
+      const data = prazoDmr(t, ano);
+      prazos.push({
+        titulo: `DMR ${t}º trimestre/${ano}`,
+        descricao: "Declaração de Movimentação de Resíduos — portal mtr.sinir.gov.br",
+        data,
+        diasRestantes: Math.round((data.getTime() - hoje.getTime()) / 86400000),
+      });
+    }
+  }
+
+  for (const ano of [anoAtual, anoAtual + 1]) {
+    const data = new Date(ano, 2, 31);
+    prazos.push({
+      titulo: `Inventário Nacional ${ano}`,
+      descricao: "Inventário estadual de resíduos — inventario.sinir.gov.br",
+      data,
+      diasRestantes: Math.round((data.getTime() - hoje.getTime()) / 86400000),
+    });
+  }
+
+  return prazos
+    .filter((p) => p.diasRestantes >= -30)
+    .sort((a, b) => a.data.getTime() - b.data.getTime())
+    .slice(0, 5);
+}
+
+function LembretesPrazos() {
+  const prazos = calcularPrazos();
+
+  function cor(item: PrazoItem): string {
+    if (item.diasRestantes < 0) return "border-red-200 bg-red-50";
+    if (item.diasRestantes <= 15) return "border-amber-200 bg-amber-50";
+    return "border-[var(--color-paper-200)] bg-[var(--color-paper-50)]";
+  }
+
+  function rotulo(item: PrazoItem): string {
+    if (item.diasRestantes < 0) return `vencido há ${-item.diasRestantes} dia(s)`;
+    if (item.diasRestantes === 0) return "vence hoje";
+    if (item.diasRestantes === 1) return "vence amanhã";
+    return `faltam ${item.diasRestantes} dia(s)`;
+  }
+
+  return (
+    <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Lembretes de prazos</h2>
+        <span className="flex items-center gap-1.5 text-xs text-[var(--color-ink-400)]"><Clock size={13} /> atualizado conforme a data atual</span>
+      </div>
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+        {prazos.map((p) => (
+          <div key={p.titulo} className={`rounded-lg border p-3 ${cor(p)}`}>
+            <p className="text-sm font-medium text-[var(--color-ink-800)]">{p.titulo}</p>
+            <p className="text-xs text-[var(--color-ink-500)]">{p.descricao}</p>
+            <p className="mt-1 text-xs font-medium text-[var(--color-ink-700)]">
+              {p.data.toLocaleDateString("pt-BR")} — <span className={p.diasRestantes < 0 ? "text-red-700" : p.diasRestantes <= 15 ? "text-amber-700" : "text-green-700"}>{rotulo(p)}</span>
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export default function SinirPage() {
@@ -196,7 +285,7 @@ export default function SinirPage() {
       )}
 
       {tab === "meusMtrs" && (
-        <MeusMtrsTab conexoes={conexoes} manifestos={manifestos} loading={manifestosLoading} filtro={filtro} setFiltro={setFiltro} onVerificar={() => carregarManifestos()} toast={toast} />
+        <MeusMtrsTab conexoes={conexoes} manifestos={manifestos} loading={manifestosLoading} filtro={filtro} setFiltro={setFiltro} toast={toast} />
       )}
 
       {tab === "emitir" && (
@@ -234,7 +323,6 @@ function PainelTab(props: {
   });
   const [dataFinal, setDataFinal] = useState(() => new Date().toISOString().slice(0, 10));
   const [resumoVerif, setResumoVerif] = useState<{ total: number; certificados: number; pendentes: number; modo: string } | null>(null);
-  const [emitindoCdf, setEmitindoCdf] = useState(false);
   const [dmrEmpId, setDmrEmpId] = useState("");
   const [dmrTrimestre, setDmrTrimestre] = useState(String(Math.floor((new Date().getMonth()) / 3) + 1));
   const [dmrAno, setDmrAno] = useState(String(new Date().getFullYear()));
@@ -278,39 +366,6 @@ function PainelTab(props: {
     }
   }
 
-  async function emitirCdfPendentes() {
-    const alvos = manifestos.filter((m) => !m.certificado && m.status !== "CANCELADO" && m.conexao.id === Number(conexaoEfetiva));
-    if (alvos.length === 0) {
-      toast("Nenhum MTR pendente na conexão selecionada", "error");
-      return;
-    }
-    const nome = prompt("Nome do responsável pela emissão do CDF:", "");
-    if (!nome || !nome.trim()) {
-      toast("Nome do responsável é obrigatório", "error");
-      return;
-    }
-    if (!confirm(`Emitir CDF para ${alvos.length} MTR(s)?`)) return;
-    setEmitindoCdf(true);
-    try {
-      const res = await fetch("/api/sinir/cdf", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conexaoId: Number(conexaoEfetiva), numeros: alvos.map((a) => a.numero), nomeResponsavel: nome.trim() }),
-      });
-      const data = await res.json().catch(() => null);
-      if (!res.ok) {
-        toast(data?.error || "Falha ao emitir CDF", "error");
-        return;
-      }
-      onVerificar();
-      toast(`CDF ${data.cdfNumero} emitido (${alvos.length} MTR, ${data.simulacao ? "simulação" : "real"})`, "success");
-    } catch {
-      toast("Falha ao emitir CDF", "error");
-    } finally {
-      setEmitindoCdf(false);
-    }
-  }
-
   async function baixarManifesto(m: Manifesto) {
     try {
       const res = await fetch(`/api/sinir/manifestos/${m.id}/download`);
@@ -330,28 +385,6 @@ function PainelTab(props: {
       URL.revokeObjectURL(url);
     } catch {
       toast("Falha ao baixar o PDF", "error");
-    }
-  }
-
-  async function baixarCdf(m: Manifesto) {
-    try {
-      const res = await fetch(`/api/sinir/manifestos/${m.id}/download-cdf`);
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        toast(data?.error || "Falha ao baixar o CDF", "error");
-        return;
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${m.cdfNumero || "CDF"}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    } catch {
-      toast("Falha ao baixar o CDF", "error");
     }
   }
 
@@ -426,6 +459,8 @@ function PainelTab(props: {
 
   return (
     <div className="space-y-4">
+      <LembretesPrazos />
+
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
         <h2 className="font-display mb-3 text-base font-semibold text-[var(--color-ink-900)]">Verificar certificação</h2>
         <div className="flex flex-wrap items-end gap-2">
@@ -462,7 +497,7 @@ function PainelTab(props: {
             </div>
             <div className="rounded-lg bg-green-50 p-3 text-center">
               <p className="text-2xl font-semibold text-green-700">{resumoVerif.certificados}</p>
-              <p className="text-xs text-green-600">Certificadas (CDF)</p>
+              <p className="text-xs text-green-600">Certificadas</p>
             </div>
             <div className={`rounded-lg p-3 text-center ${resumoVerif.pendentes > 0 ? "bg-amber-50" : "bg-[var(--color-paper-50)]"}`}>
               <p className={`text-2xl font-semibold ${resumoVerif.pendentes > 0 ? "text-amber-700" : "text-[var(--color-ink-900)]"}`}>{resumoVerif.pendentes}</p>
@@ -515,11 +550,6 @@ function PainelTab(props: {
         <div className="mb-3 flex items-center justify-between">
           <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Manifestos</h2>
           <div className="flex items-center gap-2 text-xs">
-            <button onClick={emitirCdfPendentes} disabled={emitindoCdf || !conexaoEfetiva}
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-medium text-white transition-colors disabled:opacity-50 ${emitindoCdf ? "bg-green-700" : "bg-green-600 hover:bg-green-700"}`}>
-              {emitindoCdf ? <Loader2 size={13} className="animate-spin" /> : <ShieldCheck size={13} />}
-              {emitindoCdf ? "Emitindo CDF..." : "Emitir CDF dos pendentes"}
-            </button>
             <button onClick={() => setFiltro("todos")} className={`rounded-full px-3 py-1 font-medium ${filtro === "todos" ? "bg-[var(--color-brand-500)] text-white" : "bg-[var(--color-paper-100)] text-[var(--color-ink-600)]"}`}>
               Todos ({certificados + pendentes + cancelados})
             </button>
@@ -565,7 +595,7 @@ function PainelTab(props: {
                     <td className="py-2 px-2">
                       <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${STATUS_BADGE[m.status] || "bg-[var(--color-paper-100)] text-[var(--color-ink-600)]"}`}>
                         {m.certificado ? <CheckCircle2 size={12} /> : m.status === "CANCELADO" ? <XCircle size={12} /> : <AlertTriangle size={12} />}
-                        {m.status === "CERTIFICADO" ? `CDF ${m.cdfNumero || ""}` : m.status}
+                        {m.status === "CERTIFICADO" ? "Certificado" : m.status}
                       </span>
                     </td>
                     <td className="py-2 px-2">
@@ -577,15 +607,6 @@ function PainelTab(props: {
                         >
                           <FileDown size={15} />
                         </button>
-                        {m.certificado && (
-                          <button
-                            onClick={() => baixarCdf(m)}
-                            title="Baixar PDF do CDF"
-                            className="rounded-md p-1.5 text-[var(--color-ink-600)] hover:bg-green-50 hover:text-green-700"
-                          >
-                            <ShieldCheck size={15} />
-                          </button>
-                        )}
                         {m.status !== "CANCELADO" && (
                           <button
                             onClick={() => cancelarManifesto(m)}
@@ -628,10 +649,9 @@ function MeusMtrsTab(props: {
   loading: boolean;
   filtro: string;
   setFiltro: (f: string) => void;
-  onVerificar: () => void;
   toast: ToastFn;
 }) {
-  const { conexoes, manifestos, loading, filtro, setFiltro, onVerificar, toast } = props;
+  const { conexoes, manifestos, loading, filtro, setFiltro, toast } = props;
   const [conexaoId, setConexaoId] = useState("");
   const [gerandoAlerta, setGerandoAlerta] = useState(false);
 
@@ -774,7 +794,7 @@ function MeusMtrsTab(props: {
                           ) : (
                             <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${STATUS_BADGE[m.status] || "bg-[var(--color-paper-100)] text-[var(--color-ink-600)]"}`}>
                               {m.status === "CERTIFICADO" ? <ShieldCheck size={12} /> : m.status === "CANCELADO" ? <XCircle size={12} /> : null}
-                              {m.status === "CERTIFICADO" ? `CDF ${m.cdfNumero || ""}` : m.status}
+                              {m.status === "CERTIFICADO" ? "Certificado" : m.status}
                             </span>
                           )}
                         </td>

@@ -70,7 +70,6 @@ export async function POST(req: NextRequest) {
         numero: m.numero,
         status: m.status,
         certificado: m.certificado,
-        cdfNumero: m.cdfNumero,
         clienteNome: m.clienteNome,
         empreendNome: m.empreendNome,
         resumo: m.resumo,
@@ -82,7 +81,6 @@ export async function POST(req: NextRequest) {
       update: {
         status: m.status,
         certificado: m.certificado,
-        cdfNumero: m.cdfNumero,
         clienteNome: m.clienteNome,
         empreendNome: m.empreendNome,
         resumo: m.resumo,

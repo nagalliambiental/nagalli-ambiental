@@ -427,8 +427,6 @@ model SinirManifesto {
   numero        String
   status        String   @default("EMITIDO")
   certificado   Boolean  @default(false)
-  cdfNumero     String?
-  cdfCodigo     String?
   clienteNome   String?
   empreendNome  String?
   resumo        String?
