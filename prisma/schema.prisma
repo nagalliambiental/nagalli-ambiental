@@ -399,6 +399,42 @@ model ControleDmr {
   empreendimento   Empreendimento @relation(fields: [empreendimentoId], references: [id], onDelete: Cascade)
 }
 
+model SinirConexao {
+  id           Int      @id @default(autoincrement())
+  nome         String
+  cnpj         String
+  unidade      String
+  token        String?
+  modo         String   @default("mock")
+  venceEm      DateTime?
+  ativo        Boolean  @default(true)
+  ultimoUsoEm  DateTime?
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+  manifestos   SinirManifesto[]
+}
+
+model SinirManifesto {
+  id            Int      @id @default(autoincrement())
+  conexaoId     Int
+  numero        String
+  status        String   @default("EMITIDO")
+  certificado   Boolean  @default(false)
+  cdfNumero     String?
+  clienteNome   String?
+  empreendNome  String?
+  resumo        String?
+  quantidade    Float?
+  unidade       String?
+  dataExpedicao DateTime?
+  dataRecebimento DateTime?
+  criadoEm      DateTime @default(now())
+  atualizadoEm  DateTime @updatedAt
+  conexao       SinirConexao @relation(fields: [conexaoId], references: [id], onDelete: Cascade)
+
+  @@unique([conexaoId, numero])
+}
+
 model DocumentoGerado {
   id            Int      @id @default(autoincrement())
   clienteId     Int

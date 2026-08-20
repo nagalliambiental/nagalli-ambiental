@@ -1,0 +1,55 @@
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { criptografar } from "@/lib/crypto";
+
+type Params = { params: Promise<{ id: string }> };
+
+export async function PATCH(req: NextRequest, { params }: Params) {
+  const session = await auth();
+  const perfil = (session?.user as { perfil?: string } | undefined)?.perfil;
+  if (!session?.user) {
+    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  }
+  if (perfil !== "socio" && perfil !== "admin") {
+    return NextResponse.json({ error: "Acesso restrito" }, { status: 403 });
+  }
+
+  const { id } = await params;
+  const conexao = await prisma.sinirConexao.findUnique({ where: { id: Number(id) } });
+  if (!conexao) {
+    return NextResponse.json({ error: "Conexão não encontrada" }, { status: 404 });
+  }
+
+  const body = await req.json();
+  const { nome, cnpj, unidade, token, modo, venceEm, ativo } = body;
+
+  const data: Record<string, unknown> = {};
+  if (nome !== undefined) data.nome = nome;
+  if (cnpj !== undefined) data.cnpj = String(cnpj).replace(/\D/g, "");
+  if (unidade !== undefined) data.unidade = String(unidade);
+  if (modo !== undefined) {
+    if (modo !== "mock" && modo !== "real") {
+      return NextResponse.json({ error: "modo deve ser 'mock' ou 'real'" }, { status: 400 });
+    }
+    data.modo = modo;
+  }
+  if (token !== undefined) data.token = token ? criptografar(String(token)) : null;
+  if (venceEm !== undefined) data.venceEm = venceEm ? new Date(venceEm) : null;
+  if (ativo !== undefined) data.ativo = Boolean(ativo);
+
+const atualizada = await prisma.sinirConexao.update({
+    where: { id: Number(id) },
+    data,
+    select: { id: true, nome: true, modo: true, ativo: true, token: true, venceEm: true },
+  });
+
+  return NextResponse.json({
+    id: atualizada.id,
+    nome: atualizada.nome,
+    modo: atualizada.modo,
+    ativo: atualizada.ativo,
+    venceEm: atualizada.venceEm,
+    temToken: !!atualizada.token,
+  });
+}
