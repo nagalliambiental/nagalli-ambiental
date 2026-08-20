@@ -29,6 +29,13 @@ interface EmpreendimentoOpcao {
   cnpj: string | null;
   unidadeSinir: string | null;
   descricao: string;
+  rua: string | null;
+  numero: string | null;
+  bairro: string | null;
+  municipio: string | null;
+  uf: string | null;
+  cep: string | null;
+  complemento: string | null;
   cliente: { id: number; apelido: string; cnpj: string; razaoSocial: string };
 }
 
@@ -1016,15 +1023,20 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
     const emp = empreendimentos.find((e) => e.id === Number(id));
     if (!emp) return;
     const cnpj = emp.cnpj || emp.cliente.cnpj;
+    const enderecoCompleto = [emp.rua, emp.bairro, emp.complemento].filter(Boolean).join(", ") || "";
     setForm((f) => ({
       ...f,
       empreendimentoId: id,
       clienteNome: emp.cliente.razaoSocial || emp.cliente.apelido,
       empreendNome: emp.apelido,
       geradorCnpj: cnpj || f.geradorCnpj,
+      geradorEndereco: enderecoCompleto,
+      geradorNumero: emp.numero || "",
+      geradorUf: emp.uf || "",
+      geradorCidade: emp.municipio || "",
       resumo: emp.descricao ? `Resíduo — ${emp.descricao}` : f.resumo,
     }));
-    toast(`Empreendimento ${emp.apelido} preenchido automaticamente (CNPJ ${cnpj || "não informado"} — informe transportador e destinador manualmente)`, "info");
+    toast(emp.rua ? `Empreendimento ${emp.apelido} preenchido (CNPJ ${cnpj || "não informado"} e endereço do gerador)` : `Empreendimento ${emp.apelido} preenchido (CNPJ ${cnpj || "não informado"} — informe o endereço do gerador)`, emp.rua ? "success" : "info");
   }
 
   async function buscarParceiro(tipo: "transp" | "dest") {
