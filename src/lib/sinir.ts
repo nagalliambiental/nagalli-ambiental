@@ -41,6 +41,23 @@ export interface SinirConexaoCompleta {
   ultimoUsoEm: Date | null;
 }
 
+export interface EmitirManifestoResiduoInput {
+  resCodigoIbama: string;
+  marQuantidade: number;
+  uniCodigo: number;
+  tieCodigo: number;
+  claCodigo: number;
+  tiaCodigo: number;
+  traCodigo: number;
+  marNumeroONU?: string;
+  marClasseRisco?: string;
+  marNomeEmbarque?: string;
+  marGrupoEmbalagem?: string;
+  marCodigoInterno?: string;
+  marDescricaoInterna?: string;
+  observacoes?: string;
+}
+
 export interface EmitirManifestoInput {
   conexaoId: number;
   clienteNome: string;
@@ -55,6 +72,16 @@ export interface EmitirManifestoInput {
   placaVeiculo?: string;
   dataExpedicao?: number;
   observacoes?: string;
+  residuos?: EmitirManifestoResiduoInput[];
+}
+
+export interface SinirCatalogos {
+  residuos: { resCodigoIbama: string; resNome: string }[];
+  unidades: { uniCodigo: number; uniNome: string; uniSigla: string }[];
+  estadosFisicos: { tieCodigo: number; tieDescricao: string }[];
+  classes: { claCodigo: number; claNome: string }[];
+  acondicionamentos: { tiaCodigo: number; tiaDescricao: string }[];
+  tratamentos: { traCodigo: number; traDescricao: string }[];
 }
 
 export class SinirError extends Error {
@@ -170,6 +197,123 @@ async function apiFetch(
   } catch {
     return null;
   }
+}
+
+// ---------- Catálogos (resíduos, unidades, estados, classes, acondicionamento, tratamento) ----------
+
+function listaDeResposta(resultado: unknown): unknown[] {
+  const env = (resultado || {}) as { erro?: boolean; objetoResposta?: unknown };
+  if (Array.isArray(env.objetoResposta)) return env.objetoResposta;
+  if (Array.isArray(env)) return env as unknown[];
+  return [];
+}
+
+const CATALOGOS_MOCK: SinirCatalogos = {
+  residuos: [
+    { resCodigoIbama: "150202", resNome: "Resíduo de construção civil — classe II B" },
+    { resCodigoIbama: "A001", resNome: "Resíduo perigoso classe I" },
+  ],
+  unidades: [
+    { uniCodigo: 1, uniNome: "Quilograma", uniSigla: "kg" },
+    { uniCodigo: 2, uniNome: "Tonelada", uniSigla: "ton" },
+    { uniCodigo: 3, uniNome: "Litro", uniSigla: "L" },
+    { uniCodigo: 4, uniNome: "Metro cúbico", uniSigla: "m³" },
+  ],
+  estadosFisicos: [
+    { tieCodigo: 1, tieDescricao: "Sólido" },
+    { tieCodigo: 2, tieDescricao: "Líquido" },
+    { tieCodigo: 3, tieDescricao: "Gasoso" },
+    { tieCodigo: 4, tieDescricao: "Pastoso" },
+  ],
+  classes: [
+    { claCodigo: 1, claNome: "Classe I - Perigosos" },
+    { claCodigo: 2, claNome: "Classe II A - Não inertes" },
+    { claCodigo: 3, claNome: "Classe II B - Inertes" },
+  ],
+  acondicionamentos: [
+    { tiaCodigo: 1, tiaDescricao: "Container" },
+    { tiaCodigo: 2, tiaDescricao: "Tambor" },
+    { tiaCodigo: 3, tiaDescricao: "Bag" },
+    { tiaCodigo: 4, tiaDescricao: "Granel" },
+    { tiaCodigo: 5, tiaDescricao: "Bombona" },
+  ],
+  tratamentos: [
+    { traCodigo: 1, traDescricao: "Aterro" },
+    { traCodigo: 2, traDescricao: "Reciclagem" },
+    { traCodigo: 3, traDescricao: "Incineração" },
+    { traCodigo: 4, traDescricao: "Compostagem" },
+    { traCodigo: 5, traDescricao: "Co-processamento" },
+  ],
+};
+
+export async function listarCatalogos(conexao: SinirConexaoCompleta): Promise<SinirCatalogos> {
+  if (conexao.modo === "mock") return CATALOGOS_MOCK;
+
+  const [residuosR, unidadesR, estadosR, classesR, acondR, tratR] = await Promise.all([
+    apiFetch(conexao, "/retornaListaResiduo"),
+    apiFetch(conexao, "/retornaListaUnidade"),
+    apiFetch(conexao, "/retornaListaEstadoFisico"),
+    apiFetch(conexao, "/retornaListaClasse"),
+    apiFetch(conexao, "/retornaListaAcondicionamento"),
+    apiFetch(conexao, "/retornaListaTratamento"),
+  ]);
+
+  const str = (v: unknown): string => (typeof v === "string" ? v : v == null ? "" : String(v));
+  const num = (v: unknown): number | null => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const residuos = listaDeResposta(residuosR)
+    .map((item) => {
+      const o = item as Record<string, unknown>;
+      return { resCodigoIbama: str(o.resCodigoIbama || o.resCodigo), resNome: str(o.resNome || o.resDescricao || o.resCodigoIbama) };
+    })
+    .filter((r) => r.resCodigoIbama);
+
+  const unidades = listaDeResposta(unidadesR)
+    .map((item) => {
+      const o = item as Record<string, unknown>;
+      return { uniCodigo: num(o.uniCodigo) ?? 0, uniNome: str(o.uniNome), uniSigla: str(o.uniSigla) };
+    })
+    .filter((u) => u.uniCodigo > 0);
+
+  const estadosFisicos = listaDeResposta(estadosR)
+    .map((item) => {
+      const o = item as Record<string, unknown>;
+      return { tieCodigo: num(o.tieCodigo) ?? 0, tieDescricao: str(o.tieDescricao || o.tieNome) };
+    })
+    .filter((e) => e.tieCodigo > 0);
+
+  const classes = listaDeResposta(classesR)
+    .map((item) => {
+      const o = item as Record<string, unknown>;
+      return { claCodigo: num(o.claCodigo) ?? 0, claNome: str(o.claNome) };
+    })
+    .filter((c) => c.claCodigo > 0);
+
+  const acondicionamentos = listaDeResposta(acondR)
+    .map((item) => {
+      const o = item as Record<string, unknown>;
+      return { tiaCodigo: num(o.tiaCodigo) ?? 0, tiaDescricao: str(o.tiaDescricao || o.tiaNome) };
+    })
+    .filter((a) => a.tiaCodigo > 0);
+
+  const tratamentos = listaDeResposta(tratR)
+    .map((item) => {
+      const o = item as Record<string, unknown>;
+      return { traCodigo: num(o.traCodigo) ?? 0, traDescricao: str(o.traDescricao || o.traNome) };
+    })
+    .filter((t) => t.traCodigo > 0);
+
+  return {
+    residuos: residuos.length ? residuos : CATALOGOS_MOCK.residuos,
+    unidades: unidades.length ? unidades : CATALOGOS_MOCK.unidades,
+    estadosFisicos: estadosFisicos.length ? estadosFisicos : CATALOGOS_MOCK.estadosFisicos,
+    classes: classes.length ? classes : CATALOGOS_MOCK.classes,
+    acondicionamentos: acondicionamentos.length ? acondicionamentos : CATALOGOS_MOCK.acondicionamentos,
+    tratamentos: tratamentos.length ? tratamentos : CATALOGOS_MOCK.tratamentos,
+  };
 }
 
 // ---------- Verificação (certificados vs pendentes) ----------
@@ -523,6 +667,22 @@ export async function emitirManifesto(
     throw new SinirError("CNPJ do transportador e do destinador devem ter 14 dígitos", 400);
   }
 
+  const residuos = input.residuos?.length
+    ? input.residuos
+    : [
+        {
+          resCodigoIbama: "150202",
+          marQuantidade: input.quantidade,
+          uniCodigo: 2,
+          tieCodigo: 4,
+          claCodigo: 1,
+          tiaCodigo: 5,
+          traCodigo: 4,
+          marDescricaoInterna: input.resumo,
+          marCodigoInterno: "",
+        },
+      ];
+
   if (conexao.modo === "mock") {
     const numero = `MTR-${new Date().getFullYear()}-${String(Math.floor(100000 + Math.random() * 899999))}`;
     await prisma.sinirManifesto.create({
@@ -556,19 +716,7 @@ export async function emitirManifesto(
         dataExpedicao: input.dataExpedicao || Date.now(),
         observacoes: input.observacoes || input.resumo,
         tipoManifesto: 0,
-        listaManifestoResiduos: [
-          {
-            resCodigoIbama: "150202",
-            marQuantidade: input.quantidade,
-            uniCodigo: 2,
-            tieCodigo: 4,
-            claCodigo: 1,
-            tiaCodigo: 5,
-            traCodigo: 4,
-            marDescricaoInterna: input.resumo,
-            marCodigoInterno: "",
-          },
-        ],
+        listaManifestoResiduos: residuos,
       },
     ],
   });

@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
   const {
     conexaoId, clienteNome, empreendNome, resumo, quantidade, unidade,
     transportadorCnpj, destinadorCnpj,
-    nomeResponsavel, nomeMotorista, placaVeiculo, dataExpedicao, observacoes,
+    nomeResponsavel, nomeMotorista, placaVeiculo, dataExpedicao, observacoes, residuos,
   } = body;
 
   if (!conexaoId) {
@@ -55,6 +55,7 @@ export async function POST(req: NextRequest) {
       placaVeiculo: placaVeiculo ? String(placaVeiculo) : undefined,
       dataExpedicao: dataExpedicao ? Number(dataExpedicao) : undefined,
       observacoes: observacoes ? String(observacoes) : undefined,
+      residuos: Array.isArray(residuos) && residuos.length ? residuos : undefined,
     });
 
     await prisma.sinirConexao.update({

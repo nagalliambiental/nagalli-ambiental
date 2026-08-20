@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { Topbar } from "@/components/Topbar";
-import { Truck, RefreshCw, Send, Link2, Loader2, CheckCircle2, AlertTriangle, XCircle, FileDown, Trash2, Ban, ShieldCheck, Clock, Search } from "lucide-react";
+import { Truck, RefreshCw, Send, Link2, Loader2, CheckCircle2, AlertTriangle, XCircle, FileDown, Trash2, Ban, ShieldCheck, Clock, Search, Plus, X, Pencil, PackagePlus } from "lucide-react";
 import { useToast } from "@/components/Toast";
 
 type ToastFn = (message: string, type?: "success" | "error" | "info" | "warning") => void;
@@ -47,6 +47,32 @@ interface Manifesto {
   dataExpedicao: string | null;
   dataRecebimento: string | null;
   conexao: { id: number; nome: string; modo: string };
+}
+
+interface ResiduoCadastro {
+  resCodigoIbama: string;
+  marQuantidade: string;
+  uniCodigo: string;
+  tieCodigo: string;
+  claCodigo: string;
+  tiaCodigo: string;
+  traCodigo: string;
+  marNumeroONU: string;
+  marClasseRisco: string;
+  marNomeEmbarque: string;
+  marGrupoEmbalagem: string;
+  marCodigoInterno: string;
+  marDescricaoInterna: string;
+  observacoes: string;
+}
+
+interface SinirCatalogosFront {
+  residuos: { resCodigoIbama: string; resNome: string }[];
+  unidades: { uniCodigo: number; uniNome: string; uniSigla: string }[];
+  estadosFisicos: { tieCodigo: number; tieDescricao: string }[];
+  classes: { claCodigo: number; claNome: string }[];
+  acondicionamentos: { tiaCodigo: number; tiaDescricao: string }[];
+  tratamentos: { traCodigo: number; traDescricao: string }[];
 }
 
 const STATUS_BADGE: Record<string, string> = {
@@ -873,8 +899,46 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
   const [resultado, setResultado] = useState<{ numero: string; simulacao: boolean } | null>(null);
   const [buscandoTransp, setBuscandoTransp] = useState(false);
   const [buscandoDest, setBuscandoDest] = useState(false);
+  const [residuos, setResiduos] = useState<ResiduoCadastro[]>([]);
+  const [catalogos, setCatalogos] = useState<SinirCatalogosFront | null>(null);
+  const [carregandoCatalogos, setCarregandoCatalogos] = useState(false);
+  const [modalResiduo, setModalResiduo] = useState(false);
+  const [editandoResiduo, setEditandoResiduo] = useState<number | null>(null);
+  const [residuoForm, setResiduoForm] = useState<ResiduoCadastro>({
+    resCodigoIbama: "",
+    marQuantidade: "",
+    uniCodigo: "",
+    tieCodigo: "",
+    claCodigo: "",
+    tiaCodigo: "",
+    traCodigo: "",
+    marNumeroONU: "",
+    marClasseRisco: "",
+    marNomeEmbarque: "",
+    marGrupoEmbalagem: "",
+    marCodigoInterno: "",
+    marDescricaoInterna: "",
+    observacoes: "",
+  });
 
   const conexaoEfetiva = conexoes.some((c) => c.id === Number(form.conexaoId)) ? form.conexaoId : conexoes.length ? String(conexoes[0].id) : "";
+
+  useEffect(() => {
+    if (!conexaoEfetiva) return;
+    const controller = new AbortController();
+    (async () => {
+      setCarregandoCatalogos(true);
+      try {
+        const res = await fetch(`/api/sinir/catalogos?conexaoId=${conexaoEfetiva}`, { signal: controller.signal });
+        if (res.ok) setCatalogos(await res.json());
+      } catch {
+        if (!controller.signal.aborted) setCatalogos(null);
+      } finally {
+        if (!controller.signal.aborted) setCarregandoCatalogos(false);
+      }
+    })();
+    return () => controller.abort();
+  }, [conexaoEfetiva]);
 
   const inputCls = "w-full rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]";
 
@@ -947,22 +1011,115 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
     }
   }
 
+  function abrirModalResiduo(indice?: number) {
+    if (indice != null) {
+      setResiduoForm(residuos[indice]);
+      setEditandoResiduo(indice);
+    } else {
+      setResiduoForm({
+        resCodigoIbama: "",
+        marQuantidade: "",
+        uniCodigo: "",
+        tieCodigo: "",
+        claCodigo: "",
+        tiaCodigo: "",
+        traCodigo: "",
+        marNumeroONU: "",
+        marClasseRisco: "",
+        marNomeEmbarque: "",
+        marGrupoEmbalagem: "",
+        marCodigoInterno: "",
+        marDescricaoInterna: "",
+        observacoes: "",
+      });
+      setEditandoResiduo(null);
+    }
+    setModalResiduo(true);
+  }
+
+  function salvarResiduo() {
+    if (!residuoForm.resCodigoIbama || !residuoForm.marQuantidade || !residuoForm.uniCodigo || !residuoForm.tieCodigo || !residuoForm.claCodigo || !residuoForm.tiaCodigo || !residuoForm.traCodigo) {
+      toast("Preencha resíduo, quantidade, unidade, estado físico, classe, acondicionamento e tratamento", "error");
+      return;
+    }
+    const formatoValido = Number(residuoForm.marQuantidade) > 0 && ["uniCodigo", "tieCodigo", "claCodigo", "tiaCodigo", "traCodigo"].every((k) => Number(residuoForm[k as keyof ResiduoCadastro]) > 0);
+    if (!formatoValido) {
+      toast("Quantidade e códigos devem ser números válidos", "error");
+      return;
+    }
+    setResiduos((r) => {
+      const novo = [...r];
+      if (editandoResiduo != null) novo[editandoResiduo] = residuoForm;
+      else novo.push(residuoForm);
+      return novo;
+    });
+    setModalResiduo(false);
+    toast(editandoResiduo != null ? "Resíduo atualizado" : "Resíduo adicionado", "success");
+  }
+
+  function removerResiduo(indice: number) {
+    setResiduos((r) => r.filter((_, i) => i !== indice));
+    toast("Resíduo removido", "info");
+  }
+
+  function nomeResiduo(codigo: string) {
+    return catalogos?.residuos.find((r) => r.resCodigoIbama === codigo)?.resNome || codigo;
+  }
+  function nomeUnidade(codigo: string) {
+    return catalogos?.unidades.find((u) => u.uniCodigo === Number(codigo))?.uniSigla || codigo;
+  }
+  function nomeEstado(codigo: string) {
+    return catalogos?.estadosFisicos.find((e) => e.tieCodigo === Number(codigo))?.tieDescricao || codigo;
+  }
+  function nomeClasse(codigo: string) {
+    return catalogos?.classes.find((c) => c.claCodigo === Number(codigo))?.claNome || codigo;
+  }
+  function nomeAcond(codigo: string) {
+    return catalogos?.acondicionamentos.find((a) => a.tiaCodigo === Number(codigo))?.tiaDescricao || codigo;
+  }
+  function nomeTrat(codigo: string) {
+    return catalogos?.tratamentos.find((t) => t.traCodigo === Number(codigo))?.traDescricao || codigo;
+  }
+
   async function emitir() {
-    if (!form.resumo || !form.quantidade || form.transportadorCnpj.length !== 14 || form.destinadorCnpj.length !== 14) {
-      toast("Preencha resumo, quantidade e CNPJs (14 dígitos) do transportador e destinador", "error");
+    if (!form.transportadorCnpj || form.transportadorCnpj.length !== 14 || !form.destinadorCnpj || form.destinadorCnpj.length !== 14) {
+      toast("Preencha os CNPJs (14 dígitos) do transportador e destinador", "error");
+      return;
+    }
+    if (residuos.length === 0) {
+      toast("Adicione pelo menos um resíduo", "error");
       return;
     }
     setEnviando(true);
     setResultado(null);
     try {
+      const quantidadeTotal = residuos.reduce((soma, r) => soma + Number(r.marQuantidade), 0);
+      const resumo = residuos.map((r) => r.marDescricaoInterna || nomeResiduo(r.resCodigoIbama)).join("; ");
       const res = await fetch("/api/sinir/emitir", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
           conexaoId: Number(conexaoEfetiva),
-          quantidade: Number(form.quantidade),
+          resumo,
+          quantidade: quantidadeTotal,
           dataExpedicao: form.dataExpedicao ? new Date(`${form.dataExpedicao}T12:00:00`).getTime() : undefined,
+          residuos: residuos.map((r) => ({
+            resCodigoIbama: r.resCodigoIbama,
+            marQuantidade: Number(r.marQuantidade),
+            uniCodigo: Number(r.uniCodigo),
+            tieCodigo: Number(r.tieCodigo),
+            claCodigo: Number(r.claCodigo),
+            tiaCodigo: Number(r.tiaCodigo),
+            traCodigo: Number(r.traCodigo),
+            marNumeroONU: r.marNumeroONU || undefined,
+            marClasseRisco: r.marClasseRisco || undefined,
+            marNomeEmbarque: r.marNomeEmbarque || undefined,
+            marGrupoEmbalagem: r.marGrupoEmbalagem || undefined,
+            marCodigoInterno: r.marCodigoInterno || undefined,
+            marDescricaoInterna: r.marDescricaoInterna || undefined,
+            observacoes: r.observacoes || undefined,
+          })),
         }),
       });
       const data = await res.json();
@@ -1132,20 +1289,6 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
             </button>
           </div>
         </div>
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-[var(--color-ink-500)]">Unidade de medida</label>
-          <select value={form.unidade} onChange={(e) => setCampo("unidade", e.target.value)} className={inputCls}>
-            <option value="kg">kg</option>
-            <option value="t">t</option>
-            <option value="m3">m³</option>
-            <option value="L">L</option>
-            <option value="un">un</option>
-          </select>
-        </div>
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-[var(--color-ink-500)]">Quantidade</label>
-          <input type="number" step="0.01" value={form.quantidade} onChange={(e) => setCampo("quantidade", e.target.value)} className={inputCls} />
-        </div>
         <div className="flex flex-col gap-1 md:col-span-2">
           <label className="text-xs font-medium text-[var(--color-ink-500)]">Endereço</label>
           <input value={form.destinadorEndereco} onChange={(e) => setCampo("destinadorEndereco", e.target.value)} className={inputCls} />
@@ -1176,12 +1319,70 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
         </div>
       </div>
 
-      {secaoTitulo("Resíduo e Observações", "Descreva o resíduo transportado")}
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-[var(--color-ink-500)]">Resumo do resíduo</label>
-          <input value={form.resumo} onChange={(e) => setCampo("resumo", e.target.value)} className={inputCls} placeholder="Ex.: Resíduo classe II — entulho de obra" />
+      {secaoTitulo("Resíduos", "Adicione os resíduos transportados — cada um é uma linha da tabela")}
+      <div className="flex items-center justify-between gap-2 mb-3">
+        <p className="text-sm text-[var(--color-ink-500)]">
+          {carregandoCatalogos ? "Carregando catálogos do SINIR..." : `${residuos.length} resíduo(s) adicionado(s)`}
+        </p>
+        <button
+          onClick={() => abrirModalResiduo()}
+          className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg bg-[var(--color-brand-500)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)]"
+        >
+          <Plus size={15} />
+          Adicionar Resíduo
+        </button>
+      </div>
+
+      {residuos.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-[var(--color-paper-200)] bg-[var(--color-paper-50)] p-6 text-center text-sm text-[var(--color-ink-500)]">
+          Nenhum resíduo cadastrado. Clique em &quot;Adicionar Resíduo&quot; para incluir o primeiro.
         </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-[var(--color-paper-200)] text-left">
+                <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Resíduo</th>
+                <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Quantidade</th>
+                <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Estado</th>
+                <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Classe</th>
+                <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Acondicionamento</th>
+                <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Tratamento</th>
+                <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">ONU</th>
+                <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {residuos.map((r, i) => (
+                <tr key={i} className="border-b border-[var(--color-paper-100)]">
+                  <td className="py-2 px-2 text-[var(--color-ink-700)]">
+                    <div className="font-medium">{nomeResiduo(r.resCodigoIbama)}</div>
+                    <div className="text-xs text-[var(--color-ink-500)]">{r.marDescricaoInterna || "—"}</div>
+                  </td>
+                  <td className="py-2 px-2 whitespace-nowrap text-[var(--color-ink-700)]">{Number(r.marQuantidade).toLocaleString("pt-BR")} {nomeUnidade(r.uniCodigo)}</td>
+                  <td className="py-2 px-2 text-[var(--color-ink-600)]">{nomeEstado(r.tieCodigo)}</td>
+                  <td className="py-2 px-2 text-[var(--color-ink-600)]">{nomeClasse(r.claCodigo)}</td>
+                  <td className="py-2 px-2 text-[var(--color-ink-600)]">{nomeAcond(r.tiaCodigo)}</td>
+                  <td className="py-2 px-2 text-[var(--color-ink-600)]">{nomeTrat(r.traCodigo)}</td>
+                  <td className="py-2 px-2 text-[var(--color-ink-600)]">{r.marNumeroONU || "—"}</td>
+                  <td className="py-2 px-2">
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => abrirModalResiduo(i)} title="Editar resíduo" className="rounded-md p-1.5 text-[var(--color-ink-600)] hover:bg-[var(--color-paper-100)] hover:text-[var(--color-brand-600)]">
+                        <Pencil size={15} />
+                      </button>
+                      <button onClick={() => removerResiduo(i)} title="Remover resíduo" className="rounded-md p-1.5 text-[var(--color-ink-600)] hover:bg-red-50 hover:text-red-600">
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-[var(--color-ink-500)]">Observações (0/4000)</label>
           <input value={form.observacoes} onChange={(e) => setCampo("observacoes", e.target.value.slice(0, 4000))} className={inputCls} placeholder="Observações adicionais" />
@@ -1200,6 +1401,131 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
             <CheckCircle2 size={16} className="text-green-600" />
             MTR {resultado.numero} {resultado.simulacao && <span className="rounded bg-blue-50 px-1.5 py-0.5 text-xs text-blue-700">simulação</span>}
           </p>
+        </div>
+      )}
+
+      {modalResiduo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setModalResiduo(false)}>
+          <div
+            className="shadow-card max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="font-display flex items-center gap-2 text-base font-semibold text-[var(--color-ink-900)]">
+                <PackagePlus size={18} className="text-[var(--color-brand-500)]" />
+                {editandoResiduo != null ? `Editar resíduo ${editandoResiduo + 1}` : "Adicionar Resíduo"}
+              </h3>
+              <button onClick={() => setModalResiduo(false)} className="rounded-md p-1.5 text-[var(--color-ink-500)] hover:bg-[var(--color-paper-100)]">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <div className="flex flex-col gap-1 md:col-span-2">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Resíduo / Código IBAMA *</label>
+                <select value={residuoForm.resCodigoIbama} onChange={(e) => setResiduoForm((f) => ({ ...f, resCodigoIbama: e.target.value }))} className={inputCls}>
+                  <option value="">Selecione o resíduo...</option>
+                  {catalogos?.residuos.map((r) => (
+                    <option key={r.resCodigoIbama} value={r.resCodigoIbama}>{r.resCodigoIbama} — {r.resNome}</option>
+                  ))}
+                </select>
+                {carregandoCatalogos && <p className="text-xs text-[var(--color-ink-500)]">Carregando catálogos do SINIR...</p>}
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Quantidade *</label>
+                <input type="number" step="0.01" min="0" value={residuoForm.marQuantidade} onChange={(e) => setResiduoForm((f) => ({ ...f, marQuantidade: e.target.value }))} className={inputCls} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Unidade *</label>
+                <select value={residuoForm.uniCodigo} onChange={(e) => setResiduoForm((f) => ({ ...f, uniCodigo: e.target.value }))} className={inputCls}>
+                  <option value="">Selecione...</option>
+                  {catalogos?.unidades.map((u) => (
+                    <option key={u.uniCodigo} value={u.uniCodigo}>{u.uniSigla} — {u.uniNome}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Estado Físico *</label>
+                <select value={residuoForm.tieCodigo} onChange={(e) => setResiduoForm((f) => ({ ...f, tieCodigo: e.target.value }))} className={inputCls}>
+                  <option value="">Selecione...</option>
+                  {catalogos?.estadosFisicos.map((e) => (
+                    <option key={e.tieCodigo} value={e.tieCodigo}>{e.tieDescricao}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Classe *</label>
+                <select value={residuoForm.claCodigo} onChange={(e) => setResiduoForm((f) => ({ ...f, claCodigo: e.target.value }))} className={inputCls}>
+                  <option value="">Selecione...</option>
+                  {catalogos?.classes.map((c) => (
+                    <option key={c.claCodigo} value={c.claCodigo}>{c.claNome}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Acondicionamento *</label>
+                <select value={residuoForm.tiaCodigo} onChange={(e) => setResiduoForm((f) => ({ ...f, tiaCodigo: e.target.value }))} className={inputCls}>
+                  <option value="">Selecione...</option>
+                  {catalogos?.acondicionamentos.map((a) => (
+                    <option key={a.tiaCodigo} value={a.tiaCodigo}>{a.tiaDescricao}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Tratamento *</label>
+                <select value={residuoForm.traCodigo} onChange={(e) => setResiduoForm((f) => ({ ...f, traCodigo: e.target.value }))} className={inputCls}>
+                  <option value="">Selecione...</option>
+                  {catalogos?.tratamentos.map((t) => (
+                    <option key={t.traCodigo} value={t.traCodigo}>{t.traDescricao}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Número ONU</label>
+                <input value={residuoForm.marNumeroONU} onChange={(e) => setResiduoForm((f) => ({ ...f, marNumeroONU: e.target.value }))} className={inputCls} placeholder="Opcional" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Classe de Risco</label>
+                <input value={residuoForm.marClasseRisco} onChange={(e) => setResiduoForm((f) => ({ ...f, marClasseRisco: e.target.value }))} className={inputCls} placeholder="Opcional" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Nome de Embarque</label>
+                <input value={residuoForm.marNomeEmbarque} onChange={(e) => setResiduoForm((f) => ({ ...f, marNomeEmbarque: e.target.value }))} className={inputCls} placeholder="Opcional" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Grupo Embalagem</label>
+                <input value={residuoForm.marGrupoEmbalagem} onChange={(e) => setResiduoForm((f) => ({ ...f, marGrupoEmbalagem: e.target.value }))} className={inputCls} placeholder="Opcional" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Cód. Interno</label>
+                <input value={residuoForm.marCodigoInterno} onChange={(e) => setResiduoForm((f) => ({ ...f, marCodigoInterno: e.target.value }))} className={inputCls} placeholder="Opcional" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Descr. Interna</label>
+                <input value={residuoForm.marDescricaoInterna} onChange={(e) => setResiduoForm((f) => ({ ...f, marDescricaoInterna: e.target.value }))} className={inputCls} placeholder="Opcional" />
+              </div>
+              <div className="flex flex-col gap-1 md:col-span-2">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Observação</label>
+                <input value={residuoForm.observacoes} onChange={(e) => setResiduoForm((f) => ({ ...f, observacoes: e.target.value }))} className={inputCls} placeholder="Opcional" />
+              </div>
+            </div>
+
+            <div className="mt-5 flex items-center justify-end gap-2">
+              <button
+                onClick={() => setModalResiduo(false)}
+                className="focus-ring transition-brand rounded-lg border border-[var(--color-paper-200)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={salvarResiduo}
+                className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg bg-[var(--color-brand-500)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)]"
+              >
+                {editandoResiduo != null ? <Pencil size={15} /> : <Plus size={15} />}
+                {editandoResiduo != null ? "Salvar alterações" : "Adicionar à tabela"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
