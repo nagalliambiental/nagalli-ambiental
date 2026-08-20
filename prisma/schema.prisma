@@ -127,14 +127,15 @@ model Empreendimento {
   utmX          Float?
   utmY          Float?
   utmZona       Int?
-  acessos       Acesso[]
-  contratos     Contrato[]
-  controleDmr   ControleDmr?
-  cliente       Cliente      @relation(fields: [clienteId], references: [id])
-  historicos    Historico[]
-  processos     Processo[]
-  propostas     Proposta[]
-}
+acessos       Acesso[]
+    contratos     Contrato[]
+    controleDmr   ControleDmr?
+    cliente       Cliente      @relation(fields: [clienteId], references: [id])
+    historicos    Historico[]
+    processos     Processo[]
+    propostas     Proposta[]
+    sinirConexoes SinirConexao[]
+  }
 
 model Orgao {
   id        Int        @id @default(autoincrement())
@@ -383,36 +384,42 @@ model EmpresaContratada {
 }
 
 model ControleDmr {
-  id               Int            @id @default(autoincrement())
-  empreendimentoId Int            @unique
-  ano              Int
-  t1Dmr            String         @default("")
-  t1Mtr            String         @default("")
-  t2Dmr            String         @default("")
-  t2Mtr            String         @default("")
-  t3Dmr            String         @default("")
-  t3Mtr            String         @default("")
-  t4Dmr            String         @default("")
-  t4Mtr            String         @default("")
-  criadoEm         DateTime       @default(now())
-  atualizadoEm     DateTime       @updatedAt
-  empreendimento   Empreendimento @relation(fields: [empreendimentoId], references: [id], onDelete: Cascade)
-}
+    id               Int            @id @default(autoincrement())
+    empreendimentoId Int            @unique
+    ano              Int
+    t1Dmr            String         @default("")
+    t1Mtr            String         @default("")
+    t1EnviadaEm      DateTime?
+    t2Dmr            String         @default("")
+    t2Mtr            String         @default("")
+    t2EnviadaEm      DateTime?
+    t3Dmr            String         @default("")
+    t3Mtr            String         @default("")
+    t3EnviadaEm      DateTime?
+    t4Dmr            String         @default("")
+    t4Mtr            String         @default("")
+    t4EnviadaEm      DateTime?
+    criadoEm         DateTime       @default(now())
+    atualizadoEm     DateTime       @updatedAt
+    empreendimento   Empreendimento @relation(fields: [empreendimentoId], references: [id], onDelete: Cascade)
+  }
 
 model SinirConexao {
-  id           Int      @id @default(autoincrement())
-  nome         String
-  cnpj         String
-  unidade      String
-  token        String?
-  modo         String   @default("mock")
-  venceEm      DateTime?
-  ativo        Boolean  @default(true)
-  ultimoUsoEm  DateTime?
-  criadoEm     DateTime @default(now())
-  atualizadoEm DateTime @updatedAt
-  manifestos   SinirManifesto[]
-}
+    id             Int      @id @default(autoincrement())
+    nome           String
+    cnpj           String
+    unidade        String
+    empreendimentoId Int?
+    token          String?
+    modo           String   @default("mock")
+    venceEm        DateTime?
+    ativo          Boolean  @default(true)
+    ultimoUsoEm    DateTime?
+    criadoEm       DateTime @default(now())
+    atualizadoEm   DateTime @updatedAt
+    empreendimento Empreendimento? @relation(fields: [empreendimentoId], references: [id])
+    manifestos     SinirManifesto[]
+  }
 
 model SinirManifesto {
   id            Int      @id @default(autoincrement())
@@ -421,6 +428,7 @@ model SinirManifesto {
   status        String   @default("EMITIDO")
   certificado   Boolean  @default(false)
   cdfNumero     String?
+  cdfCodigo     String?
   clienteNome   String?
   empreendNome  String?
   resumo        String?
@@ -428,6 +436,8 @@ model SinirManifesto {
   unidade       String?
   dataExpedicao DateTime?
   dataRecebimento DateTime?
+  justificativa String?
+  dataCancelamento DateTime?
   criadoEm      DateTime @default(now())
   atualizadoEm  DateTime @updatedAt
   conexao       SinirConexao @relation(fields: [conexaoId], references: [id], onDelete: Cascade)

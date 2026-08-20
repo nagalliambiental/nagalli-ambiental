@@ -17,12 +17,16 @@ interface ControleDmr {
   ano: number;
   t1Dmr: string;
   t1Mtr: string;
+  t1EnviadaEm: string | null;
   t2Dmr: string;
   t2Mtr: string;
+  t2EnviadaEm: string | null;
   t3Dmr: string;
   t3Mtr: string;
+  t3EnviadaEm: string | null;
   t4Dmr: string;
   t4Mtr: string;
+  t4EnviadaEm: string | null;
   empreendimento: Empreendimento;
 }
 
@@ -130,6 +134,24 @@ export default function DmrPage() {
     setRegistros((prev) =>
       prev.map((r) => (r.id === id ? { ...r, [campo]: valor } : r))
     );
+  }
+
+  async function registrarEnvio(id: number, campo: string, valor: string) {
+    const res = await fetch(`/api/controle-dmr/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ [campo]: valor || null }),
+    });
+    if (!res.ok) {
+      toast("Erro ao registrar envio", "error");
+      return;
+    }
+    setRegistros((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, [campo]: valor || null } : r))
+    );
+    if (valor) {
+      toast("Envio registrado", "success");
+    }
   }
 
   async function remover(id: number) {
@@ -269,8 +291,10 @@ export default function DmrPage() {
                       {trimestres.map((t) => {
                       const campoDmr = `${t.key}Dmr` as keyof typeof r;
                       const campoMtr = `${t.key}Mtr` as keyof typeof r;
+                      const campoEnviada = `${t.key}EnviadaEm` as keyof typeof r;
                       const dmrVal = (r[campoDmr] as string) || "";
                       const mtrVal = (r[campoMtr] as string) || "";
+                      const enviadaEm = (r[campoEnviada] as string | null) || "";
                       const ambosOk = dmrVal === "OK" && mtrVal === "OK";
                       const algumPendente = dmrVal === "Pendente" || mtrVal === "Pendente";
                       const combined = ambosOk ? "OK" : algumPendente ? "Pendente" : "";
@@ -297,6 +321,16 @@ export default function DmrPage() {
                             <span className="text-[10px] text-[var(--color-ink-400)]">
                               {dmrVal || "—"}/{mtrVal || "—"}
                             </span>
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="date"
+                                value={enviadaEm ? enviadaEm.slice(0, 10) : ""}
+                                onChange={(e) => registrarEnvio(r.id, campoEnviada as string, e.target.value)}
+                                title="Data de envio da DMR no portal"
+                                className="w-[110px] rounded border border-[var(--color-paper-200)] px-1 py-0.5 text-[10px] text-[var(--color-ink-600)] focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-500)]"
+                              />
+                              {enviadaEm && <span className="text-[10px] font-medium text-green-600" title="Enviada em">✓</span>}
+                            </div>
                           </div>
                         </td>
                       );

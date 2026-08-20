@@ -16,6 +16,7 @@ export async function GET() {
       nome: true,
       cnpj: true,
       unidade: true,
+      empreendimentoId: true,
       token: true,
       modo: true,
       venceEm: true,
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { nome, cnpj, unidade, token, modo, venceEm } = body;
+  const { nome, cnpj, unidade, empreendimentoId, token, modo, venceEm } = body;
 
   if (!nome || !cnpj || !unidade) {
     return NextResponse.json({ error: "nome, cnpj e unidade são obrigatórios" }, { status: 400 });
@@ -61,6 +62,7 @@ export async function POST(req: NextRequest) {
       nome,
       cnpj: String(cnpj).replace(/\D/g, ""),
       unidade: String(unidade),
+      empreendimentoId: empreendimentoId ? Number(empreendimentoId) : null,
       token: token && ehPrivilegiado ? criptografar(String(token)) : null,
       modo: modo === "real" && ehPrivilegiado ? "real" : "mock",
       venceEm: venceEm && ehPrivilegiado ? new Date(venceEm) : null,

@@ -1,9 +1,11 @@
 import { prisma } from "./prisma";
 import { descriptografar } from "./crypto";
+import { rgb } from "pdf-lib";
 
 export const SINIR_API_BASE = "https://admin.sinir.gov.br/api";
 
 export const SINIR_STATUS = {
+  SALVO: "SALVO",
   EMITIDO: "EMITIDO",
   RECEBIDO: "RECEBIDO",
   CERTIFICADO: "CERTIFICADO",
@@ -142,6 +144,7 @@ function statusDeManifestoReal(obj: Record<string, unknown>): { status: SinirSta
   if (s.includes("CANCEL")) return { status: SINIR_STATUS.CANCELADO, certificado: false };
   if (temCdf || s.includes("CERTIF")) return { status: SINIR_STATUS.CERTIFICADO, certificado: true, cdfNumero: numeroString(obj.cdfNumero || obj.cdfCodigo) };
   if (s.includes("RECEB")) return { status: SINIR_STATUS.RECEBIDO, certificado: false };
+  if (s.includes("SALVO")) return { status: SINIR_STATUS.SALVO, certificado: false };
   return { status: SINIR_STATUS.EMITIDO, certificado: false };
 }
 
@@ -227,6 +230,7 @@ async function gerarManifestosMock(
 
     const pendente = (e.id * 31 + i) % 4 === 0;
     const cancelado = (e.id * 53 + i) % 11 === 0;
+    const salvo = (e.id * 13 + i) % 5 === 0;
 
     if (cancelado) {
       return {
@@ -236,6 +240,19 @@ async function gerarManifestosMock(
         clienteNome: cliente,
         empreendNome: e.apelido,
         resumo: "Carga cancelada pelo gerador",
+        quantidade,
+        unidade,
+        dataExpedicao: expedicao,
+      };
+    }
+    if (salvo) {
+      return {
+        numero,
+        status: SINIR_STATUS.SALVO,
+        certificado: false,
+        clienteNome: cliente,
+        empreendNome: e.apelido,
+        resumo: `Resíduo classe II — ${quantidade.toLocaleString("pt-BR")} ${unidade} (aguardando recebimento pelo destinatário)`,
         quantidade,
         unidade,
         dataExpedicao: expedicao,
@@ -457,6 +474,137 @@ export async function baixarManifestoPdf(
   return { buffer, filename: `MTR-${numero}.pdf` };
 }
 
+// ---------- Cancelamento ----------
+
+export async function cancelarManifesto(
+  conexao: SinirConexaoCompleta,
+  numero: string,
+  justificativa: string
+): Promise<{ numero: string; simulacao: boolean }> {
+  if (!numero || !justificativa.trim()) {
+    throw new SinirError("Número do MTR e justificativa são obrigatórios", 400);
+  }
+
+  const existente = await prisma.sinirManifesto.findFirst({ where: { conexaoId: conexao.id, numero } });
+  if (existente && existente.certificado) {
+    throw new SinirError("MTR já certificado (CDF emitido) não pode ser cancelado", 400);
+  }
+
+  if (conexao.modo === "mock") {
+    await prisma.sinirManifesto.updateMany({
+      where: { conexaoId: conexao.id, numero },
+      data: { status: SINIR_STATUS.CANCELADO, justificativa, dataCancelamento: new Date(), certificado: false },
+    });
+    return { numero, simulacao: true };
+  }
+
+  await apiFetch(conexao, "/cancelarManifesto", {
+    method: "POST",
+    body: { manNumero: numero, justificativa },
+  });
+
+  await prisma.sinirManifesto.updateMany({
+    where: { conexaoId: conexao.id, numero },
+    data: { status: SINIR_STATUS.CANCELADO, justificativa, dataCancelamento: new Date(), certificado: false },
+  });
+
+  return { numero, simulacao: false };
+}
+
+// ---------- CDF ----------
+
+export async function emitirCdf(
+  conexao: SinirConexaoCompleta,
+  numeros: string[],
+  nomeResponsavel: string
+): Promise<{ cdfNumero: string; cdfCodigo?: string; quantidade: number; simulacao: boolean }> {
+  if (!numeros.length) throw new SinirError("Informe ao menos um MTR para o CDF", 400);
+  if (!nomeResponsavel.trim()) throw new SinirError("Nome do responsável pelo CDF é obrigatório", 400);
+
+  if (conexao.modo === "mock") {
+    const manifestos = await prisma.sinirManifesto.findMany({
+      where: { conexaoId: conexao.id, numero: { in: numeros } },
+    });
+    if (!manifestos.length) throw new SinirError("Nenhum MTR encontrado para o CDF", 404);
+
+    const quantidade = manifestos.reduce((acc, m) => acc + (m.quantidade || 0), 0);
+    const cdfNumero = `CDF-${new Date().getFullYear()}-${String(Math.floor(100000 + Math.random() * 899999))}`;
+    const cdfCodigo = String(Math.floor(1000000 + Math.random() * 8999999));
+
+    await prisma.sinirManifesto.updateMany({
+      where: { id: { in: manifestos.map((m) => m.id) } },
+      data: {
+        certificado: true,
+        status: SINIR_STATUS.CERTIFICADO,
+        cdfNumero,
+        cdfCodigo,
+        dataRecebimento: new Date(),
+      },
+    });
+
+    return { cdfNumero, cdfCodigo, quantidade, simulacao: true };
+  }
+
+  const resultado = await apiFetch(conexao, "/emiteCDF", {
+    method: "POST",
+    body: { listaManifestos: numeros, dataEmissao: Date.now(), nomeResponsavel },
+  });
+
+  const env = (resultado || {}) as { erro?: boolean; mensagem?: string; objeto?: { cdfCodigo?: number; cdfNumero?: string } };
+  if (env.erro || !env.objeto) {
+    throw new SinirError(env.mensagem || "SINIR não confirmou a emissão do CDF", 502);
+  }
+
+  const cdfNumero = env.objeto.cdfNumero || `CDF-${env.objeto.cdfCodigo ?? "?"}`;
+  const cdfCodigo = env.objeto.cdfCodigo != null ? String(env.objeto.cdfCodigo) : undefined;
+
+  await prisma.sinirManifesto.updateMany({
+    where: { conexaoId: conexao.id, numero: { in: numeros } },
+    data: {
+      certificado: true,
+      status: SINIR_STATUS.CERTIFICADO,
+      cdfNumero,
+      cdfCodigo,
+      dataRecebimento: new Date(),
+    },
+  });
+
+  const manifestos = await prisma.sinirManifesto.findMany({
+    where: { conexaoId: conexao.id, numero: { in: numeros } },
+  });
+  const quantidade = manifestos.reduce((acc, m) => acc + (m.quantidade || 0), 0);
+
+  return { cdfNumero, cdfCodigo, quantidade, simulacao: false };
+}
+
+export async function baixarCdfPdf(
+  conexao: SinirConexaoCompleta,
+  cdf: { cdfNumero?: string | null; cdfCodigo?: string | null; clienteNome?: string | null; empreendNome?: string | null; resumo?: string | null; quantidade?: number | null; unidade?: string | null; dataRecebimento?: Date | null; numero?: string | null }
+): Promise<{ buffer: Uint8Array; filename: string }> {
+  if (!cdf.cdfCodigo && conexao.modo !== "mock") {
+    throw new SinirError("CDF sem código para download", 400);
+  }
+
+  if (conexao.modo === "mock") {
+    const r = await gerarPdfCdfSimulado(cdf);
+    return { buffer: r.buffer, filename: r.nomeArquivo };
+  }
+
+  const token = tokenReal(conexao);
+  const res = await fetch(`${SINIR_API_BASE}/downloadCertificado/${encodeURIComponent(String(cdf.cdfCodigo))}?formato=pdf`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, Accept: "application/pdf" },
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    throw new SinirError(`Erro ao baixar PDF do CDF (HTTP ${res.status})`, res.status);
+  }
+
+  const buffer = new Uint8Array(await res.arrayBuffer());
+  return { buffer, filename: `${cdf.cdfNumero || "CDF"}.pdf` };
+}
+
 // ---------- PDF simulado ----------
 
 export async function gerarPdfSimulado(
@@ -537,4 +685,295 @@ export async function gerarPdfSimulado(
 
   const bytes = await pdf.save();
   return { buffer: new Uint8Array(bytes), nomeArquivo: `MTR-${manifesto.numero}.pdf` };
+}
+
+// ---------- PDF CDF simulado ----------
+
+interface CdfSimuladoDados {
+  cdfNumero?: string | null;
+  cdfCodigo?: string | null;
+  clienteNome?: string | null;
+  empreendNome?: string | null;
+  resumo?: string | null;
+  quantidade?: number | null;
+  unidade?: string | null;
+  dataRecebimento?: Date | null;
+  numero?: string | null;
+}
+
+export async function gerarPdfCdfSimulado(
+  cdf: CdfSimuladoDados
+): Promise<{ buffer: Uint8Array; nomeArquivo: string }> {
+  const { PDFDocument, StandardFonts } = await import("pdf-lib");
+  const { embedNagalliLogo, drawNagalliTopo, drawNagalliFooter, PALETTE } = await import("./report-branding");
+
+  const pdf = await PDFDocument.create();
+  const font = await pdf.embedFont(StandardFonts.Helvetica);
+  const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const logo = await embedNagalliLogo(pdf);
+  const page = pdf.addPage([842, 595]);
+
+  const topo = drawNagalliTopo(page, logo, font, bold);
+  const ink900 = PALETTE.ink["900"];
+  const ink700 = PALETTE.ink["700"];
+  const ink500 = PALETTE.ink["500"];
+  const brand700 = PALETTE.brand["700"];
+
+  let y = topo - 30;
+
+  page.drawText("CERTIFICADO DE DESTINAÇÃO FINAL (SIMULAÇÃO)", { x: 40, y, size: 15, font: bold, color: brand700 });
+  y -= 18;
+  page.drawText("Documento fictício gerado pelo sistema — sem validade no SINIR", { x: 40, y, size: 9, font, color: ink500 });
+
+  y -= 30;
+
+  const rotulo = (label: string, valor: string, largura = 370) => {
+    page.drawText(label, { x: 40, y, size: 8, font: bold, color: ink500 });
+    page.drawText(valor, { x: 40, y: y - 13, size: 11, font: bold, color: ink900, maxWidth: largura });
+    y -= 40;
+  };
+
+  rotulo("NÚMERO DO CDF", cdf.cdfNumero || cdf.cdfCodigo || "—");
+  rotulo("MTR REFERENCIADO", cdf.numero || "—");
+  rotulo("CLIENTE", cdf.clienteNome || "—");
+  rotulo("EMPREENDIMENTO", cdf.empreendNome || "—");
+
+  page.drawText("RESÍDUO", { x: 40, y, size: 8, font: bold, color: ink500 });
+  page.drawText(cdf.resumo || "—", { x: 40, y: y - 13, size: 10, font, color: ink900, maxWidth: 760 });
+  y -= 44;
+
+  rotulo("QUANTIDADE", cdf.quantidade != null ? `${cdf.quantidade.toLocaleString("pt-BR")} ${cdf.unidade || ""}`.trim() : "—");
+  rotulo("DATA DE RECEBIMENTO", cdf.dataRecebimento ? cdf.dataRecebimento.toLocaleDateString("pt-BR") : "—", 180);
+  page.drawText("SITUAÇÃO", { x: 430, y: y + 40, size: 8, font: bold, color: ink500 });
+  page.drawText("CERTIFICADO", { x: 430, y: y + 27, size: 11, font: bold, color: PALETTE.brand["600"] });
+
+  y -= 16;
+  page.drawRectangle({ x: 40, y, width: 762, height: 0.6, color: PALETTE.paper["200"] });
+  y -= 20;
+  page.drawText("Atenção: este documento é apenas uma simulação para teste do fluxo. Quando a conexão estiver em modo real, o CDF é baixado diretamente do SINIR.", {
+    x: 40,
+    y,
+    size: 8.5,
+    font,
+    color: ink500,
+    maxWidth: 760,
+  });
+
+  drawNagalliFooter(page, font, bold);
+
+  const bytes = await pdf.save();
+  return { buffer: new Uint8Array(bytes), nomeArquivo: `${cdf.cdfNumero || "CDF"}.pdf` };
+}
+
+// ---------- DMR (relatório no modelo do SINIR) ----------
+
+export interface DmrDeclarante {
+  cnpj: string;
+  razaoSocial: string;
+  nomeFantasia?: string | null;
+  municipio?: string | null;
+  uf?: string | null;
+}
+
+export interface DmrLinha {
+  numero: string;
+  resumo: string | null;
+  quantidade: number | null;
+  unidade: string | null;
+  status: string;
+  certificado: boolean;
+  dataExpedicao: Date | null;
+}
+
+export async function gerarPdfDmr(
+  declarante: DmrDeclarante,
+  periodo: { ano: number; trimestre: number },
+  linhas: DmrLinha[]
+): Promise<{ buffer: Uint8Array; nomeArquivo: string }> {
+  const { PDFDocument, StandardFonts } = await import("pdf-lib");
+  const { embedNagalliLogo, drawNagalliTopo, drawNagalliFooter, PALETTE } = await import("./report-branding");
+
+  const pdf = await PDFDocument.create();
+  const font = await pdf.embedFont(StandardFonts.Helvetica);
+  const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const logo = await embedNagalliLogo(pdf);
+  const page = pdf.addPage([842, 595]);
+
+  const topo = drawNagalliTopo(page, logo, font, bold);
+  const ink900 = PALETTE.ink["900"];
+  const ink700 = PALETTE.ink["700"];
+  const ink500 = PALETTE.ink["500"];
+  const brand700 = PALETTE.brand["700"];
+
+  let y = topo - 30;
+
+  page.drawText("DECLARAÇÃO DE MOVIMENTAÇÃO DE RESÍDUOS — DMR", { x: 40, y, size: 15, font: bold, color: brand700 });
+  y -= 18;
+  page.drawText(`Período: ${periodo.trimestre}º trimestre de ${periodo.ano} (modelo de referência do SINIR — conferência)`, { x: 40, y, size: 9, font, color: ink500 });
+  y -= 8;
+  page.drawText("O envio oficial é feito no portal mtr.sinir.gov.br", { x: 40, y, size: 8.5, font, color: ink500 });
+
+  y -= 26;
+
+  page.drawText("INFORMAÇÕES DO DECLARANTE", { x: 40, y, size: 9, font: bold, color: brand700 });
+  y -= 16;
+
+  const campo = (label: string, valor: string, largura = 360) => {
+    page.drawText(label, { x: 40, y, size: 8, font: bold, color: ink500 });
+    page.drawText(valor, { x: 40, y: y - 13, size: 10.5, font: bold, color: ink900, maxWidth: largura });
+    y -= 38;
+  };
+
+  campo("RAZÃO SOCIAL", declarante.razaoSocial);
+  campo("NOME FANTASIA", declarante.nomeFantasia || "—");
+  campo("CNPJ", declarante.cnpj);
+  campo("MUNICÍPIO / UF", `${declarante.municipio || "—"} / ${declarante.uf || "—"}`);
+
+  y -= 6;
+  page.drawRectangle({ x: 40, y, width: 762, height: 0.6, color: PALETTE.paper["200"] });
+  y -= 16;
+
+  page.drawText("RESÍDUOS MOVIMENTADOS NO PERÍODO", { x: 40, y, size: 9, font: bold, color: brand700 });
+  y -= 16;
+
+  const col = (text: string, size: number, x: number, w: number, c: ReturnType<typeof rgb> = ink900, f: typeof font = font) => {
+    page.drawText(text, { x, y, size, font: f, color: c, maxWidth: w });
+  };
+
+  const headers: [string, number, number][] = [
+    ["MTR", 40, 140],
+    ["Resíduo", 140, 400],
+    ["Quantidade", 540, 120],
+    ["Situação", 660, 140],
+  ];
+
+  for (const [h, x, w] of headers) col(h, 8, x, w, ink500, bold);
+  y -= 14;
+
+  if (linhas.length === 0) {
+    col("Sem movimentação de resíduos no período (declaração sem resíduos).", 9, 40, 760, ink700);
+    y -= 16;
+  }
+
+  for (const l of linhas) {
+    if (y < 80) {
+      page.drawText("Continua na próxima página...", { x: 40, y, size: 8, font, color: ink500 });
+      const nova = pdf.addPage([842, 595]);
+      drawNagalliTopo(nova, logo, font, bold);
+      y = 700;
+    }
+    const qtd = l.quantidade != null ? `${l.quantidade.toLocaleString("pt-BR")} ${l.unidade || ""}`.trim() : "—";
+    col(l.numero, 9, 40, 140, ink900, bold);
+    col(l.resumo || "—", 9, 140, 400);
+    col(qtd, 9, 540, 120);
+    col(l.certificado ? "Certificado" : l.status, 9, 660, 140, l.certificado ? PALETTE.brand["600"] : ink700);
+    y -= 18;
+  }
+
+  y -= 8;
+  page.drawRectangle({ x: 40, y, width: 762, height: 0.6, color: PALETTE.paper["200"] });
+  y -= 18;
+
+  const totalQtd = linhas.reduce((acc, l) => acc + (l.quantidade || 0), 0);
+  page.drawText(`Total movimentado no período: ${totalQtd.toLocaleString("pt-BR")} ${linhas[0]?.unidade || ""}`.trim(), { x: 40, y, size: 10, font: bold, color: ink900 });
+  y -= 22;
+
+  drawNagalliFooter(page, font, bold);
+
+  const bytes = await pdf.save();
+  return { buffer: new Uint8Array(bytes), nomeArquivo: `DMR-${periodo.trimestre}T-${periodo.ano}.pdf` };
+}
+
+// ---------- PDF Alerta de MTRs salvos (rotina semanal) ----------
+
+interface AlertaMtrDados {
+  numero: string;
+  clienteNome?: string | null;
+  empreendNome?: string | null;
+  quantidade?: number | null;
+  unidade?: string | null;
+  dataExpedicao?: Date | null;
+  diasEmSalvo: number;
+}
+
+export async function gerarPdfAlertaMtrsSalvos(
+  conexaoNome: string,
+  limitesDias: number,
+  mtrs: AlertaMtrDados[]
+): Promise<{ buffer: Uint8Array; nomeArquivo: string }> {
+  const { PDFDocument, StandardFonts } = await import("pdf-lib");
+  const { embedNagalliLogo, drawNagalliTopo, drawNagalliFooter, PALETTE } = await import("./report-branding");
+
+  const pdf = await PDFDocument.create();
+  const font = await pdf.embedFont(StandardFonts.Helvetica);
+  const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const logo = await embedNagalliLogo(pdf);
+  const page = pdf.addPage([842, 595]);
+
+  const topo = drawNagalliTopo(page, logo, font, bold);
+  const ink900 = PALETTE.ink["900"];
+  const ink700 = PALETTE.ink["700"];
+  const ink500 = PALETTE.ink["500"];
+  const alertaCor = rgb(0.75, 0.2, 0.15);
+
+  let y = topo - 24;
+
+  page.drawText("ALERTA — MTRs SEM RECEBIMENTO", { x: 40, y, size: 15, font: bold, color: alertaCor });
+  y -= 16;
+  page.drawText(`Rotina semanal "Meus MTRs" — manifestos em situação SALVO há mais de ${limitesDias} dias`, {
+    x: 40, y, size: 9, font, color: ink700,
+  });
+  y -= 12;
+  page.drawText(`Conexão: ${conexaoNome}   |   Gerado em: ${new Date().toLocaleString("pt-BR")}`, { x: 40, y, size: 9, font, color: ink500 });
+  y -= 14;
+
+  page.drawRectangle({ x: 40, y, width: 762, height: 0.6, color: PALETTE.paper["200"] });
+  y -= 18;
+
+  if (mtrs.length === 0) {
+    page.drawText("Nenhum MTR em situação SALVO além do limite no período verificado.", { x: 40, y, size: 10, font, color: ink700 });
+  }
+
+  const linha = (texto: string, x: number, w: number, size = 9, cor = ink900, f = font) => {
+    page.drawText(texto, { x, y, size, font: f, color: cor, maxWidth: w });
+  };
+
+  const cab = (t: string, x: number, w: number) => linha(t, x, w, 8, ink500, bold);
+
+  cab("NÚMERO DO MTR", 40, 160);
+  cab("CLIENTE", 210, 180);
+  cab("EMPREENDIMENTO", 400, 180);
+  cab("DIAS EM SALVO", 590, 100);
+  cab("QUANTIDADE", 690, 110);
+  y -= 14;
+  page.drawRectangle({ x: 40, y, width: 762, height: 0.6, color: PALETTE.paper["200"] });
+  y -= 16;
+
+  for (const m of mtrs) {
+    if (y < 80) {
+      const nova = pdf.addPage([842, 595]);
+      drawNagalliTopo(nova, logo, font, bold);
+      y = 700;
+    }
+    linha(m.numero, 40, 160, 9, ink900, bold);
+    linha(m.clienteNome || "—", 210, 180, 9, ink700);
+    linha(m.empreendNome || "—", 400, 180, 9, ink700);
+    linha(`${m.diasEmSalvo} dia(s)`, 590, 100, 9, m.diasEmSalvo > limitesDias ? alertaCor : ink700, bold);
+    linha(m.quantidade != null ? `${m.quantidade.toLocaleString("pt-BR")} ${m.unidade || ""}`.trim() : "—", 690, 110, 9, ink500);
+    y -= 18;
+  }
+
+  y -= 8;
+  page.drawRectangle({ x: 40, y, width: 762, height: 0.6, color: PALETTE.paper["200"] });
+  y -= 20;
+  page.drawText(`Total de MTRs sem recebimento além do limite: ${mtrs.length}`, { x: 40, y, size: 10, font: bold, color: ink900 });
+  y -= 16;
+  page.drawText("Ação recomendada: avisar os clientes geradores para confirmarem com as empresas destinatárias o recebimento das cargas.", {
+    x: 40, y, size: 8.5, font, color: ink500, maxWidth: 760,
+  });
+
+  drawNagalliFooter(page, font, bold);
+
+  const bytes = await pdf.save();
+  return { buffer: new Uint8Array(bytes), nomeArquivo: `alerta-mtrs-salvos-${new Date().toISOString().slice(0, 10)}.pdf` };
 }

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 
 
 const CAMPOS = ["t1Dmr", "t1Mtr", "t2Dmr", "t2Mtr", "t3Dmr", "t3Mtr", "t4Dmr", "t4Mtr"] as const;
+const DATAS = ["t1EnviadaEm", "t2EnviadaEm", "t3EnviadaEm", "t4EnviadaEm"] as const;
 
 export async function PATCH(
   req: NextRequest,
@@ -17,10 +18,15 @@ export async function PATCH(
   const { id } = await params;
   const body = await req.json();
 
-  const data: Record<string, string> = {};
+  const data: Record<string, string | Date | null> = {};
   for (const campo of CAMPOS) {
     if (body[campo] !== undefined) {
       data[campo] = body[campo];
+    }
+  }
+  for (const campo of DATAS) {
+    if (body[campo] !== undefined) {
+      data[campo] = body[campo] ? new Date(body[campo]) : null;
     }
   }
 
