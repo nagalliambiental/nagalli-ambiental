@@ -1636,12 +1636,23 @@ function abrirModalResiduo(indice?: number) {
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <div className="flex flex-col gap-1 md:col-span-2">
                 <label className="text-xs font-medium text-[var(--color-ink-500)]">Resíduo / Código IBAMA *</label>
-                <select value={residuoForm.resCodigoIbama} onChange={(e) => setResiduoForm((f) => ({ ...f, resCodigoIbama: e.target.value }))} className={inputCls}>
-                  <option value="">Selecione o resíduo...</option>
+                <input
+                  list="lista-residuos-sinir"
+                  value={residuoForm.resCodigoIbama}
+                  onChange={(e) => setResiduoForm((f) => ({ ...f, resCodigoIbama: e.target.value }))}
+                  className={inputCls}
+                  placeholder="Digite o código ou descrição do resíduo para filtrar..."
+                />
+                <datalist id="lista-residuos-sinir">
                   {catalogos?.residuos.map((r) => (
-                    <option key={r.resCodigoIbama} value={r.resCodigoIbama}>{r.resCodigoIbama} — {r.resNome}</option>
+                    <option key={r.resCodigoIbama} value={r.resCodigoIbama}>{r.resNome}</option>
                   ))}
-                </select>
+                </datalist>
+                {residuoForm.resCodigoIbama && catalogos?.residuos.some((r) => r.resCodigoIbama === residuoForm.resCodigoIbama) && (
+                  <p className="rounded bg-[var(--color-paper-50)] px-2 py-1 text-xs text-[var(--color-ink-600)]">
+                    {nomeResiduo(residuoForm.resCodigoIbama)}
+                  </p>
+                )}
                 {carregandoCatalogos && <p className="text-xs text-[var(--color-ink-500)]">Carregando catálogos do SINIR...</p>}
               </div>
               <div className="flex flex-col gap-1">
