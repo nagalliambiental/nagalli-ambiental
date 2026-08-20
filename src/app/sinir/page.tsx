@@ -64,96 +64,6 @@ function fmtQtd(v: number | null, u: string | null) {
   return `${v.toLocaleString("pt-BR")} ${u || ""}`.trim();
 }
 
-// ---------- Lembretes de prazos ----------
-
-interface PrazoItem {
-  titulo: string;
-  descricao: string;
-  data: Date;
-  diasRestantes: number;
-}
-
-function prazoDmr(trimestre: number, ano: number): Date {
-  switch (trimestre) {
-    case 1: return new Date(ano, 3, 30);
-    case 2: return new Date(ano, 6, 31);
-    case 3: return new Date(ano, 9, 31);
-    case 4: return new Date(ano + 1, 0, 31);
-    default: return new Date(ano, 3, 30);
-  }
-}
-
-function calcularPrazos(): PrazoItem[] {
-  const hoje = new Date();
-  hoje.setHours(0, 0, 0, 0);
-  const anoAtual = hoje.getFullYear();
-  const prazos: PrazoItem[] = [];
-
-  for (const ano of [anoAtual - 1, anoAtual, anoAtual + 1]) {
-    for (let t = 1; t <= 4; t++) {
-      const data = prazoDmr(t, ano);
-      prazos.push({
-        titulo: `DMR ${t}º trimestre/${ano}`,
-        descricao: "Declaração de Movimentação de Resíduos — portal mtr.sinir.gov.br",
-        data,
-        diasRestantes: Math.round((data.getTime() - hoje.getTime()) / 86400000),
-      });
-    }
-  }
-
-  for (const ano of [anoAtual, anoAtual + 1]) {
-    const data = new Date(ano, 2, 31);
-    prazos.push({
-      titulo: `Inventário Nacional ${ano}`,
-      descricao: "Inventário estadual de resíduos — inventario.sinir.gov.br",
-      data,
-      diasRestantes: Math.round((data.getTime() - hoje.getTime()) / 86400000),
-    });
-  }
-
-  return prazos
-    .filter((p) => p.diasRestantes >= -30)
-    .sort((a, b) => a.data.getTime() - b.data.getTime())
-    .slice(0, 5);
-}
-
-function LembretesPrazos() {
-  const prazos = calcularPrazos();
-
-  function cor(item: PrazoItem): string {
-    if (item.diasRestantes < 0) return "border-red-200 bg-red-50";
-    if (item.diasRestantes <= 15) return "border-amber-200 bg-amber-50";
-    return "border-[var(--color-paper-200)] bg-[var(--color-paper-50)]";
-  }
-
-  function rotulo(item: PrazoItem): string {
-    if (item.diasRestantes < 0) return `vencido há ${-item.diasRestantes} dia(s)`;
-    if (item.diasRestantes === 0) return "vence hoje";
-    if (item.diasRestantes === 1) return "vence amanhã";
-    return `faltam ${item.diasRestantes} dia(s)`;
-  }
-
-  return (
-    <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Lembretes de prazos</h2>
-        <span className="flex items-center gap-1.5 text-xs text-[var(--color-ink-400)]"><Clock size={13} /> atualizado conforme a data atual</span>
-      </div>
-      <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-        {prazos.map((p) => (
-          <div key={p.titulo} className={`rounded-lg border p-3 ${cor(p)}`}>
-            <p className="text-sm font-medium text-[var(--color-ink-800)]">{p.titulo}</p>
-            <p className="text-xs text-[var(--color-ink-500)]">{p.descricao}</p>
-            <p className="mt-1 text-xs font-medium text-[var(--color-ink-700)]">
-              {p.data.toLocaleDateString("pt-BR")} — <span className={p.diasRestantes < 0 ? "text-red-700" : p.diasRestantes <= 15 ? "text-amber-700" : "text-green-700"}>{rotulo(p)}</span>
-            </p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 export default function SinirPage() {
   const { toast } = useToast();
   const [tab, setTab] = useState<Tab>("painel");
@@ -459,8 +369,6 @@ function PainelTab(props: {
 
   return (
     <div className="space-y-4">
-      <LembretesPrazos />
-
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
         <h2 className="font-display mb-3 text-base font-semibold text-[var(--color-ink-900)]">Verificar certificação</h2>
         <div className="flex flex-wrap items-end gap-2">
