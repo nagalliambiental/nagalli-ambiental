@@ -850,10 +850,8 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
       clienteNome: emp.cliente.razaoSocial || emp.cliente.apelido,
       empreendNome: emp.apelido,
       resumo: emp.descricao ? `Resíduo — ${emp.descricao}` : f.resumo,
-      transportadorCnpj: cnpj || f.transportadorCnpj,
-      destinadorCnpj: cnpj || f.destinadorCnpj,
     }));
-    toast(`Empreendimento ${emp.apelido} preenchido automaticamente (CNPJ ${cnpj || "não informado"})`, "info");
+    toast(`Empreendimento ${emp.apelido} preenchido automaticamente (CNPJ ${cnpj || "não informado"} — informe transportador e destinador manualmente)`, "info");
   }
 
   async function emitir() {
