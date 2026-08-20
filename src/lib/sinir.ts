@@ -20,6 +20,8 @@ export interface SinirManifestoDados {
   certificado: boolean;
   clienteNome?: string;
   empreendNome?: string;
+  transportadorNome?: string;
+  destinadorNome?: string;
   resumo?: string;
   quantidade?: number;
   unidade?: string;
@@ -177,9 +179,9 @@ function extrairParceiro(obj: unknown): ParceiroLista {
   if (!obj || typeof obj !== "object") return {};
   const o = obj as Record<string, unknown>;
   return {
-    cpfCnpj: typeof o.cpfCnpj === "string" ? o.cpfCnpj : typeof o.cnpj === "string" ? o.cnpj : undefined,
-    nome: typeof o.nome === "string" ? o.nome : typeof o.razaoSocial === "string" ? o.razaoSocial : undefined,
-    unidade: typeof o.unidade === "string" ? o.unidade : typeof o.uniCodigo === "number" ? String(o.uniCodigo) : undefined,
+    cpfCnpj: typeof o.parCnpj === "string" ? o.parCnpj : typeof o.cpfCnpj === "string" ? o.cpfCnpj : typeof o.cnpj === "string" ? o.cnpj : undefined,
+    nome: typeof o.parDescricao === "string" ? o.parDescricao : typeof o.nome === "string" ? o.nome : typeof o.razaoSocial === "string" ? o.razaoSocial : undefined,
+    unidade: typeof o.uniCodigo === "number" ? String(o.uniCodigo) : typeof o.parCodigo === "number" ? String(o.parCodigo) : typeof o.unidade === "string" ? o.unidade : undefined,
   };
 }
 
@@ -200,13 +202,15 @@ function dataDeMs(v: unknown): Date | undefined {
 }
 
 function statusDeManifestoReal(obj: Record<string, unknown>): { status: SinirStatus | string; certificado: boolean } {
-  const s = String(obj.manSituacao || obj.situacao || obj.status || "").toUpperCase();
+  const sim = (obj.situacaoManifesto || {}) as { simDescricao?: string; simCodigo?: number };
+  const s = String(sim.simDescricao || obj.manSituacao || obj.situacao || obj.status || "").toUpperCase();
   const certificado = obj.cdfCodigo != null || obj.cdfNumero != null || String(obj.manCertificado || "").toUpperCase() === "S" || s.includes("CERTIF");
 
   if (s.includes("CANCEL")) return { status: SINIR_STATUS.CANCELADO, certificado: false };
   if (certificado) return { status: SINIR_STATUS.CERTIFICADO, certificado: true };
-  if (s.includes("RECEB")) return { status: SINIR_STATUS.RECEBIDO, certificado: false };
-  if (s.includes("SALVO")) return { status: SINIR_STATUS.SALVO, certificado: false };
+  if (s.includes("RECEB") || sim.simCodigo === 3) return { status: SINIR_STATUS.RECEBIDO, certificado: false };
+  if (s.includes("SALVO") || sim.simCodigo === 1) return { status: SINIR_STATUS.SALVO, certificado: false };
+  if (sim.simCodigo === 9) return { status: "ARMAZ_TEMPORARIO", certificado: false };
   return { status: SINIR_STATUS.EMITIDO, certificado: false };
 }
 
@@ -243,7 +247,14 @@ async function listarManifestosReais(
       if (!numero) continue;
 
       const { status, certificado } = statusDeManifestoReal(obj);
-      const gerador = extrairParceiro(obj.gerador || obj.dadosGerador);
+      const gerador = extrairParceiro(obj.parceiroGerador || obj.gerador || obj.dadosGerador);
+      const transportador = extrairParceiro(obj.parceiroTransportador || obj.transportador);
+      const destinador = extrairParceiro(obj.parceiroDestinador || obj.destinador);
+      const residuos = Array.isArray(obj.listaManifestoResiduo) ? (obj.listaManifestoResiduo as Record<string, unknown>[]) : [];
+      const resumoResiduo = residuos
+        .map((r) => (typeof r.marDescricaoInterna === "string" ? r.marDescricaoInterna : null))
+        .filter((v): v is string => Boolean(v))
+        .join("; ");
 
       manifestos.push({
         numero,
@@ -251,11 +262,13 @@ async function listarManifestosReais(
         certificado,
         clienteNome: gerador.nome || numeroString(obj.clienteNome),
         empreendNome: typeof obj.empreendimento === "string" ? obj.empreendimento : numeroString(obj.empreendNome),
-        resumo: typeof obj.resumoResiduos === "string" ? obj.resumoResiduos : numeroString(obj.resumo),
-        quantidade: typeof obj.manQuantidade === "number" ? obj.manQuantidade : undefined,
+        transportadorNome: transportador.nome || numeroString(obj.transportadorNome),
+        destinadorNome: destinador.nome || numeroString(obj.destinadorNome),
+        resumo: typeof obj.resumoResiduos === "string" ? obj.resumoResiduos : resumoResiduo || numeroString(obj.resumo || obj.manObservacao),
+        quantidade: typeof obj.manQuantidade === "number" ? obj.manQuantidade : residuos[0] && typeof residuos[0].marQuantidade === "number" ? residuos[0].marQuantidade : undefined,
         unidade: numeroString(obj.uniCodigo || obj.unidade),
-        dataExpedicao: dataDeMs(obj.dataExpedicao || obj.manDataExpedicao),
-        dataRecebimento: dataDeMs(obj.dataRecebimento || obj.manDataRecebimento),
+        dataExpedicao: dataDeMs(obj.dataExpedicao || obj.manDataExpedicao || obj.manData),
+        dataRecebimento: dataDeMs(obj.dataRecebimento || obj.manDataRecebimento || obj.manDataRecebimentoArmazenamentoTemporario),
       });
     }
 
@@ -456,6 +469,8 @@ export async function consultarManifesto(
       certificado: existente.certificado,
       clienteNome: existente.clienteNome || undefined,
       empreendNome: existente.empreendNome || undefined,
+      transportadorNome: existente.transportadorNome || undefined,
+      destinadorNome: existente.destinadorNome || undefined,
       resumo: existente.resumo || undefined,
       quantidade: existente.quantidade || undefined,
       unidade: existente.unidade || undefined,
@@ -470,7 +485,9 @@ export async function consultarManifesto(
 
   const obj = (env.objeto || env) as Record<string, unknown>;
   const { status, certificado } = statusDeManifestoReal(obj);
-  const gerador = extrairParceiro(obj.gerador || obj.dadosGerador);
+  const gerador = extrairParceiro(obj.parceiroGerador || obj.gerador || obj.dadosGerador);
+  const transportador = extrairParceiro(obj.parceiroTransportador || obj.transportador);
+  const destinador = extrairParceiro(obj.parceiroDestinador || obj.destinador);
 
   return {
     numero: numeroString(obj.manNumero) || numero,
@@ -478,11 +495,13 @@ export async function consultarManifesto(
     certificado,
     clienteNome: gerador.nome || numeroString(obj.clienteNome),
     empreendNome: typeof obj.empreendimento === "string" ? obj.empreendimento : numeroString(obj.empreendNome),
-    resumo: typeof obj.resumoResiduos === "string" ? obj.resumoResiduos : numeroString(obj.resumo),
+    transportadorNome: transportador.nome || numeroString(obj.transportadorNome),
+    destinadorNome: destinador.nome || numeroString(obj.destinadorNome),
+    resumo: typeof obj.resumoResiduos === "string" ? obj.resumoResiduos : numeroString(obj.resumo || obj.manObservacao),
     quantidade: typeof obj.manQuantidade === "number" ? obj.manQuantidade : undefined,
     unidade: numeroString(obj.uniCodigo || obj.unidade),
-    dataExpedicao: dataDeMs(obj.dataExpedicao || obj.manDataExpedicao),
-    dataRecebimento: dataDeMs(obj.dataRecebimento || obj.manDataRecebimento),
+    dataExpedicao: dataDeMs(obj.dataExpedicao || obj.manDataExpedicao || obj.manData),
+    dataRecebimento: dataDeMs(obj.dataRecebimento || obj.manDataRecebimento || obj.manDataRecebimentoArmazenamentoTemporario),
   };
 }
 
@@ -847,6 +866,8 @@ interface AlertaMtrDados {
   numero: string;
   clienteNome?: string | null;
   empreendNome?: string | null;
+  transportadorNome?: string | null;
+  destinadorNome?: string | null;
   quantidade?: number | null;
   unidade?: string | null;
   dataExpedicao?: Date | null;
@@ -898,8 +919,8 @@ export async function gerarPdfAlertaMtrsSalvos(
   const cab = (t: string, x: number, w: number) => linha(t, x, w, 8, ink500, bold);
 
   cab("NÚMERO DO MTR", 40, 160);
-  cab("CLIENTE", 210, 180);
-  cab("EMPREENDIMENTO", 400, 180);
+  cab("GERADOR", 210, 180);
+  cab("DESTINADOR", 400, 180);
   cab("DIAS EM SALVO", 590, 100);
   cab("QUANTIDADE", 690, 110);
   y -= 14;
@@ -914,7 +935,7 @@ export async function gerarPdfAlertaMtrsSalvos(
     }
     linha(m.numero, 40, 160, 9, ink900, bold);
     linha(m.clienteNome || "—", 210, 180, 9, ink700);
-    linha(m.empreendNome || "—", 400, 180, 9, ink700);
+    linha(m.destinadorNome || m.empreendNome || "—", 400, 180, 9, ink700);
     linha(`${m.diasEmSalvo} dia(s)`, 590, 100, 9, m.diasEmSalvo > limitesDias ? alertaCor : ink700, bold);
     linha(m.quantidade != null ? `${m.quantidade.toLocaleString("pt-BR")} ${m.unidade || ""}`.trim() : "—", 690, 110, 9, ink500);
     y -= 18;

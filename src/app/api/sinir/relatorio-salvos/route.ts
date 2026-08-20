@@ -42,6 +42,8 @@ export async function GET(req: NextRequest) {
       numero: m.numero,
       clienteNome: m.clienteNome,
       empreendNome: m.empreendNome,
+      transportadorNome: m.transportadorNome,
+      destinadorNome: m.destinadorNome,
       quantidade: m.quantidade,
       unidade: m.unidade,
       dataExpedicao: m.dataExpedicao,

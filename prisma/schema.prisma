@@ -430,6 +430,8 @@ model SinirManifesto {
   certificado   Boolean  @default(false)
   clienteNome   String?
   empreendNome  String?
+  transportadorNome String?
+  destinadorNome String?
   resumo        String?
   quantidade    Float?
   unidade       String?

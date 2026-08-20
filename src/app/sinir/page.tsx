@@ -39,6 +39,8 @@ interface Manifesto {
   certificado: boolean;
   clienteNome: string | null;
   empreendNome: string | null;
+  transportadorNome: string | null;
+  destinadorNome: string | null;
   resumo: string | null;
   quantidade: number | null;
   unidade: string | null;
@@ -53,6 +55,7 @@ const STATUS_BADGE: Record<string, string> = {
   EMITIDO: "bg-blue-50 text-blue-700",
   RECEBIDO: "bg-amber-50 text-amber-700",
   CANCELADO: "bg-red-50 text-red-700",
+  ARMAZ_TEMPORARIO: "bg-purple-50 text-purple-700",
 };
 
 function fmtData(v: string | null) {
@@ -704,8 +707,9 @@ function MeusMtrsTab(props: {
               <thead>
                 <tr className="border-b border-[var(--color-paper-200)] text-left">
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Número</th>
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Cliente</th>
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Empreendimento</th>
+                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Gerador</th>
+                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Destinador</th>
+                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Transportador</th>
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Expedição</th>
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Situação</th>
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Ações</th>
@@ -724,7 +728,8 @@ function MeusMtrsTab(props: {
                       >
                         <td className="py-2 px-2 font-mono text-xs text-[var(--color-ink-700)]">{m.numero}</td>
                         <td className="py-2 px-2 text-[var(--color-ink-700)]">{m.clienteNome || "—"}</td>
-                        <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.empreendNome || "—"}</td>
+                        <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.destinadorNome || "—"}</td>
+                        <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.transportadorNome || "—"}</td>
                         <td className="py-2 px-2 text-[var(--color-ink-600)] whitespace-nowrap">{fmtData(m.dataExpedicao)}</td>
                         <td className="py-2 px-2">
                           {m.status === "RECEBIDO" ? (
@@ -739,7 +744,7 @@ function MeusMtrsTab(props: {
                           ) : (
                             <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${STATUS_BADGE[m.status] || "bg-[var(--color-paper-100)] text-[var(--color-ink-600)]"}`}>
                               {m.status === "CERTIFICADO" ? <ShieldCheck size={12} /> : m.status === "CANCELADO" ? <XCircle size={12} /> : null}
-                              {m.status === "CERTIFICADO" ? "Certificado" : m.status}
+                              {m.status === "CERTIFICADO" ? "Certificado" : m.status === "ARMAZ_TEMPORARIO" ? "Armazenamento temporário" : m.status}
                             </span>
                           )}
                         </td>
