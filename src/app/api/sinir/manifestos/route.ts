@@ -36,9 +36,20 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
 
+  const id = req.nextUrl.searchParams.get("id");
   const conexaoId = req.nextUrl.searchParams.get("conexaoId");
+
+  if (id) {
+    const manifesto = await prisma.sinirManifesto.findUnique({ where: { id: Number(id) } });
+    if (!manifesto) {
+      return NextResponse.json({ error: "Manifesto não encontrado" }, { status: 404 });
+    }
+    await prisma.sinirManifesto.delete({ where: { id: Number(id) } });
+    return NextResponse.json({ removed: 1 });
+  }
+
   if (!conexaoId) {
-    return NextResponse.json({ error: "Parâmetro conexaoId é obrigatório" }, { status: 400 });
+    return NextResponse.json({ error: "Parâmetro id ou conexaoId é obrigatório" }, { status: 400 });
   }
 
   const result = await prisma.sinirManifesto.deleteMany({

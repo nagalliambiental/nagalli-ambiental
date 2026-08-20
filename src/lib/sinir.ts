@@ -456,3 +456,85 @@ export async function baixarManifestoPdf(
   const buffer = new Uint8Array(await res.arrayBuffer());
   return { buffer, filename: `MTR-${numero}.pdf` };
 }
+
+// ---------- PDF simulado ----------
+
+export async function gerarPdfSimulado(
+  manifesto: {
+    numero: string;
+    status: string;
+    certificado: boolean;
+    cdfNumero?: string | null;
+    clienteNome?: string | null;
+    empreendNome?: string | null;
+    resumo?: string | null;
+    quantidade?: number | null;
+    unidade?: string | null;
+    dataExpedicao?: Date | null;
+    dataRecebimento?: Date | null;
+  }
+): Promise<{ buffer: Uint8Array; nomeArquivo: string }> {
+  const { PDFDocument, StandardFonts } = await import("pdf-lib");
+  const { embedNagalliLogo, drawNagalliTopo, drawNagalliFooter, PALETTE } = await import("./report-branding");
+
+  const pdf = await PDFDocument.create();
+  const font = await pdf.embedFont(StandardFonts.Helvetica);
+  const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const logo = await embedNagalliLogo(pdf);
+  const page = pdf.addPage([842, 595]);
+
+  const topo = drawNagalliTopo(page, logo, font, bold);
+  const ink900 = PALETTE.ink["900"];
+  const ink700 = PALETTE.ink["700"];
+  const ink500 = PALETTE.ink["500"];
+  const brand700 = PALETTE.brand["700"];
+
+  let y = topo - 30;
+
+  page.drawText("MANIFESTO DE TRANSPORTE DE RESÍDUOS (SIMULAÇÃO)", { x: 40, y, size: 15, font: bold, color: brand700 });
+  y -= 18;
+  page.drawText("Documento fictício gerado pelo sistema — sem validade no SINIR", { x: 40, y, size: 9, font, color: ink500 });
+
+  y -= 30;
+
+  const rotulo = (label: string, valor: string, largura = 370) => {
+    page.drawText(label, { x: 40, y, size: 8, font: bold, color: ink500 });
+    page.drawText(valor, { x: 40, y: y - 13, size: 11, font: bold, color: ink900, maxWidth: largura });
+    y -= 40;
+  };
+
+  rotulo("NÚMERO DO MTR", manifesto.numero);
+  rotulo("CLIENTE", manifesto.clienteNome || "—");
+  rotulo("EMPREENDIMENTO", manifesto.empreendNome || "—");
+
+  page.drawText("RESÍDUO", { x: 40, y, size: 8, font: bold, color: ink500 });
+  page.drawText(manifesto.resumo || "—", { x: 40, y: y - 13, size: 10, font, color: ink900, maxWidth: 760 });
+  y -= 44;
+
+  rotulo("QUANTIDADE", manifesto.quantidade != null ? `${manifesto.quantidade.toLocaleString("pt-BR")} ${manifesto.unidade || ""}`.trim() : "—");
+
+  const fmt = (d?: Date | null) => (d ? d.toLocaleDateString("pt-BR") : "—");
+  rotulo("DATA DE EXPEDIÇÃO", fmt(manifesto.dataExpedicao), 180);
+  page.drawText("SITUAÇÃO", { x: 430, y: y + 40, size: 8, font: bold, color: ink500 });
+  page.drawText(
+    manifesto.certificado && manifesto.cdfNumero ? `CERTIFICADO (CDF ${manifesto.cdfNumero})` : manifesto.status,
+    { x: 430, y: y + 27, size: 11, font: bold, color: manifesto.certificado ? PALETTE.brand["600"] : ink700, maxWidth: 350 }
+  );
+
+  y -= 16;
+  page.drawRectangle({ x: 40, y, width: 762, height: 0.6, color: PALETTE.paper["200"] });
+  y -= 20;
+  page.drawText("Atenção: este documento é apenas uma simulação para teste do fluxo. Quando a conexão estiver em modo real, o PDF é baixado diretamente do SINIR.", {
+    x: 40,
+    y,
+    size: 8.5,
+    font,
+    color: ink500,
+    maxWidth: 760,
+  });
+
+  drawNagalliFooter(page, font, bold);
+
+  const bytes = await pdf.save();
+  return { buffer: new Uint8Array(bytes), nomeArquivo: `MTR-${manifesto.numero}.pdf` };
+}

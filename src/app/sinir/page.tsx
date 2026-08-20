@@ -206,6 +206,44 @@ function PainelTab(props: {
 
   const conexaoEfetiva = conexoes.some((c) => c.id === Number(conexaoId)) ? conexaoId : conexoes.length ? String(conexoes[0].id) : "";
 
+  async function baixarManifesto(m: Manifesto) {
+    try {
+      const res = await fetch(`/api/sinir/manifestos/${m.id}/download`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        toast(data?.error || "Falha ao baixar o PDF", "error");
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `MTR-${m.numero}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast("Falha ao baixar o PDF", "error");
+    }
+  }
+
+  async function excluirManifesto(m: Manifesto) {
+    if (!confirm(`Excluir o manifesto ${m.numero}?`)) return;
+    try {
+      const res = await fetch(`/api/sinir/manifestos?id=${m.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        toast(data?.error || "Falha ao excluir", "error");
+        return;
+      }
+      onVerificar();
+      toast("Manifesto excluído", "success");
+    } catch {
+      toast("Falha ao excluir", "error");
+    }
+  }
+
   async function verificar() {
     if (!conexaoEfetiva) {
       toast("Selecione uma conexão", "error");
@@ -317,6 +355,7 @@ function PainelTab(props: {
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Quantidade</th>
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Expedição</th>
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Situação</th>
+                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -332,6 +371,24 @@ function PainelTab(props: {
                         {m.certificado ? <CheckCircle2 size={12} /> : m.status === "CANCELADO" ? <XCircle size={12} /> : <AlertTriangle size={12} />}
                         {m.status === "CERTIFICADO" ? `CDF ${m.cdfNumero || ""}` : m.status}
                       </span>
+                    </td>
+                    <td className="py-2 px-2">
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => baixarManifesto(m)}
+                          title="Baixar PDF"
+                          className="rounded-md p-1.5 text-[var(--color-ink-600)] hover:bg-[var(--color-paper-100)] hover:text-[var(--color-brand-600)]"
+                        >
+                          <FileDown size={15} />
+                        </button>
+                        <button
+                          onClick={() => excluirManifesto(m)}
+                          title="Excluir"
+                          className="rounded-md p-1.5 text-[var(--color-ink-600)] hover:bg-red-50 hover:text-red-600"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
