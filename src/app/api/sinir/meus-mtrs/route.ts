@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json().catch(() => ({}));
-  const { conexaoId } = body;
+  const { conexaoId, dataInicial, dataFinal } = body;
   if (!conexaoId) {
     return NextResponse.json({ error: "conexaoId é obrigatório" }, { status: 400 });
   }
@@ -26,10 +26,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Conexão inativa" }, { status: 400 });
   }
 
-  const fim = new Date();
-  const inicio = new Date(fim.getTime() - 29 * 86400000);
-  const dataInicial = inicio.toISOString().slice(0, 10);
-  const dataFinal = fim.toISOString().slice(0, 10);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+  let fim: Date;
+  let inicio: Date;
+  if (dataInicial && dataFinal) {
+    const dI = new Date(`${dataInicial}T00:00:00`);
+    const dF = new Date(`${dataFinal}T23:59:59`);
+    if (isNaN(dI.getTime()) || isNaN(dF.getTime()) || dI > dF) {
+      return NextResponse.json({ error: "Período de consulta inválido — dataInicial deve ser anterior a dataFinal" }, { status: 400 });
+    }
+    inicio = dI;
+    fim = dF;
+  } else {
+    fim = new Date();
+    inicio = new Date(fim.getTime() - 29 * 86400000);
+  }
+  const dataInicialFmt = iso(inicio);
+  const dataFinalFmt = iso(fim);
 
   const conexaoCompleta = {
     id: conexao.id,
@@ -45,7 +60,7 @@ export async function POST(req: NextRequest) {
 
   let manifestos;
   try {
-    manifestos = await consultarTodosManifestos(conexaoCompleta, { dataInicial, dataFinal });
+    manifestos = await consultarTodosManifestos(conexaoCompleta, { dataInicial: dataInicialFmt, dataFinal: dataFinalFmt });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Falha ao consultar manifestos no SINIR" },
@@ -99,7 +114,7 @@ export async function POST(req: NextRequest) {
     {
       acao: "meus-mtrs",
       conexao: conexao.nome,
-      periodo: `${dataInicial} a ${dataFinal}`,
+      periodo: `${dataInicialFmt} a ${dataFinalFmt}`,
       papeis: SINIR_TIPOS_PARCEIRO.map((p) => `${p.rotulo}=${p.valor}`).join(", "),
       encontrados: manifestos.length,
     },
@@ -110,7 +125,7 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({
     conexao: { id: conexao.id, nome: conexao.nome, modo: conexao.modo },
-    periodo: { dataInicial, dataFinal },
+    periodo: { dataInicial: dataInicialFmt, dataFinal: dataFinalFmt },
     papeis: SINIR_TIPOS_PARCEIRO.map((p) => p.rotulo),
     total: manifestos.length,
     pendentes: pendentes.length,

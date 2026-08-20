@@ -569,6 +569,12 @@ function MeusMtrsTab(props: {
   const [gerandoAlerta, setGerandoAlerta] = useState(false);
   const [consultando, setConsultando] = useState(false);
 
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const hoje = new Date();
+  const inicioPadrao = new Date(hoje.getTime() - 29 * 86400000);
+  const [dataInicial, setDataInicial] = useState(`${inicioPadrao.getFullYear()}-${pad(inicioPadrao.getMonth() + 1)}-${pad(inicioPadrao.getDate())}`);
+  const [dataFinal, setDataFinal] = useState(`${hoje.getFullYear()}-${pad(hoje.getMonth() + 1)}-${pad(hoje.getDate())}`);
+
   const limiteDias = 7;
   const conexaoEfetiva = conexoes.some((c) => c.id === Number(conexaoId)) ? conexaoId : conexoes.length ? String(conexoes[0].id) : "";
 
@@ -582,12 +588,20 @@ function MeusMtrsTab(props: {
       toast("Selecione uma conexão", "error");
       return;
     }
+    if (!dataInicial || !dataFinal) {
+      toast("Informe o período de consulta", "error");
+      return;
+    }
+    if (new Date(dataInicial) > new Date(dataFinal)) {
+      toast("Período inválido — data inicial após a data final", "error");
+      return;
+    }
     setConsultando(true);
     try {
       const res = await fetch("/api/sinir/meus-mtrs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conexaoId: Number(conexaoEfetiva) }),
+        body: JSON.stringify({ conexaoId: Number(conexaoEfetiva), dataInicial, dataFinal }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) {
@@ -595,7 +609,7 @@ function MeusMtrsTab(props: {
         return;
       }
       onVerificar();
-      toast(`SINIR consultado: ${data.total} MTR(s) nos últimos 30 dias (${data.papeis?.join(", ")})`, "success");
+      toast(`SINIR consultado: ${data.total} MTR(s) de ${dataInicial} a ${dataFinal} (${data.papeis?.join(", ")})`, "success");
     } catch {
       toast("Falha ao consultar o SINIR", "error");
     } finally {
@@ -641,7 +655,7 @@ function MeusMtrsTab(props: {
           <div>
             <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Meus MTRs — consulta semanal</h2>
             <p className="mt-1 text-sm text-[var(--color-ink-500)]">
-              Puxa do SINIR todos os MTRs dos últimos 30 dias em que a empresa consta (gerador, transportador, destinador ou armazenador). Situação de cada MTR: <b className="text-green-700">Recebido</b> = tudo ok; <b className="text-red-700">Salvo há mais de {limiteDias} dias</b> = avisar o cliente.
+              Busca no SINIR todos os MTRs do período escolhido em que a empresa consta (gerador, transportador, destinador ou armazenador) — períodos maiores que 30 dias são divididos automaticamente. Situação de cada MTR: <b className="text-green-700">Recebido</b> = tudo ok; <b className="text-red-700">Salvo há mais de {limiteDias} dias</b> = avisar o cliente.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -654,13 +668,28 @@ function MeusMtrsTab(props: {
                 <option key={c.id} value={c.id}>{c.nome} {c.modo === "mock" ? "(simulação)" : ""}</option>
               ))}
             </select>
+            <div className="flex items-center gap-1.5 text-sm">
+              <input
+                type="date"
+                value={dataInicial}
+                onChange={(e) => setDataInicial(e.target.value)}
+                className="rounded-lg border border-[var(--color-paper-200)] px-2 py-2 text-sm"
+              />
+              <span className="text-[var(--color-ink-500)]">até</span>
+              <input
+                type="date"
+                value={dataFinal}
+                onChange={(e) => setDataFinal(e.target.value)}
+                className="rounded-lg border border-[var(--color-paper-200)] px-2 py-2 text-sm"
+              />
+            </div>
             <button
               onClick={consultarSinir}
               disabled={consultando || conexoes.length === 0}
               className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
             >
               {consultando ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
-              {consultando ? "Consultando..." : "Consultar SINIR (30 dias)"}
+              {consultando ? "Consultando..." : "Consultar SINIR"}
             </button>
             <button
               onClick={gerarAlertaPdf}
