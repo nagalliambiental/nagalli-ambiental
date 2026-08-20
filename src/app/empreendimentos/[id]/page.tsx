@@ -8,7 +8,7 @@ import { ehPrivilegiado } from "@/lib/perfil";
 import { Topbar } from "@/components/Topbar";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Map, MapPin, Building2, Calendar, FileText, Edit3, ArrowLeft, Download } from "lucide-react";
+import { Map, MapPin, Building2, Calendar, FileText, Edit3, ArrowLeft, Download, Hash } from "lucide-react";
 import Link from "next/link";
 import DeleteButton from "@/components/DeleteButton";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
@@ -36,7 +36,7 @@ export default async function EmpreendimentoDetailPage(props: { params: Promise<
   const emp = await prisma.empreendimento.findUnique({
     where: { id: Number(id) },
     select: {
-      id: true, apelido: true, descricao: true, cnpj: true, cep: true,
+      id: true, apelido: true, descricao: true, cnpj: true, unidadeSinir: true, cep: true,
       municipio: true, uf: true, rua: true, numero: true, bairro: true,
       complemento: true, latitude: true, longitude: true,
       utmX: true, utmY: true, utmZona: true, utmHemisferio: true,

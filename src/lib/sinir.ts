@@ -218,7 +218,7 @@ export async function consultarManifestosTodasFuncoes(
   conexao: SinirConexaoCompleta,
   opts: { dataInicial: string; dataFinal: string }
 ): Promise<SinirManifestoDados[]> {
-  const [dI, dF] = [new Date(`${opts.dataInicial}T00:00:00`), new Date(`${opts.dataFinal}T23:59:59`)];
+  const [dI, dF] = [parseDataDm(opts.dataInicial), parseDataDm(opts.dataFinal)];
   if (isNaN(dI.getTime()) || isNaN(dF.getTime()) || dI > dF) {
     throw new SinirError("Período de consulta inválido", 400);
   }
@@ -246,7 +246,7 @@ export async function consultarTodosManifestos(
   conexao: SinirConexaoCompleta,
   opts: { dataInicial: string; dataFinal: string }
 ): Promise<SinirManifestoDados[]> {
-  const [dI, dF] = [new Date(`${opts.dataInicial}T00:00:00`), new Date(`${opts.dataFinal}T23:59:59`)];
+  const [dI, dF] = [parseDataDm(opts.dataInicial), parseDataDm(opts.dataFinal)];
   if (isNaN(dI.getTime()) || isNaN(dF.getTime()) || dI > dF) {
     throw new SinirError("Período de consulta inválido", 400);
   }
@@ -259,7 +259,16 @@ export async function consultarTodosManifestos(
 }
 
 function fmtDataDm(d: Date): string {
-  return d.toLocaleDateString("pt-BR");
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()}`;
+}
+
+function parseDataDm(s: string): Date {
+  const m = s.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+  if (m) return new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (iso) return new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
+  return new Date(NaN);
 }
 
 async function gerarManifestosMock(
@@ -353,7 +362,7 @@ export async function verificarManifestos(
   opts: { dataInicial: string; dataFinal: string; tipoParceiro?: number }
 ): Promise<SinirManifestoDados[]> {
   const tipoParceiro = opts.tipoParceiro ?? 1;
-  const [dI, dF] = [new Date(`${opts.dataInicial}T00:00:00`), new Date(`${opts.dataFinal}T23:59:59`)];
+  const [dI, dF] = [parseDataDm(opts.dataInicial), parseDataDm(opts.dataFinal)];
   if (isNaN(dI.getTime()) || isNaN(dF.getTime()) || dI > dF) {
     throw new SinirError("Período de verificação inválido", 400);
   }
