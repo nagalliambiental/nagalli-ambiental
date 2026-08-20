@@ -195,7 +195,7 @@ export default function SinirPage() {
       )}
 
       {tab === "meusMtrs" && (
-        <MeusMtrsTab conexoes={conexoes} manifestos={manifestos} loading={manifestosLoading} filtro={filtro} setFiltro={setFiltro} toast={toast} />
+        <MeusMtrsTab conexoes={conexoes} manifestos={manifestos} loading={manifestosLoading} filtro={filtro} setFiltro={setFiltro} onVerificar={() => carregarManifestos()} toast={toast} />
       )}
 
       {tab === "emitir" && (
@@ -557,11 +557,13 @@ function MeusMtrsTab(props: {
   loading: boolean;
   filtro: string;
   setFiltro: (f: string) => void;
+  onVerificar: () => void;
   toast: ToastFn;
 }) {
-  const { conexoes, manifestos, loading, filtro, setFiltro, toast } = props;
+  const { conexoes, manifestos, loading, filtro, setFiltro, onVerificar, toast } = props;
   const [conexaoId, setConexaoId] = useState("");
   const [gerandoAlerta, setGerandoAlerta] = useState(false);
+  const [consultando, setConsultando] = useState(false);
 
   const limiteDias = 7;
   const conexaoEfetiva = conexoes.some((c) => c.id === Number(conexaoId)) ? conexaoId : conexoes.length ? String(conexoes[0].id) : "";
@@ -570,6 +572,32 @@ function MeusMtrsTab(props: {
     (m) => (m.status === "SALVO" || m.status === "EMITIDO") && !m.certificado
   );
   const emAtraso = salvos.filter((m) => diasEmSalvo(m) > limiteDias);
+
+  async function consultarSinir() {
+    if (!conexaoEfetiva) {
+      toast("Selecione uma conexão", "error");
+      return;
+    }
+    setConsultando(true);
+    try {
+      const res = await fetch("/api/sinir/meus-mtrs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conexaoId: Number(conexaoEfetiva) }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        toast(data?.error || "Falha ao consultar o SINIR", "error");
+        return;
+      }
+      onVerificar();
+      toast(`SINIR consultado: ${data.total} MTR(s) nos últimos 30 dias (${data.papeis?.join(", ")})`, "success");
+    } catch {
+      toast("Falha ao consultar o SINIR", "error");
+    } finally {
+      setConsultando(false);
+    }
+  }
 
   async function gerarAlertaPdf() {
     if (!conexaoEfetiva) {
@@ -609,7 +637,7 @@ function MeusMtrsTab(props: {
           <div>
             <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Meus MTRs — consulta semanal</h2>
             <p className="mt-1 text-sm text-[var(--color-ink-500)]">
-              Situação de cada MTR: <b className="text-green-700">Recebido</b> = tudo ok; <b className="text-red-700">Salvo há mais de {limiteDias} dias</b> = avisar o cliente.
+              Puxa do SINIR todos os MTRs dos últimos 30 dias em que a empresa consta (gerador, transportador, destinador ou armazenador). Situação de cada MTR: <b className="text-green-700">Recebido</b> = tudo ok; <b className="text-red-700">Salvo há mais de {limiteDias} dias</b> = avisar o cliente.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -622,6 +650,14 @@ function MeusMtrsTab(props: {
                 <option key={c.id} value={c.id}>{c.nome} {c.modo === "mock" ? "(simulação)" : ""}</option>
               ))}
             </select>
+            <button
+              onClick={consultarSinir}
+              disabled={consultando || conexoes.length === 0}
+              className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
+            >
+              {consultando ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+              {consultando ? "Consultando..." : "Consultar SINIR (30 dias)"}
+            </button>
             <button
               onClick={gerarAlertaPdf}
               disabled={gerandoAlerta || emAtraso.length === 0}
@@ -659,7 +695,7 @@ function MeusMtrsTab(props: {
           </div>
         ) : manifestos.length === 0 ? (
           <p className="py-8 text-center text-sm text-[var(--color-ink-500)]">
-            Nenhum MTR ainda. Use a aba Painel → Verificar para buscar os manifestos do SINIR.
+            Nenhum MTR ainda. Clique em &quot;Consultar SINIR&quot; para buscar todos os MTRs dos últimos 30 dias (incluindo os emitidos pelos clientes).
           </p>
         ) : (
           <div className="overflow-x-auto">

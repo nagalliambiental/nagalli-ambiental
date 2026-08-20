@@ -153,46 +153,109 @@ async function listarManifestosReais(
   dataFinal: string,
   tipoParceiro: number
 ): Promise<SinirManifestoDados[]> {
-  const resultado = await apiFetch(conexao, "/listaManifesto", {
-    method: "POST",
-    body: { dataInicial, dataFinal, tipoParceiro },
-    query: { page: "0", size: "100" },
-  });
-
-  const env = (resultado || {}) as { erro?: boolean; mensagem?: string; objetoResposta?: unknown; totalRecords?: number };
-  if (env.erro) throw new SinirError(env.mensagem || "Falha ao listar manifestos no SINIR", 500);
-
-  const lista = Array.isArray(env.objetoResposta)
-    ? env.objetoResposta
-    : Array.isArray(env)
-      ? (env as unknown[])
-      : [];
-
   const manifestos: SinirManifestoDados[] = [];
-  for (const item of lista) {
-    if (!item || typeof item !== "object") continue;
-    const obj = item as Record<string, unknown>;
-    const numero = numeroString(obj.manNumero || obj.manifestoNumeroNacional || obj.manNumeroNacional);
-    if (!numero) continue;
+  const size = 100;
+  let page = 0;
 
-    const { status, certificado } = statusDeManifestoReal(obj);
-    const gerador = extrairParceiro(obj.gerador || obj.dadosGerador);
-
-    manifestos.push({
-      numero,
-      status,
-      certificado,
-      clienteNome: gerador.nome || numeroString(obj.clienteNome),
-      empreendNome: typeof obj.empreendimento === "string" ? obj.empreendimento : numeroString(obj.empreendNome),
-      resumo: typeof obj.resumoResiduos === "string" ? obj.resumoResiduos : numeroString(obj.resumo),
-      quantidade: typeof obj.manQuantidade === "number" ? obj.manQuantidade : undefined,
-      unidade: numeroString(obj.uniCodigo || obj.unidade),
-      dataExpedicao: dataDeMs(obj.dataExpedicao || obj.manDataExpedicao),
-      dataRecebimento: dataDeMs(obj.dataRecebimento || obj.manDataRecebimento),
+  for (;;) {
+    const resultado = await apiFetch(conexao, "/listaManifesto", {
+      method: "POST",
+      body: { dataInicial, dataFinal, tipoParceiro },
+      query: { page: String(page), size: String(size) },
     });
+
+    const env = (resultado || {}) as { erro?: boolean; mensagem?: string; objetoResposta?: unknown; totalRecords?: number };
+    if (env.erro) throw new SinirError(env.mensagem || "Falha ao listar manifestos no SINIR", 500);
+
+    const lista = Array.isArray(env.objetoResposta)
+      ? env.objetoResposta
+      : Array.isArray(env)
+        ? (env as unknown[])
+        : [];
+
+    for (const item of lista) {
+      if (!item || typeof item !== "object") continue;
+      const obj = item as Record<string, unknown>;
+      const numero = numeroString(obj.manNumero || obj.manifestoNumeroNacional || obj.manNumeroNacional);
+      if (!numero) continue;
+
+      const { status, certificado } = statusDeManifestoReal(obj);
+      const gerador = extrairParceiro(obj.gerador || obj.dadosGerador);
+
+      manifestos.push({
+        numero,
+        status,
+        certificado,
+        clienteNome: gerador.nome || numeroString(obj.clienteNome),
+        empreendNome: typeof obj.empreendimento === "string" ? obj.empreendimento : numeroString(obj.empreendNome),
+        resumo: typeof obj.resumoResiduos === "string" ? obj.resumoResiduos : numeroString(obj.resumo),
+        quantidade: typeof obj.manQuantidade === "number" ? obj.manQuantidade : undefined,
+        unidade: numeroString(obj.uniCodigo || obj.unidade),
+        dataExpedicao: dataDeMs(obj.dataExpedicao || obj.manDataExpedicao),
+        dataRecebimento: dataDeMs(obj.dataRecebimento || obj.manDataRecebimento),
+      });
+    }
+
+    const total = typeof env.totalRecords === "number" ? env.totalRecords : undefined;
+    page += 1;
+    if (lista.length < size) break;
+    if (total != null && page * size >= total) break;
+    if (page > 50) break;
   }
 
   return manifestos;
+}
+
+// Papéis em que a empresa cadastrada pode constar no MTR (conforme doc do SINIR)
+export const SINIR_TIPOS_PARCEIRO = [
+  { valor: 8, rotulo: "Gerador" },
+  { valor: 5, rotulo: "Transportador" },
+  { valor: 9, rotulo: "Destinador" },
+  { valor: 10, rotulo: "Armazenador Temporário" },
+];
+
+export async function consultarManifestosTodasFuncoes(
+  conexao: SinirConexaoCompleta,
+  opts: { dataInicial: string; dataFinal: string }
+): Promise<SinirManifestoDados[]> {
+  const [dI, dF] = [new Date(`${opts.dataInicial}T00:00:00`), new Date(`${opts.dataFinal}T23:59:59`)];
+  if (isNaN(dI.getTime()) || isNaN(dF.getTime()) || dI > dF) {
+    throw new SinirError("Período de consulta inválido", 400);
+  }
+
+  const janelas: { inicio: string; fim: string }[] = [];
+  let cursor = new Date(dI);
+  while (cursor <= dF) {
+    const fimJanela = new Date(Math.min(cursor.getTime() + 29 * 86400000, dF.getTime()));
+    janelas.push({ inicio: fmtDataDm(cursor), fim: fmtDataDm(fimJanela) });
+    cursor = new Date(fimJanela.getTime() + 86400000);
+  }
+
+  const porNumero = new Map<string, SinirManifestoDados>();
+  for (const tipo of SINIR_TIPOS_PARCEIRO) {
+    for (const janela of janelas) {
+      const lista = await listarManifestosReais(conexao, janela.inicio, janela.fim, tipo.valor);
+      for (const m of lista) porNumero.set(m.numero, m);
+    }
+  }
+
+  return [...porNumero.values()];
+}
+
+export async function consultarTodosManifestos(
+  conexao: SinirConexaoCompleta,
+  opts: { dataInicial: string; dataFinal: string }
+): Promise<SinirManifestoDados[]> {
+  const [dI, dF] = [new Date(`${opts.dataInicial}T00:00:00`), new Date(`${opts.dataFinal}T23:59:59`)];
+  if (isNaN(dI.getTime()) || isNaN(dF.getTime()) || dI > dF) {
+    throw new SinirError("Período de consulta inválido", 400);
+  }
+
+  if (conexao.modo === "mock") {
+    return gerarManifestosMock(conexao, dI, dF);
+  }
+
+  return consultarManifestosTodasFuncoes(conexao, { dataInicial: fmtDataDm(dI), dataFinal: fmtDataDm(dF) });
 }
 
 function fmtDataDm(d: Date): string {
