@@ -276,35 +276,35 @@ export async function listarCatalogos(conexao: SinirConexaoCompleta): Promise<Si
   const unidades = listaDeResposta(unidadesR)
     .map((item) => {
       const o = item as Record<string, unknown>;
-      return { uniCodigo: num(o.uniCodigo) ?? 0, uniNome: str(o.uniNome), uniSigla: str(o.uniSigla) };
+      return { uniCodigo: num(o.uniCodigo) ?? 0, uniNome: str(o.uniNome || o.uniDescricao), uniSigla: str(o.uniSigla) };
     })
     .filter((u) => u.uniCodigo > 0);
 
   const estadosFisicos = listaDeResposta(estadosR)
     .map((item) => {
       const o = item as Record<string, unknown>;
-      return { tieCodigo: num(o.tieCodigo) ?? 0, tieDescricao: str(o.tieDescricao || o.tieNome) };
+      return { tieCodigo: num(o.tieCodigo) ?? 0, tieDescricao: str(o.tieDescricao || o.tieNome || o.descricao) };
     })
     .filter((e) => e.tieCodigo > 0);
 
   const classes = listaDeResposta(classesR)
     .map((item) => {
       const o = item as Record<string, unknown>;
-      return { claCodigo: num(o.claCodigo) ?? 0, claNome: str(o.claNome) };
+      return { claCodigo: num(o.claCodigo) ?? 0, claNome: str(o.claNome || o.claDescricao || o.descricao || o.nome) };
     })
     .filter((c) => c.claCodigo > 0);
 
   const acondicionamentos = listaDeResposta(acondR)
     .map((item) => {
       const o = item as Record<string, unknown>;
-      return { tiaCodigo: num(o.tiaCodigo) ?? 0, tiaDescricao: str(o.tiaDescricao || o.tiaNome) };
+      return { tiaCodigo: num(o.tiaCodigo) ?? 0, tiaDescricao: str(o.tiaDescricao || o.tiaNome || o.descricao) };
     })
     .filter((a) => a.tiaCodigo > 0);
 
   const tratamentos = listaDeResposta(tratR)
     .map((item) => {
       const o = item as Record<string, unknown>;
-      return { traCodigo: num(o.traCodigo) ?? 0, traDescricao: str(o.traDescricao || o.traNome) };
+      return { traCodigo: num(o.traCodigo) ?? 0, traDescricao: str(o.traDescricao || o.traNome || o.descricao) };
     })
     .filter((t) => t.traCodigo > 0);
 
