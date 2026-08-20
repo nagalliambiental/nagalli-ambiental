@@ -40,9 +40,6 @@ export async function POST(req: NextRequest) {
   if (!session?.user) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
-  if (perfil !== "socio" && perfil !== "admin") {
-    return NextResponse.json({ error: "Acesso restrito" }, { status: 403 });
-  }
 
   const body = await req.json();
   const { nome, cnpj, unidade, token, modo, venceEm } = body;
@@ -54,14 +51,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "modo deve ser 'mock' ou 'real'" }, { status: 400 });
   }
 
+  const ehPrivilegiado = perfil === "socio" || perfil === "admin";
+  if (modo === "real" && !ehPrivilegiado) {
+    return NextResponse.json({ error: "Apenas sócio ou administrador pode cadastrar token em modo real" }, { status: 403 });
+  }
+
   const conexao = await prisma.sinirConexao.create({
     data: {
       nome,
       cnpj: String(cnpj).replace(/\D/g, ""),
       unidade: String(unidade),
-      token: token ? criptografar(String(token)) : null,
-      modo: modo === "real" ? "real" : "mock",
-      venceEm: venceEm ? new Date(venceEm) : null,
+      token: token && ehPrivilegiado ? criptografar(String(token)) : null,
+      modo: modo === "real" && ehPrivilegiado ? "real" : "mock",
+      venceEm: venceEm && ehPrivilegiado ? new Date(venceEm) : null,
     },
   });
 
@@ -70,12 +72,8 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   const session = await auth();
-  const perfil = (session?.user as { perfil?: string } | undefined)?.perfil;
   if (!session?.user) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-  }
-  if (perfil !== "socio" && perfil !== "admin") {
-    return NextResponse.json({ error: "Acesso restrito" }, { status: 403 });
   }
 
   const ids = req.nextUrl.searchParams.get("ids");

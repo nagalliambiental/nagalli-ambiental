@@ -32,12 +32,8 @@ export async function GET(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   const session = await auth();
-  const perfil = (session?.user as { perfil?: string } | undefined)?.perfil;
   if (!session?.user) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-  }
-  if (perfil !== "socio" && perfil !== "admin") {
-    return NextResponse.json({ error: "Acesso restrito" }, { status: 403 });
   }
 
   const conexaoId = req.nextUrl.searchParams.get("conexaoId");

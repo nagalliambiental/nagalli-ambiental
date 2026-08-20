@@ -11,9 +11,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   if (!session?.user) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
-  if (perfil !== "socio" && perfil !== "admin") {
-    return NextResponse.json({ error: "Acesso restrito" }, { status: 403 });
-  }
+  const ehPrivilegiado = perfil === "socio" || perfil === "admin";
 
   const { id } = await params;
   const conexao = await prisma.sinirConexao.findUnique({ where: { id: Number(id) } });
@@ -32,13 +30,26 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     if (modo !== "mock" && modo !== "real") {
       return NextResponse.json({ error: "modo deve ser 'mock' ou 'real'" }, { status: 400 });
     }
+    if (modo === "real" && !ehPrivilegiado) {
+      return NextResponse.json({ error: "Apenas sócio ou administrador pode ativar o modo real" }, { status: 403 });
+    }
     data.modo = modo;
   }
-  if (token !== undefined) data.token = token ? criptografar(String(token)) : null;
-  if (venceEm !== undefined) data.venceEm = venceEm ? new Date(venceEm) : null;
+  if (token !== undefined) {
+    if (!ehPrivilegiado) {
+      return NextResponse.json({ error: "Apenas sócio ou administrador pode alterar o token" }, { status: 403 });
+    }
+    data.token = token ? criptografar(String(token)) : null;
+  }
+  if (venceEm !== undefined) {
+    if (!ehPrivilegiado) {
+      return NextResponse.json({ error: "Apenas sócio ou administrador pode alterar o vencimento do token" }, { status: 403 });
+    }
+    data.venceEm = venceEm ? new Date(venceEm) : null;
+  }
   if (ativo !== undefined) data.ativo = Boolean(ativo);
 
-const atualizada = await prisma.sinirConexao.update({
+  const atualizada = await prisma.sinirConexao.update({
     where: { id: Number(id) },
     data,
     select: { id: true, nome: true, modo: true, ativo: true, token: true, venceEm: true },

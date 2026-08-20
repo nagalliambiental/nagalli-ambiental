@@ -6,12 +6,8 @@ import { emitirManifesto, SinirError } from "@/lib/sinir";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
-  const perfil = (session?.user as { perfil?: string } | undefined)?.perfil;
   if (!session?.user) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-  }
-  if (perfil !== "socio" && perfil !== "admin") {
-    return NextResponse.json({ error: "Acesso restrito" }, { status: 403 });
   }
 
   const body = await req.json();
