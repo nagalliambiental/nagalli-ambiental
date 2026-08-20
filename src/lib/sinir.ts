@@ -49,6 +49,7 @@ export interface EmitirManifestoResiduoInput {
   claCodigo: number;
   tiaCodigo: number;
   traCodigo: number;
+  marDensidade?: number;
   marNumeroONU?: string;
   marClasseRisco?: string;
   marNomeEmbarque?: string;

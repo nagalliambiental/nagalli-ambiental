@@ -2,12 +2,12 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { Topbar } from "@/components/Topbar";
-import { Truck, RefreshCw, Send, Link2, Loader2, CheckCircle2, AlertTriangle, XCircle, FileDown, Trash2, Ban, ShieldCheck, Clock, Search, Plus, X, Pencil, PackagePlus } from "lucide-react";
+import { Truck, RefreshCw, Send, Link2, Loader2, CheckCircle2, AlertTriangle, XCircle, FileDown, Trash2, Ban, ShieldCheck, Clock, Search, Plus, X, Pencil, PackagePlus, Bookmark, Save } from "lucide-react";
 import { useToast } from "@/components/Toast";
 
 type ToastFn = (message: string, type?: "success" | "error" | "info" | "warning") => void;
 
-type Tab = "painel" | "meusMtrs" | "emitir" | "conexoes";
+type Tab = "painel" | "meusMtrs" | "emitir" | "modelos" | "conexoes";
 
 interface Conexao {
   id: number;
@@ -52,6 +52,7 @@ interface Manifesto {
 interface ResiduoCadastro {
   resCodigoIbama: string;
   marQuantidade: string;
+  marDensidade: string;
   uniCodigo: string;
   tieCodigo: string;
   claCodigo: string;
@@ -73,6 +74,39 @@ interface SinirCatalogosFront {
   classes: { claCodigo: number; claNome: string }[];
   acondicionamentos: { tiaCodigo: number; tiaDescricao: string }[];
   tratamentos: { traCodigo: number; traDescricao: string }[];
+}
+
+interface ModeloMtr {
+  id: number;
+  nome: string;
+  descricao: string | null;
+  conexaoId: number | null;
+  clienteNome: string | null;
+  empreendNome: string | null;
+  nomeResponsavel: string | null;
+  transportadorCnpj: string | null;
+  transportadorNome: string | null;
+  transportadorEndereco: string | null;
+  transportadorNumero: string | null;
+  transportadorUf: string | null;
+  transportadorCidade: string | null;
+  transportadorCep: string | null;
+  transportadorLicenca: string | null;
+  transportadorOrgao: string | null;
+  destinadorCnpj: string | null;
+  destinadorNome: string | null;
+  destinadorEndereco: string | null;
+  destinadorNumero: string | null;
+  destinadorUf: string | null;
+  destinadorCidade: string | null;
+  destinadorCep: string | null;
+  destinadorLicenca: string | null;
+  destinadorOrgao: string | null;
+  nomeMotorista: string | null;
+  placaVeiculo: string | null;
+  observacoes: string | null;
+  residuos: ResiduoCadastro[];
+  conexao: { id: number; nome: string; modo: string } | null;
 }
 
 const STATUS_BADGE: Record<string, string> = {
@@ -103,11 +137,21 @@ export default function SinirPage() {
   const [manifestosLoading, setManifestosLoading] = useState(false);
   const [filtro, setFiltro] = useState("todos");
   const [empreendimentos, setEmpreendimentos] = useState<EmpreendimentoOpcao[]>([]);
+  const [modelos, setModelos] = useState<ModeloMtr[]>([]);
 
   const carregarConexoes = useCallback(async () => {
     try {
       const res = await fetch("/api/sinir/conexoes");
       if (res.ok) setConexoes(await res.json());
+    } catch {
+      // silencioso
+    }
+  }, []);
+
+  const carregarModelos = useCallback(async () => {
+    try {
+      const res = await fetch("/api/sinir/modelos");
+      if (res.ok) setModelos(await res.json());
     } catch {
       // silencioso
     }
@@ -136,6 +180,19 @@ export default function SinirPage() {
         if (res.ok) setConexoes(await res.json());
       } catch {
         if (!controller.signal.aborted) setConexoes([]);
+      }
+    })();
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const res = await fetch("/api/sinir/modelos", { signal: controller.signal });
+        if (res.ok) setModelos(await res.json());
+      } catch {
+        if (!controller.signal.aborted) setModelos([]);
       }
     })();
     return () => controller.abort();
@@ -191,6 +248,7 @@ export default function SinirPage() {
             { key: "painel", label: "Painel" },
             { key: "meusMtrs", label: "Meus MTRs" },
             { key: "emitir", label: "Emitir MTR" },
+            { key: "modelos", label: "Modelos" },
             { key: "conexoes", label: "Conexões" },
           ] as { key: Tab; label: string }[]
         ).map((t) => (
@@ -229,7 +287,18 @@ export default function SinirPage() {
       )}
 
       {tab === "emitir" && (
-        <EmitirTab conexoes={conexoes} empreendimentos={empreendimentos} onEmitido={() => { carregarManifestos(); carregarConexoes(); }} toast={toast} />
+        <EmitirTab
+          conexoes={conexoes}
+          empreendimentos={empreendimentos}
+          modelos={modelos}
+          onEmitido={() => { carregarManifestos(); carregarConexoes(); }}
+          onModelosChanged={() => carregarModelos()}
+          toast={toast}
+        />
+      )}
+
+      {tab === "modelos" && (
+        <ModelosTab conexoes={conexoes} modelos={modelos} onChanged={() => carregarModelos()} toast={toast} />
       )}
 
       {tab === "conexoes" && (
@@ -853,8 +922,8 @@ function MeusMtrsTab(props: {
 
 // ---------- Emitir ----------
 
-function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: EmpreendimentoOpcao[]; onEmitido: () => void; toast: ToastFn }) {
-  const { conexoes, empreendimentos, onEmitido, toast } = props;
+function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: EmpreendimentoOpcao[]; modelos: ModeloMtr[]; onEmitido: () => void; onModelosChanged: () => void; toast: ToastFn }) {
+  const { conexoes, empreendimentos, modelos, onEmitido, onModelosChanged, toast } = props;
   const [form, setForm] = useState({
     conexaoId: "",
     empreendimentoId: "",
@@ -907,6 +976,7 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
   const [residuoForm, setResiduoForm] = useState<ResiduoCadastro>({
     resCodigoIbama: "",
     marQuantidade: "",
+    marDensidade: "",
     uniCodigo: "",
     tieCodigo: "",
     claCodigo: "",
@@ -1011,7 +1081,107 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
     }
   }
 
-  function abrirModalResiduo(indice?: number) {
+  function aplicarModelo(id: string) {
+    const m = modelos.find((x) => x.id === Number(id));
+    if (!m) return;
+    setForm((f) => ({
+      ...f,
+      empreendimentoId: f.empreendimentoId,
+      clienteNome: m.clienteNome || f.clienteNome,
+      empreendNome: m.empreendNome || f.empreendNome,
+      nomeResponsavel: m.nomeResponsavel || f.nomeResponsavel,
+      transportadorCnpj: m.transportadorCnpj || "",
+      transportadorNome: m.transportadorNome || "",
+      transportadorEndereco: m.transportadorEndereco || "",
+      transportadorNumero: m.transportadorNumero || "",
+      transportadorUf: m.transportadorUf || "",
+      transportadorCidade: m.transportadorCidade || "",
+      transportadorCep: m.transportadorCep || "",
+      transportadorLicenca: m.transportadorLicenca || "",
+      transportadorOrgao: m.transportadorOrgao || "",
+      destinadorCnpj: m.destinadorCnpj || "",
+      destinadorNome: m.destinadorNome || "",
+      destinadorEndereco: m.destinadorEndereco || "",
+      destinadorNumero: m.destinadorNumero || "",
+      destinadorUf: m.destinadorUf || "",
+      destinadorCidade: m.destinadorCidade || "",
+      destinadorCep: m.destinadorCep || "",
+      destinadorLicenca: m.destinadorLicenca || "",
+      destinadorOrgao: m.destinadorOrgao || "",
+      nomeMotorista: m.nomeMotorista || "",
+      placaVeiculo: m.placaVeiculo || "",
+      observacoes: m.observacoes || f.observacoes,
+      resumo: f.resumo,
+      quantidade: f.quantidade,
+      unidade: f.unidade,
+    }));
+    const residuosModelo = (m.residuos || []).map((r) => ({
+      ...r,
+      marQuantidade: "",
+      marDensidade: "",
+    }));
+    setResiduos(residuosModelo);
+    toast(`Modelo "${m.nome}" aplicado — preencha quantidade (e densidade) de cada resíduo`, "success");
+  }
+
+  async function salvarComoModelo() {
+    if (!form.transportadorCnpj || form.transportadorCnpj.length !== 14 || !form.destinadorCnpj || form.destinadorCnpj.length !== 14) {
+      toast("Preencha os CNPJs do transportador e destinador para salvar o modelo", "error");
+      return;
+    }
+    if (residuos.length === 0) {
+      toast("Adicione pelo menos um resíduo para salvar o modelo", "error");
+      return;
+    }
+    const nome = window.prompt("Nome do modelo:");
+    if (!nome) return;
+    try {
+      const res = await fetch("/api/sinir/modelos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nome,
+          conexaoId: Number(conexaoEfetiva),
+          clienteNome: form.clienteNome,
+          empreendNome: form.empreendNome,
+          nomeResponsavel: form.nomeResponsavel,
+          transportadorCnpj: form.transportadorCnpj,
+          transportadorNome: form.transportadorNome,
+          transportadorEndereco: form.transportadorEndereco,
+          transportadorNumero: form.transportadorNumero,
+          transportadorUf: form.transportadorUf,
+          transportadorCidade: form.transportadorCidade,
+          transportadorCep: form.transportadorCep,
+          transportadorLicenca: form.transportadorLicenca,
+          transportadorOrgao: form.transportadorOrgao,
+          destinadorCnpj: form.destinadorCnpj,
+          destinadorNome: form.destinadorNome,
+          destinadorEndereco: form.destinadorEndereco,
+          destinadorNumero: form.destinadorNumero,
+          destinadorUf: form.destinadorUf,
+          destinadorCidade: form.destinadorCidade,
+          destinadorCep: form.destinadorCep,
+          destinadorLicenca: form.destinadorLicenca,
+          destinadorOrgao: form.destinadorOrgao,
+          nomeMotorista: form.nomeMotorista,
+          placaVeiculo: form.placaVeiculo,
+          observacoes: form.observacoes,
+          residuos,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast(data.error || "Falha ao salvar o modelo", "error");
+        return;
+      }
+      onModelosChanged();
+      toast(`Modelo "${nome}" salvo`, "success");
+    } catch {
+      toast("Erro ao salvar o modelo", "error");
+    }
+  }
+
+function abrirModalResiduo(indice?: number) {
     if (indice != null) {
       setResiduoForm(residuos[indice]);
       setEditandoResiduo(indice);
@@ -1019,6 +1189,7 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
       setResiduoForm({
         resCodigoIbama: "",
         marQuantidade: "",
+        marDensidade: "",
         uniCodigo: "",
         tieCodigo: "",
         claCodigo: "",
@@ -1090,6 +1261,10 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
       toast("Adicione pelo menos um resíduo", "error");
       return;
     }
+    if (residuos.some((r) => !r.marQuantidade || Number(r.marQuantidade) <= 0)) {
+      toast("Informe a quantidade de cada resíduo antes de emitir", "error");
+      return;
+    }
     setEnviando(true);
     setResultado(null);
     try {
@@ -1107,6 +1282,7 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
           residuos: residuos.map((r) => ({
             resCodigoIbama: r.resCodigoIbama,
             marQuantidade: Number(r.marQuantidade),
+            marDensidade: r.marDensidade ? Number(r.marDensidade) : undefined,
             uniCodigo: Number(r.uniCodigo),
             tieCodigo: Number(r.tieCodigo),
             claCodigo: Number(r.claCodigo),
@@ -1170,6 +1346,26 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
               <option key={c.id} value={c.id}>{c.nome} {c.modo === "mock" ? "(simulação)" : ""}</option>
             ))}
           </select>
+        </div>
+        <div className="flex flex-col gap-1 md:col-span-2">
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">Modelo pré-cadastrado</label>
+          <div className="flex gap-2">
+            <select value="" onChange={(e) => aplicarModelo(e.target.value)} className={inputCls}>
+              <option value="">Selecione um modelo para preencher automaticamente...</option>
+              {modelos.map((m) => (
+                <option key={m.id} value={m.id}>{m.nome} {m.conexao ? `(${m.conexao.nome})` : ""}</option>
+              ))}
+            </select>
+            <button
+              onClick={salvarComoModelo}
+              title="Salvar o formulário atual como modelo pré-cadastrado"
+              className="focus-ring transition-brand flex shrink-0 items-center gap-1.5 rounded-lg bg-[var(--color-paper-100)] px-3 py-2 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-200)]"
+            >
+              <Bookmark size={15} />
+              Salvar como modelo
+            </button>
+          </div>
+          <p className="text-xs text-[var(--color-ink-500)]">Ao aplicar um modelo, transportador, destinador e os resíduos são preenchidos — informe apenas a quantidade (e densidade) de cada resíduo.</p>
         </div>
       </div>
 
@@ -1436,6 +1632,10 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
                 <input type="number" step="0.01" min="0" value={residuoForm.marQuantidade} onChange={(e) => setResiduoForm((f) => ({ ...f, marQuantidade: e.target.value }))} className={inputCls} />
               </div>
               <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Densidade</label>
+                <input type="number" step="0.01" min="0" value={residuoForm.marDensidade} onChange={(e) => setResiduoForm((f) => ({ ...f, marDensidade: e.target.value }))} className={inputCls} placeholder="Opcional — kg/m³" />
+              </div>
+              <div className="flex flex-col gap-1">
                 <label className="text-xs font-medium text-[var(--color-ink-500)]">Unidade *</label>
                 <select value={residuoForm.uniCodigo} onChange={(e) => setResiduoForm((f) => ({ ...f, uniCodigo: e.target.value }))} className={inputCls}>
                   <option value="">Selecione...</option>
@@ -1523,6 +1723,623 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
               >
                 {editandoResiduo != null ? <Pencil size={15} /> : <Plus size={15} />}
                 {editandoResiduo != null ? "Salvar alterações" : "Adicionar à tabela"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------- Modelos ----------
+
+interface ModeloFormState {
+  id: number | null;
+  nome: string;
+  descricao: string;
+  conexaoId: string;
+  clienteNome: string;
+  empreendNome: string;
+  nomeResponsavel: string;
+  transportadorCnpj: string;
+  transportadorNome: string;
+  transportadorEndereco: string;
+  transportadorNumero: string;
+  transportadorUf: string;
+  transportadorCidade: string;
+  transportadorCep: string;
+  transportadorLicenca: string;
+  transportadorOrgao: string;
+  destinadorCnpj: string;
+  destinadorNome: string;
+  destinadorEndereco: string;
+  destinadorNumero: string;
+  destinadorUf: string;
+  destinadorCidade: string;
+  destinadorCep: string;
+  destinadorLicenca: string;
+  destinadorOrgao: string;
+  nomeMotorista: string;
+  placaVeiculo: string;
+  observacoes: string;
+  residuos: ResiduoCadastro[];
+}
+
+const MODELO_FORM_VAZIO: ModeloFormState = {
+  id: null,
+  nome: "",
+  descricao: "",
+  conexaoId: "",
+  clienteNome: "",
+  empreendNome: "",
+  nomeResponsavel: "",
+  transportadorCnpj: "",
+  transportadorNome: "",
+  transportadorEndereco: "",
+  transportadorNumero: "",
+  transportadorUf: "",
+  transportadorCidade: "",
+  transportadorCep: "",
+  transportadorLicenca: "",
+  transportadorOrgao: "",
+  destinadorCnpj: "",
+  destinadorNome: "",
+  destinadorEndereco: "",
+  destinadorNumero: "",
+  destinadorUf: "",
+  destinadorCidade: "",
+  destinadorCep: "",
+  destinadorLicenca: "",
+  destinadorOrgao: "",
+  nomeMotorista: "",
+  placaVeiculo: "",
+  observacoes: "",
+  residuos: [],
+};
+
+function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtr[]; onChanged: () => void; toast: ToastFn }) {
+  const { conexoes, modelos, onChanged, toast } = props;
+  const [form, setForm] = useState<ModeloFormState>(MODELO_FORM_VAZIO);
+  const [salvando, setSalvando] = useState(false);
+  const [residuoModal, setResiduoModal] = useState(false);
+  const [editandoResiduo, setEditandoResiduo] = useState<number | null>(null);
+  const [residuoForm, setResiduoForm] = useState<ResiduoCadastro>({
+    resCodigoIbama: "",
+    marQuantidade: "",
+    marDensidade: "",
+    uniCodigo: "",
+    tieCodigo: "",
+    claCodigo: "",
+    tiaCodigo: "",
+    traCodigo: "",
+    marNumeroONU: "",
+    marClasseRisco: "",
+    marNomeEmbarque: "",
+    marGrupoEmbalagem: "",
+    marCodigoInterno: "",
+    marDescricaoInterna: "",
+    observacoes: "",
+  });
+  const [buscandoCnpj, setBuscandoCnpj] = useState(false);
+
+  const inputCls = "w-full rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]";
+
+  function editarModelo(m: ModeloMtr) {
+    setForm({
+      id: m.id,
+      nome: m.nome,
+      descricao: m.descricao || "",
+      conexaoId: m.conexaoId ? String(m.conexaoId) : "",
+      clienteNome: m.clienteNome || "",
+      empreendNome: m.empreendNome || "",
+      nomeResponsavel: m.nomeResponsavel || "",
+      transportadorCnpj: m.transportadorCnpj || "",
+      transportadorNome: m.transportadorNome || "",
+      transportadorEndereco: m.transportadorEndereco || "",
+      transportadorNumero: m.transportadorNumero || "",
+      transportadorUf: m.transportadorUf || "",
+      transportadorCidade: m.transportadorCidade || "",
+      transportadorCep: m.transportadorCep || "",
+      transportadorLicenca: m.transportadorLicenca || "",
+      transportadorOrgao: m.transportadorOrgao || "",
+      destinadorCnpj: m.destinadorCnpj || "",
+      destinadorNome: m.destinadorNome || "",
+      destinadorEndereco: m.destinadorEndereco || "",
+      destinadorNumero: m.destinadorNumero || "",
+      destinadorUf: m.destinadorUf || "",
+      destinadorCidade: m.destinadorCidade || "",
+      destinadorCep: m.destinadorCep || "",
+      destinadorLicenca: m.destinadorLicenca || "",
+      destinadorOrgao: m.destinadorOrgao || "",
+      nomeMotorista: m.nomeMotorista || "",
+      placaVeiculo: m.placaVeiculo || "",
+      observacoes: m.observacoes || "",
+      residuos: Array.isArray(m.residuos) ? (m.residuos as ResiduoCadastro[]) : [],
+    });
+    toast(`Editando modelo "${m.nome}"`, "info");
+  }
+
+  function novoModelo() {
+    setForm(MODELO_FORM_VAZIO);
+  }
+
+  function abrirModalResiduo(indice?: number) {
+    if (typeof indice === "number") {
+      const r = form.residuos[indice];
+      if (r) {
+        setResiduoForm({ ...r });
+        setEditandoResiduo(indice);
+      }
+    } else {
+      setResiduoForm({
+        resCodigoIbama: "",
+        marQuantidade: "",
+        marDensidade: "",
+        uniCodigo: "",
+        tieCodigo: "",
+        claCodigo: "",
+        tiaCodigo: "",
+        traCodigo: "",
+        marNumeroONU: "",
+        marClasseRisco: "",
+        marNomeEmbarque: "",
+        marGrupoEmbalagem: "",
+        marCodigoInterno: "",
+        marDescricaoInterna: "",
+        observacoes: "",
+      });
+      setEditandoResiduo(null);
+    }
+    setResiduoModal(true);
+  }
+
+  function salvarResiduo() {
+    if (!residuoForm.resCodigoIbama || !residuoForm.marQuantidade) {
+      toast("Preencha o resíduo (código IBAMA) e a quantidade padrão do modelo", "error");
+      return;
+    }
+    if (editandoResiduo === null) {
+      setForm((f) => ({ ...f, residuos: [...f.residuos, residuoForm] }));
+    } else {
+      setForm((f) => {
+        const lista = [...f.residuos];
+        lista[editandoResiduo] = residuoForm;
+        return { ...f, residuos: lista };
+      });
+    }
+    setResiduoModal(false);
+    setEditandoResiduo(null);
+  }
+
+  function removerResiduo(indice: number) {
+    setForm((f) => ({ ...f, residuos: f.residuos.filter((_, i) => i !== indice) }));
+  }
+
+  async function buscarCnpj(qual: "transportador" | "destinador") {
+    const cnpj = (qual === "transportador" ? form.transportadorCnpj : form.destinadorCnpj).replace(/\D/g, "");
+    if (cnpj.length !== 14) {
+      toast("Informe um CNPJ com 14 dígitos para buscar", "error");
+      return;
+    }
+    setBuscandoCnpj(true);
+    try {
+      const res = await fetch(`/api/cnpj/${cnpj}`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        toast(data?.error || "CNPJ não encontrado", "error");
+        return;
+      }
+      const data = await res.json();
+      const razao = data.razaoSocial || "";
+      setForm((f) => (qual === "transportador" ? { ...f, transportadorNome: razao } : { ...f, destinadorNome: razao }));
+      toast(`Razão social preenchida: ${razao}`, "success");
+    } catch {
+      toast("Falha ao buscar o CNPJ", "error");
+    } finally {
+      setBuscandoCnpj(false);
+    }
+  }
+
+  async function salvar() {
+    if (!form.nome) {
+      toast("Informe o nome do modelo", "error");
+      return;
+    }
+    if (form.residuos.length === 0) {
+      toast("Adicione pelo menos um resíduo ao modelo", "error");
+      return;
+    }
+    if (form.transportadorCnpj.replace(/\D/g, "").length !== 14 || form.destinadorCnpj.replace(/\D/g, "").length !== 14) {
+      toast("Preencha os CNPJs (14 dígitos) do transportador e do destinador", "error");
+      return;
+    }
+    setSalvando(true);
+    try {
+      const payload = {
+        nome: form.nome,
+        descricao: form.descricao || null,
+        conexaoId: form.conexaoId ? Number(form.conexaoId) : null,
+        clienteNome: form.clienteNome || null,
+        empreendNome: form.empreendNome || null,
+        nomeResponsavel: form.nomeResponsavel || null,
+        transportadorCnpj: form.transportadorCnpj.replace(/\D/g, ""),
+        transportadorNome: form.transportadorNome || null,
+        transportadorEndereco: form.transportadorEndereco || null,
+        transportadorNumero: form.transportadorNumero || null,
+        transportadorUf: form.transportadorUf || null,
+        transportadorCidade: form.transportadorCidade || null,
+        transportadorCep: form.transportadorCep || null,
+        transportadorLicenca: form.transportadorLicenca || null,
+        transportadorOrgao: form.transportadorOrgao || null,
+        destinadorCnpj: form.destinadorCnpj.replace(/\D/g, ""),
+        destinadorNome: form.destinadorNome || null,
+        destinadorEndereco: form.destinadorEndereco || null,
+        destinadorNumero: form.destinadorNumero || null,
+        destinadorUf: form.destinadorUf || null,
+        destinadorCidade: form.destinadorCidade || null,
+        destinadorCep: form.destinadorCep || null,
+        destinadorLicenca: form.destinadorLicenca || null,
+        destinadorOrgao: form.destinadorOrgao || null,
+        nomeMotorista: form.nomeMotorista || null,
+        placaVeiculo: form.placaVeiculo || null,
+        observacoes: form.observacoes || null,
+        residuos: form.residuos,
+      };
+      const res = await fetch(form.id ? `/api/sinir/modelos/${form.id}` : "/api/sinir/modelos", {
+        method: form.id ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast(data.error || "Falha ao salvar modelo", "error");
+        return;
+      }
+      toast(form.id ? `Modelo "${form.nome}" atualizado` : `Modelo "${form.nome}" criado`, "success");
+      setForm(MODELO_FORM_VAZIO);
+      onChanged();
+    } catch {
+      toast("Erro ao salvar modelo", "error");
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function remover(m: ModeloMtr) {
+    if (!confirm(`Remover o modelo "${m.nome}"?`)) return;
+    const res = await fetch(`/api/sinir/modelos/${m.id}`, { method: "DELETE" });
+    if (res.ok) {
+      toast("Modelo removido", "success");
+      if (form.id === m.id) setForm(MODELO_FORM_VAZIO);
+      onChanged();
+    } else {
+      toast("Falha ao remover modelo", "error");
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">
+            {form.id ? `Editando modelo: ${form.nome}` : "Novo modelo"}
+          </h2>
+          {form.id && (
+            <button onClick={novoModelo} className="text-sm font-medium text-[var(--color-brand-600)] hover:underline">
+              Novo modelo
+            </button>
+          )}
+        </div>
+        <p className="mb-4 text-sm text-[var(--color-ink-500)]">
+          Um modelo pré-preenche o transportador, o destinador e os resíduos na emissão. Quantidade e densidade de cada resíduo ficam em branco para informar na hora de emitir.
+        </p>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-[var(--color-ink-500)]">Nome do modelo *</label>
+            <input value={form.nome} onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))} className={inputCls} placeholder="Ex.: Transporte mensal de resíduos classe II" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-[var(--color-ink-500)]">Descrição</label>
+            <input value={form.descricao} onChange={(e) => setForm((f) => ({ ...f, descricao: e.target.value }))} className={inputCls} />
+          </div>
+          <div className="flex flex-col gap-1 md:col-span-2">
+            <label className="text-xs font-medium text-[var(--color-ink-500)]">Conexão padrão (opcional)</label>
+            <select value={form.conexaoId} onChange={(e) => setForm((f) => ({ ...f, conexaoId: e.target.value }))} className={inputCls}>
+              <option value="">Qualquer conexão</option>
+              {conexoes.map((c) => (
+                <option key={c.id} value={c.id}>{c.nome} {c.modo === "mock" ? "(simulação)" : ""}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="md:col-span-2">
+            <h3 className="font-display mb-2 mt-2 text-sm font-semibold text-[var(--color-ink-700)]">Transportador</h3>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">CNPJ *</label>
+                <div className="flex gap-2">
+                  <input value={form.transportadorCnpj} onChange={(e) => setForm((f) => ({ ...f, transportadorCnpj: e.target.value.replace(/\D/g, "") }))} className={inputCls} placeholder="00000000000000" />
+                  <button onClick={() => buscarCnpj("transportador")} disabled={buscandoCnpj} title="Buscar razão social"
+                    className="focus-ring transition-brand flex shrink-0 items-center gap-1.5 rounded-lg bg-[var(--color-paper-100)] px-3 py-2 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-200)] disabled:opacity-50">
+                    {buscandoCnpj ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
+                  </button>
+                </div>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Razão social</label>
+                <input value={form.transportadorNome} onChange={(e) => setForm((f) => ({ ...f, transportadorNome: e.target.value }))} className={inputCls} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Licença</label>
+                <input value={form.transportadorLicenca} onChange={(e) => setForm((f) => ({ ...f, transportadorLicenca: e.target.value }))} className={inputCls} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Órgão emissor</label>
+                <input value={form.transportadorOrgao} onChange={(e) => setForm((f) => ({ ...f, transportadorOrgao: e.target.value }))} className={inputCls} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Endereço</label>
+                <input value={form.transportadorEndereco} onChange={(e) => setForm((f) => ({ ...f, transportadorEndereco: e.target.value }))} className={inputCls} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Número</label>
+                <input value={form.transportadorNumero} onChange={(e) => setForm((f) => ({ ...f, transportadorNumero: e.target.value }))} className={inputCls} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">UF</label>
+                <input value={form.transportadorUf} onChange={(e) => setForm((f) => ({ ...f, transportadorUf: e.target.value.toUpperCase() }))} className={inputCls} maxLength={2} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Cidade</label>
+                <input value={form.transportadorCidade} onChange={(e) => setForm((f) => ({ ...f, transportadorCidade: e.target.value }))} className={inputCls} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">CEP</label>
+                <input value={form.transportadorCep} onChange={(e) => setForm((f) => ({ ...f, transportadorCep: e.target.value.replace(/\D/g, "") }))} className={inputCls} />
+              </div>
+            </div>
+          </div>
+
+          <div className="md:col-span-2">
+            <h3 className="font-display mb-2 mt-2 text-sm font-semibold text-[var(--color-ink-700)]">Destinador</h3>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">CNPJ *</label>
+                <div className="flex gap-2">
+                  <input value={form.destinadorCnpj} onChange={(e) => setForm((f) => ({ ...f, destinadorCnpj: e.target.value.replace(/\D/g, "") }))} className={inputCls} placeholder="00000000000000" />
+                  <button onClick={() => buscarCnpj("destinador")} disabled={buscandoCnpj} title="Buscar razão social"
+                    className="focus-ring transition-brand flex shrink-0 items-center gap-1.5 rounded-lg bg-[var(--color-paper-100)] px-3 py-2 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-200)] disabled:opacity-50">
+                    {buscandoCnpj ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
+                  </button>
+                </div>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Razão social</label>
+                <input value={form.destinadorNome} onChange={(e) => setForm((f) => ({ ...f, destinadorNome: e.target.value }))} className={inputCls} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Licença</label>
+                <input value={form.destinadorLicenca} onChange={(e) => setForm((f) => ({ ...f, destinadorLicenca: e.target.value }))} className={inputCls} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Órgão emissor</label>
+                <input value={form.destinadorOrgao} onChange={(e) => setForm((f) => ({ ...f, destinadorOrgao: e.target.value }))} className={inputCls} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Endereço</label>
+                <input value={form.destinadorEndereco} onChange={(e) => setForm((f) => ({ ...f, destinadorEndereco: e.target.value }))} className={inputCls} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Número</label>
+                <input value={form.destinadorNumero} onChange={(e) => setForm((f) => ({ ...f, destinadorNumero: e.target.value }))} className={inputCls} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">UF</label>
+                <input value={form.destinadorUf} onChange={(e) => setForm((f) => ({ ...f, destinadorUf: e.target.value.toUpperCase() }))} className={inputCls} maxLength={2} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Cidade</label>
+                <input value={form.destinadorCidade} onChange={(e) => setForm((f) => ({ ...f, destinadorCidade: e.target.value }))} className={inputCls} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">CEP</label>
+                <input value={form.destinadorCep} onChange={(e) => setForm((f) => ({ ...f, destinadorCep: e.target.value.replace(/\D/g, "") }))} className={inputCls} />
+              </div>
+            </div>
+          </div>
+
+          <div className="md:col-span-2">
+            <h3 className="font-display mb-2 mt-2 text-sm font-semibold text-[var(--color-ink-700)]">Resíduos do modelo</h3>
+            <div className="overflow-x-auto rounded-lg border border-[var(--color-paper-200)]">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[var(--color-paper-200)] bg-[var(--color-paper-50)] text-left">
+                    <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Resíduo (IBAMA)</th>
+                    <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Qtde. padrão</th>
+                    <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Unidade</th>
+                    <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Classe</th>
+                    <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {form.residuos.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-4 text-center text-[var(--color-ink-500)]">Nenhum resíduo no modelo.</td>
+                    </tr>
+                  ) : (
+                    form.residuos.map((r, i) => (
+                      <tr key={i} className="border-b border-[var(--color-paper-100)]">
+                        <td className="py-2 px-2 text-[var(--color-ink-800)]">{r.resCodigoIbama}</td>
+                        <td className="py-2 px-2 text-[var(--color-ink-600)]">{r.marQuantidade}</td>
+                        <td className="py-2 px-2 text-[var(--color-ink-600)]">{r.uniCodigo}</td>
+                        <td className="py-2 px-2 text-[var(--color-ink-600)]">{r.claCodigo}</td>
+                        <td className="py-2 px-2">
+                          <div className="flex gap-1">
+                            <button onClick={() => abrirModalResiduo(i)} className="rounded p-1 text-[var(--color-ink-400)] hover:bg-[var(--color-paper-100)] hover:text-[var(--color-ink-700)]" title="Editar">
+                              <Pencil size={14} />
+                            </button>
+                            <button onClick={() => removerResiduo(i)} className="rounded p-1 text-[var(--color-ink-400)] hover:bg-red-50 hover:text-red-600" title="Remover">
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <button onClick={() => abrirModalResiduo()} className="focus-ring transition-brand mt-2 flex items-center gap-1.5 rounded-lg bg-[var(--color-paper-100)] px-3 py-2 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-200)]">
+              <Plus size={15} /> Adicionar resíduo
+            </button>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-[var(--color-ink-500)]">Motorista</label>
+            <input value={form.nomeMotorista} onChange={(e) => setForm((f) => ({ ...f, nomeMotorista: e.target.value }))} className={inputCls} />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-[var(--color-ink-500)]">Placa do veículo</label>
+            <input value={form.placaVeiculo} onChange={(e) => setForm((f) => ({ ...f, placaVeiculo: e.target.value.toUpperCase() }))} className={inputCls} />
+          </div>
+          <div className="flex flex-col gap-1 md:col-span-2">
+            <label className="text-xs font-medium text-[var(--color-ink-500)]">Observações</label>
+            <textarea value={form.observacoes} onChange={(e) => setForm((f) => ({ ...f, observacoes: e.target.value }))} className={inputCls} rows={2} />
+          </div>
+        </div>
+        <button onClick={salvar} disabled={salvando}
+          className="focus-ring transition-brand mt-4 flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">
+          {salvando ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+          {salvando ? "Salvando..." : form.id ? "Atualizar modelo" : "Salvar modelo"}
+        </button>
+      </div>
+
+      <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
+        <h2 className="font-display mb-3 text-base font-semibold text-[var(--color-ink-900)]">Modelos cadastrados</h2>
+        {modelos.length === 0 ? (
+          <p className="py-4 text-center text-sm text-[var(--color-ink-500)]">Nenhum modelo cadastrado. Você também pode salvar o formulário da aba &quot;Emitir MTR&quot; como modelo.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-[var(--color-paper-200)] text-left">
+                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Nome</th>
+                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Transportador</th>
+                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Destinador</th>
+                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Resíduos</th>
+                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Conexão</th>
+                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {modelos.map((m) => (
+                  <tr key={m.id} className="border-b border-[var(--color-paper-100)] hover:bg-[var(--color-paper-50)]">
+                    <td className="py-2 px-2">
+                      <div className="font-medium text-[var(--color-ink-800)]">{m.nome}</div>
+                      {m.descricao && <div className="text-xs text-[var(--color-ink-500)]">{m.descricao}</div>}
+                    </td>
+                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.transportadorNome || m.transportadorCnpj || "—"}</td>
+                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.destinadorNome || m.destinadorCnpj || "—"}</td>
+                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{Array.isArray(m.residuos) ? m.residuos.length : 0} resíduo(s)</td>
+                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.conexao ? m.conexao.nome : "—"}</td>
+                    <td className="py-2 px-2">
+                      <div className="flex gap-1">
+                        <button onClick={() => editarModelo(m)} className="rounded p-1 text-[var(--color-ink-400)] hover:bg-[var(--color-paper-100)] hover:text-[var(--color-ink-700)]" title="Editar">
+                          <Pencil size={14} />
+                        </button>
+                        <button onClick={() => remover(m)} className="rounded p-1 text-[var(--color-ink-400)] hover:bg-red-50 hover:text-red-600" title="Remover">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {residuoModal && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4">
+          <div className="shadow-card mt-8 w-full max-w-2xl rounded-[var(--radius-card)] bg-white p-5">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="font-display text-base font-semibold text-[var(--color-ink-900)]">
+                {editandoResiduo === null ? "Adicionar resíduo" : "Editar resíduo"}
+              </h3>
+              <button onClick={() => setResiduoModal(false)} className="rounded p-1 text-[var(--color-ink-400)] hover:bg-[var(--color-paper-100)]">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <div className="flex flex-col gap-1 md:col-span-2">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Resíduo (código IBAMA) *</label>
+                <input value={residuoForm.resCodigoIbama} onChange={(e) => setResiduoForm((f) => ({ ...f, resCodigoIbama: e.target.value }))} className={inputCls} placeholder="Ex.: A001" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Quantidade padrão *</label>
+                <input type="number" step="0.01" min="0" value={residuoForm.marQuantidade} onChange={(e) => setResiduoForm((f) => ({ ...f, marQuantidade: e.target.value }))} className={inputCls} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Unidade *</label>
+                <input value={residuoForm.uniCodigo} onChange={(e) => setResiduoForm((f) => ({ ...f, uniCodigo: e.target.value }))} className={inputCls} placeholder="Código da unidade" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Estado físico *</label>
+                <input value={residuoForm.tieCodigo} onChange={(e) => setResiduoForm((f) => ({ ...f, tieCodigo: e.target.value }))} className={inputCls} placeholder="Código do estado físico" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Classe *</label>
+                <input value={residuoForm.claCodigo} onChange={(e) => setResiduoForm((f) => ({ ...f, claCodigo: e.target.value }))} className={inputCls} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Acondicionamento *</label>
+                <input value={residuoForm.tiaCodigo} onChange={(e) => setResiduoForm((f) => ({ ...f, tiaCodigo: e.target.value }))} className={inputCls} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Tratamento *</label>
+                <input value={residuoForm.traCodigo} onChange={(e) => setResiduoForm((f) => ({ ...f, traCodigo: e.target.value }))} className={inputCls} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Densidade (opcional)</label>
+                <input type="number" step="0.01" min="0" value={residuoForm.marDensidade} onChange={(e) => setResiduoForm((f) => ({ ...f, marDensidade: e.target.value }))} className={inputCls} placeholder="kg/m³" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Número ONU (opcional)</label>
+                <input value={residuoForm.marNumeroONU} onChange={(e) => setResiduoForm((f) => ({ ...f, marNumeroONU: e.target.value }))} className={inputCls} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Classe de risco (opcional)</label>
+                <input value={residuoForm.marClasseRisco} onChange={(e) => setResiduoForm((f) => ({ ...f, marClasseRisco: e.target.value }))} className={inputCls} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Nome de embarque (opcional)</label>
+                <input value={residuoForm.marNomeEmbarque} onChange={(e) => setResiduoForm((f) => ({ ...f, marNomeEmbarque: e.target.value }))} className={inputCls} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Grupo de embalagem (opcional)</label>
+                <input value={residuoForm.marGrupoEmbalagem} onChange={(e) => setResiduoForm((f) => ({ ...f, marGrupoEmbalagem: e.target.value }))} className={inputCls} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Código interno (opcional)</label>
+                <input value={residuoForm.marCodigoInterno} onChange={(e) => setResiduoForm((f) => ({ ...f, marCodigoInterno: e.target.value }))} className={inputCls} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Descrição interna (opcional)</label>
+                <input value={residuoForm.marDescricaoInterna} onChange={(e) => setResiduoForm((f) => ({ ...f, marDescricaoInterna: e.target.value }))} className={inputCls} />
+              </div>
+              <div className="flex flex-col gap-1 md:col-span-2">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Observação (opcional)</label>
+                <textarea value={residuoForm.observacoes} onChange={(e) => setResiduoForm((f) => ({ ...f, observacoes: e.target.value }))} className={inputCls} rows={2} />
+              </div>
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <button onClick={() => setResiduoModal(false)} className="rounded-lg px-3 py-2 text-sm font-medium text-[var(--color-ink-500)] hover:bg-[var(--color-paper-100)]">
+                Cancelar
+              </button>
+              <button onClick={salvarResiduo} className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)]">
+                <Save size={15} /> {editandoResiduo === null ? "Adicionar" : "Salvar"}
               </button>
             </div>
           </div>

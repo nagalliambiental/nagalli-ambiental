@@ -420,7 +420,43 @@ model SinirConexao {
     atualizadoEm   DateTime @updatedAt
     empreendimento Empreendimento? @relation(fields: [empreendimentoId], references: [id])
     manifestos     SinirManifesto[]
+    modelos        SinirModelo[]
   }
+
+model SinirModelo {
+  id            Int      @id @default(autoincrement())
+  conexaoId     Int?
+  nome          String
+  descricao     String?
+  clienteNome        String?
+  empreendNome       String?
+  nomeResponsavel    String?
+  transportadorCnpj     String?
+  transportadorNome     String?
+  transportadorEndereco String?
+  transportadorNumero   String?
+  transportadorUf       String?
+  transportadorCidade   String?
+  transportadorCep      String?
+  transportadorLicenca  String?
+  transportadorOrgao    String?
+  destinadorCnpj     String?
+  destinadorNome     String?
+  destinadorEndereco String?
+  destinadorNumero   String?
+  destinadorUf       String?
+  destinadorCidade   String?
+  destinadorCep      String?
+  destinadorLicenca  String?
+  destinadorOrgao    String?
+  nomeMotorista      String?
+  placaVeiculo       String?
+  observacoes        String?
+  residuos           Json      @default("[]")
+  criadoEm           DateTime  @default(now())
+  atualizadoEm       DateTime  @updatedAt
+  conexao            SinirConexao? @relation(fields: [conexaoId], references: [id], onDelete: SetNull)
+}
 
 model SinirManifesto {
   id            Int      @id @default(autoincrement())
