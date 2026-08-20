@@ -66,6 +66,7 @@ export async function PUT(
     data: {
       apelido: body.apelido,
       cnpj: body.cnpj ?? null,
+      unidadeSinir: body.unidadeSinir ?? null,
       cep: body.cep ?? null,
       municipio: body.municipio ?? null,
       uf: body.uf ?? null,

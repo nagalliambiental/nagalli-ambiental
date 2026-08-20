@@ -33,6 +33,7 @@ export default async function Page() {
           options: clientes.map((c) => ({ value: String(c.id), label: c.apelido })),
         },
         { name: "cnpj", label: "CNPJ", type: "text" },
+        { name: "unidadeSinir", label: "Unidade do SINIR", type: "text" },
         { name: "cep", label: "CEP", type: "text", search: "cep" },
         { name: "municipio", label: "Município", type: "text" },
         { name: "uf", label: "UF", type: "text" },

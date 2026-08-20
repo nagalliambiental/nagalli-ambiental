@@ -27,6 +27,7 @@ interface EmpreendimentoOpcao {
   id: number;
   apelido: string;
   cnpj: string | null;
+  unidadeSinir: string | null;
   descricao: string;
   cliente: { id: number; apelido: string; cnpj: string; razaoSocial: string };
 }
@@ -812,7 +813,7 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
     setForm((f) => ({
       ...f,
       empreendimentoId: id,
-      clienteNome: emp.cliente.apelido,
+      clienteNome: emp.cliente.razaoSocial || emp.cliente.apelido,
       empreendNome: emp.apelido,
       resumo: emp.descricao ? `Resíduo — ${emp.descricao}` : f.resumo,
       transportadorCnpj: cnpj || f.transportadorCnpj,
@@ -934,6 +935,7 @@ function ConexoesTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimen
   const { conexoes, empreendimentos, onChanged, toast } = props;
   const [form, setForm] = useState({ nome: "", cnpj: "", unidade: "", empreendimentoId: "", token: "", modo: "mock", venceEm: "" });
   const [salvando, setSalvando] = useState(false);
+  const [buscandoCnpj, setBuscandoCnpj] = useState(false);
 
   const inputCls = "w-full rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]";
 
@@ -941,14 +943,41 @@ function ConexoesTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimen
     const emp = empreendimentos.find((e) => e.id === Number(id));
     if (!emp) return;
     const cnpj = emp.cnpj || emp.cliente.cnpj;
+    const razaoSocial = emp.cliente.razaoSocial || `${emp.cliente.apelido} — ${emp.apelido}`;
     setForm((f) => ({
       ...f,
       empreendimentoId: id,
-      nome: `${emp.cliente.apelido} — ${emp.apelido}`,
+      nome: razaoSocial,
       cnpj: cnpj || f.cnpj,
-      unidade: emp.apelido,
+      unidade: emp.unidadeSinir || f.unidade,
     }));
-    toast(`Dados de ${emp.apelido} preenchidos (edite se necessário)`, "info");
+    toast(emp.unidadeSinir ? `Dados de ${emp.apelido} preenchidos (razão social e unidade do SINIR)` : `Dados de ${emp.apelido} preenchidos — informe a unidade do SINIR`, emp.unidadeSinir ? "success" : "info");
+  }
+
+  async function buscarCnpj() {
+    if (form.cnpj.replace(/\D/g, "").length !== 14) {
+      toast("Informe um CNPJ com 14 dígitos para buscar", "error");
+      return;
+    }
+    setBuscandoCnpj(true);
+    try {
+      const res = await fetch(`/api/cnpj/${form.cnpj.replace(/\D/g, "")}`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        toast(data?.error || "CNPJ não encontrado", "error");
+        return;
+      }
+      const data = await res.json();
+      setForm((f) => ({
+        ...f,
+        nome: data.razaoSocial || f.nome,
+      }));
+      toast(`Razão social preenchida: ${data.razaoSocial}`, "success");
+    } catch {
+      toast("Falha ao buscar o CNPJ", "error");
+    } finally {
+      setBuscandoCnpj(false);
+    }
   }
 
   async function salvar() {
@@ -1026,15 +1055,26 @@ function ConexoesTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimen
             </select>
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-[var(--color-ink-500)]">Nome (ex.: Cliente X — Unidade Y)</label>
+            <label className="text-xs font-medium text-[var(--color-ink-500)]">Nome (razão social)</label>
             <input value={form.nome} onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))} className={inputCls} />
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium text-[var(--color-ink-500)]">CNPJ</label>
-            <input value={form.cnpj} onChange={(e) => setForm((f) => ({ ...f, cnpj: e.target.value.replace(/\D/g, "") }))} className={inputCls} placeholder="00000000000000" />
+            <div className="flex gap-2">
+              <input value={form.cnpj} onChange={(e) => setForm((f) => ({ ...f, cnpj: e.target.value.replace(/\D/g, "") }))} className={inputCls} placeholder="00000000000000" />
+              <button
+                onClick={buscarCnpj}
+                disabled={buscandoCnpj}
+                title="Buscar razão social pelo CNPJ"
+                className="focus-ring transition-brand flex shrink-0 items-center gap-1.5 rounded-lg bg-[var(--color-paper-100)] px-3 py-2 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-200)] disabled:opacity-50"
+              >
+                {buscandoCnpj ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
+                {buscandoCnpj ? "Buscando..." : "Buscar CNPJ"}
+              </button>
+            </div>
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-[var(--color-ink-500)]">Código da unidade</label>
+            <label className="text-xs font-medium text-[var(--color-ink-500)]">Código da unidade no SINIR</label>
             <input value={form.unidade} onChange={(e) => setForm((f) => ({ ...f, unidade: e.target.value }))} className={inputCls} placeholder="Ex.: 1001" />
           </div>
           <div className="flex flex-col gap-1">

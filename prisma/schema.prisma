@@ -114,6 +114,7 @@ model Empreendimento {
   criadoEm      DateTime     @default(now())
   atualizadoEm  DateTime     @updatedAt
   cnpj          String?
+  unidadeSinir  String?
   cep           String?
   municipio     String?
   uf            String?
