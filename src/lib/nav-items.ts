@@ -7,6 +7,7 @@ import {
   ListTodo,
   DatabaseBackup,
   Wallet,
+  Recycle,
   type LucideIcon,
 } from "lucide-react";
 
@@ -38,10 +39,15 @@ export const NAV_ITEMS: NavItem[] = [
     children: [
       { label: "Processos", href: "/processos" },
       { label: "Exigências", href: "/exigencias" },
-      { label: "DMR", href: "/dmr" },
-      { label: "SINIR MTR", href: "/sinir" },
       { label: "Prazos", href: "/prazos" },
       { label: "Modelos", href: "/modelos" },
+    ],
+  },
+  {
+    label: "SINIR", icon: Recycle,
+    children: [
+      { label: "DMR", href: "/dmr" },
+      { label: "SINIR MTR", href: "/sinir" },
     ],
   },
   { label: "Tarefas", href: "/tarefas", icon: ListTodo },
