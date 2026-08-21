@@ -771,19 +771,26 @@ export async function emitirManifesto(
 // ---------- Download ----------
 
 async function erroDownload(res: Response, fallback: string): Promise<SinirError> {
-  const corpo = (await res.json().catch(() => ({}))) as {
-    mensagem?: string;
-    mensagemErroNacional?: string;
-    error?: string;
-    message?: string;
-  };
+  let texto = "";
+  try {
+    texto = new TextDecoder().decode(new Uint8Array(await res.arrayBuffer())).trim();
+  } catch {
+    // corpo ilegível
+  }
+  const corpo = (() => {
+    try {
+      return JSON.parse(texto) as { mensagem?: string; mensagemErroNacional?: string; error?: string; message?: string };
+    } catch {
+      return null;
+    }
+  })();
   const detalhe =
-    (typeof corpo.mensagem === "string" && corpo.mensagem.trim() && corpo.mensagem) ||
-    (typeof corpo.mensagemErroNacional === "string" && corpo.mensagemErroNacional.trim() && corpo.mensagemErroNacional) ||
-    (typeof corpo.error === "string" && corpo.error.trim() && corpo.error) ||
-    (typeof corpo.message === "string" && corpo.message.trim() && corpo.message) ||
-    "";
-  return new SinirError(detalhe ? `SINIR: ${detalhe}` : `${fallback} (HTTP ${res.status})`, res.status);
+    (typeof corpo?.mensagem === "string" && corpo.mensagem.trim() && corpo.mensagem) ||
+    (typeof corpo?.mensagemErroNacional === "string" && corpo.mensagemErroNacional.trim() && corpo.mensagemErroNacional) ||
+    (typeof corpo?.error === "string" && corpo.error.trim() && corpo.error) ||
+    (typeof corpo?.message === "string" && corpo.message.trim() && corpo.message) ||
+    (texto ? texto.slice(0, 200) : "");
+  return new SinirError(detalhe ? `SINIR: ${detalhe} (HTTP ${res.status})` : `${fallback} (HTTP ${res.status})`, res.status);
 }
 
 function ePdfValido(buffer: Uint8Array): boolean {
@@ -812,7 +819,8 @@ export async function baixarManifestoPdf(
 
   const buffer = new Uint8Array(await res.arrayBuffer());
   if (!ePdfValido(buffer)) {
-    throw new SinirError("O SINIR não retornou um PDF válido para este MTR", 502);
+    const amostra = new TextDecoder().decode(buffer.slice(0, 200)).trim();
+    throw new SinirError(`O SINIR não retornou um PDF válido para este MTR${amostra ? ` — resposta: ${amostra}` : " (corpo vazio)"}`, 502);
   }
   return { buffer, filename: `MTR-${numero}.pdf` };
 }
@@ -868,7 +876,8 @@ export async function baixarCertificadoPdf(
 
   const buffer = new Uint8Array(await res.arrayBuffer());
   if (!ePdfValido(buffer)) {
-    throw new SinirError("O SINIR não retornou um PDF válido para este CDF", 502);
+    const amostra = new TextDecoder().decode(buffer.slice(0, 200)).trim();
+    throw new SinirError(`O SINIR não retornou um PDF válido para este CDF${amostra ? ` — resposta: ${amostra}` : " (corpo vazio)"}`, 502);
   }
   return { buffer, filename: `CDF-${codigo}.pdf` };
 }

@@ -83,6 +83,10 @@ export async function GET(req: NextRequest, { params }: Params) {
     if (err instanceof SinirError) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
-    return NextResponse.json({ error: "Falha ao baixar o PDF" }, { status: 500 });
+    console.error("Falha no download SINIR:", err);
+    return NextResponse.json(
+      { error: err instanceof Error ? `Falha ao baixar o PDF: ${err.message}` : "Falha ao baixar o PDF" },
+      { status: 500 }
+    );
   }
 }

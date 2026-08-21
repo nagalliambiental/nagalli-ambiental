@@ -703,10 +703,10 @@ function PainelTab(props: {
                         >
                           <FileDown size={15} />
                         </button>
-                        {m.status !== "CANCELADO" && (
+                        {m.certificado && m.status !== "CANCELADO" && (
                           <button
                             onClick={() => baixarCdf(m)}
-                            title="Baixar CDF (Certificado de Destinação Final) deste MTR no SINIR"
+                            title="Baixar CDF (Certificado de Destinação Final) — disponível após o destinador confirmar a destinação"
                             className="rounded-md p-1.5 text-[var(--color-ink-600)] hover:bg-green-50 hover:text-green-700"
                           >
                             <ShieldCheck size={15} />
@@ -1059,16 +1059,18 @@ function MeusMtrsTab(props: {
                             >
                               <FileDown size={15} />
                             </button>
-                            <button
-                              onClick={() => {
-                                toast("Consultando o CDF no SINIR...", "info");
-                                baixarArquivoMeusMtrs("cdf", m);
-                              }}
-                              title="Baixar CDF (Certificado de Destinação Final) deste MTR no SINIR"
-                              className="rounded-md p-1.5 text-[var(--color-ink-600)] hover:bg-green-50 hover:text-green-700"
-                            >
-                              <ShieldCheck size={15} />
-                            </button>
+                            {m.certificado && m.status !== "CANCELADO" && (
+                              <button
+                                onClick={() => {
+                                  toast("Consultando o CDF no SINIR...", "info");
+                                  baixarArquivoMeusMtrs("cdf", m);
+                                }}
+                                title="Baixar CDF (Certificado de Destinação Final) — disponível após o destinador confirmar a destinação"
+                                className="rounded-md p-1.5 text-[var(--color-ink-600)] hover:bg-green-50 hover:text-green-700"
+                              >
+                                <ShieldCheck size={15} />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
