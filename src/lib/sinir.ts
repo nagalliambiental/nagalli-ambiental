@@ -371,14 +371,16 @@ function statusDeManifestoReal(obj: Record<string, unknown>): { status: SinirSta
     const n = Number(v);
     return Number.isFinite(n) && n > 0;
   });
-  const certificado = temCodigoCdf || String(obj.manCertificado || "").toUpperCase() === "S" || s.includes("CERTIF");
+  const certificado = temCodigoCdf || String(obj.manCertificado || "").toUpperCase() === "S";
 
-  if (s.includes("CANCEL")) return { status: SINIR_STATUS.CANCELADO, certificado: false };
-  if (certificado) return { status: SINIR_STATUS.CERTIFICADO, certificado: true };
-  if (s.includes("RECEB") || sim.simCodigo === 3) return { status: SINIR_STATUS.RECEBIDO, certificado: false };
-  if (s.includes("SALVO") || sim.simCodigo === 1) return { status: SINIR_STATUS.SALVO, certificado: false };
-  if (sim.simCodigo === 9) return { status: "ARMAZ_TEMPORARIO", certificado: false };
-  return { status: SINIR_STATUS.EMITIDO, certificado: false };
+  let status: SinirStatus | string;
+  if (s.includes("CANCEL")) status = SINIR_STATUS.CANCELADO;
+  else if (s.includes("RECEB") || sim.simCodigo === 3) status = SINIR_STATUS.RECEBIDO;
+  else if (s.includes("SALVO") || sim.simCodigo === 1) status = SINIR_STATUS.SALVO;
+  else if (sim.simCodigo === 9) status = "ARMAZ_TEMPORARIO";
+  else status = SINIR_STATUS.EMITIDO;
+
+  return { status, certificado };
 }
 
 async function listarManifestosReais(
@@ -587,7 +589,7 @@ async function gerarManifestosMock(
     }
     return {
       numero,
-      status: SINIR_STATUS.CERTIFICADO,
+      status: SINIR_STATUS.RECEBIDO,
       certificado: true,
       clienteNome: cliente,
       empreendNome: e.apelido,
@@ -856,14 +858,14 @@ export async function consultarCertificadoMtr(conexao: SinirConexaoCompleta, num
   const alvo = ((dados?.objeto ?? dados?.objetoResposta) || null) as Record<string, unknown> | null;
   if (!alvo || typeof alvo !== "object") return null;
 
-  for (const chave of ["cdfCodigo", "certificadoCodigo", "codigoCertificado", "numeroCertificado", "cerCodigo"]) {
+  for (const chave of ["cdfNumero", "cdfCodigo", "cdfEmitidoNumero", "certificadoCodigo", "codigoCertificado", "numeroCertificado", "cerCodigo"]) {
     const n = Number(alvo[chave]);
     if (Number.isFinite(n) && n > 0) return n;
   }
   const cert = alvo.certificado;
   if (cert && typeof cert === "object") {
     const c = cert as Record<string, unknown>;
-    for (const chave of ["cdfCodigo", "codigo", "cerCodigo"]) {
+    for (const chave of ["cdfNumero", "cdfCodigo", "codigo", "cerCodigo"]) {
       const n = Number(c[chave]);
       if (Number.isFinite(n) && n > 0) return n;
     }

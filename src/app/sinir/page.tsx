@@ -138,10 +138,9 @@ interface ContatoEmpreendimento {
 }
 
 const STATUS_BADGE: Record<string, string> = {
-  CERTIFICADO: "bg-green-50 text-green-700",
   SALVO: "bg-red-50 text-red-700",
   EMITIDO: "bg-blue-50 text-blue-700",
-  RECEBIDO: "bg-amber-50 text-amber-700",
+  RECEBIDO: "bg-green-50 text-green-700",
   CANCELADO: "bg-red-50 text-red-700",
   ARMAZ_TEMPORARIO: "bg-purple-50 text-purple-700",
 };
@@ -703,8 +702,9 @@ function PainelTab(props: {
                     <td className="py-2 px-2 text-[var(--color-ink-600)] whitespace-nowrap">{fmtData(m.dataExpedicao)}</td>
                     <td className="py-2 px-2">
                       <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${STATUS_BADGE[m.status] || "bg-[var(--color-paper-100)] text-[var(--color-ink-600)]"}`}>
-                        {m.certificado ? <CheckCircle2 size={12} /> : m.status === "CANCELADO" ? <XCircle size={12} /> : <AlertTriangle size={12} />}
-                        {m.status === "CERTIFICADO" ? "Certificado" : m.status}
+                        {m.status === "CANCELADO" ? <XCircle size={12} /> : m.status === "RECEBIDO" ? <CheckCircle2 size={12} /> : <AlertTriangle size={12} />}
+                        {m.status === "ARMAZ_TEMPORARIO" ? "Armazenamento temporário" : m.status}
+                              {m.certificado && <ShieldCheck size={12} />}
                       </span>
                     </td>
                     <td className="py-2 px-2">
@@ -716,7 +716,7 @@ function PainelTab(props: {
                         >
                           <FileDown size={15} />
                         </button>
-                        {m.conexao.modo === "real" && m.status !== "CANCELADO" && (m.certificado || m.status === "RECEBIDO") && (
+                        {m.conexao.modo === "real" && m.certificado && m.status !== "CANCELADO" && (
                           <button
                             onClick={() => baixarCdf(m)}
                             title="Baixar CDF (Certificado de Destinação Final) — disponível após o destinador confirmar a destinação"
@@ -1133,8 +1133,9 @@ function MeusMtrsTab(props: {
                             </span>
                           ) : (
                             <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${STATUS_BADGE[m.status] || "bg-[var(--color-paper-100)] text-[var(--color-ink-600)]"}`}>
-                              {m.status === "CERTIFICADO" ? <ShieldCheck size={12} /> : m.status === "CANCELADO" ? <XCircle size={12} /> : null}
-                              {m.status === "CERTIFICADO" ? "Certificado" : m.status === "ARMAZ_TEMPORARIO" ? "Armazenamento temporário" : m.status}
+                              {m.status === "CANCELADO" ? <XCircle size={12} /> : m.status === "RECEBIDO" ? <CheckCircle2 size={12} /> : null}
+                              {m.status === "ARMAZ_TEMPORARIO" ? "Armazenamento temporário" : m.status}
+                        {m.certificado && <ShieldCheck size={12} />}
                             </span>
                           )}
                         </td>
@@ -1147,7 +1148,7 @@ function MeusMtrsTab(props: {
                             >
                               <FileDown size={15} />
                             </button>
-                            {m.conexao?.modo === "real" && m.status !== "CANCELADO" && (m.certificado || m.status === "RECEBIDO") && (
+                            {m.conexao?.modo === "real" && m.certificado && m.status !== "CANCELADO" && (
                               <button
                                 onClick={() => {
                                   toast("Consultando o CDF no SINIR...", "info");
