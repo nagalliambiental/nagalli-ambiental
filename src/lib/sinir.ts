@@ -367,7 +367,11 @@ function dataDeMs(v: unknown): Date | undefined {
 function statusDeManifestoReal(obj: Record<string, unknown>): { status: SinirStatus | string; certificado: boolean } {
   const sim = (obj.situacaoManifesto || {}) as { simDescricao?: string; simCodigo?: number };
   const s = String(sim.simDescricao || obj.manSituacao || obj.situacao || obj.status || "").toUpperCase();
-  const certificado = obj.cdfCodigo != null || obj.cdfNumero != null || obj.cdfEmitidoNumero != null || String(obj.manCertificado || "").toUpperCase() === "S" || s.includes("CERTIF");
+  const temCodigoCdf = [obj.cdfCodigo, obj.cdfNumero, obj.cdfEmitidoNumero].some((v) => {
+    const n = Number(v);
+    return Number.isFinite(n) && n > 0;
+  });
+  const certificado = temCodigoCdf || String(obj.manCertificado || "").toUpperCase() === "S" || s.includes("CERTIF");
 
   if (s.includes("CANCEL")) return { status: SINIR_STATUS.CANCELADO, certificado: false };
   if (certificado) return { status: SINIR_STATUS.CERTIFICADO, certificado: true };
