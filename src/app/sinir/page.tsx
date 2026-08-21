@@ -558,7 +558,7 @@ function PainelTab(props: {
             <label className="text-xs text-[var(--color-ink-500)]">Conexão</label>
             <select value={conexaoEfetiva} onChange={(e) => setConexaoId(e.target.value)} className="rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm">
               {conexoes.map((c) => (
-                <option key={c.id} value={c.id}>{c.nome} {c.modo === "mock" ? "(simulação)" : ""}</option>
+                <option key={c.id} value={c.id}>{c.nome} — unid. {c.unidade}{c.modo === "mock" ? " (simulação)" : ""}</option>
               ))}
             </select>
           </div>
@@ -608,7 +608,7 @@ function PainelTab(props: {
             <select value={dmrEmpId} onChange={(e) => setDmrEmpId(e.target.value)} className="rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm">
               <option value="">Selecione...</option>
               {empreendimentos.map((e) => (
-                <option key={e.id} value={e.id}>{e.cliente.apelido} — {e.apelido}</option>
+                <option key={e.id} value={e.id}>{e.cliente.apelido} — {e.apelido}{e.unidadeSinir ? ` — unid. ${e.unidadeSinir}` : ""}</option>
               ))}
             </select>
           </div>
@@ -938,7 +938,7 @@ function MeusMtrsTab(props: {
               className="rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm"
             >
               {conexoes.map((c) => (
-                <option key={c.id} value={c.id}>{c.nome} {c.modo === "mock" ? "(simulação)" : ""}</option>
+                <option key={c.id} value={c.id}>{c.nome} — unid. {c.unidade}{c.modo === "mock" ? " (simulação)" : ""}</option>
               ))}
             </select>
             <div className="flex items-center gap-1.5 text-sm">
@@ -1678,7 +1678,7 @@ function abrirModalResiduo(indice?: number) {
           <select value={form.empreendimentoId} onChange={(e) => selecionarEmpreendimento(e.target.value)} className={inputCls}>
             <option value="">Selecione um empreendimento cadastrado...</option>
             {empreendimentos.map((e) => (
-              <option key={e.id} value={e.id}>{e.cliente.apelido} — {e.apelido}{e.cnpj ? "" : " (sem CNPJ próprio)"}</option>
+              <option key={e.id} value={e.id}>{e.cliente.apelido} — {e.apelido}{e.cnpj ? "" : " (sem CNPJ próprio)"}{e.unidadeSinir ? ` — unid. ${e.unidadeSinir}` : ""}</option>
             ))}
           </select>
         </div>
@@ -1686,7 +1686,7 @@ function abrirModalResiduo(indice?: number) {
           <label className="text-xs font-medium text-[var(--color-ink-500)]">Conexão</label>
           <select value={conexaoEfetiva} onChange={(e) => setForm((f) => ({ ...f, conexaoId: e.target.value }))} className={inputCls}>
             {conexoes.map((c) => (
-              <option key={c.id} value={c.id}>{c.nome} {c.modo === "mock" ? "(simulação)" : ""}</option>
+              <option key={c.id} value={c.id}>{c.nome} — unid. {c.unidade}{c.modo === "mock" ? " (simulação)" : ""}</option>
             ))}
           </select>
         </div>
@@ -2422,7 +2422,7 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtr[]; onChange
             <select value={form.conexaoId} onChange={(e) => setForm((f) => ({ ...f, conexaoId: e.target.value }))} className={inputCls}>
               <option value="">Qualquer conexão</option>
               {conexoes.map((c) => (
-                <option key={c.id} value={c.id}>{c.nome} {c.modo === "mock" ? "(simulação)" : ""}</option>
+                <option key={c.id} value={c.id}>{c.nome} — unid. {c.unidade}{c.modo === "mock" ? " (simulação)" : ""}</option>
               ))}
             </select>
           </div>
@@ -2852,7 +2852,7 @@ function ConexoesTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimen
             <select value={form.empreendimentoId} onChange={(e) => selecionarEmpreendimento(e.target.value)} className={inputCls}>
               <option value="">Selecione um empreendimento cadastrado...</option>
               {empreendimentos.map((e) => (
-                <option key={e.id} value={e.id}>{e.cliente.apelido} — {e.apelido}</option>
+                <option key={e.id} value={e.id}>{e.cliente.apelido} — {e.apelido}{e.unidadeSinir ? ` — unid. ${e.unidadeSinir}` : ""}</option>
               ))}
             </select>
           </div>
