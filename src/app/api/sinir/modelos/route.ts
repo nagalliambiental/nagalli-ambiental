@@ -29,9 +29,9 @@ export async function POST(req: NextRequest) {
   const {
     nome, descricao, conexaoId,
     clienteNome, empreendNome, nomeResponsavel,
-    transportadorCnpj, transportadorNome, transportadorEndereco, transportadorNumero,
+    transportadorCnpj, transportadorUnidade, transportadorNome, transportadorEndereco, transportadorNumero,
     transportadorUf, transportadorCidade, transportadorCep, transportadorLicenca, transportadorOrgao,
-    destinadorCnpj, destinadorNome, destinadorEndereco, destinadorNumero,
+    destinadorCnpj, destinadorUnidade, destinadorNome, destinadorEndereco, destinadorNumero,
     destinadorUf, destinadorCidade, destinadorCep, destinadorLicenca, destinadorOrgao,
     nomeMotorista, placaVeiculo, observacoes, residuos,
   } = body;
@@ -56,6 +56,7 @@ export async function POST(req: NextRequest) {
       empreendNome: empreendNome ? String(empreendNome) : null,
       nomeResponsavel: nomeResponsavel ? String(nomeResponsavel) : null,
       transportadorCnpj: transportadorCnpj ? String(transportadorCnpj) : null,
+      transportadorUnidade: transportadorUnidade ? Number(transportadorUnidade) : null,
       transportadorNome: transportadorNome ? String(transportadorNome) : null,
       transportadorEndereco: transportadorEndereco ? String(transportadorEndereco) : null,
       transportadorNumero: transportadorNumero ? String(transportadorNumero) : null,
@@ -65,6 +66,7 @@ export async function POST(req: NextRequest) {
       transportadorLicenca: transportadorLicenca ? String(transportadorLicenca) : null,
       transportadorOrgao: transportadorOrgao ? String(transportadorOrgao) : null,
       destinadorCnpj: destinadorCnpj ? String(destinadorCnpj) : null,
+      destinadorUnidade: destinadorUnidade ? Number(destinadorUnidade) : null,
       destinadorNome: destinadorNome ? String(destinadorNome) : null,
       destinadorEndereco: destinadorEndereco ? String(destinadorEndereco) : null,
       destinadorNumero: destinadorNumero ? String(destinadorNumero) : null,

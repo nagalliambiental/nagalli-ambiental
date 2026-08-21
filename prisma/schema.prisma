@@ -432,6 +432,7 @@ model SinirModelo {
   empreendNome       String?
   nomeResponsavel    String?
   transportadorCnpj     String?
+  transportadorUnidade  Int?
   transportadorNome     String?
   transportadorEndereco String?
   transportadorNumero   String?
@@ -441,6 +442,7 @@ model SinirModelo {
   transportadorLicenca  String?
   transportadorOrgao    String?
   destinadorCnpj     String?
+  destinadorUnidade  Int?
   destinadorNome     String?
   destinadorEndereco String?
   destinadorNumero   String?

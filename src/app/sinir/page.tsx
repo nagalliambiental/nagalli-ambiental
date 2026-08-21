@@ -93,6 +93,7 @@ interface ModeloMtr {
   empreendNome: string | null;
   nomeResponsavel: string | null;
   transportadorCnpj: string | null;
+  transportadorUnidade: number | null;
   transportadorNome: string | null;
   transportadorEndereco: string | null;
   transportadorNumero: string | null;
@@ -102,6 +103,7 @@ interface ModeloMtr {
   transportadorLicenca: string | null;
   transportadorOrgao: string | null;
   destinadorCnpj: string | null;
+  destinadorUnidade: number | null;
   destinadorNome: string | null;
   destinadorEndereco: string | null;
   destinadorNumero: string | null;
@@ -116,6 +118,8 @@ interface ModeloMtr {
   residuos: ResiduoCadastro[];
   conexao: { id: number; nome: string; modo: string } | null;
 }
+
+const PESO_MAX_TONELADAS = 45;
 
 const STATUS_BADGE: Record<string, string> = {
   CERTIFICADO: "bg-green-50 text-green-700",
@@ -383,26 +387,36 @@ function PainelTab(props: {
     }
   }
 
-  async function baixarManifesto(m: Manifesto) {
+  async function baixarArquivo(tipo: "mtr" | "cdf", m: Manifesto) {
+    const prefixo = tipo === "cdf" ? "CDF" : "MTR";
     try {
-      const res = await fetch(`/api/sinir/manifestos/${m.id}/download`);
+      const res = await fetch(`/api/sinir/manifestos/${m.id}/download${tipo === "cdf" ? "?tipo=cdf" : ""}`);
       if (!res.ok) {
         const data = await res.json().catch(() => null);
-        toast(data?.error || "Falha ao baixar o PDF", "error");
+        toast(data?.error || `Falha ao baixar o ${prefixo}`, "error");
         return;
       }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `MTR-${m.numero}.pdf`;
+      a.download = `${prefixo}-${m.numero}.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
     } catch {
-      toast("Falha ao baixar o PDF", "error");
+      toast(`Falha ao baixar o ${prefixo}`, "error");
     }
+  }
+
+  async function baixarManifesto(m: Manifesto) {
+    await baixarArquivo("mtr", m);
+  }
+
+  async function baixarCdf(m: Manifesto) {
+    toast("Consultando o CDF no SINIR...", "info");
+    await baixarArquivo("cdf", m);
   }
 
   async function cancelarManifesto(m: Manifesto) {
@@ -624,6 +638,15 @@ function PainelTab(props: {
                         </button>
                         {m.status !== "CANCELADO" && (
                           <button
+                            onClick={() => baixarCdf(m)}
+                            title="Baixar CDF (Certificado de Destinação Final) deste MTR no SINIR"
+                            className="rounded-md p-1.5 text-[var(--color-ink-600)] hover:bg-green-50 hover:text-green-700"
+                          >
+                            <ShieldCheck size={15} />
+                          </button>
+                        )}
+                        {m.status !== "CANCELADO" && (
+                          <button
                             onClick={() => cancelarManifesto(m)}
                             title="Cancelar MTR"
                             className="rounded-md p-1.5 text-[var(--color-ink-600)] hover:bg-amber-50 hover:text-amber-700"
@@ -718,6 +741,29 @@ function MeusMtrsTab(props: {
       toast("Falha ao consultar o SINIR", "error");
     } finally {
       setConsultando(false);
+    }
+  }
+
+  async function baixarArquivoMeusMtrs(tipo: "mtr" | "cdf", m: Manifesto) {
+    const prefixo = tipo === "cdf" ? "CDF" : "MTR";
+    try {
+      const res = await fetch(`/api/sinir/manifestos/${m.id}/download${tipo === "cdf" ? "?tipo=cdf" : ""}`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        toast(data?.error || `Falha ao baixar o ${prefixo}`, "error");
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${prefixo}-${m.numero}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast(`Falha ao baixar o ${prefixo}`, "error");
     }
   }
 
@@ -888,31 +934,21 @@ function MeusMtrsTab(props: {
                         <td className="py-2 px-2">
                           <div className="flex items-center gap-1">
                             <button
-                              onClick={async () => {
-                                try {
-                                  const res = await fetch(`/api/sinir/manifestos/${m.id}/download`);
-                                  if (!res.ok) {
-                                    const data = await res.json().catch(() => null);
-                                    toast(data?.error || "Falha ao baixar", "error");
-                                    return;
-                                  }
-                                  const blob = await res.blob();
-                                  const url = URL.createObjectURL(blob);
-                                  const a = document.createElement("a");
-                                  a.href = url;
-                                  a.download = `MTR-${m.numero}.pdf`;
-                                  document.body.appendChild(a);
-                                  a.click();
-                                  a.remove();
-                                  URL.revokeObjectURL(url);
-                                } catch {
-                                  toast("Falha ao baixar", "error");
-                                }
-                              }}
+                              onClick={() => baixarArquivoMeusMtrs("mtr", m)}
                               title="Baixar PDF do MTR"
                               className="rounded-md p-1.5 text-[var(--color-ink-600)] hover:bg-[var(--color-paper-100)] hover:text-[var(--color-brand-600)]"
                             >
                               <FileDown size={15} />
+                            </button>
+                            <button
+                              onClick={() => {
+                                toast("Consultando o CDF no SINIR...", "info");
+                                baixarArquivoMeusMtrs("cdf", m);
+                              }}
+                              title="Baixar CDF (Certificado de Destinação Final) deste MTR no SINIR"
+                              className="rounded-md p-1.5 text-[var(--color-ink-600)] hover:bg-green-50 hover:text-green-700"
+                            >
+                              <ShieldCheck size={15} />
                             </button>
                           </div>
                         </td>
@@ -1019,6 +1055,7 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
     nomeResponsavel: "",
     // Transportador
     transportadorCnpj: "",
+    transportadorUnidade: "",
     transportadorNome: "",
     transportadorEndereco: "",
     transportadorNumero: "",
@@ -1032,6 +1069,7 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
     dataExpedicao: "",
     // Destinador
     destinadorCnpj: "",
+    destinadorUnidade: "",
     destinadorNome: "",
     destinadorEndereco: "",
     destinadorNumero: "",
@@ -1175,6 +1213,7 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
       empreendNome: m.empreendNome || f.empreendNome,
       nomeResponsavel: m.nomeResponsavel || f.nomeResponsavel,
       transportadorCnpj: m.transportadorCnpj || "",
+      transportadorUnidade: m.transportadorUnidade ? String(m.transportadorUnidade) : "",
       transportadorNome: m.transportadorNome || "",
       transportadorEndereco: m.transportadorEndereco || "",
       transportadorNumero: m.transportadorNumero || "",
@@ -1184,6 +1223,7 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
       transportadorLicenca: m.transportadorLicenca || "",
       transportadorOrgao: m.transportadorOrgao || "",
       destinadorCnpj: m.destinadorCnpj || "",
+      destinadorUnidade: m.destinadorUnidade ? String(m.destinadorUnidade) : "",
       destinadorNome: m.destinadorNome || "",
       destinadorEndereco: m.destinadorEndereco || "",
       destinadorNumero: m.destinadorNumero || "",
@@ -1213,6 +1253,10 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
       toast("Preencha os CNPJs do transportador e destinador para salvar o modelo", "error");
       return;
     }
+    if (!form.transportadorUnidade || !form.destinadorUnidade) {
+      toast("Informe os códigos de unidade do transportador e do destinador para salvar o modelo", "error");
+      return;
+    }
     if (residuos.length === 0) {
       toast("Adicione pelo menos um resíduo para salvar o modelo", "error");
       return;
@@ -1230,6 +1274,7 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
           empreendNome: form.empreendNome,
           nomeResponsavel: responsavel,
           transportadorCnpj: form.transportadorCnpj,
+          transportadorUnidade: form.transportadorUnidade ? Number(form.transportadorUnidade) : null,
           transportadorNome: form.transportadorNome,
           transportadorEndereco: form.transportadorEndereco,
           transportadorNumero: form.transportadorNumero,
@@ -1239,6 +1284,7 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
           transportadorLicenca: form.transportadorLicenca,
           transportadorOrgao: form.transportadorOrgao,
           destinadorCnpj: form.destinadorCnpj,
+          destinadorUnidade: form.destinadorUnidade ? Number(form.destinadorUnidade) : null,
           destinadorNome: form.destinadorNome,
           destinadorEndereco: form.destinadorEndereco,
           destinadorNumero: form.destinadorNumero,
@@ -1302,6 +1348,15 @@ function abrirModalResiduo(indice?: number) {
       toast("Quantidade e códigos devem ser números válidos", "error");
       return;
     }
+    if (precisaDensidade(residuoForm.uniCodigo) && !(residuoForm.marDensidade && Number(residuoForm.marDensidade) > 0)) {
+      toast("Informe a densidade — ela converte o volume em toneladas na emissão", "error");
+      return;
+    }
+    const pesoLinha = pesoCalculado(residuoForm.marQuantidade, residuoForm.marDensidade, residuoForm.uniCodigo);
+    if (pesoLinha != null && pesoLinha > PESO_MAX_TONELADAS) {
+      toast(`Peso calculado (${pesoLinha.toLocaleString("pt-BR", { maximumFractionDigits: 3 })} t) excede o máximo de ${PESO_MAX_TONELADAS} t`, "error");
+      return;
+    }
     setResiduos((r) => {
       const novo = [...r];
       if (editandoResiduo != null) novo[editandoResiduo] = residuoForm;
@@ -1335,10 +1390,61 @@ function abrirModalResiduo(indice?: number) {
   function nomeTrat(codigo: string) {
     return catalogos?.tratamentos.find((t) => t.traCodigo === Number(codigo))?.traDescricao || codigo;
   }
+  function semAcento(texto: string) {
+    return texto.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "");
+  }
+  function tipoUnidade(codigo: string): "m3" | "litro" | "kg" | "tonelada" | "outro" {
+    const u = catalogos?.unidades.find((x) => x.uniCodigo === Number(codigo));
+    if (!u) return "outro";
+    const nome = semAcento(u.uniNome);
+    const sigla = semAcento(u.uniSigla);
+    if (nome.includes("m3") || sigla.includes("m3") || nome.includes("metro cubico") || nome.includes("metros cubicos")) return "m3";
+    if (nome.includes("litro") || sigla === "l") return "litro";
+    if (nome.includes("tonelada") || sigla === "t" || sigla === "ton") return "tonelada";
+    if (nome.includes("quilo") || sigla === "kg") return "kg";
+    return "outro";
+  }
+  function precisaDensidade(codigo: string) {
+    const t = tipoUnidade(codigo);
+    return t === "m3" || t === "litro";
+  }
+  function rotuloDensidade(codigo: string) {
+    return tipoUnidade(codigo) === "litro" ? "Densidade (g/cm³) *" : "Densidade (t/m³) *";
+  }
+  function pesoCalculado(quantidade: string, densidade: string, codigo: string): number | null {
+    const qtd = Number(quantidade);
+    if (!Number.isFinite(qtd) || qtd <= 0) return null;
+    const t = tipoUnidade(codigo);
+    if (t === "tonelada") return Math.round(qtd * 1000) / 1000;
+    if (t === "kg") return Math.round((qtd / 1000) * 1000) / 1000;
+    const dens = Number(densidade);
+    if (!Number.isFinite(dens) || dens <= 0) return null;
+    if (t === "m3") return Math.round(qtd * dens * 1000) / 1000;
+    if (t === "litro") return Math.round(((qtd * dens) / 1000) * 1000) / 1000;
+    return null;
+  }
+  function pesoExibido(r: ResiduoCadastro): string | null {
+    if (tipoUnidade(r.uniCodigo) === "tonelada") return null;
+    const peso = pesoCalculado(r.marQuantidade, r.marDensidade, r.uniCodigo);
+    return peso != null && peso > 0 ? `≈ ${peso.toLocaleString("pt-BR", { maximumFractionDigits: 3 })} t` : null;
+  }
+  function codigoToneladas(): number | undefined {
+    const u = catalogos?.unidades.find((x) => {
+      const nome = semAcento(x.uniNome);
+      const sigla = x.uniSigla.toLowerCase();
+      return nome.includes("tonelada") || sigla === "t" || sigla === "ton";
+    });
+    return u?.uniCodigo;
+  }
 
   async function emitir() {
     if (!form.transportadorCnpj || form.transportadorCnpj.length !== 14 || !form.destinadorCnpj || form.destinadorCnpj.length !== 14) {
       toast("Preencha os CNPJs (14 dígitos) do transportador e destinador", "error");
+      return;
+    }
+    const modoReal = conexoes.find((c) => c.id === Number(conexaoEfetiva))?.modo !== "mock";
+    if (modoReal && (!form.transportadorUnidade || !form.destinadorUnidade)) {
+      toast("Informe o código da unidade do transportador e do destinador (visível no portal SINIR — DMR/emissão)", "error");
       return;
     }
     if (residuos.length === 0) {
@@ -1349,10 +1455,56 @@ function abrirModalResiduo(indice?: number) {
       toast("Informe a quantidade de cada resíduo antes de emitir", "error");
       return;
     }
+    const codTon = codigoToneladas();
+    if (!codTon) {
+      toast("Não encontrei a unidade 'tonelada' no catálogo do SINIR para converter os pesos", "error");
+      return;
+    }
+    let pesoTotal = 0;
+    for (const r of residuos) {
+      if (tipoUnidade(r.uniCodigo) === "outro") continue;
+      const peso = pesoCalculado(r.marQuantidade, r.marDensidade, r.uniCodigo);
+      const nomeLinha = r.marDescricaoInterna || nomeResiduo(r.resCodigoIbama);
+      if (peso == null) {
+        toast(`"${nomeLinha}": informe quantidade${precisaDensidade(r.uniCodigo) ? " e densidade" : ""} para calcular o peso em toneladas`, "error");
+        return;
+      }
+      if (peso > PESO_MAX_TONELADAS) {
+        toast(`"${nomeLinha}": peso calculado (${peso.toLocaleString("pt-BR")} t) excede o máximo de ${PESO_MAX_TONELADAS} t`, "error");
+        return;
+      }
+      pesoTotal += peso;
+    }
+    if (pesoTotal > PESO_MAX_TONELADAS) {
+      toast(`Peso total (${pesoTotal.toLocaleString("pt-BR", { maximumFractionDigits: 3 })} t) excede o máximo de ${PESO_MAX_TONELADAS} t por MTR`, "error");
+      return;
+    }
     setEnviando(true);
     setResultado(null);
     try {
-      const quantidadeTotal = residuos.reduce((soma, r) => soma + Number(r.marQuantidade), 0);
+      const residuosPayload = residuos.map((r) => {
+        const tipo = tipoUnidade(r.uniCodigo);
+        const peso = pesoCalculado(r.marQuantidade, r.marDensidade, r.uniCodigo);
+        const converte = tipo !== "outro" && peso != null;
+        return {
+          resCodigoIbama: r.resCodigoIbama,
+          marQuantidade: converte ? peso : Number(r.marQuantidade),
+          marDensidade: precisaDensidade(r.uniCodigo) && r.marDensidade ? Number(r.marDensidade) : undefined,
+          uniCodigo: converte ? codTon : Number(r.uniCodigo),
+          tieCodigo: Number(r.tieCodigo),
+          claCodigo: Number(r.claCodigo),
+          tiaCodigo: Number(r.tiaCodigo),
+          traCodigo: Number(r.traCodigo),
+          marNumeroONU: r.marNumeroONU || undefined,
+          marClasseRisco: r.marClasseRisco || undefined,
+          marNomeEmbarque: r.marNomeEmbarque || undefined,
+          marGrupoEmbalagem: r.marGrupoEmbalagem || undefined,
+          marCodigoInterno: r.marCodigoInterno || undefined,
+          marDescricaoInterna: r.marDescricaoInterna || undefined,
+          observacoes: r.observacoes || undefined,
+        };
+      });
+      const quantidadeTotal = residuosPayload.reduce((soma, r) => soma + r.marQuantidade, 0);
       const resumo = residuos.map((r) => r.marDescricaoInterna || nomeResiduo(r.resCodigoIbama)).join("; ");
       const res = await fetch("/api/sinir/emitir", {
         method: "POST",
@@ -1364,23 +1516,7 @@ function abrirModalResiduo(indice?: number) {
           resumo,
           quantidade: quantidadeTotal,
           dataExpedicao: form.dataExpedicao ? new Date(`${form.dataExpedicao}T12:00:00`).getTime() : undefined,
-          residuos: residuos.map((r) => ({
-            resCodigoIbama: r.resCodigoIbama,
-            marQuantidade: Number(r.marQuantidade),
-            marDensidade: r.marDensidade ? Number(r.marDensidade) : undefined,
-            uniCodigo: Number(r.uniCodigo),
-            tieCodigo: Number(r.tieCodigo),
-            claCodigo: Number(r.claCodigo),
-            tiaCodigo: Number(r.tiaCodigo),
-            traCodigo: Number(r.traCodigo),
-            marNumeroONU: r.marNumeroONU || undefined,
-            marClasseRisco: r.marClasseRisco || undefined,
-            marNomeEmbarque: r.marNomeEmbarque || undefined,
-            marGrupoEmbalagem: r.marGrupoEmbalagem || undefined,
-            marCodigoInterno: r.marCodigoInterno || undefined,
-            marDescricaoInterna: r.marDescricaoInterna || undefined,
-            observacoes: r.observacoes || undefined,
-          })),
+          residuos: residuosPayload,
         }),
       });
       const data = await res.json();
@@ -1508,6 +1644,10 @@ function abrirModalResiduo(indice?: number) {
           </div>
         </div>
         <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-[var(--color-ink-500)]" title="Código da unidade deste parceiro no SINIR — visível no portal (DMR/emissão) ao buscar pelo CNPJ">Cód. Unidade SINIR *</label>
+          <input value={form.transportadorUnidade} onChange={(e) => setCampo("transportadorUnidade", e.target.value.replace(/\D/g, ""))} className={inputCls} placeholder="Ex.: 400701" />
+        </div>
+        <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-[var(--color-ink-500)]">Placa do veículo</label>
           <input value={form.placaVeiculo} onChange={(e) => setCampo("placaVeiculo", e.target.value.toUpperCase())} className={inputCls} />
         </div>
@@ -1569,6 +1709,10 @@ function abrirModalResiduo(indice?: number) {
               {buscandoDest ? "Buscando..." : "Buscar"}
             </button>
           </div>
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-[var(--color-ink-500)]" title="Código da unidade deste parceiro no SINIR — visível no portal (DMR/emissão) ao buscar pelo CNPJ. Um mesmo CNPJ pode ter várias unidades.">Cód. Unidade SINIR *</label>
+          <input value={form.destinadorUnidade} onChange={(e) => setCampo("destinadorUnidade", e.target.value.replace(/\D/g, ""))} className={inputCls} placeholder="Ex.: 400701" />
         </div>
         <div className="flex flex-col gap-1 md:col-span-2">
           <label className="text-xs font-medium text-[var(--color-ink-500)]">Endereço</label>
@@ -1640,7 +1784,10 @@ function abrirModalResiduo(indice?: number) {
                     <div className="font-medium">{nomeResiduo(r.resCodigoIbama)}</div>
                     <div className="text-xs text-[var(--color-ink-500)]">{r.marDescricaoInterna || "—"}</div>
                   </td>
-                  <td className="py-2 px-2 whitespace-nowrap text-[var(--color-ink-700)]">{Number(r.marQuantidade).toLocaleString("pt-BR")} {nomeUnidade(r.uniCodigo)}</td>
+                  <td className="py-2 px-2 whitespace-nowrap text-[var(--color-ink-700)]">
+                    <div>{Number(r.marQuantidade).toLocaleString("pt-BR")} {nomeUnidade(r.uniCodigo)}</div>
+                    {pesoExibido(r) && <div className="text-xs text-[var(--color-ink-500)]">{pesoExibido(r)}</div>}
+                  </td>
                   <td className="py-2 px-2 text-[var(--color-ink-600)]">{nomeEstado(r.tieCodigo)}</td>
                   <td className="py-2 px-2 text-[var(--color-ink-600)]">{nomeClasse(r.claCodigo)}</td>
                   <td className="py-2 px-2 text-[var(--color-ink-600)]">{nomeAcond(r.tiaCodigo)}</td>
@@ -1717,18 +1864,30 @@ function abrirModalResiduo(indice?: number) {
                 <input type="number" step="0.01" min="0" value={residuoForm.marQuantidade} onChange={(e) => setResiduoForm((f) => ({ ...f, marQuantidade: e.target.value }))} className={inputCls} />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-[var(--color-ink-500)]">Densidade</label>
-                <input type="number" step="0.01" min="0" value={residuoForm.marDensidade} onChange={(e) => setResiduoForm((f) => ({ ...f, marDensidade: e.target.value }))} className={inputCls} placeholder="Opcional — kg/m³" />
-              </div>
-              <div className="flex flex-col gap-1">
                 <label className="text-xs font-medium text-[var(--color-ink-500)]">Unidade *</label>
-                <select value={residuoForm.uniCodigo} onChange={(e) => setResiduoForm((f) => ({ ...f, uniCodigo: e.target.value }))} className={inputCls}>
+                <select value={residuoForm.uniCodigo} onChange={(e) => setResiduoForm((f) => ({ ...f, uniCodigo: e.target.value, marDensidade: precisaDensidade(e.target.value) ? f.marDensidade : "" }))} className={inputCls}>
                   <option value="">Selecione...</option>
                   {catalogos?.unidades.map((u) => (
                     <option key={u.uniCodigo} value={u.uniCodigo}>{u.uniSigla} — {u.uniNome}</option>
                   ))}
                 </select>
               </div>
+              {precisaDensidade(residuoForm.uniCodigo) && (
+                <div className="flex flex-col gap-1 md:col-span-2">
+                  <label className="text-xs font-medium text-[var(--color-ink-500)]">{rotuloDensidade(residuoForm.uniCodigo)}</label>
+                  <input type="number" step="0.01" min="0" value={residuoForm.marDensidade} onChange={(e) => setResiduoForm((f) => ({ ...f, marDensidade: e.target.value }))} className={inputCls} placeholder={tipoUnidade(residuoForm.uniCodigo) === "litro" ? "Ex.: 1,2 — converte litros em toneladas (L × densidade ÷ 1000)" : "Ex.: 1,4 — converte m³ em toneladas (qtd × densidade)"} />
+                </div>
+              )}
+              {(() => {
+                const peso = pesoCalculado(residuoForm.marQuantidade, residuoForm.marDensidade, residuoForm.uniCodigo);
+                if (peso == null) return null;
+                const excede = peso > PESO_MAX_TONELADAS;
+                return (
+                  <p className={`md:col-span-2 text-xs ${excede ? "font-medium text-red-600" : "text-[var(--color-ink-500)]"}`}>
+                    Peso calculado: {peso.toLocaleString("pt-BR", { maximumFractionDigits: 3 })} t{excede ? ` — excede o máximo de ${PESO_MAX_TONELADAS} t` : ""}
+                  </p>
+                );
+              })()}
               <div className="flex flex-col gap-1">
                 <label className="text-xs font-medium text-[var(--color-ink-500)]">Estado Físico *</label>
                 <select value={residuoForm.tieCodigo} onChange={(e) => setResiduoForm((f) => ({ ...f, tieCodigo: e.target.value }))} className={inputCls}>
@@ -1828,6 +1987,7 @@ interface ModeloFormState {
   empreendNome: string;
   nomeResponsavel: string;
   transportadorCnpj: string;
+  transportadorUnidade: string;
   transportadorNome: string;
   transportadorEndereco: string;
   transportadorNumero: string;
@@ -1837,6 +1997,7 @@ interface ModeloFormState {
   transportadorLicenca: string;
   transportadorOrgao: string;
   destinadorCnpj: string;
+  destinadorUnidade: string;
   destinadorNome: string;
   destinadorEndereco: string;
   destinadorNumero: string;
@@ -1860,6 +2021,7 @@ const MODELO_FORM_VAZIO: ModeloFormState = {
   empreendNome: "",
   nomeResponsavel: "",
   transportadorCnpj: "",
+  transportadorUnidade: "",
   transportadorNome: "",
   transportadorEndereco: "",
   transportadorNumero: "",
@@ -1869,6 +2031,7 @@ const MODELO_FORM_VAZIO: ModeloFormState = {
   transportadorLicenca: "",
   transportadorOrgao: "",
   destinadorCnpj: "",
+  destinadorUnidade: "",
   destinadorNome: "",
   destinadorEndereco: "",
   destinadorNumero: "",
@@ -1920,6 +2083,7 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtr[]; onChange
       empreendNome: m.empreendNome || "",
       nomeResponsavel: m.nomeResponsavel || "",
       transportadorCnpj: m.transportadorCnpj || "",
+      transportadorUnidade: m.transportadorUnidade ? String(m.transportadorUnidade) : "",
       transportadorNome: m.transportadorNome || "",
       transportadorEndereco: m.transportadorEndereco || "",
       transportadorNumero: m.transportadorNumero || "",
@@ -1929,6 +2093,7 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtr[]; onChange
       transportadorLicenca: m.transportadorLicenca || "",
       transportadorOrgao: m.transportadorOrgao || "",
       destinadorCnpj: m.destinadorCnpj || "",
+      destinadorUnidade: m.destinadorUnidade ? String(m.destinadorUnidade) : "",
       destinadorNome: m.destinadorNome || "",
       destinadorEndereco: m.destinadorEndereco || "",
       destinadorNumero: m.destinadorNumero || "",
@@ -2039,6 +2204,10 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtr[]; onChange
       toast("Preencha os CNPJs (14 dígitos) do transportador e do destinador", "error");
       return;
     }
+    if (!form.transportadorUnidade || !form.destinadorUnidade) {
+      toast("Informe os códigos de unidade SINIR do transportador e do destinador", "error");
+      return;
+    }
     setSalvando(true);
     try {
       const payload = {
@@ -2049,6 +2218,7 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtr[]; onChange
         empreendNome: form.empreendNome || null,
         nomeResponsavel: form.nomeResponsavel || null,
         transportadorCnpj: form.transportadorCnpj.replace(/\D/g, ""),
+        transportadorUnidade: form.transportadorUnidade ? Number(form.transportadorUnidade) : null,
         transportadorNome: form.transportadorNome || null,
         transportadorEndereco: form.transportadorEndereco || null,
         transportadorNumero: form.transportadorNumero || null,
@@ -2058,6 +2228,7 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtr[]; onChange
         transportadorLicenca: form.transportadorLicenca || null,
         transportadorOrgao: form.transportadorOrgao || null,
         destinadorCnpj: form.destinadorCnpj.replace(/\D/g, ""),
+        destinadorUnidade: form.destinadorUnidade ? Number(form.destinadorUnidade) : null,
         destinadorNome: form.destinadorNome || null,
         destinadorEndereco: form.destinadorEndereco || null,
         destinadorNumero: form.destinadorNumero || null,
@@ -2156,6 +2327,10 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtr[]; onChange
                 <input value={form.transportadorNome} onChange={(e) => setForm((f) => ({ ...f, transportadorNome: e.target.value }))} className={inputCls} />
               </div>
               <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]" title="Código da unidade deste parceiro no SINIR — visível no portal (DMR/emissão) ao buscar pelo CNPJ. Um mesmo CNPJ pode ter várias unidades.">Cód. Unidade SINIR *</label>
+                <input value={form.transportadorUnidade} onChange={(e) => setForm((f) => ({ ...f, transportadorUnidade: e.target.value.replace(/\D/g, "") }))} className={inputCls} placeholder="Ex.: 400701" />
+              </div>
+              <div className="flex flex-col gap-1">
                 <label className="text-xs font-medium text-[var(--color-ink-500)]">Licença</label>
                 <input value={form.transportadorLicenca} onChange={(e) => setForm((f) => ({ ...f, transportadorLicenca: e.target.value }))} className={inputCls} />
               </div>
@@ -2202,6 +2377,10 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtr[]; onChange
               <div className="flex flex-col gap-1">
                 <label className="text-xs font-medium text-[var(--color-ink-500)]">Razão social</label>
                 <input value={form.destinadorNome} onChange={(e) => setForm((f) => ({ ...f, destinadorNome: e.target.value }))} className={inputCls} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]" title="Código da unidade deste parceiro no SINIR — visível no portal (DMR/emissão) ao buscar pelo CNPJ. Um mesmo CNPJ pode ter várias unidades.">Cód. Unidade SINIR *</label>
+                <input value={form.destinadorUnidade} onChange={(e) => setForm((f) => ({ ...f, destinadorUnidade: e.target.value.replace(/\D/g, "") }))} className={inputCls} placeholder="Ex.: 400701" />
               </div>
               <div className="flex flex-col gap-1">
                 <label className="text-xs font-medium text-[var(--color-ink-500)]">Licença</label>
@@ -2387,8 +2566,8 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtr[]; onChange
                 <input value={residuoForm.traCodigo} onChange={(e) => setResiduoForm((f) => ({ ...f, traCodigo: e.target.value }))} className={inputCls} />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-[var(--color-ink-500)]">Densidade (opcional)</label>
-                <input type="number" step="0.01" min="0" value={residuoForm.marDensidade} onChange={(e) => setResiduoForm((f) => ({ ...f, marDensidade: e.target.value }))} className={inputCls} placeholder="kg/m³" />
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Densidade</label>
+                <input type="number" step="0.01" min="0" value={residuoForm.marDensidade} onChange={(e) => setResiduoForm((f) => ({ ...f, marDensidade: e.target.value }))} className={inputCls} placeholder="Converte volume (m³/L) em toneladas na emissão" />
               </div>
               <div className="flex flex-col gap-1">
                 <label className="text-xs font-medium text-[var(--color-ink-500)]">Número ONU (opcional)</label>

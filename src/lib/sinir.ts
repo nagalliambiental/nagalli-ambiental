@@ -67,7 +67,9 @@ export interface EmitirManifestoInput {
   quantidade: number;
   unidade: string;
   transportadorCnpj: string;
+  transportadorUnidade: number;
   destinadorCnpj: string;
+  destinadorUnidade: number;
   nomeResponsavel?: string;
   nomeMotorista?: string;
   placaVeiculo?: string;
@@ -190,7 +192,17 @@ async function apiFetch(
     throw new SinirError("Sem permissão do SINIR para esta operação — confira a unidade vinculada ao token", 403);
   }
   if (!res.ok) {
-    throw new SinirError(`Erro do SINIR (HTTP ${res.status})`, res.status);
+    const corpo = (await res.json().catch(() => ({}))) as {
+      mensagem?: string;
+      mensagemErroNacional?: string;
+      erro?: boolean;
+      objetoResposta?: unknown;
+    };
+    const msg =
+      (typeof corpo.mensagem === "string" && corpo.mensagem.trim() ? corpo.mensagem : "") ||
+      (typeof corpo.mensagemErroNacional === "string" && corpo.mensagemErroNacional.trim() ? corpo.mensagemErroNacional : "") ||
+      `Erro do SINIR (HTTP ${res.status})`;
+    throw new SinirError(msg, res.status);
   }
 
   try {
@@ -704,6 +716,10 @@ export async function emitirManifesto(
     return { numero, simulacao: true };
   }
 
+  if (!input.transportadorUnidade || !input.destinadorUnidade) {
+    throw new SinirError("Informe o código da unidade do transportador e do destinador (visível no portal SINIR, módulo DMR)", 400);
+  }
+
   const resultado = await apiFetch(conexao, "/salvarManifestoLote", {
     method: "POST",
     body: [
@@ -711,8 +727,8 @@ export async function emitirManifesto(
         possuiArmazenamentoTemporario: false,
         nomeResponsavel: input.nomeResponsavel || "Responsavel Tecnico",
         gerador: { cpfCnpj: conexao.cnpj, unidade: Number(conexao.unidade) || conexao.unidade },
-        transportador: { cpfCnpj: input.transportadorCnpj, unidade: Number(input.transportadorCnpj) || input.transportadorCnpj },
-        destinador: { cpfCnpj: input.destinadorCnpj, unidade: Number(input.destinadorCnpj) || input.destinadorCnpj },
+        transportador: { cpfCnpj: input.transportadorCnpj, unidade: input.transportadorUnidade },
+        destinador: { cpfCnpj: input.destinadorCnpj, unidade: input.destinadorUnidade },
         nomeMotorista: input.nomeMotorista || null,
         placaVeiculo: input.placaVeiculo || null,
         dataExpedicao: input.dataExpedicao || Date.now(),
@@ -754,6 +770,26 @@ export async function emitirManifesto(
 
 // ---------- Download ----------
 
+async function erroDownload(res: Response, fallback: string): Promise<SinirError> {
+  const corpo = (await res.json().catch(() => ({}))) as {
+    mensagem?: string;
+    mensagemErroNacional?: string;
+    error?: string;
+    message?: string;
+  };
+  const detalhe =
+    (typeof corpo.mensagem === "string" && corpo.mensagem.trim() && corpo.mensagem) ||
+    (typeof corpo.mensagemErroNacional === "string" && corpo.mensagemErroNacional.trim() && corpo.mensagemErroNacional) ||
+    (typeof corpo.error === "string" && corpo.error.trim() && corpo.error) ||
+    (typeof corpo.message === "string" && corpo.message.trim() && corpo.message) ||
+    "";
+  return new SinirError(detalhe ? `SINIR: ${detalhe}` : `${fallback} (HTTP ${res.status})`, res.status);
+}
+
+function ePdfValido(buffer: Uint8Array): boolean {
+  return buffer.byteLength > 200 && String.fromCharCode(...buffer.slice(0, 5)) === "%PDF-";
+}
+
 export async function baixarManifestoPdf(
   conexao: SinirConexaoCompleta,
   numero: string
@@ -770,12 +806,71 @@ export async function baixarManifestoPdf(
     cache: "no-store",
   });
 
-  if (!res.ok) {
-    throw new SinirError(`Erro ao baixar PDF do MTR (HTTP ${res.status})`, res.status);
+  if (!res.ok || (res.headers.get("content-type") || "").includes("application/json")) {
+    throw await erroDownload(res, "Erro ao baixar PDF do MTR");
   }
 
   const buffer = new Uint8Array(await res.arrayBuffer());
+  if (!ePdfValido(buffer)) {
+    throw new SinirError("O SINIR não retornou um PDF válido para este MTR", 502);
+  }
   return { buffer, filename: `MTR-${numero}.pdf` };
+}
+
+// ---------- Certificado de Destinação Final (CDF) ----------
+
+export async function consultarCertificadoMtr(conexao: SinirConexaoCompleta, numero: string): Promise<number | null> {
+  const dados = (await apiFetch(conexao, `/retornaManifesto/${encodeURIComponent(numero)}`)) as {
+    erro?: boolean;
+    mensagem?: string;
+    objeto?: unknown;
+    objetoResposta?: unknown;
+  } | null;
+
+  const alvo = ((dados?.objeto ?? dados?.objetoResposta) || null) as Record<string, unknown> | null;
+  if (!alvo || typeof alvo !== "object") return null;
+
+  for (const chave of ["cdfCodigo", "certificadoCodigo", "codigoCertificado", "numeroCertificado", "cerCodigo"]) {
+    const n = Number(alvo[chave]);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  const cert = alvo.certificado;
+  if (cert && typeof cert === "object") {
+    const c = cert as Record<string, unknown>;
+    for (const chave of ["cdfCodigo", "codigo", "cerCodigo"]) {
+      const n = Number(c[chave]);
+      if (Number.isFinite(n) && n > 0) return n;
+    }
+  }
+  return null;
+}
+
+export async function baixarCertificadoPdf(
+  conexao: SinirConexaoCompleta,
+  cdfCodigo: number | string
+): Promise<{ buffer: Uint8Array; filename: string }> {
+  const codigo = String(cdfCodigo).trim();
+  if (!codigo) throw new SinirError("Código do certificado é obrigatório", 400);
+
+  const token = await obterTokenAcesso(conexao);
+  const res = await fetch(`${SINIR_API_BASE}/downloadCertificado/${encodeURIComponent(codigo)}?formato=pdf`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/pdf",
+    },
+    cache: "no-store",
+  });
+
+  if (!res.ok || (res.headers.get("content-type") || "").includes("application/json")) {
+    throw await erroDownload(res, "Erro ao baixar o CDF do SINIR");
+  }
+
+  const buffer = new Uint8Array(await res.arrayBuffer());
+  if (!ePdfValido(buffer)) {
+    throw new SinirError("O SINIR não retornou um PDF válido para este CDF", 502);
+  }
+  return { buffer, filename: `CDF-${codigo}.pdf` };
 }
 
 // ---------- Cancelamento ----------

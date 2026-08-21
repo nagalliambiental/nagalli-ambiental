@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const {
     conexaoId, clienteNome, empreendNome, resumo, quantidade, unidade,
-    transportadorCnpj, destinadorCnpj,
+    transportadorCnpj, destinadorCnpj, transportadorUnidade, destinadorUnidade,
     nomeResponsavel, nomeMotorista, placaVeiculo, dataExpedicao, observacoes, residuos,
   } = body;
 
@@ -49,7 +49,9 @@ export async function POST(req: NextRequest) {
       quantidade: Number(quantidade),
       unidade: unidade || "kg",
       transportadorCnpj: String(transportadorCnpj || ""),
+      transportadorUnidade: Number(transportadorUnidade) || 0,
       destinadorCnpj: String(destinadorCnpj || ""),
+      destinadorUnidade: Number(destinadorUnidade) || 0,
       nomeResponsavel: nomeResponsavel ? String(nomeResponsavel) : undefined,
       nomeMotorista: nomeMotorista ? String(nomeMotorista) : undefined,
       placaVeiculo: placaVeiculo ? String(placaVeiculo) : undefined,
