@@ -53,8 +53,8 @@ export async function POST(req: NextRequest) {
   }
 
   const ehPrivilegiado = perfil === "socio" || perfil === "admin";
-  if (modo === "real" && !ehPrivilegiado) {
-    return NextResponse.json({ error: "Apenas sócio ou administrador pode cadastrar token em modo real" }, { status: 403 });
+  if (!ehPrivilegiado) {
+    return NextResponse.json({ error: "Apenas sócio ou administrador pode gerenciar conexões" }, { status: 403 });
   }
 
   const conexao = await prisma.sinirConexao.create({
@@ -63,9 +63,9 @@ export async function POST(req: NextRequest) {
       cnpj: String(cnpj).replace(/\D/g, ""),
       unidade: String(unidade),
       empreendimentoId: empreendimentoId ? Number(empreendimentoId) : null,
-      token: token && ehPrivilegiado ? criptografar(String(token)) : null,
-      modo: modo === "real" && ehPrivilegiado ? "real" : "mock",
-      venceEm: venceEm && ehPrivilegiado ? new Date(venceEm) : null,
+      token: token ? criptografar(String(token)) : null,
+      modo: modo === "real" ? "real" : "mock",
+      venceEm: venceEm ? new Date(venceEm) : null,
     },
   });
 
@@ -74,8 +74,12 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   const session = await auth();
+  const perfil = (session?.user as { perfil?: string } | undefined)?.perfil;
   if (!session?.user) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  }
+  if (perfil !== "socio" && perfil !== "admin") {
+    return NextResponse.json({ error: "Apenas sócio ou administrador pode gerenciar conexões" }, { status: 403 });
   }
 
   const ids = req.nextUrl.searchParams.get("ids");

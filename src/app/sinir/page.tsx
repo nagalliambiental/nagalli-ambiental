@@ -148,6 +148,9 @@ function fmtQtd(v: number | null, u: string | null) {
 
 export default function SinirPage() {
   const { toast } = useToast();
+  const { data: session } = useSession();
+  const perfil = (session?.user as Record<string, unknown> | undefined)?.perfil as string | undefined;
+  const ehPrivilegiado = perfil === "socio" || perfil === "admin";
   const [tab, setTab] = useState<Tab>("painel");
 
   const [conexoes, setConexoes] = useState<Conexao[]>([]);
@@ -267,7 +270,7 @@ export default function SinirPage() {
             { key: "meusMtrs", label: "Meus MTRs" },
             { key: "emitir", label: "Emitir MTR" },
             { key: "modelos", label: "Modelos" },
-            { key: "conexoes", label: "Conexões" },
+            ...(ehPrivilegiado ? [{ key: "conexoes" as Tab, label: "Conexões" }] : []),
           ] as { key: Tab; label: string }[]
         ).map((t) => (
           <button
@@ -319,7 +322,7 @@ export default function SinirPage() {
         <ModelosTab conexoes={conexoes} modelos={modelos} onChanged={() => carregarModelos()} toast={toast} />
       )}
 
-      {tab === "conexoes" && (
+      {tab === "conexoes" && ehPrivilegiado && (
         <ConexoesTab conexoes={conexoes} empreendimentos={empreendimentos} onChanged={() => carregarConexoes()} toast={toast} />
       )}
     </div>
@@ -355,6 +358,9 @@ function PainelTab(props: {
   const [dmrAno, setDmrAno] = useState(String(new Date().getFullYear()));
   const [gerandoDmr, setGerandoDmr] = useState(false);
   const [enviandoControle, setEnviandoControle] = useState(false);
+  const [modalCancel, setModalCancel] = useState<Manifesto | null>(null);
+  const [justificativaCancel, setJustificativaCancel] = useState("");
+  const [cancelando, setCancelando] = useState(false);
 
   const conexaoEfetiva = conexoes.some((c) => c.id === Number(conexaoId)) ? conexaoId : conexoes.length ? String(conexoes[0].id) : "";
 
@@ -464,18 +470,24 @@ function PainelTab(props: {
     await baixarArquivo("cdf", m);
   }
 
-  async function cancelarManifesto(m: Manifesto) {
-    const justificativa = prompt(`Justificativa para cancelar o MTR ${m.numero}:`, "");
-    if (justificativa === null || !justificativa.trim()) {
-      toast("Cancelamento requerido com justificativa", "error");
+  function abrirModalCancelamento(m: Manifesto) {
+    setModalCancel(m);
+    setJustificativaCancel("");
+  }
+
+  async function confirmarCancelamento() {
+    const m = modalCancel;
+    if (!m) return;
+    if (!justificativaCancel.trim()) {
+      toast("Informe a justificativa do cancelamento", "error");
       return;
     }
-    if (!confirm(`Cancelar o MTR ${m.numero}?`)) return;
+    setCancelando(true);
     try {
       const res = await fetch("/api/sinir/cancelar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conexaoId: m.conexao.id, numero: m.numero, justificativa: justificativa.trim() }),
+        body: JSON.stringify({ conexaoId: m.conexao.id, numero: m.numero, justificativa: justificativaCancel.trim() }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) {
@@ -483,9 +495,13 @@ function PainelTab(props: {
         return;
       }
       onVerificar();
-      toast("MTR cancelado", "success");
+      toast(`MTR ${m.numero} cancelado${data?.simulacao ? " (simulação)" : ""}`, "success");
+      setModalCancel(null);
+      setJustificativaCancel("");
     } catch {
       toast("Falha ao cancelar", "error");
+    } finally {
+      setCancelando(false);
     }
   }
 
@@ -698,7 +714,7 @@ function PainelTab(props: {
                         )}
                         {m.status !== "CANCELADO" && (
                           <button
-                            onClick={() => cancelarManifesto(m)}
+                            onClick={() => abrirModalCancelamento(m)}
                             title="Cancelar MTR"
                             className="rounded-md p-1.5 text-[var(--color-ink-600)] hover:bg-amber-50 hover:text-amber-700"
                           >
@@ -721,6 +737,58 @@ function PainelTab(props: {
           </div>
         )}
       </div>
+
+      {modalCancel && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => { if (!cancelando) setModalCancel(null); }}>
+          <div
+            className="shadow-card w-full max-w-lg rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="font-display flex items-center gap-2 text-base font-semibold text-[var(--color-ink-900)]">
+                <Ban size={18} className="text-red-600" />
+                Cancelar MTR {modalCancel.numero}
+              </h3>
+              <button onClick={() => setModalCancel(null)} disabled={cancelando} className="rounded-md p-1.5 text-[var(--color-ink-500)] hover:bg-[var(--color-paper-100)]">
+                <X size={18} />
+              </button>
+            </div>
+            <p className="mb-3 text-sm text-[var(--color-ink-600)]">
+              O cancelamento será enviado ao SINIR{modalCancel.conexao.modo === "mock" ? " (modo simulação)" : ""}. Esta ação não pode ser desfeita.
+            </p>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-[var(--color-ink-500)]">Justificativa *</label>
+              <textarea
+                value={justificativaCancel}
+                onChange={(e) => setJustificativaCancel(e.target.value)}
+                rows={4}
+                maxLength={500}
+                autoFocus
+                placeholder="Ex.: emissão com dados incorretos do destinador — será emitido novo MTR"
+                className="w-full resize-y rounded-lg border border-[var(--color-paper-200)] bg-white px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]"
+              />
+              <span className="text-right text-xs text-[var(--color-ink-400)]">{justificativaCancel.length}/500</span>
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                onClick={() => setModalCancel(null)}
+                disabled={cancelando}
+                className="focus-ring transition-brand rounded-lg border border-[var(--color-paper-200)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-50)]"
+              >
+                Voltar
+              </button>
+              <button
+                onClick={() => void confirmarCancelamento()}
+                disabled={cancelando || !justificativaCancel.trim()}
+                className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {cancelando ? <Loader2 size={16} className="animate-spin" /> : <Ban size={16} />}
+                {cancelando ? "Cancelando..." : "Confirmar cancelamento"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
