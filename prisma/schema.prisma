@@ -131,6 +131,7 @@ model Empreendimento {
 acessos       Acesso[]
     contratos     Contrato[]
     controleDmr   ControleDmr?
+    contatos      Contato[]
     cliente       Cliente      @relation(fields: [clienteId], references: [id])
     historicos    Historico[]
     processos     Processo[]
@@ -422,6 +423,21 @@ model SinirConexao {
     manifestos     SinirManifesto[]
     modelos        SinirModelo[]
   }
+
+model Contato {
+  id               Int      @id @default(autoincrement())
+  nome             String
+  email            String
+  cargo            String?
+  telefone         String?
+  empreendimentoId Int
+  empreendimento   Empreendimento @relation(fields: [empreendimentoId], references: [id], onDelete: Cascade)
+  ativo            Boolean  @default(true)
+  criadoEm         DateTime @default(now())
+  atualizadoEm     DateTime @updatedAt
+
+  @@index([empreendimentoId])
+}
 
 model SinirModelo {
   id            Int      @id @default(autoincrement())

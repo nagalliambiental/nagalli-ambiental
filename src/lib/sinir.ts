@@ -1221,3 +1221,101 @@ export async function gerarPdfAlertaMtrsSalvos(
   const bytes = await pdf.save();
   return { buffer: new Uint8Array(bytes), nomeArquivo: `alerta-mtrs-salvos-${new Date().toISOString().slice(0, 10)}.pdf` };
 }
+
+export interface MtrsSalvosPorDestinadorItem {
+  numero: string;
+  destinadorNome: string | null;
+  dataExpedicao: Date | null;
+}
+
+export async function gerarPdfMtrsSalvosPorDestinador(
+  empreendimentoNome: string,
+  unidadeSinir: string | null,
+  mtrs: MtrsSalvosPorDestinadorItem[]
+): Promise<{ buffer: Uint8Array; nomeArquivo: string }> {
+  const { PDFDocument, StandardFonts } = await import("pdf-lib");
+  const { embedNagalliLogo, drawNagalliTopo, drawNagalliFooter, PALETTE } = await import("./report-branding");
+
+  const grupos = new Map<string, MtrsSalvosPorDestinadorItem[]>();
+  for (const m of mtrs) {
+    const chave = m.destinadorNome || "Destinador não identificado";
+    if (!grupos.has(chave)) grupos.set(chave, []);
+    grupos.get(chave)!.push(m);
+  }
+  const ordenados = [...grupos.entries()].sort((a, b) => a[0].localeCompare(b[0], "pt-BR"));
+
+  const pdf = await PDFDocument.create();
+  const font = await pdf.embedFont(StandardFonts.Helvetica);
+  const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const logo = await embedNagalliLogo(pdf);
+  let page = pdf.addPage([842, 595]);
+
+  const topo = drawNagalliTopo(page, logo, font, bold);
+  const ink900 = PALETTE.ink["900"];
+  const ink700 = PALETTE.ink["700"];
+  const ink500 = PALETTE.ink["500"];
+
+  let y = topo - 24;
+
+  page.drawText("MTRs AGUARDANDO CONFIRMAÇÃO DE RECEBIMENTO", { x: 40, y, size: 15, font: bold, color: ink900 });
+  y -= 16;
+  page.drawText('Manifestos com situação "Salvo" no SINIR — aguardando ação do destinador', {
+    x: 40, y, size: 9, font, color: ink700,
+  });
+  y -= 12;
+  const linhaInfo = `Empreendimento: ${empreendimentoNome}${unidadeSinir ? `   |   Unidade SINIR: ${unidadeSinir}` : ""}   |   Gerado em: ${new Date().toLocaleDateString("pt-BR")}`;
+  page.drawText(linhaInfo, { x: 40, y, size: 9, font, color: ink500 });
+  y -= 14;
+
+  page.drawRectangle({ x: 40, y, width: 762, height: 0.6, color: PALETTE.paper["200"] });
+  y -= 20;
+
+  if (ordenados.length === 0) {
+    page.drawText("Nenhum MTR na situação Salvo para este empreendimento.", { x: 40, y, size: 10, font, color: ink700 });
+  }
+
+  const novaPagina = () => {
+    const p = pdf.addPage([842, 595]);
+    drawNagalliTopo(p, logo, font, bold);
+    return { p, y: topo - 16 };
+  };
+
+  for (const [destinador, lista] of ordenados) {
+    if (y < 110) ({ p: page, y } = novaPagina());
+
+    page.drawRectangle({ x: 40, y: y - 4, width: 762, height: 18, color: PALETTE.brand["50"] });
+    page.drawText(`DESTINADOR: ${destinador.toUpperCase()}`, { x: 48, y, size: 11, font: bold, color: PALETTE.brand["700"] });
+    y -= 22;
+
+    for (const m of lista) {
+      if (y < 70) ({ p: page, y } = novaPagina());
+      page.drawCircle({ x: 46, y: y + 3, size: 1.6, color: PALETTE.brand["600"] });
+      page.drawText(`MTR ${m.numero}`, { x: 56, y, size: 9.5, font: bold, color: ink900 });
+      const dataTxt = m.dataExpedicao ? `— emitido em ${m.dataExpedicao.toLocaleDateString("pt-BR")}` : "— data de emissão não registrada";
+      page.drawText(dataTxt, { x: 220, y, size: 9.5, font, color: ink700 });
+      y -= 17;
+    }
+    y -= 12;
+  }
+
+  y -= 4;
+  page.drawRectangle({ x: 40, y, width: 762, height: 0.6, color: PALETTE.paper["200"] });
+  y -= 20;
+  page.drawText(`Total de MTRs pendentes de recebimento: ${mtrs.length} — distribuídos entre ${ordenados.length} destinador(es).`, {
+    x: 40, y, size: 10, font: bold, color: ink900,
+  });
+  y -= 15;
+  page.drawText(
+    "Solicitamos que os destinadores listados acessem o portal SINIR e confirmem o recebimento das cargas para regularização dos manifestos.",
+    { x: 40, y, size: 8.5, font, color: ink500, maxWidth: 760 }
+  );
+
+  drawNagalliFooter(page, font, bold);
+
+  const bytes = await pdf.save();
+  const slug = empreendimentoNome.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
+  return {
+    buffer: new Uint8Array(bytes),
+    nomeArquivo: `mtrs-salvos-${slug || "empreendimento"}-${new Date().toISOString().slice(0, 10)}.pdf`,
+  };
+}

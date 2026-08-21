@@ -1,14 +1,14 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { Topbar } from "@/components/Topbar";
-import { Truck, RefreshCw, Send, Link2, Loader2, CheckCircle2, AlertTriangle, XCircle, FileDown, Trash2, Ban, ShieldCheck, Clock, Plus, X, Pencil, PackagePlus, Bookmark, Save } from "lucide-react";
+import { Truck, RefreshCw, Send, Link2, Loader2, CheckCircle2, AlertTriangle, XCircle, FileDown, Trash2, Ban, ShieldCheck, Clock, Plus, X, Pencil, PackagePlus, Bookmark, Save, Mail } from "lucide-react";
 import { useToast } from "@/components/Toast";
 
 type ToastFn = (message: string, type?: "success" | "error" | "info" | "warning") => void;
 
-type Tab = "painel" | "meusMtrs" | "emitir" | "modelos" | "conexoes";
+type Tab = "painel" | "meusMtrs" | "emitir" | "modelos" | "contatos" | "conexoes";
 
 interface Conexao {
   id: number;
@@ -127,6 +127,16 @@ interface ParceiroUnidade {
   endereco: string;
 }
 
+interface ContatoEmpreendimento {
+  id: number;
+  nome: string;
+  email: string;
+  cargo: string | null;
+  telefone: string | null;
+  ativo: boolean;
+  empreendimento: { id: number; apelido: string; unidadeSinir: string | null; cliente: { apelido: string } };
+}
+
 const STATUS_BADGE: Record<string, string> = {
   CERTIFICADO: "bg-green-50 text-green-700",
   SALVO: "bg-red-50 text-red-700",
@@ -137,12 +147,12 @@ const STATUS_BADGE: Record<string, string> = {
 };
 
 function fmtData(v: string | null) {
-  if (!v) return "—";
+  if (!v) return "â€”";
   return new Date(v).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
 }
 
 function fmtQtd(v: number | null, u: string | null) {
-  if (v == null) return "—";
+  if (v == null) return "â€”";
   return `${v.toLocaleString("pt-BR")} ${u || ""}`.trim();
 }
 
@@ -260,7 +270,7 @@ export default function SinirPage() {
       <Topbar
         icon={Truck}
         title="SINIR MTR"
-        subtitle="Verificação de certificação de cargas (MTR) e emissão de manifestos via SINIR Nacional"
+        subtitle="VerificaÃ§Ã£o de certificaÃ§Ã£o de cargas (MTR) e emissÃ£o de manifestos via SINIR Nacional"
       />
 
       <div className="mb-4 flex gap-1 border-b border-[var(--color-paper-200)]">
@@ -270,7 +280,8 @@ export default function SinirPage() {
             { key: "meusMtrs", label: "Meus MTRs" },
             { key: "emitir", label: "Emitir MTR" },
             { key: "modelos", label: "Modelos" },
-            ...(ehPrivilegiado ? [{ key: "conexoes" as Tab, label: "Conexões" }] : []),
+            { key: "contatos", label: "Contatos" },
+            ...(ehPrivilegiado ? [{ key: "conexoes" as Tab, label: "ConexÃµes" }] : []),
           ] as { key: Tab; label: string }[]
         ).map((t) => (
           <button
@@ -304,7 +315,7 @@ export default function SinirPage() {
       )}
 
       {tab === "meusMtrs" && (
-        <MeusMtrsTab conexoes={conexoes} filtro={filtro} setFiltro={setFiltro} onVerificar={() => carregarManifestos()} toast={toast} />
+        <MeusMtrsTab conexoes={conexoes} empreendimentos={empreendimentos} filtro={filtro} setFiltro={setFiltro} onVerificar={() => carregarManifestos()} toast={toast} />
       )}
 
       {tab === "emitir" && (
@@ -321,6 +332,8 @@ export default function SinirPage() {
       {tab === "modelos" && (
         <ModelosTab conexoes={conexoes} modelos={modelos} onChanged={() => carregarModelos()} toast={toast} />
       )}
+
+      {tab === "contatos" && <ContatosTab empreendimentos={empreendimentos} toast={toast} />}
 
       {tab === "conexoes" && ehPrivilegiado && (
         <ConexoesTab conexoes={conexoes} empreendimentos={empreendimentos} onChanged={() => carregarConexoes()} toast={toast} />
@@ -385,7 +398,7 @@ function PainelTab(props: {
         if (!resLista.ok) throw new Error(data.error || "Falha ao listar controle DMR");
         const lista = await resLista.json();
         registroId = lista.find((r: { empreendimentoId: number }) => r.empreendimentoId === Number(dmrEmpId))?.id;
-        if (!registroId) throw new Error(data.error || "Registro não encontrado no controle DMR");
+        if (!registroId) throw new Error(data.error || "Registro nÃ£o encontrado no controle DMR");
       }
       const prefixo = `t${dmrTrimestre}`;
       const resPatch = await fetch(`/api/controle-dmr/${registroId}`, {
@@ -394,7 +407,7 @@ function PainelTab(props: {
         body: JSON.stringify({ [`${prefixo}Dmr`]: "OK", [`${prefixo}Mtr`]: "OK" }),
       });
       if (!resPatch.ok) throw new Error("Falha ao atualizar status");
-      toast(`Enviado ao controle DMR como OK (${dmrTrimestre}º trimestre)`, "success");
+      toast(`Enviado ao controle DMR como OK (${dmrTrimestre}Âº trimestre)`, "success");
     } catch (e) {
       toast(e instanceof Error ? e.message : "Erro ao enviar para o controle DMR", "error");
     } finally {
@@ -404,7 +417,7 @@ function PainelTab(props: {
 
   async function gerarDmr() {
     if (!conexaoEfetiva || !dmrEmpId) {
-      toast("Selecione a conexão e o empreendimento para a DMR", "error");
+      toast("Selecione a conexÃ£o e o empreendimento para a DMR", "error");
       return;
     }
     setGerandoDmr(true);
@@ -430,7 +443,7 @@ function PainelTab(props: {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-      toast("DMR gerada — envio oficial deve ser feito no portal mtr.sinir.gov.br", "success");
+      toast("DMR gerada â€” envio oficial deve ser feito no portal mtr.sinir.gov.br", "success");
     } catch {
       toast("Falha ao gerar a DMR", "error");
     } finally {
@@ -495,7 +508,7 @@ function PainelTab(props: {
         return;
       }
       onVerificar();
-      toast(`MTR ${m.numero} cancelado${data?.simulacao ? " (simulação)" : ""}`, "success");
+      toast(`MTR ${m.numero} cancelado${data?.simulacao ? " (simulaÃ§Ã£o)" : ""}`, "success");
       setModalCancel(null);
       setJustificativaCancel("");
     } catch {
@@ -515,7 +528,7 @@ function PainelTab(props: {
         return;
       }
       onVerificar();
-      toast("Manifesto excluído", "success");
+      toast("Manifesto excluÃ­do", "success");
     } catch {
       toast("Falha ao excluir", "error");
     }
@@ -523,7 +536,7 @@ function PainelTab(props: {
 
   async function verificar() {
     if (!conexaoEfetiva) {
-      toast("Selecione uma conexão", "error");
+      toast("Selecione uma conexÃ£o", "error");
       return;
     }
     setVerificando(true);
@@ -541,7 +554,7 @@ function PainelTab(props: {
       }
       setResumoVerif({ total: data.total, certificados: data.certificados, pendentes: data.pendentes, modo: data.conexao.modo });
       onVerificar();
-      toast(data.pendentes > 0 ? `${data.pendentes} carga(s) sem certificação` : "Todas as cargas certificadas", data.pendentes > 0 ? "warning" : "success");
+      toast(data.pendentes > 0 ? `${data.pendentes} carga(s) sem certificaÃ§Ã£o` : "Todas as cargas certificadas", data.pendentes > 0 ? "warning" : "success");
     } catch {
       toast("Erro ao verificar manifestos", "error");
     } finally {
@@ -552,13 +565,13 @@ function PainelTab(props: {
   return (
     <div className="space-y-4">
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
-        <h2 className="font-display mb-3 text-base font-semibold text-[var(--color-ink-900)]">Verificar certificação</h2>
+        <h2 className="font-display mb-3 text-base font-semibold text-[var(--color-ink-900)]">Verificar certificaÃ§Ã£o</h2>
         <div className="flex flex-wrap items-end gap-2">
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-[var(--color-ink-500)]">Conexão</label>
+            <label className="text-xs text-[var(--color-ink-500)]">ConexÃ£o</label>
             <select value={conexaoEfetiva} onChange={(e) => setConexaoId(e.target.value)} className="rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm">
               {conexoes.map((c) => (
-                <option key={c.id} value={c.id}>{c.nome} — unid. {c.unidade}{c.modo === "mock" ? " (simulação)" : ""}</option>
+                <option key={c.id} value={c.id}>{c.nome} â€” unid. {c.unidade}{c.modo === "mock" ? " (simulaÃ§Ã£o)" : ""}</option>
               ))}
             </select>
           </div>
@@ -567,7 +580,7 @@ function PainelTab(props: {
             <input type="date" value={dataInicial} onChange={(e) => setDataInicial(e.target.value)} className="rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm" />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-[var(--color-ink-500)]">Até</label>
+            <label className="text-xs text-[var(--color-ink-500)]">AtÃ©</label>
             <input type="date" value={dataFinal} onChange={(e) => setDataFinal(e.target.value)} className="rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm" />
           </div>
           <button onClick={verificar} disabled={verificando || conexoes.length === 0}
@@ -577,13 +590,13 @@ function PainelTab(props: {
           </button>
         </div>
         {conexoes.length === 0 && (
-          <p className="mt-3 text-xs text-[var(--color-ink-500)]">Nenhuma conexão cadastrada — vá na aba Conexões para adicionar (modo simulação já funciona sem token).</p>
+          <p className="mt-3 text-xs text-[var(--color-ink-500)]">Nenhuma conexÃ£o cadastrada â€” vÃ¡ na aba ConexÃµes para adicionar (modo simulaÃ§Ã£o jÃ¡ funciona sem token).</p>
         )}
         {resumoVerif && (
           <div className="mt-4 grid grid-cols-3 gap-3">
             <div className="rounded-lg bg-[var(--color-paper-50)] p-3 text-center">
               <p className="text-2xl font-semibold text-[var(--color-ink-900)]">{resumoVerif.total}</p>
-              <p className="text-xs text-[var(--color-ink-500)]">Total no período</p>
+              <p className="text-xs text-[var(--color-ink-500)]">Total no perÃ­odo</p>
             </div>
             <div className="rounded-lg bg-green-50 p-3 text-center">
               <p className="text-2xl font-semibold text-green-700">{resumoVerif.certificados}</p>
@@ -591,7 +604,7 @@ function PainelTab(props: {
             </div>
             <div className={`rounded-lg p-3 text-center ${resumoVerif.pendentes > 0 ? "bg-amber-50" : "bg-[var(--color-paper-50)]"}`}>
               <p className={`text-2xl font-semibold ${resumoVerif.pendentes > 0 ? "text-amber-700" : "text-[var(--color-ink-900)]"}`}>{resumoVerif.pendentes}</p>
-              <p className={`text-xs ${resumoVerif.pendentes > 0 ? "text-amber-600" : "text-[var(--color-ink-500)]"}`}>Sem certificação</p>
+              <p className={`text-xs ${resumoVerif.pendentes > 0 ? "text-amber-600" : "text-[var(--color-ink-500)]"}`}>Sem certificaÃ§Ã£o</p>
             </div>
           </div>
         )}
@@ -599,8 +612,8 @@ function PainelTab(props: {
 
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Declaração DMR</h2>
-          <span className="text-xs text-[var(--color-ink-400)]">Modelo de referência do SINIR — envio oficial no portal mtr.sinir.gov.br</span>
+          <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">DeclaraÃ§Ã£o DMR</h2>
+          <span className="text-xs text-[var(--color-ink-400)]">Modelo de referÃªncia do SINIR â€” envio oficial no portal mtr.sinir.gov.br</span>
         </div>
         <div className="flex flex-wrap items-end gap-2">
           <div className="flex flex-col gap-1">
@@ -608,17 +621,17 @@ function PainelTab(props: {
             <select value={dmrEmpId} onChange={(e) => setDmrEmpId(e.target.value)} className="rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm">
               <option value="">Selecione...</option>
               {empreendimentos.map((e) => (
-                <option key={e.id} value={e.id}>{e.cliente.apelido} — {e.apelido}{e.unidadeSinir ? ` — unid. ${e.unidadeSinir}` : ""}</option>
+                <option key={e.id} value={e.id}>{e.cliente.apelido} â€” {e.apelido}{e.unidadeSinir ? ` â€” unid. ${e.unidadeSinir}` : ""}</option>
               ))}
             </select>
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-xs text-[var(--color-ink-500)]">Trimestre</label>
             <select value={dmrTrimestre} onChange={(e) => setDmrTrimestre(e.target.value)} className="rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm">
-              <option value="1">1º trimestre</option>
-              <option value="2">2º trimestre</option>
-              <option value="3">3º trimestre</option>
-              <option value="4">4º trimestre</option>
+              <option value="1">1Âº trimestre</option>
+              <option value="2">2Âº trimestre</option>
+              <option value="3">3Âº trimestre</option>
+              <option value="4">4Âº trimestre</option>
             </select>
           </div>
           <div className="flex flex-col gap-1">
@@ -631,14 +644,14 @@ function PainelTab(props: {
             {gerandoDmr ? "Gerando..." : "Gerar DMR (PDF)"}
           </button>
           <button onClick={marcarNoControle} disabled={enviandoControle || !dmrEmpId}
-            title="Adiciona o empreendimento ao módulo DMR e marca este trimestre como OK"
+            title="Adiciona o empreendimento ao mÃ³dulo DMR e marca este trimestre como OK"
             className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50">
             {enviandoControle ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
             {enviandoControle ? "Enviando..." : "Enviar ao controle DMR (OK)"}
           </button>
         </div>
         {!conexaoEfetiva && (
-          <p className="mt-3 text-xs text-[var(--color-ink-500)]">Selecione a conexão no card de verificação para usar seus manifestos na DMR.</p>
+          <p className="mt-3 text-xs text-[var(--color-ink-500)]">Selecione a conexÃ£o no card de verificaÃ§Ã£o para usar seus manifestos na DMR.</p>
         )}
       </div>
 
@@ -664,28 +677,28 @@ function PainelTab(props: {
           </div>
         ) : manifestos.length === 0 ? (
           <p className="py-8 text-center text-sm text-[var(--color-ink-500)]">
-            Nenhum manifesto ainda. Use a verificação acima para listar as cargas do período.
+            Nenhum manifesto ainda. Use a verificaÃ§Ã£o acima para listar as cargas do perÃ­odo.
           </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--color-paper-200)] text-left">
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Número</th>
+                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">NÃºmero</th>
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Cliente</th>
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Empreendimento</th>
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Quantidade</th>
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Expedição</th>
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Situação</th>
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Ações</th>
+                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">ExpediÃ§Ã£o</th>
+                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">SituaÃ§Ã£o</th>
+                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">AÃ§Ãµes</th>
                 </tr>
               </thead>
               <tbody>
                 {manifestos.map((m) => (
                   <tr key={m.id} className="border-b border-[var(--color-paper-100)] hover:bg-[var(--color-paper-50)]">
                     <td className="py-2 px-2 font-mono text-xs text-[var(--color-ink-700)]">{m.numero}</td>
-                    <td className="py-2 px-2 text-[var(--color-ink-700)]">{m.clienteNome || "—"}</td>
-                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.empreendNome || "—"}</td>
+                    <td className="py-2 px-2 text-[var(--color-ink-700)]">{m.clienteNome || "â€”"}</td>
+                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.empreendNome || "â€”"}</td>
                     <td className="py-2 px-2 text-[var(--color-ink-600)]">{fmtQtd(m.quantidade, m.unidade)}</td>
                     <td className="py-2 px-2 text-[var(--color-ink-600)] whitespace-nowrap">{fmtData(m.dataExpedicao)}</td>
                     <td className="py-2 px-2">
@@ -706,7 +719,7 @@ function PainelTab(props: {
                         {m.conexao.modo === "real" && m.status !== "CANCELADO" && (m.certificado || m.status === "RECEBIDO") && (
                           <button
                             onClick={() => baixarCdf(m)}
-                            title="Baixar CDF (Certificado de Destinação Final) — disponível após o destinador confirmar a destinação"
+                            title="Baixar CDF (Certificado de DestinaÃ§Ã£o Final) â€” disponÃ­vel apÃ³s o destinador confirmar a destinaÃ§Ã£o"
                             className="rounded-md p-1.5 text-[var(--color-ink-600)] hover:bg-green-50 hover:text-green-700"
                           >
                             <ShieldCheck size={15} />
@@ -754,7 +767,7 @@ function PainelTab(props: {
               </button>
             </div>
             <p className="mb-3 text-sm text-[var(--color-ink-600)]">
-              O cancelamento será enviado ao SINIR{modalCancel.conexao.modo === "mock" ? " (modo simulação)" : ""}. Esta ação não pode ser desfeita.
+              O cancelamento serÃ¡ enviado ao SINIR{modalCancel.conexao.modo === "mock" ? " (modo simulaÃ§Ã£o)" : ""}. Esta aÃ§Ã£o nÃ£o pode ser desfeita.
             </p>
             <div className="flex flex-col gap-1">
               <label className="text-xs font-medium text-[var(--color-ink-500)]">Justificativa *</label>
@@ -764,7 +777,7 @@ function PainelTab(props: {
                 rows={4}
                 maxLength={500}
                 autoFocus
-                placeholder="Ex.: emissão com dados incorretos do destinador — será emitido novo MTR"
+                placeholder="Ex.: emissÃ£o com dados incorretos do destinador â€” serÃ¡ emitido novo MTR"
                 className="w-full resize-y rounded-lg border border-[var(--color-paper-200)] bg-white px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]"
               />
               <span className="text-right text-xs text-[var(--color-ink-400)]">{justificativaCancel.length}/500</span>
@@ -802,16 +815,22 @@ function diasEmSalvo(m: Manifesto) {
 
 function MeusMtrsTab(props: {
   conexoes: Conexao[];
+  empreendimentos: EmpreendimentoOpcao[];
   filtro: string;
   setFiltro: (f: string) => void;
   onVerificar: () => void;
   toast: ToastFn;
 }) {
-  const { conexoes, filtro, setFiltro, onVerificar, toast } = props;
+  const { conexoes, empreendimentos, filtro, setFiltro, onVerificar, toast } = props;
   const [conexaoId, setConexaoId] = useState("");
   const [gerandoAlerta, setGerandoAlerta] = useState(false);
   const [consultando, setConsultando] = useState(false);
   const [lista, setLista] = useState<Manifesto[]>([]);
+  const [modalNotificar, setModalNotificar] = useState(false);
+  const [contatosNotif, setContatosNotif] = useState<ContatoEmpreendimento[]>([]);
+  const [selecionados, setSelecionados] = useState<number[]>([]);
+  const [enviandoNotif, setEnviandoNotif] = useState(false);
+  const [carregandoContatos, setCarregandoContatos] = useState(false);
 
   const pad = (n: number) => String(n).padStart(2, "0");
   const hoje = new Date();
@@ -830,15 +849,15 @@ function MeusMtrsTab(props: {
   async function consultarSinir(idConexao?: string) {
     const conexaoUsar = idConexao || conexaoEfetiva;
     if (!conexaoUsar) {
-      toast("Selecione uma conexão", "error");
+      toast("Selecione uma conexÃ£o", "error");
       return;
     }
     if (!dataInicial || !dataFinal) {
-      toast("Informe o período de consulta", "error");
+      toast("Informe o perÃ­odo de consulta", "error");
       return;
     }
     if (new Date(dataInicial) > new Date(dataFinal)) {
-      toast("Período inválido — data inicial após a data final", "error");
+      toast("PerÃ­odo invÃ¡lido â€” data inicial apÃ³s a data final", "error");
       return;
     }
     setConsultando(true);
@@ -888,7 +907,7 @@ function MeusMtrsTab(props: {
 
   async function gerarAlertaPdf() {
     if (!conexaoEfetiva) {
-      toast("Selecione uma conexão", "error");
+      toast("Selecione uma conexÃ£o", "error");
       return;
     }
     setGerandoAlerta(true);
@@ -897,7 +916,7 @@ function MeusMtrsTab(props: {
       const res = await fetch(`/api/sinir/relatorio-salvos?${params}`);
       if (!res.ok) {
         const data = await res.json().catch(() => null);
-        toast(data?.error || "Falha ao gerar o relatório", "error");
+        toast(data?.error || "Falha ao gerar o relatÃ³rio", "error");
         return;
       }
       const blob = await res.blob();
@@ -909,11 +928,71 @@ function MeusMtrsTab(props: {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-      toast("Relação de MTRs salvos gerada — pronta para enviar", "success");
+      toast("RelaÃ§Ã£o de MTRs salvos gerada â€” pronta para enviar", "success");
     } catch {
-      toast("Falha ao gerar o relatório", "error");
+      toast("Falha ao gerar o relatÃ³rio", "error");
     } finally {
       setGerandoAlerta(false);
+    }
+  }
+
+  const salvosParaNotificar = lista.filter((m) => m.status === "SALVO");
+  const conexaoAtual = conexoes.find((c) => c.id === Number(conexaoEfetiva));
+  const empreendimentoAtual = empreendimentos.find((e) => e.id === conexaoAtual?.empreendimentoId);
+
+  async function abrirModalNotificar() {
+    if (!conexaoAtual?.empreendimentoId) {
+      toast("A conexÃ£o selecionada nÃ£o tem empreendimento vinculado â€” cadastre em ConexÃµes", "warning");
+      return;
+    }
+    if (salvosParaNotificar.length === 0) {
+      toast("Nenhum MTR na situaÃ§Ã£o Salvo â€” consulte o SINIR primeiro", "info");
+      return;
+    }
+    setCarregandoContatos(true);
+    setSelecionados([]);
+    setContatosNotif([]);
+    setModalNotificar(true);
+    try {
+      const res = await fetch(`/api/contatos?empreendimentoId=${conexaoAtual.empreendimentoId}`);
+      if (res.ok) {
+        const data: ContatoEmpreendimento[] = await res.json();
+        setContatosNotif(data.filter((c) => c.ativo));
+      }
+    } catch {
+      toast("Falha ao carregar os contatos", "error");
+    } finally {
+      setCarregandoContatos(false);
+    }
+  }
+
+  function alternarContato(id: number) {
+    setSelecionados((atual) => (atual.includes(id) ? atual.filter((x) => x !== id) : [...atual, id]));
+  }
+
+  async function enviarNotificacao() {
+    if (selecionados.length === 0) {
+      toast("Selecione pelo menos um contato", "error");
+      return;
+    }
+    setEnviandoNotif(true);
+    try {
+      const res = await fetch("/api/sinir/notificar-salvos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conexaoId: Number(conexaoEfetiva), contatoIds: selecionados }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        toast(data?.error || "Falha ao enviar a notificaÃ§Ã£o", "error");
+        return;
+      }
+      toast(`E-mail enviado para ${data.enviados} contato(s): ${data.mtrs} MTR(s) de ${data.destinadores} destinador(es)`, "success");
+      setModalNotificar(false);
+    } catch {
+      toast("Falha ao enviar a notificaÃ§Ã£o", "error");
+    } finally {
+      setEnviandoNotif(false);
     }
   }
 
@@ -922,9 +1001,9 @@ function MeusMtrsTab(props: {
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Meus MTRs — consulta semanal</h2>
+            <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Meus MTRs â€” consulta semanal</h2>
             <p className="mt-1 text-sm text-[var(--color-ink-500)]">
-              Busca no SINIR todos os MTRs do período escolhido em que a empresa consta (gerador, transportador, destinador ou armazenador) — períodos maiores que 30 dias são divididos automaticamente. Situação de cada MTR: <b className="text-green-700">Recebido</b> = tudo ok; <b className="text-red-700">Salvo há mais de {limiteDias} dias</b> = avisar o cliente.
+              Busca no SINIR todos os MTRs do perÃ­odo escolhido em que a empresa consta (gerador, transportador, destinador ou armazenador) â€” perÃ­odos maiores que 30 dias sÃ£o divididos automaticamente. SituaÃ§Ã£o de cada MTR: <b className="text-green-700">Recebido</b> = tudo ok; <b className="text-red-700">Salvo hÃ¡ mais de {limiteDias} dias</b> = avisar o cliente.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -938,7 +1017,7 @@ function MeusMtrsTab(props: {
               className="rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm"
             >
               {conexoes.map((c) => (
-                <option key={c.id} value={c.id}>{c.nome} — unid. {c.unidade}{c.modo === "mock" ? " (simulação)" : ""}</option>
+                <option key={c.id} value={c.id}>{c.nome} â€” unid. {c.unidade}{c.modo === "mock" ? " (simulaÃ§Ã£o)" : ""}</option>
               ))}
             </select>
             <div className="flex items-center gap-1.5 text-sm">
@@ -948,7 +1027,7 @@ function MeusMtrsTab(props: {
                 onChange={(e) => setDataInicial(e.target.value)}
                 className="rounded-lg border border-[var(--color-paper-200)] px-2 py-2 text-sm"
               />
-              <span className="text-[var(--color-ink-500)]">até</span>
+              <span className="text-[var(--color-ink-500)]">atÃ©</span>
               <input
                 type="date"
                 value={dataFinal}
@@ -970,14 +1049,23 @@ function MeusMtrsTab(props: {
               className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
             >
               {gerandoAlerta ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={16} />}
-              {gerandoAlerta ? "Gerando..." : "Relação MTRs Salvos"}
+              {gerandoAlerta ? "Gerando..." : "RelaÃ§Ã£o MTRs Salvos"}
+            </button>
+            <button
+              onClick={abrirModalNotificar}
+              disabled={salvosParaNotificar.length === 0 || conexoes.length === 0}
+              title="Enviar por e-mail aos contatos do empreendimento a relaÃ§Ã£o de MTRs na situaÃ§Ã£o Salvo, agrupados por destinador"
+              className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-[var(--color-ink-700)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-ink-900)] disabled:opacity-50"
+            >
+              <Mail size={16} />
+              Notificar por e-mail
             </button>
           </div>
         </div>
 
         {emAtraso.length > 0 && (
           <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-            <b>{emAtraso.length} MTR(s) em situação SALVO há mais de {limiteDias} dias</b> — envie o relatório ao chefe para avisar os clientes que as cargas não foram recebidas pelas empresas destinatárias.
+            <b>{emAtraso.length} MTR(s) em situaÃ§Ã£o SALVO hÃ¡ mais de {limiteDias} dias</b> â€” envie o relatÃ³rio ao chefe para avisar os clientes que as cargas nÃ£o foram recebidas pelas empresas destinatÃ¡rias.
           </div>
         )}
       </div>
@@ -1001,20 +1089,20 @@ function MeusMtrsTab(props: {
           </div>
         ) : lista.length === 0 ? (
           <p className="py-8 text-center text-sm text-[var(--color-ink-500)]">
-            Nenhum MTR para o período informado. Ajuste as datas e clique em &quot;Consultar SINIR&quot;.
+            Nenhum MTR para o perÃ­odo informado. Ajuste as datas e clique em &quot;Consultar SINIR&quot;.
           </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--color-paper-200)] text-left">
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Número</th>
+                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">NÃºmero</th>
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Gerador</th>
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Destinador</th>
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Transportador</th>
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Expedição</th>
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Situação</th>
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Ações</th>
+                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">ExpediÃ§Ã£o</th>
+                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">SituaÃ§Ã£o</th>
+                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">AÃ§Ãµes</th>
                 </tr>
               </thead>
               <tbody>
@@ -1029,24 +1117,24 @@ function MeusMtrsTab(props: {
                         className={`border-b border-[var(--color-paper-100)] ${atrasado ? "bg-red-50" : salvo ? "bg-amber-50/50" : ""}`}
                       >
                         <td className="py-2 px-2 font-mono text-xs text-[var(--color-ink-700)]">{m.numero}</td>
-                        <td className="py-2 px-2 text-[var(--color-ink-700)]">{m.clienteNome || "—"}</td>
-                        <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.destinadorNome || "—"}</td>
-                        <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.transportadorNome || "—"}</td>
+                        <td className="py-2 px-2 text-[var(--color-ink-700)]">{m.clienteNome || "â€”"}</td>
+                        <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.destinadorNome || "â€”"}</td>
+                        <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.transportadorNome || "â€”"}</td>
                         <td className="py-2 px-2 text-[var(--color-ink-600)] whitespace-nowrap">{fmtData(m.dataExpedicao)}</td>
                         <td className="py-2 px-2">
                           {m.status === "RECEBIDO" ? (
                             <span className="inline-flex items-center gap-1 rounded bg-green-50 px-1.5 py-0.5 text-xs font-medium text-green-700">
-                              <CheckCircle2 size={12} /> Recebido — ok
+                              <CheckCircle2 size={12} /> Recebido â€” ok
                             </span>
                           ) : salvo ? (
                             <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${atrasado ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>
                               {atrasado ? <AlertTriangle size={12} /> : <Clock size={12} />}
-                              Salvo há {diasEmSalvo(m)} dia(s){atrasado ? " — avisar cliente" : ""}
+                              Salvo hÃ¡ {diasEmSalvo(m)} dia(s){atrasado ? " â€” avisar cliente" : ""}
                             </span>
                           ) : (
                             <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${STATUS_BADGE[m.status] || "bg-[var(--color-paper-100)] text-[var(--color-ink-600)]"}`}>
                               {m.status === "CERTIFICADO" ? <ShieldCheck size={12} /> : m.status === "CANCELADO" ? <XCircle size={12} /> : null}
-                              {m.status === "CERTIFICADO" ? "Certificado" : m.status === "ARMAZ_TEMPORARIO" ? "Armazenamento temporário" : m.status}
+                              {m.status === "CERTIFICADO" ? "Certificado" : m.status === "ARMAZ_TEMPORARIO" ? "Armazenamento temporÃ¡rio" : m.status}
                             </span>
                           )}
                         </td>
@@ -1065,7 +1153,7 @@ function MeusMtrsTab(props: {
                                   toast("Consultando o CDF no SINIR...", "info");
                                   baixarArquivoMeusMtrs("cdf", m);
                                 }}
-                                title="Baixar CDF (Certificado de Destinação Final) — disponível após o destinador confirmar a destinação"
+                                title="Baixar CDF (Certificado de DestinaÃ§Ã£o Final) â€” disponÃ­vel apÃ³s o destinador confirmar a destinaÃ§Ã£o"
                                 className="rounded-md p-1.5 text-[var(--color-ink-600)] hover:bg-green-50 hover:text-green-700"
                               >
                                 <ShieldCheck size={15} />
@@ -1081,11 +1169,72 @@ function MeusMtrsTab(props: {
           </div>
         )}
       </div>
+
+      {modalNotificar && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="shadow-card w-full max-w-lg rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">
+            <div className="flex items-center justify-between border-b border-[var(--color-paper-200)] px-5 py-4">
+              <h3 className="font-display flex items-center gap-2 text-base font-semibold text-[var(--color-ink-900)]">
+                <Mail size={17} className="text-[var(--color-brand-600)]" />
+                Notificar MTRs salvos por e-mail
+              </h3>
+              <button onClick={() => setModalNotificar(false)} className="rounded-md p-1 text-[var(--color-ink-500)] hover:bg-[var(--color-paper-100)]">
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="px-5 py-4">
+              <div className="mb-3 rounded-lg bg-[var(--color-paper-50)] p-3 text-xs text-[var(--color-ink-700)]">
+                <b>{empreendimentoAtual?.apelido || conexaoAtual?.nome}</b>
+                {empreendimentoAtual?.unidadeSinir ? ` Â· Unidade SINIR ${empreendimentoAtual.unidadeSinir}` : ""}
+                {" â€” "}
+                <b>{salvosParaNotificar.length} MTR(s)</b> na situaÃ§Ã£o Salvo, agrupados por destinador. O relatÃ³rio em PDF vai em anexo.
+              </div>
+
+              {carregandoContatos ? (
+                <p className="py-4 text-center text-sm text-[var(--color-ink-500)]"><Loader2 size={15} className="mr-2 inline animate-spin" /> Carregando contatos...</p>
+              ) : contatosNotif.length === 0 ? (
+                <p className="py-4 text-center text-sm text-[var(--color-ink-500)]">
+                  Nenhum contato cadastrado para este empreendimento â€” cadastre na aba <b>Contatos</b>.
+                </p>
+              ) : (
+                <div className="max-h-64 space-y-1 overflow-y-auto">
+                  {contatosNotif.map((c) => (
+                    <label key={c.id} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-[var(--color-paper-50)]">
+                      <input
+                        type="checkbox"
+                        checked={selecionados.includes(c.id)}
+                        onChange={() => alternarContato(c.id)}
+                        className="accent-[var(--color-brand-600)]"
+                      />
+                      <span className="font-medium text-[var(--color-ink-900)]">{c.nome}</span>
+                      {c.cargo && <span className="text-xs text-[var(--color-ink-500)]">({c.cargo})</span>}
+                      <span className="ml-auto text-xs text-[var(--color-ink-500)]">{c.email}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-[var(--color-paper-200)] px-5 py-3">
+              <button onClick={() => setModalNotificar(false)} className="rounded-lg border border-[var(--color-paper-200)] px-4 py-2 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-50)]">
+                Voltar
+              </button>
+              <button
+                onClick={enviarNotificacao}
+                disabled={enviandoNotif || selecionados.length === 0}
+                className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
+              >
+                {enviandoNotif ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
+                {enviandoNotif ? "Enviando..." : `Enviar para ${selecionados.length || 0} contato(s)`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
-// ---------- Emitir ----------
 
 function BuscaResiduo(props: {
   catalogos: SinirCatalogosFront | null;
@@ -1120,12 +1269,12 @@ function BuscaResiduo(props: {
           if (e.key === "Escape") setAberto(false);
         }}
         className={inputCls}
-        placeholder="Digite o código ou descrição do resíduo para filtrar..."
+        placeholder="Digite o cÃ³digo ou descriÃ§Ã£o do resÃ­duo para filtrar..."
       />
       {aberto && (
         <div className="absolute left-0 right-0 z-20 mt-1 max-h-56 overflow-y-auto rounded-lg border border-[var(--color-paper-200)] bg-white shadow-lg">
           {lista.length === 0 ? (
-            <p className="px-3 py-2 text-sm text-[var(--color-ink-500)]">Nenhum resíduo encontrado.</p>
+            <p className="px-3 py-2 text-sm text-[var(--color-ink-500)]">Nenhum resÃ­duo encontrado.</p>
           ) : (
             lista.map((r) => (
               <button
@@ -1265,15 +1414,15 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
       geradorNumero: emp.numero || "",
       geradorUf: emp.uf || "",
       geradorCidade: emp.municipio || "",
-      resumo: emp.descricao ? `Resíduo — ${emp.descricao}` : f.resumo,
+      resumo: emp.descricao ? `ResÃ­duo â€” ${emp.descricao}` : f.resumo,
     }));
-    toast(emp.rua ? `Empreendimento ${emp.apelido} preenchido (CNPJ ${cnpj || "não informado"} e endereço do gerador)` : `Empreendimento ${emp.apelido} preenchido (CNPJ ${cnpj || "não informado"} — informe o endereço do gerador)`, emp.rua ? "success" : "info");
+    toast(emp.rua ? `Empreendimento ${emp.apelido} preenchido (CNPJ ${cnpj || "nÃ£o informado"} e endereÃ§o do gerador)` : `Empreendimento ${emp.apelido} preenchido (CNPJ ${cnpj || "nÃ£o informado"} â€” informe o endereÃ§o do gerador)`, emp.rua ? "success" : "info");
   }
 
   async function buscarParceiro(tipo: "transp" | "dest") {
     const cnpj = (tipo === "transp" ? form.transportadorCnpj : form.destinadorCnpj).replace(/\D/g, "");
     if (cnpj.length !== 14) {
-      toast("Informe um CNPJ com 14 dígitos para buscar", "error");
+      toast("Informe um CNPJ com 14 dÃ­gitos para buscar", "error");
       return;
     }
     try {
@@ -1283,7 +1432,7 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
       ]);
       if (!res.ok) {
         const data = await res.json().catch(() => null);
-        toast(data?.error || "CNPJ não encontrado", "error");
+        toast(data?.error || "CNPJ nÃ£o encontrado", "error");
         return;
       }
       const d = await res.json();
@@ -1316,11 +1465,11 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
       if (unidades.length === 1) {
         const unidade = String(unidades[0].unidade);
         setForm((f) => (tipo === "transp" ? { ...f, transportadorUnidade: unidade } : { ...f, destinadorUnidade: unidade }));
-        toast(`Empresa encontrada: ${d.razaoSocial} — unidade SINIR ${unidade} preenchida`, "success");
+        toast(`Empresa encontrada: ${d.razaoSocial} â€” unidade SINIR ${unidade} preenchida`, "success");
       } else if (unidades.length > 1) {
-        toast(`${d.razaoSocial}: ${unidades.length} unidades no SINIR — selecione a correta no campo Cód. Unidade`, "warning");
+        toast(`${d.razaoSocial}: ${unidades.length} unidades no SINIR â€” selecione a correta no campo CÃ³d. Unidade`, "warning");
       } else {
-        toast(`Empresa encontrada: ${d.razaoSocial}. Unidade não localizada no portal — informe o código manualmente`, "warning");
+        toast(`Empresa encontrada: ${d.razaoSocial}. Unidade nÃ£o localizada no portal â€” informe o cÃ³digo manualmente`, "warning");
       }
     } catch {
       toast("Falha ao buscar o CNPJ", "error");
@@ -1369,7 +1518,7 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
       marDensidade: "",
     }));
     setResiduos(residuosModelo);
-    toast(`Modelo "${m.nome}" aplicado — preencha quantidade (e densidade) de cada resíduo`, "success");
+    toast(`Modelo "${m.nome}" aplicado â€” preencha quantidade (e densidade) de cada resÃ­duo`, "success");
   }
 
   async function salvarComoModelo() {
@@ -1378,11 +1527,11 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
       return;
     }
     if (!form.transportadorUnidade || !form.destinadorUnidade) {
-      toast("Informe os códigos de unidade do transportador e do destinador para salvar o modelo", "error");
+      toast("Informe os cÃ³digos de unidade do transportador e do destinador para salvar o modelo", "error");
       return;
     }
     if (residuos.length === 0) {
-      toast("Adicione pelo menos um resíduo para salvar o modelo", "error");
+      toast("Adicione pelo menos um resÃ­duo para salvar o modelo", "error");
       return;
     }
     const nome = window.prompt("Nome do modelo:");
@@ -1464,21 +1613,21 @@ function abrirModalResiduo(indice?: number) {
 
   function salvarResiduo() {
     if (!residuoForm.resCodigoIbama || !residuoForm.marQuantidade || !residuoForm.uniCodigo || !residuoForm.tieCodigo || !residuoForm.claCodigo || !residuoForm.tiaCodigo || !residuoForm.traCodigo) {
-      toast("Preencha resíduo, quantidade, unidade, estado físico, classe, acondicionamento e tratamento", "error");
+      toast("Preencha resÃ­duo, quantidade, unidade, estado fÃ­sico, classe, acondicionamento e tratamento", "error");
       return;
     }
     const formatoValido = Number(residuoForm.marQuantidade) > 0 && ["uniCodigo", "tieCodigo", "claCodigo", "tiaCodigo", "traCodigo"].every((k) => Number(residuoForm[k as keyof ResiduoCadastro]) > 0);
     if (!formatoValido) {
-      toast("Quantidade e códigos devem ser números válidos", "error");
+      toast("Quantidade e cÃ³digos devem ser nÃºmeros vÃ¡lidos", "error");
       return;
     }
     if (precisaDensidade(residuoForm.uniCodigo) && !(residuoForm.marDensidade && Number(residuoForm.marDensidade) > 0)) {
-      toast("Informe a densidade — ela converte o volume em toneladas na emissão", "error");
+      toast("Informe a densidade â€” ela converte o volume em toneladas na emissÃ£o", "error");
       return;
     }
     const pesoLinha = pesoCalculado(residuoForm.marQuantidade, residuoForm.marDensidade, residuoForm.uniCodigo);
     if (pesoLinha != null && pesoLinha > PESO_MAX_TONELADAS) {
-      toast(`Peso calculado (${pesoLinha.toLocaleString("pt-BR", { maximumFractionDigits: 3 })} t) excede o máximo de ${PESO_MAX_TONELADAS} t`, "error");
+      toast(`Peso calculado (${pesoLinha.toLocaleString("pt-BR", { maximumFractionDigits: 3 })} t) excede o mÃ¡ximo de ${PESO_MAX_TONELADAS} t`, "error");
       return;
     }
     setResiduos((r) => {
@@ -1488,12 +1637,12 @@ function abrirModalResiduo(indice?: number) {
       return novo;
     });
     setModalResiduo(false);
-    toast(editandoResiduo != null ? "Resíduo atualizado" : "Resíduo adicionado", "success");
+    toast(editandoResiduo != null ? "ResÃ­duo atualizado" : "ResÃ­duo adicionado", "success");
   }
 
   function removerResiduo(indice: number) {
     setResiduos((r) => r.filter((_, i) => i !== indice));
-    toast("Resíduo removido", "info");
+    toast("ResÃ­duo removido", "info");
   }
 
   function nomeResiduo(codigo: string) {
@@ -1533,7 +1682,7 @@ function abrirModalResiduo(indice?: number) {
     return t === "m3" || t === "litro";
   }
   function rotuloDensidade(codigo: string) {
-    return tipoUnidade(codigo) === "litro" ? "Densidade (g/cm³) *" : "Densidade (t/m³) *";
+    return tipoUnidade(codigo) === "litro" ? "Densidade (g/cmÂ³) *" : "Densidade (t/mÂ³) *";
   }
   function pesoCalculado(quantidade: string, densidade: string, codigo: string): number | null {
     const qtd = Number(quantidade);
@@ -1550,7 +1699,7 @@ function abrirModalResiduo(indice?: number) {
   function pesoExibido(r: ResiduoCadastro): string | null {
     if (tipoUnidade(r.uniCodigo) === "tonelada") return null;
     const peso = pesoCalculado(r.marQuantidade, r.marDensidade, r.uniCodigo);
-    return peso != null && peso > 0 ? `≈ ${peso.toLocaleString("pt-BR", { maximumFractionDigits: 3 })} t` : null;
+    return peso != null && peso > 0 ? `â‰ˆ ${peso.toLocaleString("pt-BR", { maximumFractionDigits: 3 })} t` : null;
   }
   function codigoToneladas(): number | undefined {
     const u = catalogos?.unidades.find((x) => {
@@ -1563,25 +1712,25 @@ function abrirModalResiduo(indice?: number) {
 
   async function emitir() {
     if (!form.transportadorCnpj || form.transportadorCnpj.length !== 14 || !form.destinadorCnpj || form.destinadorCnpj.length !== 14) {
-      toast("Preencha os CNPJs (14 dígitos) do transportador e destinador", "error");
+      toast("Preencha os CNPJs (14 dÃ­gitos) do transportador e destinador", "error");
       return;
     }
     const modoReal = conexoes.find((c) => c.id === Number(conexaoEfetiva))?.modo !== "mock";
     if (modoReal && (!form.transportadorUnidade || !form.destinadorUnidade)) {
-      toast("Informe o código da unidade do transportador e do destinador (visível no portal SINIR — DMR/emissão)", "error");
+      toast("Informe o cÃ³digo da unidade do transportador e do destinador (visÃ­vel no portal SINIR â€” DMR/emissÃ£o)", "error");
       return;
     }
     if (residuos.length === 0) {
-      toast("Adicione pelo menos um resíduo", "error");
+      toast("Adicione pelo menos um resÃ­duo", "error");
       return;
     }
     if (residuos.some((r) => !r.marQuantidade || Number(r.marQuantidade) <= 0)) {
-      toast("Informe a quantidade de cada resíduo antes de emitir", "error");
+      toast("Informe a quantidade de cada resÃ­duo antes de emitir", "error");
       return;
     }
     const codTon = codigoToneladas();
     if (!codTon) {
-      toast("Não encontrei a unidade 'tonelada' no catálogo do SINIR para converter os pesos", "error");
+      toast("NÃ£o encontrei a unidade 'tonelada' no catÃ¡logo do SINIR para converter os pesos", "error");
       return;
     }
     let pesoTotal = 0;
@@ -1594,13 +1743,13 @@ function abrirModalResiduo(indice?: number) {
         return;
       }
       if (peso > PESO_MAX_TONELADAS) {
-        toast(`"${nomeLinha}": peso calculado (${peso.toLocaleString("pt-BR")} t) excede o máximo de ${PESO_MAX_TONELADAS} t`, "error");
+        toast(`"${nomeLinha}": peso calculado (${peso.toLocaleString("pt-BR")} t) excede o mÃ¡ximo de ${PESO_MAX_TONELADAS} t`, "error");
         return;
       }
       pesoTotal += peso;
     }
     if (pesoTotal > PESO_MAX_TONELADAS) {
-      toast(`Peso total (${pesoTotal.toLocaleString("pt-BR", { maximumFractionDigits: 3 })} t) excede o máximo de ${PESO_MAX_TONELADAS} t por MTR`, "error");
+      toast(`Peso total (${pesoTotal.toLocaleString("pt-BR", { maximumFractionDigits: 3 })} t) excede o mÃ¡ximo de ${PESO_MAX_TONELADAS} t por MTR`, "error");
       return;
     }
     setEnviando(true);
@@ -1650,7 +1799,7 @@ function abrirModalResiduo(indice?: number) {
       }
       setResultado(data);
       onEmitido();
-      toast(data.simulacao ? "MTR emitido em modo simulação" : "MTR emitido no SINIR", "success");
+      toast(data.simulacao ? "MTR emitido em modo simulaÃ§Ã£o" : "MTR emitido no SINIR", "success");
     } catch {
       toast("Erro ao emitir MTR", "error");
     } finally {
@@ -1672,7 +1821,7 @@ function abrirModalResiduo(indice?: number) {
   return (
     <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
       <h2 className="font-display mb-1 text-base font-semibold text-[var(--color-ink-900)]">Emitir Manifesto (MTR)</h2>
-      <p className="mb-2 text-sm text-[var(--color-ink-500)]">Em modo simulação gera um MTR fictício. Em modo real envia ao SINIR com o token da conexão. Busque transportador e destinador pelo CNPJ — os dados de endereço são preenchidos automaticamente.</p>
+      <p className="mb-2 text-sm text-[var(--color-ink-500)]">Em modo simulaÃ§Ã£o gera um MTR fictÃ­cio. Em modo real envia ao SINIR com o token da conexÃ£o. Busque transportador e destinador pelo CNPJ â€” os dados de endereÃ§o sÃ£o preenchidos automaticamente.</p>
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <div className="flex flex-col gap-1 md:col-span-2">
@@ -1680,20 +1829,20 @@ function abrirModalResiduo(indice?: number) {
           <select value={form.empreendimentoId} onChange={(e) => selecionarEmpreendimento(e.target.value)} className={inputCls}>
             <option value="">Selecione um empreendimento cadastrado...</option>
             {empreendimentos.map((e) => (
-              <option key={e.id} value={e.id}>{e.cliente.apelido} — {e.apelido}{e.cnpj ? "" : " (sem CNPJ próprio)"}{e.unidadeSinir ? ` — unid. ${e.unidadeSinir}` : ""}</option>
+              <option key={e.id} value={e.id}>{e.cliente.apelido} â€” {e.apelido}{e.cnpj ? "" : " (sem CNPJ prÃ³prio)"}{e.unidadeSinir ? ` â€” unid. ${e.unidadeSinir}` : ""}</option>
             ))}
           </select>
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-[var(--color-ink-500)]">Conexão</label>
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">ConexÃ£o</label>
           <select value={conexaoEfetiva} onChange={(e) => setForm((f) => ({ ...f, conexaoId: e.target.value }))} className={inputCls}>
             {conexoes.map((c) => (
-              <option key={c.id} value={c.id}>{c.nome} — unid. {c.unidade}{c.modo === "mock" ? " (simulação)" : ""}</option>
+              <option key={c.id} value={c.id}>{c.nome} â€” unid. {c.unidade}{c.modo === "mock" ? " (simulaÃ§Ã£o)" : ""}</option>
             ))}
           </select>
         </div>
         <div className="flex flex-col gap-1 md:col-span-2">
-          <label className="text-xs font-medium text-[var(--color-ink-500)]">Modelo pré-cadastrado</label>
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">Modelo prÃ©-cadastrado</label>
           <div className="flex gap-2">
             <select value="" onChange={(e) => aplicarModelo(e.target.value)} className={inputCls}>
               <option value="">Selecione um modelo para preencher automaticamente...</option>
@@ -1703,21 +1852,21 @@ function abrirModalResiduo(indice?: number) {
             </select>
             <button
               onClick={salvarComoModelo}
-              title="Salvar o formulário atual como modelo pré-cadastrado"
+              title="Salvar o formulÃ¡rio atual como modelo prÃ©-cadastrado"
               className="focus-ring transition-brand flex shrink-0 items-center gap-1.5 rounded-lg bg-[var(--color-paper-100)] px-3 py-2 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-200)]"
             >
               <Bookmark size={15} />
               Salvar como modelo
             </button>
           </div>
-          <p className="text-xs text-[var(--color-ink-500)]">Ao aplicar um modelo, transportador, destinador e os resíduos são preenchidos — informe apenas a quantidade (e densidade) de cada resíduo.</p>
+          <p className="text-xs text-[var(--color-ink-500)]">Ao aplicar um modelo, transportador, destinador e os resÃ­duos sÃ£o preenchidos â€” informe apenas a quantidade (e densidade) de cada resÃ­duo.</p>
         </div>
       </div>
 
-      {secaoTitulo("Dados do Gerador", "Empresa que gera o resíduo — preenchida pelo empreendimento")}
+      {secaoTitulo("Dados do Gerador", "Empresa que gera o resÃ­duo â€” preenchida pelo empreendimento")}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
         <div className="flex flex-col gap-1 md:col-span-2">
-          <label className="text-xs font-medium text-[var(--color-ink-500)]">Gerador (razão social)</label>
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">Gerador (razÃ£o social)</label>
           <input value={form.clienteNome} onChange={(e) => setCampo("clienteNome", e.target.value)} className={inputCls} />
         </div>
         <div className="flex flex-col gap-1">
@@ -1725,15 +1874,15 @@ function abrirModalResiduo(indice?: number) {
           <input value={form.geradorCnpj} onChange={(e) => setCampo("geradorCnpj", e.target.value.replace(/\D/g, ""))} className={inputCls} />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-[var(--color-ink-500)]">Responsável *</label>
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">ResponsÃ¡vel *</label>
           <input value={responsavel} onChange={(e) => setCampo("nomeResponsavel", e.target.value)} className={inputCls} />
         </div>
         <div className="flex flex-col gap-1 md:col-span-2">
-          <label className="text-xs font-medium text-[var(--color-ink-500)]">Endereço</label>
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">EndereÃ§o</label>
           <input value={form.geradorEndereco} onChange={(e) => setCampo("geradorEndereco", e.target.value)} className={inputCls} />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-[var(--color-ink-500)]">Nº</label>
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">NÂº</label>
           <input value={form.geradorNumero} onChange={(e) => setCampo("geradorNumero", e.target.value)} className={inputCls} />
         </div>
         <div className="flex flex-col gap-1">
@@ -1749,7 +1898,7 @@ function abrirModalResiduo(indice?: number) {
       {secaoTitulo("Dados do Transportador", "Pesquise o transportador por CNPJ")}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
         <div className="flex flex-col gap-1 md:col-span-2">
-          <label className="text-xs font-medium text-[var(--color-ink-500)]">Transportador (razão social)</label>
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">Transportador (razÃ£o social)</label>
           <input value={form.transportadorNome} onChange={(e) => setCampo("transportadorNome", e.target.value)} className={inputCls} />
         </div>
           <div className="flex flex-col gap-1">
@@ -1757,12 +1906,12 @@ function abrirModalResiduo(indice?: number) {
             <input value={form.transportadorCnpj} onChange={(e) => { setCampo("transportadorCnpj", e.target.value.replace(/\D/g, "")); setUnidadesTransp([]); }} onBlur={() => { if (form.transportadorCnpj.replace(/\D/g, "").length === 14 && unidadesTransp.length === 0) void buscarParceiro("transp"); }} className={inputCls} placeholder="00000000000000" />
           </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-[var(--color-ink-500)]" title="Código da unidade deste parceiro no SINIR — preenchido automaticamente ao buscar pelo CNPJ">Cód. Unidade SINIR *</label>
+          <label className="text-xs font-medium text-[var(--color-ink-500)]" title="CÃ³digo da unidade deste parceiro no SINIR â€” preenchido automaticamente ao buscar pelo CNPJ">CÃ³d. Unidade SINIR *</label>
           {unidadesTransp.length > 0 ? (
             <select value={form.transportadorUnidade} onChange={(e) => setCampo("transportadorUnidade", e.target.value)} className={inputCls}>
-              <option value="">{unidadesTransp.length} unidade(s) encontrada(s) — selecione</option>
+              <option value="">{unidadesTransp.length} unidade(s) encontrada(s) â€” selecione</option>
               {unidadesTransp.map((u) => (
-                <option key={u.unidade} value={String(u.unidade)}>{u.unidade} — {u.nome}{u.endereco ? ` (${u.endereco})` : ""}</option>
+                <option key={u.unidade} value={String(u.unidade)}>{u.unidade} â€” {u.nome}{u.endereco ? ` (${u.endereco})` : ""}</option>
               ))}
             </select>
           ) : (
@@ -1770,7 +1919,7 @@ function abrirModalResiduo(indice?: number) {
           )}
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-[var(--color-ink-500)]">Placa do veículo</label>
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">Placa do veÃ­culo</label>
           <input value={form.placaVeiculo} onChange={(e) => setCampo("placaVeiculo", e.target.value.toUpperCase())} className={inputCls} />
         </div>
         <div className="flex flex-col gap-1">
@@ -1778,15 +1927,15 @@ function abrirModalResiduo(indice?: number) {
           <input value={form.nomeMotorista} onChange={(e) => setCampo("nomeMotorista", e.target.value)} className={inputCls} />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-[var(--color-ink-500)]">Data de expedição</label>
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">Data de expediÃ§Ã£o</label>
           <input type="date" value={form.dataExpedicao} onChange={(e) => setCampo("dataExpedicao", e.target.value)} className={inputCls} />
         </div>
         <div className="flex flex-col gap-1 md:col-span-2">
-          <label className="text-xs font-medium text-[var(--color-ink-500)]">Endereço</label>
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">EndereÃ§o</label>
           <input value={form.transportadorEndereco} onChange={(e) => setCampo("transportadorEndereco", e.target.value)} className={inputCls} />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-[var(--color-ink-500)]">Nº</label>
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">NÂº</label>
           <input value={form.transportadorNumero} onChange={(e) => setCampo("transportadorNumero", e.target.value)} className={inputCls} />
         </div>
         <div className="flex flex-col gap-1">
@@ -1802,11 +1951,11 @@ function abrirModalResiduo(indice?: number) {
           <input value={form.transportadorCep} onChange={(e) => setCampo("transportadorCep", e.target.value.replace(/\D/g, ""))} className={inputCls} />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-[var(--color-ink-500)]">Licença</label>
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">LicenÃ§a</label>
           <input value={form.transportadorLicenca} onChange={(e) => setCampo("transportadorLicenca", e.target.value)} className={inputCls} />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-[var(--color-ink-500)]">Órgão Emissor</label>
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">Ã“rgÃ£o Emissor</label>
           <input value={form.transportadorOrgao} onChange={(e) => setCampo("transportadorOrgao", e.target.value)} className={inputCls} />
         </div>
       </div>
@@ -1814,7 +1963,7 @@ function abrirModalResiduo(indice?: number) {
       {secaoTitulo("Dados do Destinador", "Pesquise o destinador por CNPJ")}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
         <div className="flex flex-col gap-1 md:col-span-2">
-          <label className="text-xs font-medium text-[var(--color-ink-500)]">Destinador (razão social)</label>
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">Destinador (razÃ£o social)</label>
           <input value={form.destinadorNome} onChange={(e) => setCampo("destinadorNome", e.target.value)} className={inputCls} />
         </div>
           <div className="flex flex-col gap-1">
@@ -1822,12 +1971,12 @@ function abrirModalResiduo(indice?: number) {
             <input value={form.destinadorCnpj} onChange={(e) => { setCampo("destinadorCnpj", e.target.value.replace(/\D/g, "")); setUnidadesDest([]); }} onBlur={() => { if (form.destinadorCnpj.replace(/\D/g, "").length === 14 && unidadesDest.length === 0) void buscarParceiro("dest"); }} className={inputCls} placeholder="00000000000000" />
           </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-[var(--color-ink-500)]" title="Código da unidade deste parceiro no SINIR — preenchido automaticamente ao buscar pelo CNPJ. Um mesmo CNPJ pode ter várias unidades.">Cód. Unidade SINIR *</label>
+          <label className="text-xs font-medium text-[var(--color-ink-500)]" title="CÃ³digo da unidade deste parceiro no SINIR â€” preenchido automaticamente ao buscar pelo CNPJ. Um mesmo CNPJ pode ter vÃ¡rias unidades.">CÃ³d. Unidade SINIR *</label>
           {unidadesDest.length > 0 ? (
             <select value={form.destinadorUnidade} onChange={(e) => setCampo("destinadorUnidade", e.target.value)} className={inputCls}>
-              <option value="">{unidadesDest.length} unidade(s) encontrada(s) — selecione</option>
+              <option value="">{unidadesDest.length} unidade(s) encontrada(s) â€” selecione</option>
               {unidadesDest.map((u) => (
-                <option key={u.unidade} value={String(u.unidade)}>{u.unidade} — {u.nome}{u.endereco ? ` (${u.endereco})` : ""}</option>
+                <option key={u.unidade} value={String(u.unidade)}>{u.unidade} â€” {u.nome}{u.endereco ? ` (${u.endereco})` : ""}</option>
               ))}
             </select>
           ) : (
@@ -1835,11 +1984,11 @@ function abrirModalResiduo(indice?: number) {
           )}
         </div>
         <div className="flex flex-col gap-1 md:col-span-2">
-          <label className="text-xs font-medium text-[var(--color-ink-500)]">Endereço</label>
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">EndereÃ§o</label>
           <input value={form.destinadorEndereco} onChange={(e) => setCampo("destinadorEndereco", e.target.value)} className={inputCls} />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-[var(--color-ink-500)]">Nº</label>
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">NÂº</label>
           <input value={form.destinadorNumero} onChange={(e) => setCampo("destinadorNumero", e.target.value)} className={inputCls} />
         </div>
         <div className="flex flex-col gap-1">
@@ -1855,46 +2004,46 @@ function abrirModalResiduo(indice?: number) {
           <input value={form.destinadorCep} onChange={(e) => setCampo("destinadorCep", e.target.value.replace(/\D/g, ""))} className={inputCls} />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-[var(--color-ink-500)]">Licença</label>
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">LicenÃ§a</label>
           <input value={form.destinadorLicenca} onChange={(e) => setCampo("destinadorLicenca", e.target.value)} className={inputCls} />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-[var(--color-ink-500)]">Órgão Emissor</label>
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">Ã“rgÃ£o Emissor</label>
           <input value={form.destinadorOrgao} onChange={(e) => setCampo("destinadorOrgao", e.target.value)} className={inputCls} />
         </div>
       </div>
 
-      {secaoTitulo("Resíduos", "Adicione os resíduos transportados — cada um é uma linha da tabela")}
+      {secaoTitulo("ResÃ­duos", "Adicione os resÃ­duos transportados â€” cada um Ã© uma linha da tabela")}
       <div className="flex items-center justify-between gap-2 mb-3">
         <p className="text-sm text-[var(--color-ink-500)]">
-          {carregandoCatalogos ? "Carregando catálogos do SINIR..." : `${residuos.length} resíduo(s) adicionado(s)`}
+          {carregandoCatalogos ? "Carregando catÃ¡logos do SINIR..." : `${residuos.length} resÃ­duo(s) adicionado(s)`}
         </p>
         <button
           onClick={() => abrirModalResiduo()}
           className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg bg-[var(--color-brand-500)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)]"
         >
           <Plus size={15} />
-          Adicionar Resíduo
+          Adicionar ResÃ­duo
         </button>
       </div>
 
       {residuos.length === 0 ? (
         <div className="rounded-lg border border-dashed border-[var(--color-paper-200)] bg-[var(--color-paper-50)] p-6 text-center text-sm text-[var(--color-ink-500)]">
-          Nenhum resíduo cadastrado. Clique em &quot;Adicionar Resíduo&quot; para incluir o primeiro.
+          Nenhum resÃ­duo cadastrado. Clique em &quot;Adicionar ResÃ­duo&quot; para incluir o primeiro.
         </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[var(--color-paper-200)] text-left">
-                <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Resíduo</th>
+                <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">ResÃ­duo</th>
                 <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Quantidade</th>
                 <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Estado</th>
                 <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Classe</th>
                 <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Acondicionamento</th>
                 <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Tratamento</th>
                 <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">ONU</th>
-                <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Ações</th>
+                <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">AÃ§Ãµes</th>
               </tr>
             </thead>
             <tbody>
@@ -1902,7 +2051,7 @@ function abrirModalResiduo(indice?: number) {
                 <tr key={i} className="border-b border-[var(--color-paper-100)]">
                   <td className="py-2 px-2 text-[var(--color-ink-700)]">
                     <div className="font-medium">{nomeResiduo(r.resCodigoIbama)}</div>
-                    <div className="text-xs text-[var(--color-ink-500)]">{r.marDescricaoInterna || "—"}</div>
+                    <div className="text-xs text-[var(--color-ink-500)]">{r.marDescricaoInterna || "â€”"}</div>
                   </td>
                   <td className="py-2 px-2 whitespace-nowrap text-[var(--color-ink-700)]">
                     <div>{Number(r.marQuantidade).toLocaleString("pt-BR")} {nomeUnidade(r.uniCodigo)}</div>
@@ -1912,13 +2061,13 @@ function abrirModalResiduo(indice?: number) {
                   <td className="py-2 px-2 text-[var(--color-ink-600)]">{nomeClasse(r.claCodigo)}</td>
                   <td className="py-2 px-2 text-[var(--color-ink-600)]">{nomeAcond(r.tiaCodigo)}</td>
                   <td className="py-2 px-2 text-[var(--color-ink-600)]">{nomeTrat(r.traCodigo)}</td>
-                  <td className="py-2 px-2 text-[var(--color-ink-600)]">{r.marNumeroONU || "—"}</td>
+                  <td className="py-2 px-2 text-[var(--color-ink-600)]">{r.marNumeroONU || "â€”"}</td>
                   <td className="py-2 px-2">
                     <div className="flex items-center gap-1">
-                      <button onClick={() => abrirModalResiduo(i)} title="Editar resíduo" className="rounded-md p-1.5 text-[var(--color-ink-600)] hover:bg-[var(--color-paper-100)] hover:text-[var(--color-brand-600)]">
+                      <button onClick={() => abrirModalResiduo(i)} title="Editar resÃ­duo" className="rounded-md p-1.5 text-[var(--color-ink-600)] hover:bg-[var(--color-paper-100)] hover:text-[var(--color-brand-600)]">
                         <Pencil size={15} />
                       </button>
-                      <button onClick={() => removerResiduo(i)} title="Remover resíduo" className="rounded-md p-1.5 text-[var(--color-ink-600)] hover:bg-red-50 hover:text-red-600">
+                      <button onClick={() => removerResiduo(i)} title="Remover resÃ­duo" className="rounded-md p-1.5 text-[var(--color-ink-600)] hover:bg-red-50 hover:text-red-600">
                         <Trash2 size={15} />
                       </button>
                     </div>
@@ -1932,8 +2081,8 @@ function abrirModalResiduo(indice?: number) {
 
       <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-[var(--color-ink-500)]">Observações (0/4000)</label>
-          <input value={form.observacoes} onChange={(e) => setCampo("observacoes", e.target.value.slice(0, 4000))} className={inputCls} placeholder="Observações adicionais" />
+          <label className="text-xs font-medium text-[var(--color-ink-500)]">ObservaÃ§Ãµes (0/4000)</label>
+          <input value={form.observacoes} onChange={(e) => setCampo("observacoes", e.target.value.slice(0, 4000))} className={inputCls} placeholder="ObservaÃ§Ãµes adicionais" />
         </div>
       </div>
 
@@ -1947,7 +2096,7 @@ function abrirModalResiduo(indice?: number) {
         <div className="mt-4 rounded-lg border border-[var(--color-paper-200)] bg-[var(--color-paper-50)] p-4">
           <p className="flex items-center gap-2 text-sm font-medium text-[var(--color-ink-800)]">
             <CheckCircle2 size={16} className="text-green-600" />
-            MTR {resultado.numero} {resultado.simulacao && <span className="rounded bg-blue-50 px-1.5 py-0.5 text-xs text-blue-700">simulação</span>}
+            MTR {resultado.numero} {resultado.simulacao && <span className="rounded bg-blue-50 px-1.5 py-0.5 text-xs text-blue-700">simulaÃ§Ã£o</span>}
           </p>
         </div>
       )}
@@ -1961,7 +2110,7 @@ function abrirModalResiduo(indice?: number) {
             <div className="mb-4 flex items-center justify-between">
               <h3 className="font-display flex items-center gap-2 text-base font-semibold text-[var(--color-ink-900)]">
                 <PackagePlus size={18} className="text-[var(--color-brand-500)]" />
-                {editandoResiduo != null ? `Editar resíduo ${editandoResiduo + 1}` : "Adicionar Resíduo"}
+                {editandoResiduo != null ? `Editar resÃ­duo ${editandoResiduo + 1}` : "Adicionar ResÃ­duo"}
               </h3>
               <button onClick={() => setModalResiduo(false)} className="rounded-md p-1.5 text-[var(--color-ink-500)] hover:bg-[var(--color-paper-100)]">
                 <X size={18} />
@@ -1970,14 +2119,14 @@ function abrirModalResiduo(indice?: number) {
 
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <div className="flex flex-col gap-1 md:col-span-2">
-                <label className="text-xs font-medium text-[var(--color-ink-500)]">Resíduo / Código IBAMA *</label>
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">ResÃ­duo / CÃ³digo IBAMA *</label>
                 <BuscaResiduo
                   catalogos={catalogos}
                   valor={residuoForm.resCodigoIbama}
                   onChange={(codigo) => setResiduoForm((f) => ({ ...f, resCodigoIbama: codigo }))}
                   inputCls={inputCls}
                 />
-                {carregandoCatalogos && <p className="text-xs text-[var(--color-ink-500)]">Carregando catálogos do SINIR...</p>}
+                {carregandoCatalogos && <p className="text-xs text-[var(--color-ink-500)]">Carregando catÃ¡logos do SINIR...</p>}
               </div>
               <div className="flex flex-col gap-1">
                 <label className="text-xs font-medium text-[var(--color-ink-500)]">Quantidade *</label>
@@ -1988,14 +2137,14 @@ function abrirModalResiduo(indice?: number) {
                 <select value={residuoForm.uniCodigo} onChange={(e) => setResiduoForm((f) => ({ ...f, uniCodigo: e.target.value, marDensidade: precisaDensidade(e.target.value) ? f.marDensidade : "" }))} className={inputCls}>
                   <option value="">Selecione...</option>
                   {catalogos?.unidades.map((u) => (
-                    <option key={u.uniCodigo} value={u.uniCodigo}>{u.uniSigla} — {u.uniNome}</option>
+                    <option key={u.uniCodigo} value={u.uniCodigo}>{u.uniSigla} â€” {u.uniNome}</option>
                   ))}
                 </select>
               </div>
               {precisaDensidade(residuoForm.uniCodigo) && (
                 <div className="flex flex-col gap-1 md:col-span-2">
                   <label className="text-xs font-medium text-[var(--color-ink-500)]">{rotuloDensidade(residuoForm.uniCodigo)}</label>
-                  <input type="number" step="0.01" min="0" value={residuoForm.marDensidade} onChange={(e) => setResiduoForm((f) => ({ ...f, marDensidade: e.target.value }))} className={inputCls} placeholder={tipoUnidade(residuoForm.uniCodigo) === "litro" ? "Ex.: 1,2 — converte litros em toneladas (L × densidade ÷ 1000)" : "Ex.: 1,4 — converte m³ em toneladas (qtd × densidade)"} />
+                  <input type="number" step="0.01" min="0" value={residuoForm.marDensidade} onChange={(e) => setResiduoForm((f) => ({ ...f, marDensidade: e.target.value }))} className={inputCls} placeholder={tipoUnidade(residuoForm.uniCodigo) === "litro" ? "Ex.: 1,2 â€” converte litros em toneladas (L Ã— densidade Ã· 1000)" : "Ex.: 1,4 â€” converte mÂ³ em toneladas (qtd Ã— densidade)"} />
                 </div>
               )}
               {(() => {
@@ -2004,12 +2153,12 @@ function abrirModalResiduo(indice?: number) {
                 const excede = peso > PESO_MAX_TONELADAS;
                 return (
                   <p className={`md:col-span-2 text-xs ${excede ? "font-medium text-red-600" : "text-[var(--color-ink-500)]"}`}>
-                    Peso calculado: {peso.toLocaleString("pt-BR", { maximumFractionDigits: 3 })} t{excede ? ` — excede o máximo de ${PESO_MAX_TONELADAS} t` : ""}
+                    Peso calculado: {peso.toLocaleString("pt-BR", { maximumFractionDigits: 3 })} t{excede ? ` â€” excede o mÃ¡ximo de ${PESO_MAX_TONELADAS} t` : ""}
                   </p>
                 );
               })()}
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-[var(--color-ink-500)]">Estado Físico *</label>
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Estado FÃ­sico *</label>
                 <select value={residuoForm.tieCodigo} onChange={(e) => setResiduoForm((f) => ({ ...f, tieCodigo: e.target.value }))} className={inputCls}>
                   <option value="">Selecione...</option>
                   {catalogos?.estadosFisicos.map((e) => (
@@ -2045,7 +2194,7 @@ function abrirModalResiduo(indice?: number) {
                 </select>
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-[var(--color-ink-500)]">Número ONU</label>
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">NÃºmero ONU</label>
                 <input value={residuoForm.marNumeroONU} onChange={(e) => setResiduoForm((f) => ({ ...f, marNumeroONU: e.target.value }))} className={inputCls} placeholder="Opcional" />
               </div>
               <div className="flex flex-col gap-1">
@@ -2061,7 +2210,7 @@ function abrirModalResiduo(indice?: number) {
                 <input value={residuoForm.marGrupoEmbalagem} onChange={(e) => setResiduoForm((f) => ({ ...f, marGrupoEmbalagem: e.target.value }))} className={inputCls} placeholder="Opcional" />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-[var(--color-ink-500)]">Cód. Interno</label>
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">CÃ³d. Interno</label>
                 <input value={residuoForm.marCodigoInterno} onChange={(e) => setResiduoForm((f) => ({ ...f, marCodigoInterno: e.target.value }))} className={inputCls} placeholder="Opcional" />
               </div>
               <div className="flex flex-col gap-1">
@@ -2069,7 +2218,7 @@ function abrirModalResiduo(indice?: number) {
                 <input value={residuoForm.marDescricaoInterna} onChange={(e) => setResiduoForm((f) => ({ ...f, marDescricaoInterna: e.target.value }))} className={inputCls} placeholder="Opcional" />
               </div>
               <div className="flex flex-col gap-1 md:col-span-2">
-                <label className="text-xs font-medium text-[var(--color-ink-500)]">Observação</label>
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">ObservaÃ§Ã£o</label>
                 <input value={residuoForm.observacoes} onChange={(e) => setResiduoForm((f) => ({ ...f, observacoes: e.target.value }))} className={inputCls} placeholder="Opcional" />
               </div>
             </div>
@@ -2086,7 +2235,7 @@ function abrirModalResiduo(indice?: number) {
                 className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg bg-[var(--color-brand-500)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)]"
               >
                 {editandoResiduo != null ? <Pencil size={15} /> : <Plus size={15} />}
-                {editandoResiduo != null ? "Salvar alterações" : "Adicionar à tabela"}
+                {editandoResiduo != null ? "Salvar alteraÃ§Ãµes" : "Adicionar Ã  tabela"}
               </button>
             </div>
           </div>
@@ -2266,7 +2415,7 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtr[]; onChange
 
   function salvarResiduo() {
     if (!residuoForm.resCodigoIbama || !residuoForm.marQuantidade) {
-      toast("Preencha o resíduo (código IBAMA) e a quantidade padrão do modelo", "error");
+      toast("Preencha o resÃ­duo (cÃ³digo IBAMA) e a quantidade padrÃ£o do modelo", "error");
       return;
     }
     if (editandoResiduo === null) {
@@ -2289,7 +2438,7 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtr[]; onChange
   async function buscarCnpj(qual: "transportador" | "destinador") {
     const cnpj = (qual === "transportador" ? form.transportadorCnpj : form.destinadorCnpj).replace(/\D/g, "");
     if (cnpj.length !== 14) {
-      toast("Informe um CNPJ com 14 dígitos para buscar", "error");
+      toast("Informe um CNPJ com 14 dÃ­gitos para buscar", "error");
       return;
     }
     setBuscandoCnpj(true);
@@ -2297,13 +2446,13 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtr[]; onChange
       const res = await fetch(`/api/cnpj/${cnpj}`);
       if (!res.ok) {
         const data = await res.json().catch(() => null);
-        toast(data?.error || "CNPJ não encontrado", "error");
+        toast(data?.error || "CNPJ nÃ£o encontrado", "error");
         return;
       }
       const data = await res.json();
       const razao = data.razaoSocial || "";
       setForm((f) => (qual === "transportador" ? { ...f, transportadorNome: razao } : { ...f, destinadorNome: razao }));
-      toast(`Razão social preenchida: ${razao}`, "success");
+      toast(`RazÃ£o social preenchida: ${razao}`, "success");
     } catch {
       toast("Falha ao buscar o CNPJ", "error");
     } finally {
@@ -2317,15 +2466,15 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtr[]; onChange
       return;
     }
     if (form.residuos.length === 0) {
-      toast("Adicione pelo menos um resíduo ao modelo", "error");
+      toast("Adicione pelo menos um resÃ­duo ao modelo", "error");
       return;
     }
     if (form.transportadorCnpj.replace(/\D/g, "").length !== 14 || form.destinadorCnpj.replace(/\D/g, "").length !== 14) {
-      toast("Preencha os CNPJs (14 dígitos) do transportador e do destinador", "error");
+      toast("Preencha os CNPJs (14 dÃ­gitos) do transportador e do destinador", "error");
       return;
     }
     if (!form.transportadorUnidade || !form.destinadorUnidade) {
-      toast("Informe os códigos de unidade SINIR do transportador e do destinador", "error");
+      toast("Informe os cÃ³digos de unidade SINIR do transportador e do destinador", "error");
       return;
     }
     setSalvando(true);
@@ -2408,23 +2557,23 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtr[]; onChange
           )}
         </div>
         <p className="mb-4 text-sm text-[var(--color-ink-500)]">
-          Um modelo pré-preenche o transportador, o destinador e os resíduos na emissão. Quantidade e densidade de cada resíduo ficam em branco para informar na hora de emitir.
+          Um modelo prÃ©-preenche o transportador, o destinador e os resÃ­duos na emissÃ£o. Quantidade e densidade de cada resÃ­duo ficam em branco para informar na hora de emitir.
         </p>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium text-[var(--color-ink-500)]">Nome do modelo *</label>
-            <input value={form.nome} onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))} className={inputCls} placeholder="Ex.: Transporte mensal de resíduos classe II" />
+            <input value={form.nome} onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))} className={inputCls} placeholder="Ex.: Transporte mensal de resÃ­duos classe II" />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-[var(--color-ink-500)]">Descrição</label>
+            <label className="text-xs font-medium text-[var(--color-ink-500)]">DescriÃ§Ã£o</label>
             <input value={form.descricao} onChange={(e) => setForm((f) => ({ ...f, descricao: e.target.value }))} className={inputCls} />
           </div>
           <div className="flex flex-col gap-1 md:col-span-2">
-            <label className="text-xs font-medium text-[var(--color-ink-500)]">Conexão padrão (opcional)</label>
+            <label className="text-xs font-medium text-[var(--color-ink-500)]">ConexÃ£o padrÃ£o (opcional)</label>
             <select value={form.conexaoId} onChange={(e) => setForm((f) => ({ ...f, conexaoId: e.target.value }))} className={inputCls}>
-              <option value="">Qualquer conexão</option>
+              <option value="">Qualquer conexÃ£o</option>
               {conexoes.map((c) => (
-                <option key={c.id} value={c.id}>{c.nome} — unid. {c.unidade}{c.modo === "mock" ? " (simulação)" : ""}</option>
+                <option key={c.id} value={c.id}>{c.nome} â€” unid. {c.unidade}{c.modo === "mock" ? " (simulaÃ§Ã£o)" : ""}</option>
               ))}
             </select>
           </div>
@@ -2436,34 +2585,34 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtr[]; onChange
                 <label className="text-xs font-medium text-[var(--color-ink-500)]">CNPJ *</label>
                 <div className="flex gap-2">
                   <input value={form.transportadorCnpj} onChange={(e) => setForm((f) => ({ ...f, transportadorCnpj: e.target.value.replace(/\D/g, "") }))} className={inputCls} placeholder="00000000000000" />
-                  <button onClick={() => buscarCnpj("transportador")} disabled={buscandoCnpj} title="Buscar razão social"
+                  <button onClick={() => buscarCnpj("transportador")} disabled={buscandoCnpj} title="Buscar razÃ£o social"
                     className="focus-ring transition-brand flex shrink-0 items-center gap-1.5 rounded-lg bg-[var(--color-paper-100)] px-3 py-2 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-200)] disabled:opacity-50">
                     {buscandoCnpj ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
                   </button>
                 </div>
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-[var(--color-ink-500)]">Razão social</label>
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">RazÃ£o social</label>
                 <input value={form.transportadorNome} onChange={(e) => setForm((f) => ({ ...f, transportadorNome: e.target.value }))} className={inputCls} />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-[var(--color-ink-500)]" title="Código da unidade deste parceiro no SINIR — visível no portal (DMR/emissão) ao buscar pelo CNPJ. Um mesmo CNPJ pode ter várias unidades.">Cód. Unidade SINIR *</label>
+                <label className="text-xs font-medium text-[var(--color-ink-500)]" title="CÃ³digo da unidade deste parceiro no SINIR â€” visÃ­vel no portal (DMR/emissÃ£o) ao buscar pelo CNPJ. Um mesmo CNPJ pode ter vÃ¡rias unidades.">CÃ³d. Unidade SINIR *</label>
                 <input value={form.transportadorUnidade} onChange={(e) => setForm((f) => ({ ...f, transportadorUnidade: e.target.value.replace(/\D/g, "") }))} className={inputCls} placeholder="Ex.: 400701" />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-[var(--color-ink-500)]">Licença</label>
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">LicenÃ§a</label>
                 <input value={form.transportadorLicenca} onChange={(e) => setForm((f) => ({ ...f, transportadorLicenca: e.target.value }))} className={inputCls} />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-[var(--color-ink-500)]">Órgão emissor</label>
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Ã“rgÃ£o emissor</label>
                 <input value={form.transportadorOrgao} onChange={(e) => setForm((f) => ({ ...f, transportadorOrgao: e.target.value }))} className={inputCls} />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-[var(--color-ink-500)]">Endereço</label>
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">EndereÃ§o</label>
                 <input value={form.transportadorEndereco} onChange={(e) => setForm((f) => ({ ...f, transportadorEndereco: e.target.value }))} className={inputCls} />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-[var(--color-ink-500)]">Número</label>
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">NÃºmero</label>
                 <input value={form.transportadorNumero} onChange={(e) => setForm((f) => ({ ...f, transportadorNumero: e.target.value }))} className={inputCls} />
               </div>
               <div className="flex flex-col gap-1">
@@ -2488,34 +2637,34 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtr[]; onChange
                 <label className="text-xs font-medium text-[var(--color-ink-500)]">CNPJ *</label>
                 <div className="flex gap-2">
                   <input value={form.destinadorCnpj} onChange={(e) => setForm((f) => ({ ...f, destinadorCnpj: e.target.value.replace(/\D/g, "") }))} className={inputCls} placeholder="00000000000000" />
-                  <button onClick={() => buscarCnpj("destinador")} disabled={buscandoCnpj} title="Buscar razão social"
+                  <button onClick={() => buscarCnpj("destinador")} disabled={buscandoCnpj} title="Buscar razÃ£o social"
                     className="focus-ring transition-brand flex shrink-0 items-center gap-1.5 rounded-lg bg-[var(--color-paper-100)] px-3 py-2 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-200)] disabled:opacity-50">
                     {buscandoCnpj ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
                   </button>
                 </div>
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-[var(--color-ink-500)]">Razão social</label>
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">RazÃ£o social</label>
                 <input value={form.destinadorNome} onChange={(e) => setForm((f) => ({ ...f, destinadorNome: e.target.value }))} className={inputCls} />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-[var(--color-ink-500)]" title="Código da unidade deste parceiro no SINIR — visível no portal (DMR/emissão) ao buscar pelo CNPJ. Um mesmo CNPJ pode ter várias unidades.">Cód. Unidade SINIR *</label>
+                <label className="text-xs font-medium text-[var(--color-ink-500)]" title="CÃ³digo da unidade deste parceiro no SINIR â€” visÃ­vel no portal (DMR/emissÃ£o) ao buscar pelo CNPJ. Um mesmo CNPJ pode ter vÃ¡rias unidades.">CÃ³d. Unidade SINIR *</label>
                 <input value={form.destinadorUnidade} onChange={(e) => setForm((f) => ({ ...f, destinadorUnidade: e.target.value.replace(/\D/g, "") }))} className={inputCls} placeholder="Ex.: 400701" />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-[var(--color-ink-500)]">Licença</label>
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">LicenÃ§a</label>
                 <input value={form.destinadorLicenca} onChange={(e) => setForm((f) => ({ ...f, destinadorLicenca: e.target.value }))} className={inputCls} />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-[var(--color-ink-500)]">Órgão emissor</label>
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Ã“rgÃ£o emissor</label>
                 <input value={form.destinadorOrgao} onChange={(e) => setForm((f) => ({ ...f, destinadorOrgao: e.target.value }))} className={inputCls} />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-[var(--color-ink-500)]">Endereço</label>
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">EndereÃ§o</label>
                 <input value={form.destinadorEndereco} onChange={(e) => setForm((f) => ({ ...f, destinadorEndereco: e.target.value }))} className={inputCls} />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-[var(--color-ink-500)]">Número</label>
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">NÃºmero</label>
                 <input value={form.destinadorNumero} onChange={(e) => setForm((f) => ({ ...f, destinadorNumero: e.target.value }))} className={inputCls} />
               </div>
               <div className="flex flex-col gap-1">
@@ -2534,22 +2683,22 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtr[]; onChange
           </div>
 
           <div className="md:col-span-2">
-            <h3 className="font-display mb-2 mt-2 text-sm font-semibold text-[var(--color-ink-700)]">Resíduos do modelo</h3>
+            <h3 className="font-display mb-2 mt-2 text-sm font-semibold text-[var(--color-ink-700)]">ResÃ­duos do modelo</h3>
             <div className="overflow-x-auto rounded-lg border border-[var(--color-paper-200)]">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-[var(--color-paper-200)] bg-[var(--color-paper-50)] text-left">
-                    <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Resíduo (IBAMA)</th>
-                    <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Qtde. padrão</th>
+                    <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">ResÃ­duo (IBAMA)</th>
+                    <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Qtde. padrÃ£o</th>
                     <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Unidade</th>
                     <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Classe</th>
-                    <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Ações</th>
+                    <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">AÃ§Ãµes</th>
                   </tr>
                 </thead>
                 <tbody>
                   {form.residuos.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="py-4 text-center text-[var(--color-ink-500)]">Nenhum resíduo no modelo.</td>
+                      <td colSpan={5} className="py-4 text-center text-[var(--color-ink-500)]">Nenhum resÃ­duo no modelo.</td>
                     </tr>
                   ) : (
                     form.residuos.map((r, i) => (
@@ -2575,7 +2724,7 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtr[]; onChange
               </table>
             </div>
             <button onClick={() => abrirModalResiduo()} className="focus-ring transition-brand mt-2 flex items-center gap-1.5 rounded-lg bg-[var(--color-paper-100)] px-3 py-2 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-200)]">
-              <Plus size={15} /> Adicionar resíduo
+              <Plus size={15} /> Adicionar resÃ­duo
             </button>
           </div>
 
@@ -2584,11 +2733,11 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtr[]; onChange
             <input value={form.nomeMotorista} onChange={(e) => setForm((f) => ({ ...f, nomeMotorista: e.target.value }))} className={inputCls} />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-[var(--color-ink-500)]">Placa do veículo</label>
+            <label className="text-xs font-medium text-[var(--color-ink-500)]">Placa do veÃ­culo</label>
             <input value={form.placaVeiculo} onChange={(e) => setForm((f) => ({ ...f, placaVeiculo: e.target.value.toUpperCase() }))} className={inputCls} />
           </div>
           <div className="flex flex-col gap-1 md:col-span-2">
-            <label className="text-xs font-medium text-[var(--color-ink-500)]">Observações</label>
+            <label className="text-xs font-medium text-[var(--color-ink-500)]">ObservaÃ§Ãµes</label>
             <textarea value={form.observacoes} onChange={(e) => setForm((f) => ({ ...f, observacoes: e.target.value }))} className={inputCls} rows={2} />
           </div>
         </div>
@@ -2602,7 +2751,7 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtr[]; onChange
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
         <h2 className="font-display mb-3 text-base font-semibold text-[var(--color-ink-900)]">Modelos cadastrados</h2>
         {modelos.length === 0 ? (
-          <p className="py-4 text-center text-sm text-[var(--color-ink-500)]">Nenhum modelo cadastrado. Você também pode salvar o formulário da aba &quot;Emitir MTR&quot; como modelo.</p>
+          <p className="py-4 text-center text-sm text-[var(--color-ink-500)]">Nenhum modelo cadastrado. VocÃª tambÃ©m pode salvar o formulÃ¡rio da aba &quot;Emitir MTR&quot; como modelo.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -2611,9 +2760,9 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtr[]; onChange
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Nome</th>
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Transportador</th>
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Destinador</th>
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Resíduos</th>
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Conexão</th>
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Ações</th>
+                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">ResÃ­duos</th>
+                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">ConexÃ£o</th>
+                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">AÃ§Ãµes</th>
                 </tr>
               </thead>
               <tbody>
@@ -2623,10 +2772,10 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtr[]; onChange
                       <div className="font-medium text-[var(--color-ink-800)]">{m.nome}</div>
                       {m.descricao && <div className="text-xs text-[var(--color-ink-500)]">{m.descricao}</div>}
                     </td>
-                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.transportadorNome || m.transportadorCnpj || "—"}</td>
-                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.destinadorNome || m.destinadorCnpj || "—"}</td>
-                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{Array.isArray(m.residuos) ? m.residuos.length : 0} resíduo(s)</td>
-                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.conexao ? m.conexao.nome : "—"}</td>
+                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.transportadorNome || m.transportadorCnpj || "â€”"}</td>
+                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.destinadorNome || m.destinadorCnpj || "â€”"}</td>
+                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{Array.isArray(m.residuos) ? m.residuos.length : 0} resÃ­duo(s)</td>
+                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.conexao ? m.conexao.nome : "â€”"}</td>
                     <td className="py-2 px-2">
                       <div className="flex gap-1">
                         <button onClick={() => editarModelo(m)} className="rounded p-1 text-[var(--color-ink-400)] hover:bg-[var(--color-paper-100)] hover:text-[var(--color-ink-700)]" title="Editar">
@@ -2650,7 +2799,7 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtr[]; onChange
           <div className="shadow-card mt-8 w-full max-w-2xl rounded-[var(--radius-card)] bg-white p-5">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="font-display text-base font-semibold text-[var(--color-ink-900)]">
-                {editandoResiduo === null ? "Adicionar resíduo" : "Editar resíduo"}
+                {editandoResiduo === null ? "Adicionar resÃ­duo" : "Editar resÃ­duo"}
               </h3>
               <button onClick={() => setResiduoModal(false)} className="rounded p-1 text-[var(--color-ink-400)] hover:bg-[var(--color-paper-100)]">
                 <X size={18} />
@@ -2658,20 +2807,20 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtr[]; onChange
             </div>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <div className="flex flex-col gap-1 md:col-span-2">
-                <label className="text-xs font-medium text-[var(--color-ink-500)]">Resíduo (código IBAMA) *</label>
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">ResÃ­duo (cÃ³digo IBAMA) *</label>
                 <input value={residuoForm.resCodigoIbama} onChange={(e) => setResiduoForm((f) => ({ ...f, resCodigoIbama: e.target.value }))} className={inputCls} placeholder="Ex.: A001" />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-[var(--color-ink-500)]">Quantidade padrão *</label>
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Quantidade padrÃ£o *</label>
                 <input type="number" step="0.01" min="0" value={residuoForm.marQuantidade} onChange={(e) => setResiduoForm((f) => ({ ...f, marQuantidade: e.target.value }))} className={inputCls} />
               </div>
               <div className="flex flex-col gap-1">
                 <label className="text-xs font-medium text-[var(--color-ink-500)]">Unidade *</label>
-                <input value={residuoForm.uniCodigo} onChange={(e) => setResiduoForm((f) => ({ ...f, uniCodigo: e.target.value }))} className={inputCls} placeholder="Código da unidade" />
+                <input value={residuoForm.uniCodigo} onChange={(e) => setResiduoForm((f) => ({ ...f, uniCodigo: e.target.value }))} className={inputCls} placeholder="CÃ³digo da unidade" />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-[var(--color-ink-500)]">Estado físico *</label>
-                <input value={residuoForm.tieCodigo} onChange={(e) => setResiduoForm((f) => ({ ...f, tieCodigo: e.target.value }))} className={inputCls} placeholder="Código do estado físico" />
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Estado fÃ­sico *</label>
+                <input value={residuoForm.tieCodigo} onChange={(e) => setResiduoForm((f) => ({ ...f, tieCodigo: e.target.value }))} className={inputCls} placeholder="CÃ³digo do estado fÃ­sico" />
               </div>
               <div className="flex flex-col gap-1">
                 <label className="text-xs font-medium text-[var(--color-ink-500)]">Classe *</label>
@@ -2687,10 +2836,10 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtr[]; onChange
               </div>
               <div className="flex flex-col gap-1">
                 <label className="text-xs font-medium text-[var(--color-ink-500)]">Densidade</label>
-                <input type="number" step="0.01" min="0" value={residuoForm.marDensidade} onChange={(e) => setResiduoForm((f) => ({ ...f, marDensidade: e.target.value }))} className={inputCls} placeholder="Converte volume (m³/L) em toneladas na emissão" />
+                <input type="number" step="0.01" min="0" value={residuoForm.marDensidade} onChange={(e) => setResiduoForm((f) => ({ ...f, marDensidade: e.target.value }))} className={inputCls} placeholder="Converte volume (mÂ³/L) em toneladas na emissÃ£o" />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-[var(--color-ink-500)]">Número ONU (opcional)</label>
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">NÃºmero ONU (opcional)</label>
                 <input value={residuoForm.marNumeroONU} onChange={(e) => setResiduoForm((f) => ({ ...f, marNumeroONU: e.target.value }))} className={inputCls} />
               </div>
               <div className="flex flex-col gap-1">
@@ -2706,15 +2855,15 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtr[]; onChange
                 <input value={residuoForm.marGrupoEmbalagem} onChange={(e) => setResiduoForm((f) => ({ ...f, marGrupoEmbalagem: e.target.value }))} className={inputCls} />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-[var(--color-ink-500)]">Código interno (opcional)</label>
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">CÃ³digo interno (opcional)</label>
                 <input value={residuoForm.marCodigoInterno} onChange={(e) => setResiduoForm((f) => ({ ...f, marCodigoInterno: e.target.value }))} className={inputCls} />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-[var(--color-ink-500)]">Descrição interna (opcional)</label>
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">DescriÃ§Ã£o interna (opcional)</label>
                 <input value={residuoForm.marDescricaoInterna} onChange={(e) => setResiduoForm((f) => ({ ...f, marDescricaoInterna: e.target.value }))} className={inputCls} />
               </div>
               <div className="flex flex-col gap-1 md:col-span-2">
-                <label className="text-xs font-medium text-[var(--color-ink-500)]">Observação (opcional)</label>
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">ObservaÃ§Ã£o (opcional)</label>
                 <textarea value={residuoForm.observacoes} onChange={(e) => setResiduoForm((f) => ({ ...f, observacoes: e.target.value }))} className={inputCls} rows={2} />
               </div>
             </div>
@@ -2733,7 +2882,186 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtr[]; onChange
   );
 }
 
-// ---------- Conexões ----------
+// ---------- Contatos ----------
+
+function ContatosTab(props: { empreendimentos: EmpreendimentoOpcao[]; toast: ToastFn }) {
+  const { empreendimentos, toast } = props;
+  const [empreendimentoId, setEmpreendimentoId] = useState("");
+  const [contatos, setContatos] = useState<ContatoEmpreendimento[]>([]);
+  const [carregando, setCarregando] = useState(false);
+  const [salvando, setSalvando] = useState(false);
+  const [form, setForm] = useState({ nome: "", email: "", cargo: "", telefone: "" });
+
+  const trocarEmpreendimento = async (idEmp: string) => {
+    setEmpreendimentoId(idEmp);
+    if (!idEmp) {
+      setContatos([]);
+      return;
+    }
+    setCarregando(true);
+    try {
+      const res = await fetch(`/api/contatos?empreendimentoId=${idEmp}`);
+      if (res.ok) setContatos(await res.json());
+    } catch {
+      toast("Falha ao carregar os contatos", "error");
+    } finally {
+      setCarregando(false);
+    }
+  };
+
+  async function adicionar() {
+    if (!empreendimentoId) {
+      toast("Selecione um empreendimento", "error");
+      return;
+    }
+    if (!form.nome.trim() || !form.email.trim()) {
+      toast("Informe nome e e-mail do contato", "error");
+      return;
+    }
+    setSalvando(true);
+    try {
+      const res = await fetch("/api/contatos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, empreendimentoId: Number(empreendimentoId) }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        toast(data?.error || "Falha ao salvar o contato", "error");
+        return;
+      }
+      toast("Contato cadastrado", "success");
+      setForm({ nome: "", email: "", cargo: "", telefone: "" });
+      trocarEmpreendimento(empreendimentoId);
+    } catch {
+      toast("Falha ao salvar o contato", "error");
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function excluir(c: ContatoEmpreendimento) {
+    if (!confirm(`Remover o contato ${c.nome} (${c.email})?`)) return;
+    try {
+      const res = await fetch(`/api/contatos/${c.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        toast(data?.error || "Falha ao remover o contato", "error");
+        return;
+      }
+      toast("Contato removido", "success");
+      trocarEmpreendimento(empreendimentoId);
+    } catch {
+      toast("Falha ao remover o contato", "error");
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
+        <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Contatos por empreendimento</h2>
+        <p className="mt-1 text-sm text-[var(--color-ink-500)]">
+          Pessoas especÃ­ficas de cada empresa para receber as notificaÃ§Ãµes de MTRs pendentes â€” o e-mail vinculado ao CNPJ nem sempre Ã© o contato correto.
+        </p>
+
+        <div className="mt-4 flex flex-wrap items-end gap-3">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-[var(--color-ink-500)]">Empreendimento</label>
+            <select
+              value={empreendimentoId}
+              onChange={(e) => trocarEmpreendimento(e.target.value)}
+              className="rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm"
+            >
+              <option value="">Selecione...</option>
+              {empreendimentos.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.apelido} â€” {e.cliente?.apelido}{e.unidadeSinir ? ` Â· unid. ${e.unidadeSinir}` : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {empreendimentoId && (
+          <div className="mt-4 grid gap-2 sm:grid-cols-5">
+            <input
+              placeholder="Nome *"
+              value={form.nome}
+              onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))}
+              className="rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm"
+            />
+            <input
+              placeholder="E-mail *"
+              type="email"
+              value={form.email}
+              onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+              className="rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm"
+            />
+            <input
+              placeholder="Cargo"
+              value={form.cargo}
+              onChange={(e) => setForm((f) => ({ ...f, cargo: e.target.value }))}
+              className="rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm"
+            />
+            <input
+              placeholder="Telefone"
+              value={form.telefone}
+              onChange={(e) => setForm((f) => ({ ...f, telefone: e.target.value }))}
+              className="rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm"
+            />
+            <button
+              onClick={adicionar}
+              disabled={salvando}
+              className="focus-ring transition-brand flex items-center justify-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
+            >
+              {salvando ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />}
+              Adicionar
+            </button>
+          </div>
+        )}
+      </div>
+
+      {empreendimentoId && (
+        <div className="shadow-card overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">
+          <table className="w-full text-sm">
+            <thead className="bg-[var(--color-paper-50)]">
+              <tr>
+                <th className="px-4 py-2.5 text-left font-medium text-[var(--color-ink-500)]">Nome</th>
+                <th className="px-4 py-2.5 text-left font-medium text-[var(--color-ink-500)]">Cargo</th>
+                <th className="px-4 py-2.5 text-left font-medium text-[var(--color-ink-500)]">E-mail</th>
+                <th className="px-4 py-2.5 text-left font-medium text-[var(--color-ink-500)]">Telefone</th>
+                <th className="px-4 py-2.5 text-right font-medium text-[var(--color-ink-500)]">AÃ§Ãµes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {carregando ? (
+                <tr><td colSpan={5} className="px-4 py-6 text-center text-[var(--color-ink-500)]"><Loader2 size={16} className="mr-2 inline animate-spin" /> Carregando...</td></tr>
+              ) : contatos.length === 0 ? (
+                <tr><td colSpan={5} className="px-4 py-6 text-center text-[var(--color-ink-500)]">Nenhum contato cadastrado para este empreendimento.</td></tr>
+              ) : (
+                contatos.map((c) => (
+                  <tr key={c.id} className="border-t border-[var(--color-paper-100)]">
+                    <td className="px-4 py-2.5 font-medium text-[var(--color-ink-900)]">{c.nome}</td>
+                    <td className="px-4 py-2.5 text-[var(--color-ink-700)]">{c.cargo || "â€”"}</td>
+                    <td className="px-4 py-2.5 text-[var(--color-ink-700)]">{c.email}</td>
+                    <td className="px-4 py-2.5 text-[var(--color-ink-700)]">{c.telefone || "â€”"}</td>
+                    <td className="px-4 py-2.5 text-right">
+                      <button onClick={() => excluir(c)} title="Remover contato" className="rounded-md p-1.5 text-[var(--color-ink-600)] hover:bg-red-50 hover:text-red-700">
+                        <Trash2 size={15} />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------- ConexÃµes ----------
 
 function ConexoesTab(props: { conexoes: Conexao[]; empreendimentos: EmpreendimentoOpcao[]; onChanged: () => void; toast: ToastFn }) {
   const { conexoes, empreendimentos, onChanged, toast } = props;
@@ -2747,7 +3075,7 @@ function ConexoesTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimen
     const emp = empreendimentos.find((e) => e.id === Number(id));
     if (!emp) return;
     const cnpj = emp.cnpj || emp.cliente.cnpj;
-    const razaoSocial = emp.cliente.razaoSocial || `${emp.cliente.apelido} — ${emp.apelido}`;
+    const razaoSocial = emp.cliente.razaoSocial || `${emp.cliente.apelido} â€” ${emp.apelido}`;
     setForm((f) => ({
       ...f,
       empreendimentoId: id,
@@ -2755,12 +3083,12 @@ function ConexoesTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimen
       cnpj: cnpj || f.cnpj,
       unidade: emp.unidadeSinir || f.unidade,
     }));
-    toast(emp.unidadeSinir ? `Dados de ${emp.apelido} preenchidos (razão social e unidade do SINIR)` : `Dados de ${emp.apelido} preenchidos — informe a unidade do SINIR`, emp.unidadeSinir ? "success" : "info");
+    toast(emp.unidadeSinir ? `Dados de ${emp.apelido} preenchidos (razÃ£o social e unidade do SINIR)` : `Dados de ${emp.apelido} preenchidos â€” informe a unidade do SINIR`, emp.unidadeSinir ? "success" : "info");
   }
 
   async function buscarCnpj() {
     if (form.cnpj.replace(/\D/g, "").length !== 14) {
-      toast("Informe um CNPJ com 14 dígitos para buscar", "error");
+      toast("Informe um CNPJ com 14 dÃ­gitos para buscar", "error");
       return;
     }
     setBuscandoCnpj(true);
@@ -2768,7 +3096,7 @@ function ConexoesTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimen
       const res = await fetch(`/api/cnpj/${form.cnpj.replace(/\D/g, "")}`);
       if (!res.ok) {
         const data = await res.json().catch(() => null);
-        toast(data?.error || "CNPJ não encontrado", "error");
+        toast(data?.error || "CNPJ nÃ£o encontrado", "error");
         return;
       }
       const data = await res.json();
@@ -2776,7 +3104,7 @@ function ConexoesTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimen
         ...f,
         nome: data.razaoSocial || f.nome,
       }));
-      toast(`Razão social preenchida: ${data.razaoSocial}`, "success");
+      toast(`RazÃ£o social preenchida: ${data.razaoSocial}`, "success");
     } catch {
       toast("Falha ao buscar o CNPJ", "error");
     } finally {
@@ -2786,7 +3114,7 @@ function ConexoesTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimen
 
   async function salvar() {
     if (!form.nome || !form.cnpj || !form.unidade) {
-      toast("Preencha nome, CNPJ e código da unidade", "error");
+      toast("Preencha nome, CNPJ e cÃ³digo da unidade", "error");
       return;
     }
     setSalvando(true);
@@ -2808,21 +3136,21 @@ function ConexoesTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimen
         toast(data.error || "Falha ao salvar", "error");
         return;
       }
-      toast(form.modo === "real" ? "Conexão real cadastrada (token criptografado)" : "Conexão de simulação cadastrada", "success");
+      toast(form.modo === "real" ? "ConexÃ£o real cadastrada (token criptografado)" : "ConexÃ£o de simulaÃ§Ã£o cadastrada", "success");
       setForm({ nome: "", cnpj: "", unidade: "", empreendimentoId: "", token: "", modo: "mock", venceEm: "" });
       onChanged();
     } catch {
-      toast("Erro ao salvar conexão", "error");
+      toast("Erro ao salvar conexÃ£o", "error");
     } finally {
       setSalvando(false);
     }
   }
 
   async function remover(id: number) {
-    if (!confirm("Remover esta conexão e seus manifestos?")) return;
+    if (!confirm("Remover esta conexÃ£o e seus manifestos?")) return;
     const res = await fetch(`/api/sinir/conexoes?ids=${id}`, { method: "DELETE" });
     if (res.ok) {
-      toast("Conexão removida", "success");
+      toast("ConexÃ£o removida", "success");
       onChanged();
     }
   }
@@ -2834,7 +3162,7 @@ function ConexoesTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimen
       body: JSON.stringify({ modo: novoModo }),
     });
     if (res.ok) {
-      toast(novoModo === "real" ? "Modo real ativado — o token será usado nas próximas chamadas" : "Modo simulação ativado", "success");
+      toast(novoModo === "real" ? "Modo real ativado â€” o token serÃ¡ usado nas prÃ³ximas chamadas" : "Modo simulaÃ§Ã£o ativado", "success");
       onChanged();
     } else {
       toast("Falha ao alterar o modo", "error");
@@ -2844,9 +3172,9 @@ function ConexoesTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimen
   return (
     <div className="space-y-4">
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
-        <h2 className="font-display mb-3 text-base font-semibold text-[var(--color-ink-900)]">Nova conexão</h2>
+        <h2 className="font-display mb-3 text-base font-semibold text-[var(--color-ink-900)]">Nova conexÃ£o</h2>
         <p className="mb-4 text-sm text-[var(--color-ink-500)]">
-          Em <b>modo simulação</b> funciona sem token (dados fictícios). Para conversar com o SINIR de verdade, gere o token no portal (Configurações → Gerar Token API WS) e cadastre em <b>modo real</b> — o token fica criptografado.
+          Em <b>modo simulaÃ§Ã£o</b> funciona sem token (dados fictÃ­cios). Para conversar com o SINIR de verdade, gere o token no portal (ConfiguraÃ§Ãµes â†’ Gerar Token API WS) e cadastre em <b>modo real</b> â€” o token fica criptografado.
         </p>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <div className="flex flex-col gap-1 md:col-span-2">
@@ -2854,12 +3182,12 @@ function ConexoesTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimen
             <select value={form.empreendimentoId} onChange={(e) => selecionarEmpreendimento(e.target.value)} className={inputCls}>
               <option value="">Selecione um empreendimento cadastrado...</option>
               {empreendimentos.map((e) => (
-                <option key={e.id} value={e.id}>{e.cliente.apelido} — {e.apelido}{e.unidadeSinir ? ` — unid. ${e.unidadeSinir}` : ""}</option>
+                <option key={e.id} value={e.id}>{e.cliente.apelido} â€” {e.apelido}{e.unidadeSinir ? ` â€” unid. ${e.unidadeSinir}` : ""}</option>
               ))}
             </select>
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-[var(--color-ink-500)]">Nome (razão social)</label>
+            <label className="text-xs font-medium text-[var(--color-ink-500)]">Nome (razÃ£o social)</label>
             <input value={form.nome} onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))} className={inputCls} />
           </div>
           <div className="flex flex-col gap-1">
@@ -2869,7 +3197,7 @@ function ConexoesTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimen
               <button
                 onClick={buscarCnpj}
                 disabled={buscandoCnpj}
-                title="Buscar razão social pelo CNPJ"
+                title="Buscar razÃ£o social pelo CNPJ"
                 className="focus-ring transition-brand flex shrink-0 items-center gap-1.5 rounded-lg bg-[var(--color-paper-100)] px-3 py-2 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-200)] disabled:opacity-50"
               >
                 {buscandoCnpj ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
@@ -2878,13 +3206,13 @@ function ConexoesTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimen
             </div>
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-[var(--color-ink-500)]">Código da unidade no SINIR</label>
+            <label className="text-xs font-medium text-[var(--color-ink-500)]">CÃ³digo da unidade no SINIR</label>
             <input value={form.unidade} onChange={(e) => setForm((f) => ({ ...f, unidade: e.target.value }))} className={inputCls} placeholder="Ex.: 1001" />
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium text-[var(--color-ink-500)]">Modo</label>
             <select value={form.modo} onChange={(e) => setForm((f) => ({ ...f, modo: e.target.value }))} className={inputCls}>
-              <option value="mock">Simulação (sem token)</option>
+              <option value="mock">SimulaÃ§Ã£o (sem token)</option>
               <option value="real">Real (com token)</option>
             </select>
           </div>
@@ -2904,14 +3232,14 @@ function ConexoesTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimen
         <button onClick={salvar} disabled={salvando}
           className="focus-ring transition-brand mt-4 flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">
           {salvando ? <Loader2 size={16} className="animate-spin" /> : <Link2 size={16} />}
-          {salvando ? "Salvando..." : "Salvar conexão"}
+          {salvando ? "Salvando..." : "Salvar conexÃ£o"}
         </button>
       </div>
 
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
-        <h2 className="font-display mb-3 text-base font-semibold text-[var(--color-ink-900)]">Conexões cadastradas</h2>
+        <h2 className="font-display mb-3 text-base font-semibold text-[var(--color-ink-900)]">ConexÃµes cadastradas</h2>
         {conexoes.length === 0 ? (
-          <p className="py-4 text-center text-sm text-[var(--color-ink-500)]">Nenhuma conexão cadastrada.</p>
+          <p className="py-4 text-center text-sm text-[var(--color-ink-500)]">Nenhuma conexÃ£o cadastrada.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -2923,7 +3251,7 @@ function ConexoesTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimen
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Modo</th>
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Token</th>
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Vencimento</th>
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Ações</th>
+                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">AÃ§Ãµes</th>
                 </tr>
               </thead>
               <tbody>
@@ -2936,15 +3264,15 @@ function ConexoesTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimen
                       <button
                         onClick={() => trocarModo(c, c.modo === "mock" ? "real" : "mock")}
                         className={`rounded px-1.5 py-0.5 text-xs font-medium ${c.modo === "mock" ? "bg-blue-50 text-blue-700" : "bg-green-50 text-green-700"}`}
-                        title="Clique para alternar entre simulação e real"
+                        title="Clique para alternar entre simulaÃ§Ã£o e real"
                       >
-                        {c.modo === "mock" ? "simulação" : "real"} — clicar alterna
+                        {c.modo === "mock" ? "simulaÃ§Ã£o" : "real"} â€” clicar alterna
                       </button>
                     </td>
                     <td className="py-2 px-2 text-[var(--color-ink-600)]">
                       {c.temToken ? <span className="flex items-center gap-1 text-xs text-green-700"><CheckCircle2 size={12} /> token salvo</span> : <span className="text-xs text-[var(--color-ink-400)]">sem token</span>}
                     </td>
-                    <td className="py-2 px-2 text-[var(--color-ink-600)] whitespace-nowrap">{c.venceEm ? fmtData(c.venceEm) : "—"}</td>
+                    <td className="py-2 px-2 text-[var(--color-ink-600)] whitespace-nowrap">{c.venceEm ? fmtData(c.venceEm) : "â€”"}</td>
                     <td className="py-2 px-2">
                       <div className="flex gap-1">
                         <button onClick={() => remover(c.id)} className="rounded p-1 text-[var(--color-ink-400)] hover:bg-red-50 hover:text-red-600" title="Remover">
@@ -2955,7 +3283,7 @@ function ConexoesTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimen
                             onClick={async () => {
                               const res = await fetch(`/api/sinir/manifestos?conexaoId=${c.id}`, { method: "DELETE" });
                               if (res.ok) {
-                                toast("Manifestos da conexão removidos", "success");
+                                toast("Manifestos da conexÃ£o removidos", "success");
                                 onChanged();
                               }
                             }}
