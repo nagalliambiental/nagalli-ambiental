@@ -149,7 +149,7 @@ async function obterTokenAcesso(conexao: SinirConexaoCompleta): Promise<string> 
     throw new SinirError("O SINIR não retornou um token de acesso", 502);
   }
 
-  const expMs = expDoJwt(tokenAcesso) ?? Date.now() + 8 * 3600 * 1000;
+  const expMs = Math.min(expDoJwt(tokenAcesso) ?? Infinity, Date.now() + 30 * 60 * 1000);
   cacheTokenAcesso.set(conexao.id, { token: tokenAcesso, expiraEm: expMs });
   return tokenAcesso;
 }
@@ -367,7 +367,7 @@ function dataDeMs(v: unknown): Date | undefined {
 function statusDeManifestoReal(obj: Record<string, unknown>): { status: SinirStatus | string; certificado: boolean } {
   const sim = (obj.situacaoManifesto || {}) as { simDescricao?: string; simCodigo?: number };
   const s = String(sim.simDescricao || obj.manSituacao || obj.situacao || obj.status || "").toUpperCase();
-  const certificado = obj.cdfCodigo != null || obj.cdfNumero != null || String(obj.manCertificado || "").toUpperCase() === "S" || s.includes("CERTIF");
+  const certificado = obj.cdfCodigo != null || obj.cdfNumero != null || obj.cdfEmitidoNumero != null || String(obj.manCertificado || "").toUpperCase() === "S" || s.includes("CERTIF");
 
   if (s.includes("CANCEL")) return { status: SINIR_STATUS.CANCELADO, certificado: false };
   if (certificado) return { status: SINIR_STATUS.CERTIFICADO, certificado: true };
@@ -797,25 +797,39 @@ function ePdfValido(buffer: Uint8Array): boolean {
   return buffer.byteLength > 200 && String.fromCharCode(...buffer.slice(0, 5)) === "%PDF-";
 }
 
+async function fetchDownload(
+  conexao: SinirConexaoCompleta,
+  path: string,
+  fallback: string,
+  opts: { method?: string; accept?: string } = {}
+): Promise<Response> {
+  const enviar = async () => {
+    const token = await obterTokenAcesso(conexao);
+    return fetch(`${SINIR_API_BASE}${path}`, {
+      method: opts.method || "POST",
+      headers: { Authorization: `Bearer ${token}`, Accept: opts.accept || "application/pdf" },
+      cache: "no-store",
+    });
+  };
+
+  let res = await enviar();
+  if (res.status === 401) {
+    cacheTokenAcesso.delete(conexao.id);
+    res = await enviar();
+  }
+  if (!res.ok || (res.headers.get("content-type") || "").includes("application/json")) {
+    throw await erroDownload(res, fallback);
+  }
+  return res;
+}
+
 export async function baixarManifestoPdf(
   conexao: SinirConexaoCompleta,
   numero: string
 ): Promise<{ buffer: Uint8Array; filename: string }> {
   if (!numero) throw new SinirError("Número do manifesto é obrigatório", 400);
 
-  const token = await obterTokenAcesso(conexao);
-  const res = await fetch(`${SINIR_API_BASE}/downloadManifesto/${encodeURIComponent(numero)}`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: "application/pdf",
-    },
-    cache: "no-store",
-  });
-
-  if (!res.ok || (res.headers.get("content-type") || "").includes("application/json")) {
-    throw await erroDownload(res, "Erro ao baixar PDF do MTR");
-  }
+  const res = await fetchDownload(conexao, `/downloadManifesto/${encodeURIComponent(numero)}`, "Erro ao baixar PDF do MTR");
 
   const buffer = new Uint8Array(await res.arrayBuffer());
   if (!ePdfValido(buffer)) {
@@ -860,19 +874,12 @@ export async function baixarCertificadoPdf(
   const codigo = String(cdfCodigo).trim();
   if (!codigo) throw new SinirError("Código do certificado é obrigatório", 400);
 
-  const token = await obterTokenAcesso(conexao);
-  const res = await fetch(`${SINIR_API_BASE}/downloadCertificado/${encodeURIComponent(codigo)}?formato=pdf`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: "application/pdf",
-    },
-    cache: "no-store",
-  });
-
-  if (!res.ok || (res.headers.get("content-type") || "").includes("application/json")) {
-    throw await erroDownload(res, "Erro ao baixar o CDF do SINIR");
-  }
+  const res = await fetchDownload(
+    conexao,
+    `/mtr/imprimir/imprimeCertificado/${encodeURIComponent(codigo)}`,
+    "Erro ao baixar o CDF do SINIR",
+    { method: "GET", accept: "*/*" }
+  );
 
   const buffer = new Uint8Array(await res.arrayBuffer());
   if (!ePdfValido(buffer)) {

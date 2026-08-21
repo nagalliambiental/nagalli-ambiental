@@ -703,7 +703,7 @@ function PainelTab(props: {
                         >
                           <FileDown size={15} />
                         </button>
-                        {m.certificado && m.status !== "CANCELADO" && (
+                        {m.conexao.modo === "real" && m.status !== "CANCELADO" && (m.certificado || m.status === "RECEBIDO") && (
                           <button
                             onClick={() => baixarCdf(m)}
                             title="Baixar CDF (Certificado de Destinação Final) — disponível após o destinador confirmar a destinação"
@@ -1059,7 +1059,7 @@ function MeusMtrsTab(props: {
                             >
                               <FileDown size={15} />
                             </button>
-                            {m.certificado && m.status !== "CANCELADO" && (
+                            {m.conexao?.modo === "real" && m.status !== "CANCELADO" && (m.certificado || m.status === "RECEBIDO") && (
                               <button
                                 onClick={() => {
                                   toast("Consultando o CDF no SINIR...", "info");

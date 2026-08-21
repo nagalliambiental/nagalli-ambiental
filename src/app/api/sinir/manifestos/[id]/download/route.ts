@@ -52,6 +52,12 @@ export async function GET(req: NextRequest, { params }: Params) {
           { status: 404 }
         );
       }
+      if (!manifesto.certificado || manifesto.status !== "CERTIFICADO") {
+        await prisma.sinirManifesto.updateMany({
+          where: { conexaoId: conexao.id, numero: manifesto.numero },
+          data: { certificado: true, status: "CERTIFICADO" },
+        });
+      }
       const resultado = await baixarCertificadoPdf(conexaoCompleta, cdfCodigo);
       buffer = resultado.buffer;
       nomeArquivo = resultado.filename;
