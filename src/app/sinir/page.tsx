@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { Topbar } from "@/components/Topbar";
-import { Truck, RefreshCw, Send, Link2, Loader2, CheckCircle2, AlertTriangle, XCircle, FileDown, Trash2, Ban, ShieldCheck, Clock, Search, Plus, X, Pencil, PackagePlus, Bookmark, Save } from "lucide-react";
+import { Truck, RefreshCw, Send, Link2, Loader2, CheckCircle2, AlertTriangle, XCircle, FileDown, Trash2, Ban, ShieldCheck, Clock, Plus, X, Pencil, PackagePlus, Bookmark, Save } from "lucide-react";
 import { useToast } from "@/components/Toast";
 
 type ToastFn = (message: string, type?: "success" | "error" | "info" | "warning") => void;
@@ -120,6 +120,12 @@ interface ModeloMtr {
 }
 
 const PESO_MAX_TONELADAS = 45;
+
+interface ParceiroUnidade {
+  unidade: number;
+  nome: string;
+  endereco: string;
+}
 
 const STATUS_BADGE: Record<string, string> = {
   CERTIFICADO: "bg-green-50 text-green-700",
@@ -348,8 +354,47 @@ function PainelTab(props: {
   const [dmrTrimestre, setDmrTrimestre] = useState(String(Math.floor((new Date().getMonth()) / 3) + 1));
   const [dmrAno, setDmrAno] = useState(String(new Date().getFullYear()));
   const [gerandoDmr, setGerandoDmr] = useState(false);
+  const [enviandoControle, setEnviandoControle] = useState(false);
 
   const conexaoEfetiva = conexoes.some((c) => c.id === Number(conexaoId)) ? conexaoId : conexoes.length ? String(conexoes[0].id) : "";
+
+  async function marcarNoControle() {
+    if (!dmrEmpId) {
+      toast("Selecione o empreendimento", "error");
+      return;
+    }
+    setEnviandoControle(true);
+    try {
+      let registroId: number | undefined;
+      const res = await fetch("/api/controle-dmr", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ empreendimentoId: Number(dmrEmpId) }),
+      });
+      if (res.status === 201) {
+        registroId = (await res.json()).id;
+      } else {
+        const data = await res.json();
+        const resLista = await fetch("/api/controle-dmr");
+        if (!resLista.ok) throw new Error(data.error || "Falha ao listar controle DMR");
+        const lista = await resLista.json();
+        registroId = lista.find((r: { empreendimentoId: number }) => r.empreendimentoId === Number(dmrEmpId))?.id;
+        if (!registroId) throw new Error(data.error || "Registro não encontrado no controle DMR");
+      }
+      const prefixo = `t${dmrTrimestre}`;
+      const resPatch = await fetch(`/api/controle-dmr/${registroId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [`${prefixo}Dmr`]: "OK", [`${prefixo}Mtr`]: "OK" }),
+      });
+      if (!resPatch.ok) throw new Error("Falha ao atualizar status");
+      toast(`Enviado ao controle DMR como OK (${dmrTrimestre}º trimestre)`, "success");
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Erro ao enviar para o controle DMR", "error");
+    } finally {
+      setEnviandoControle(false);
+    }
+  }
 
   async function gerarDmr() {
     if (!conexaoEfetiva || !dmrEmpId) {
@@ -568,6 +613,12 @@ function PainelTab(props: {
             className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-[var(--color-ink-800)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-ink-900)] disabled:opacity-50">
             {gerandoDmr ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={16} />}
             {gerandoDmr ? "Gerando..." : "Gerar DMR (PDF)"}
+          </button>
+          <button onClick={marcarNoControle} disabled={enviandoControle || !dmrEmpId}
+            title="Adiciona o empreendimento ao módulo DMR e marca este trimestre como OK"
+            className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50">
+            {enviandoControle ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+            {enviandoControle ? "Enviando..." : "Enviar ao controle DMR (OK)"}
           </button>
         </div>
         {!conexaoEfetiva && (
@@ -1082,8 +1133,8 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
   });
   const [enviando, setEnviando] = useState(false);
   const [resultado, setResultado] = useState<{ numero: string; simulacao: boolean } | null>(null);
-  const [buscandoTransp, setBuscandoTransp] = useState(false);
-  const [buscandoDest, setBuscandoDest] = useState(false);
+  const [unidadesTransp, setUnidadesTransp] = useState<ParceiroUnidade[]>([]);
+  const [unidadesDest, setUnidadesDest] = useState<ParceiroUnidade[]>([]);
   const [residuos, setResiduos] = useState<ResiduoCadastro[]>([]);
   const [catalogos, setCatalogos] = useState<SinirCatalogosFront | null>(null);
   const [carregandoCatalogos, setCarregandoCatalogos] = useState(false);
@@ -1155,19 +1206,18 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
       toast("Informe um CNPJ com 14 dígitos para buscar", "error");
       return;
     }
-    if (tipo === "transp") {
-      setBuscandoTransp(true);
-    } else {
-      setBuscandoDest(true);
-    }
     try {
-      const res = await fetch(`/api/cnpj/${cnpj}`);
+      const [res, resUnidades] = await Promise.all([
+        fetch(`/api/cnpj/${cnpj}`),
+        fetch(`/api/sinir/parceiros?documento=${cnpj}`),
+      ]);
       if (!res.ok) {
         const data = await res.json().catch(() => null);
         toast(data?.error || "CNPJ não encontrado", "error");
         return;
       }
       const d = await res.json();
+      const unidades: ParceiroUnidade[] = resUnidades.ok ? await resUnidades.json() : [];
       setForm((f) =>
         tipo === "transp"
           ? {
@@ -1191,15 +1241,19 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
               destinadorCep: d.cep || f.destinadorCep,
             }
       );
-      toast(`Empresa encontrada: ${d.razaoSocial}`, "success");
+      const setUnidades = tipo === "transp" ? setUnidadesTransp : setUnidadesDest;
+      setUnidades(unidades);
+      if (unidades.length === 1) {
+        const unidade = String(unidades[0].unidade);
+        setForm((f) => (tipo === "transp" ? { ...f, transportadorUnidade: unidade } : { ...f, destinadorUnidade: unidade }));
+        toast(`Empresa encontrada: ${d.razaoSocial} — unidade SINIR ${unidade} preenchida`, "success");
+      } else if (unidades.length > 1) {
+        toast(`${d.razaoSocial}: ${unidades.length} unidades no SINIR — selecione a correta no campo Cód. Unidade`, "warning");
+      } else {
+        toast(`Empresa encontrada: ${d.razaoSocial}. Unidade não localizada no portal — informe o código manualmente`, "warning");
+      }
     } catch {
       toast("Falha ao buscar o CNPJ", "error");
-    } finally {
-      if (tipo === "transp") {
-      setBuscandoTransp(false);
-    } else {
-      setBuscandoDest(false);
-    }
     }
   }
 
@@ -1628,24 +1682,22 @@ function abrirModalResiduo(indice?: number) {
           <label className="text-xs font-medium text-[var(--color-ink-500)]">Transportador (razão social)</label>
           <input value={form.transportadorNome} onChange={(e) => setCampo("transportadorNome", e.target.value)} className={inputCls} />
         </div>
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-[var(--color-ink-500)]">CNPJ</label>
-          <div className="flex gap-2">
-            <input value={form.transportadorCnpj} onChange={(e) => setCampo("transportadorCnpj", e.target.value.replace(/\D/g, ""))} className={inputCls} placeholder="00000000000000" />
-            <button
-              onClick={() => buscarParceiro("transp")}
-              disabled={buscandoTransp}
-              title="Buscar empresa pelo CNPJ"
-              className="focus-ring transition-brand flex shrink-0 items-center gap-1.5 rounded-lg bg-[var(--color-paper-100)] px-3 py-2 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-200)] disabled:opacity-50"
-            >
-              {buscandoTransp ? <Loader2 size={15} className="animate-spin" /> : <Search size={15} />}
-              {buscandoTransp ? "Buscando..." : "Buscar"}
-            </button>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-[var(--color-ink-500)]">CNPJ</label>
+            <input value={form.transportadorCnpj} onChange={(e) => { setCampo("transportadorCnpj", e.target.value.replace(/\D/g, "")); setUnidadesTransp([]); }} onBlur={() => { if (form.transportadorCnpj.replace(/\D/g, "").length === 14 && unidadesTransp.length === 0) void buscarParceiro("transp"); }} className={inputCls} placeholder="00000000000000" />
           </div>
-        </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-[var(--color-ink-500)]" title="Código da unidade deste parceiro no SINIR — visível no portal (DMR/emissão) ao buscar pelo CNPJ">Cód. Unidade SINIR *</label>
-          <input value={form.transportadorUnidade} onChange={(e) => setCampo("transportadorUnidade", e.target.value.replace(/\D/g, ""))} className={inputCls} placeholder="Ex.: 400701" />
+          <label className="text-xs font-medium text-[var(--color-ink-500)]" title="Código da unidade deste parceiro no SINIR — preenchido automaticamente ao buscar pelo CNPJ">Cód. Unidade SINIR *</label>
+          {unidadesTransp.length > 0 ? (
+            <select value={form.transportadorUnidade} onChange={(e) => setCampo("transportadorUnidade", e.target.value)} className={inputCls}>
+              <option value="">{unidadesTransp.length} unidade(s) encontrada(s) — selecione</option>
+              {unidadesTransp.map((u) => (
+                <option key={u.unidade} value={String(u.unidade)}>{u.unidade} — {u.nome}{u.endereco ? ` (${u.endereco})` : ""}</option>
+              ))}
+            </select>
+          ) : (
+            <input value={form.transportadorUnidade} onChange={(e) => setCampo("transportadorUnidade", e.target.value.replace(/\D/g, ""))} className={inputCls} placeholder="Preenche sozinho ao buscar pelo CNPJ" />
+          )}
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-[var(--color-ink-500)]">Placa do veículo</label>
@@ -1695,24 +1747,22 @@ function abrirModalResiduo(indice?: number) {
           <label className="text-xs font-medium text-[var(--color-ink-500)]">Destinador (razão social)</label>
           <input value={form.destinadorNome} onChange={(e) => setCampo("destinadorNome", e.target.value)} className={inputCls} />
         </div>
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-[var(--color-ink-500)]">CNPJ</label>
-          <div className="flex gap-2">
-            <input value={form.destinadorCnpj} onChange={(e) => setCampo("destinadorCnpj", e.target.value.replace(/\D/g, ""))} className={inputCls} placeholder="00000000000000" />
-            <button
-              onClick={() => buscarParceiro("dest")}
-              disabled={buscandoDest}
-              title="Buscar empresa pelo CNPJ"
-              className="focus-ring transition-brand flex shrink-0 items-center gap-1.5 rounded-lg bg-[var(--color-paper-100)] px-3 py-2 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-200)] disabled:opacity-50"
-            >
-              {buscandoDest ? <Loader2 size={15} className="animate-spin" /> : <Search size={15} />}
-              {buscandoDest ? "Buscando..." : "Buscar"}
-            </button>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-[var(--color-ink-500)]">CNPJ</label>
+            <input value={form.destinadorCnpj} onChange={(e) => { setCampo("destinadorCnpj", e.target.value.replace(/\D/g, "")); setUnidadesDest([]); }} onBlur={() => { if (form.destinadorCnpj.replace(/\D/g, "").length === 14 && unidadesDest.length === 0) void buscarParceiro("dest"); }} className={inputCls} placeholder="00000000000000" />
           </div>
-        </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-[var(--color-ink-500)]" title="Código da unidade deste parceiro no SINIR — visível no portal (DMR/emissão) ao buscar pelo CNPJ. Um mesmo CNPJ pode ter várias unidades.">Cód. Unidade SINIR *</label>
-          <input value={form.destinadorUnidade} onChange={(e) => setCampo("destinadorUnidade", e.target.value.replace(/\D/g, ""))} className={inputCls} placeholder="Ex.: 400701" />
+          <label className="text-xs font-medium text-[var(--color-ink-500)]" title="Código da unidade deste parceiro no SINIR — preenchido automaticamente ao buscar pelo CNPJ. Um mesmo CNPJ pode ter várias unidades.">Cód. Unidade SINIR *</label>
+          {unidadesDest.length > 0 ? (
+            <select value={form.destinadorUnidade} onChange={(e) => setCampo("destinadorUnidade", e.target.value)} className={inputCls}>
+              <option value="">{unidadesDest.length} unidade(s) encontrada(s) — selecione</option>
+              {unidadesDest.map((u) => (
+                <option key={u.unidade} value={String(u.unidade)}>{u.unidade} — {u.nome}{u.endereco ? ` (${u.endereco})` : ""}</option>
+              ))}
+            </select>
+          ) : (
+            <input value={form.destinadorUnidade} onChange={(e) => setCampo("destinadorUnidade", e.target.value.replace(/\D/g, ""))} className={inputCls} placeholder="Preenche sozinho ao buscar pelo CNPJ" />
+          )}
         </div>
         <div className="flex flex-col gap-1 md:col-span-2">
           <label className="text-xs font-medium text-[var(--color-ink-500)]">Endereço</label>
