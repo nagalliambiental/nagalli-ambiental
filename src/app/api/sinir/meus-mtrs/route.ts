@@ -73,8 +73,13 @@ export async function POST(req: NextRequest) {
     data: { ultimoUsoEm: new Date() },
   });
 
+  type ManifestoEnriquecido = (typeof manifestos)[number] & {
+    id: number;
+    conexao: { id: number; nome: string; modo: string };
+  };
+  const itens: ManifestoEnriquecido[] = [];
   for (const m of manifestos) {
-    await prisma.sinirManifesto.upsert({
+    const salvo = await prisma.sinirManifesto.upsert({
       where: { conexaoId_numero: { conexaoId: conexao.id, numero: m.numero } },
       create: {
         conexaoId: conexao.id,
@@ -105,6 +110,11 @@ export async function POST(req: NextRequest) {
         dataRecebimento: m.dataRecebimento,
       },
     });
+    itens.push({
+      ...m,
+      id: salvo.id,
+      conexao: { id: conexao.id, nome: conexao.nome, modo: conexao.modo },
+    });
   }
 
   await logAuditoria(
@@ -121,14 +131,14 @@ export async function POST(req: NextRequest) {
     session.user?.id ? Number(session.user.id) : undefined
   );
 
-  const pendentes = manifestos.filter((m) => !m.certificado && m.status !== "CANCELADO");
+  const pendentes = itens.filter((m) => !m.certificado && m.status !== "CANCELADO");
 
   return NextResponse.json({
     conexao: { id: conexao.id, nome: conexao.nome, modo: conexao.modo },
     periodo: { dataInicial: dataInicialFmt, dataFinal: dataFinalFmt },
     papeis: SINIR_TIPOS_PARCEIRO.map((p) => p.rotulo),
-    total: manifestos.length,
+    total: itens.length,
     pendentes: pendentes.length,
-    manifestos,
+    manifestos: itens,
   });
 }
