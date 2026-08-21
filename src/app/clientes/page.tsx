@@ -3,11 +3,11 @@ import type { Prisma } from "@prisma/client";
 import Link from "next/link";
 import { Topbar } from "@/components/Topbar";
 import { Plus, Building2 } from "lucide-react";
-import { ClientesTable } from "@/components/tables/ClientesTable";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { GerarDocumentosButton } from "@/components/GerarDocumentosButton";
 import { auth } from "@/lib/auth";
 import { ehPrivilegiado } from "@/lib/perfil";
+import { ClientesAbas } from "@/components/ClientesAbas";
 
 export const dynamic = "force-dynamic";
 
@@ -24,10 +24,23 @@ export default async function ClientesPage() {
     where,
     include: {
       _count: { select: { empreendimentos: true } },
-      empreendimentos: { select: { id: true, apelido: true }, orderBy: { apelido: "asc" } },
+      empreendimentos: {
+        select: { id: true, apelido: true, unidadeSinir: true },
+        orderBy: { apelido: "asc" },
+      },
     },
     orderBy: { apelido: "asc" },
   });
+
+  const clientesParaAbas = clientes.map((c) => ({
+    id: c.id,
+    apelido: c.apelido,
+    razaoSocial: c.razaoSocial,
+    cnpj: c.cnpj,
+    telefone: c.telefone || "",
+    _count: { empreendimentos: c._count.empreendimentos },
+    empreendimentos: c.empreendimentos,
+  }));
 
   return (
     <div>
@@ -50,7 +63,7 @@ export default async function ClientesPage() {
       />
 
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">
-        <ClientesTable data={clientes} />
+        <ClientesAbas clientes={clientesParaAbas} />
       </div>
     </div>
   );

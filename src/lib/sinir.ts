@@ -261,8 +261,6 @@ const CATALOGOS_MOCK: SinirCatalogos = {
 };
 
 export async function listarCatalogos(conexao: SinirConexaoCompleta): Promise<SinirCatalogos> {
-  if (conexao.modo === "mock") return CATALOGOS_MOCK;
-
   const [residuosR, unidadesR, estadosR, classesR, acondR, tratR] = await Promise.all([
     apiFetch(conexao, "/retornaListaResiduo"),
     apiFetch(conexao, "/retornaListaUnidade"),
@@ -496,10 +494,6 @@ export async function consultarTodosManifestos(
     throw new SinirError("Período de consulta inválido", 400);
   }
 
-  if (conexao.modo === "mock") {
-    return gerarManifestosMock(conexao, dI, dF);
-  }
-
   return consultarManifestosTodasFuncoes(conexao, { dataInicial: fmtDataDm(dI), dataFinal: fmtDataDm(dF) });
 }
 
@@ -516,92 +510,6 @@ function parseDataDm(s: string): Date {
   return new Date(NaN);
 }
 
-async function gerarManifestosMock(
-  conexao: SinirConexaoCompleta,
-  dataInicial: Date,
-  dataFinal: Date
-): Promise<SinirManifestoDados[]> {
-  const empreendimentos = await prisma.empreendimento.findMany({
-    where: { ativo: true },
-    select: { id: true, apelido: true, cliente: { select: { apelido: true, cnpj: true } } },
-    orderBy: { apelido: "asc" },
-  });
-
-  if (empreendimentos.length === 0) {
-    throw new SinirError("Nenhum empreendimento ativo cadastrado para simular a verificação", 400);
-  }
-
-  const inicio = dataInicial.getTime();
-  const fim = dataFinal.getTime();
-
-  return empreendimentos.map((e, i) => {
-    const cliente = e.cliente?.apelido || "Cliente";
-    const codigo = String(100000 + e.id * 37).padStart(6, "0");
-    const numero = `MTR-${dataInicial.getFullYear()}-${codigo}`;
-    const quantidade = Math.round((200 + ((e.id * 137) % 1800)) * 100) / 100;
-    const unidade = "kg";
-    const expedicao = new Date(inicio + ((e.id * 997) % Math.max(1, fim - inicio)));
-    const recebimento = new Date(expedicao.getTime() + 86400000 * (1 + ((e.id * 7) % 5)));
-
-    const pendente = (e.id * 31 + i) % 4 === 0;
-    const cancelado = (e.id * 53 + i) % 11 === 0;
-    const salvo = (e.id * 13 + i) % 5 === 0;
-
-    if (cancelado) {
-      return {
-        numero,
-        status: SINIR_STATUS.CANCELADO,
-        certificado: false,
-        clienteNome: cliente,
-        empreendNome: e.apelido,
-        resumo: "Carga cancelada pelo gerador",
-        quantidade,
-        unidade,
-        dataExpedicao: expedicao,
-      };
-    }
-    if (salvo) {
-      return {
-        numero,
-        status: SINIR_STATUS.SALVO,
-        certificado: false,
-        clienteNome: cliente,
-        empreendNome: e.apelido,
-        resumo: `Resíduo classe II — ${quantidade.toLocaleString("pt-BR")} ${unidade} (aguardando recebimento pelo destinatário)`,
-        quantidade,
-        unidade,
-        dataExpedicao: expedicao,
-      };
-    }
-    if (pendente) {
-      return {
-        numero,
-        status: SINIR_STATUS.RECEBIDO,
-        certificado: false,
-        clienteNome: cliente,
-        empreendNome: e.apelido,
-        resumo: `Resíduo classe II — ${quantidade.toLocaleString("pt-BR")} ${unidade} (aguardando certificação)`,
-        quantidade,
-        unidade,
-        dataExpedicao: expedicao,
-        dataRecebimento: recebimento,
-      };
-    }
-    return {
-      numero,
-      status: SINIR_STATUS.RECEBIDO,
-      certificado: true,
-      clienteNome: cliente,
-      empreendNome: e.apelido,
-      resumo: `Resíduo classe II — ${quantidade.toLocaleString("pt-BR")} ${unidade}`,
-      quantidade,
-      unidade,
-      dataExpedicao: expedicao,
-      dataRecebimento: recebimento,
-    };
-  });
-}
-
 export async function verificarManifestos(
   conexao: SinirConexaoCompleta,
   opts: { dataInicial: string; dataFinal: string; tipoParceiro?: number }
@@ -610,10 +518,6 @@ export async function verificarManifestos(
   const [dI, dF] = [parseDataDm(opts.dataInicial), parseDataDm(opts.dataFinal)];
   if (isNaN(dI.getTime()) || isNaN(dF.getTime()) || dI > dF) {
     throw new SinirError("Período de verificação inválido", 400);
-  }
-
-  if (conexao.modo === "mock") {
-    return gerarManifestosMock(conexao, dI, dF);
   }
 
   return listarManifestosReais(conexao, fmtDataDm(dI), fmtDataDm(dF), tipoParceiro);
@@ -626,27 +530,6 @@ export async function consultarManifesto(
   numero: string
 ): Promise<SinirManifestoDados | null> {
   if (!numero) throw new SinirError("Número do manifesto é obrigatório", 400);
-
-  if (conexao.modo === "mock") {
-    const existente = await prisma.sinirManifesto.findFirst({
-      where: { conexaoId: conexao.id, numero },
-    });
-    if (!existente) return null;
-    return {
-      numero: existente.numero,
-      status: existente.status,
-      certificado: existente.certificado,
-      clienteNome: existente.clienteNome || undefined,
-      empreendNome: existente.empreendNome || undefined,
-      transportadorNome: existente.transportadorNome || undefined,
-      destinadorNome: existente.destinadorNome || undefined,
-      resumo: existente.resumo || undefined,
-      quantidade: existente.quantidade || undefined,
-      unidade: existente.unidade || undefined,
-      dataExpedicao: existente.dataExpedicao || undefined,
-      dataRecebimento: existente.dataRecebimento || undefined,
-    };
-  }
 
   const resultado = await apiFetch(conexao, `/retornaManifesto/${encodeURIComponent(numero)}`);
   const env = (resultado || {}) as { erro?: boolean; mensagem?: string; objeto?: unknown };
@@ -679,7 +562,7 @@ export async function consultarManifesto(
 export async function emitirManifesto(
   conexao: SinirConexaoCompleta,
   input: EmitirManifestoInput
-): Promise<{ numero: string; simulacao: boolean }> {
+): Promise<{ numero: string }> {
   if (!input.resumo || !input.quantidade) {
     throw new SinirError("Resumo do resíduo e quantidade são obrigatórios", 400);
   }
@@ -702,25 +585,6 @@ export async function emitirManifesto(
           marCodigoInterno: "",
         },
       ];
-
-  if (conexao.modo === "mock") {
-    const numero = `MTR-${new Date().getFullYear()}-${String(Math.floor(100000 + Math.random() * 899999))}`;
-    await prisma.sinirManifesto.create({
-      data: {
-        conexaoId: conexao.id,
-        numero,
-        status: SINIR_STATUS.EMITIDO,
-        certificado: false,
-        clienteNome: input.clienteNome,
-        empreendNome: input.empreendNome,
-        resumo: input.resumo,
-        quantidade: input.quantidade,
-        unidade: input.unidade,
-        dataExpedicao: new Date(),
-      },
-    });
-    return { numero, simulacao: true };
-  }
 
   if (!input.transportadorUnidade || !input.destinadorUnidade) {
     throw new SinirError("Informe o código da unidade do transportador e do destinador (visível no portal SINIR, módulo DMR)", 400);
@@ -771,7 +635,7 @@ export async function emitirManifesto(
     },
   });
 
-  return { numero: resp.manifestoNumeroNacional, simulacao: false };
+  return { numero: resp.manifestoNumeroNacional };
 }
 
 // ---------- Download ----------
@@ -932,88 +796,7 @@ export async function cancelarManifesto(
   return { numero, simulacao: false };
 }
 
-// ---------- PDF simulado ----------
-
-export async function gerarPdfSimulado(
-  manifesto: {
-    numero: string;
-    status: string;
-    certificado: boolean;
-    clienteNome?: string | null;
-    empreendNome?: string | null;
-    resumo?: string | null;
-    quantidade?: number | null;
-    unidade?: string | null;
-    dataExpedicao?: Date | null;
-    dataRecebimento?: Date | null;
-  }
-): Promise<{ buffer: Uint8Array; nomeArquivo: string }> {
-  const { PDFDocument, StandardFonts } = await import("pdf-lib");
-  const { embedNagalliLogo, drawNagalliTopo, drawNagalliFooter, PALETTE } = await import("./report-branding");
-
-  const pdf = await PDFDocument.create();
-  const font = await pdf.embedFont(StandardFonts.Helvetica);
-  const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
-  const logo = await embedNagalliLogo(pdf);
-  const page = pdf.addPage([842, 595]);
-
-  const topo = drawNagalliTopo(page, logo, font, bold);
-  const ink900 = PALETTE.ink["900"];
-  const ink700 = PALETTE.ink["700"];
-  const ink500 = PALETTE.ink["500"];
-  const brand700 = PALETTE.brand["700"];
-
-  let y = topo - 30;
-
-  page.drawText("MANIFESTO DE TRANSPORTE DE RESÍDUOS (SIMULAÇÃO)", { x: 40, y, size: 15, font: bold, color: brand700 });
-  y -= 18;
-  page.drawText("Documento fictício gerado pelo sistema — sem validade no SINIR", { x: 40, y, size: 9, font, color: ink500 });
-
-  y -= 30;
-
-  const rotulo = (label: string, valor: string, largura = 370) => {
-    page.drawText(label, { x: 40, y, size: 8, font: bold, color: ink500 });
-    page.drawText(valor, { x: 40, y: y - 13, size: 11, font: bold, color: ink900, maxWidth: largura });
-    y -= 40;
-  };
-
-  rotulo("NÚMERO DO MTR", manifesto.numero);
-  rotulo("CLIENTE", manifesto.clienteNome || "—");
-  rotulo("EMPREENDIMENTO", manifesto.empreendNome || "—");
-
-  page.drawText("RESÍDUO", { x: 40, y, size: 8, font: bold, color: ink500 });
-  page.drawText(manifesto.resumo || "—", { x: 40, y: y - 13, size: 10, font, color: ink900, maxWidth: 760 });
-  y -= 44;
-
-  rotulo("QUANTIDADE", manifesto.quantidade != null ? `${manifesto.quantidade.toLocaleString("pt-BR")} ${manifesto.unidade || ""}`.trim() : "—");
-
-  const fmt = (d?: Date | null) => (d ? d.toLocaleDateString("pt-BR") : "—");
-  rotulo("DATA DE EXPEDIÇÃO", fmt(manifesto.dataExpedicao), 180);
-  page.drawText("SITUAÇÃO", { x: 430, y: y + 40, size: 8, font: bold, color: ink500 });
-  page.drawText(
-    manifesto.certificado ? `CERTIFICADO` : manifesto.status,
-    { x: 430, y: y + 27, size: 11, font: bold, color: manifesto.certificado ? PALETTE.brand["600"] : ink700, maxWidth: 350 }
-  );
-
-  y -= 16;
-  page.drawRectangle({ x: 40, y, width: 762, height: 0.6, color: PALETTE.paper["200"] });
-  y -= 20;
-  page.drawText("Atenção: este documento é apenas uma simulação para teste do fluxo. Quando a conexão estiver em modo real, o PDF é baixado diretamente do SINIR.", {
-    x: 40,
-    y,
-    size: 8.5,
-    font,
-    color: ink500,
-    maxWidth: 760,
-  });
-
-  drawNagalliFooter(page, font, bold);
-
-  const bytes = await pdf.save();
-  return { buffer: new Uint8Array(bytes), nomeArquivo: `MTR-${manifesto.numero}.pdf` };
-}
-
-// ---------- DMR (relatório no modelo do SINIR) ----------
+// ---------- DMR// ---------- DMR (relatório no modelo do SINIR) ----------
 
 export interface DmrDeclarante {
   cnpj: string;
@@ -1132,102 +915,6 @@ export async function gerarPdfDmr(
   return { buffer: new Uint8Array(bytes), nomeArquivo: `DMR-${periodo.trimestre}T-${periodo.ano}.pdf` };
 }
 
-// ---------- PDF Alerta de MTRs salvos (rotina semanal) ----------
-
-interface AlertaMtrDados {
-  numero: string;
-  clienteNome?: string | null;
-  empreendNome?: string | null;
-  transportadorNome?: string | null;
-  destinadorNome?: string | null;
-  quantidade?: number | null;
-  unidade?: string | null;
-  dataExpedicao?: Date | null;
-  diasEmSalvo: number;
-}
-
-export async function gerarPdfAlertaMtrsSalvos(
-  conexaoNome: string,
-  limitesDias: number,
-  mtrs: AlertaMtrDados[]
-): Promise<{ buffer: Uint8Array; nomeArquivo: string }> {
-  const { PDFDocument, StandardFonts } = await import("pdf-lib");
-  const { embedNagalliLogo, drawNagalliTopo, drawNagalliFooter, PALETTE } = await import("./report-branding");
-
-  const pdf = await PDFDocument.create();
-  const font = await pdf.embedFont(StandardFonts.Helvetica);
-  const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
-  const logo = await embedNagalliLogo(pdf);
-  const page = pdf.addPage([842, 595]);
-
-  const topo = drawNagalliTopo(page, logo, font, bold);
-  const ink900 = PALETTE.ink["900"];
-  const ink700 = PALETTE.ink["700"];
-  const ink500 = PALETTE.ink["500"];
-  const alertaCor = rgb(0.75, 0.2, 0.15);
-
-  let y = topo - 24;
-
-  page.drawText("ALERTA — MTRs SEM RECEBIMENTO", { x: 40, y, size: 15, font: bold, color: alertaCor });
-  y -= 16;
-  page.drawText(`Rotina semanal "Meus MTRs" — manifestos em situação SALVO há mais de ${limitesDias} dias`, {
-    x: 40, y, size: 9, font, color: ink700,
-  });
-  y -= 12;
-  page.drawText(`Conexão: ${conexaoNome}   |   Gerado em: ${new Date().toLocaleString("pt-BR")}`, { x: 40, y, size: 9, font, color: ink500 });
-  y -= 14;
-
-  page.drawRectangle({ x: 40, y, width: 762, height: 0.6, color: PALETTE.paper["200"] });
-  y -= 18;
-
-  if (mtrs.length === 0) {
-    page.drawText("Nenhum MTR em situação SALVO além do limite no período verificado.", { x: 40, y, size: 10, font, color: ink700 });
-  }
-
-  const linha = (texto: string, x: number, w: number, size = 9, cor = ink900, f = font) => {
-    page.drawText(texto, { x, y, size, font: f, color: cor, maxWidth: w });
-  };
-
-  const cab = (t: string, x: number, w: number) => linha(t, x, w, 8, ink500, bold);
-
-  cab("NÚMERO DO MTR", 40, 160);
-  cab("GERADOR", 210, 180);
-  cab("DESTINADOR", 400, 180);
-  cab("DIAS EM SALVO", 590, 100);
-  cab("QUANTIDADE", 690, 110);
-  y -= 14;
-  page.drawRectangle({ x: 40, y, width: 762, height: 0.6, color: PALETTE.paper["200"] });
-  y -= 16;
-
-  for (const m of mtrs) {
-    if (y < 80) {
-      const nova = pdf.addPage([842, 595]);
-      drawNagalliTopo(nova, logo, font, bold);
-      y = 700;
-    }
-    linha(m.numero, 40, 160, 9, ink900, bold);
-    linha(m.clienteNome || "—", 210, 180, 9, ink700);
-    linha(m.destinadorNome || m.empreendNome || "—", 400, 180, 9, ink700);
-    linha(`${m.diasEmSalvo} dia(s)`, 590, 100, 9, m.diasEmSalvo > limitesDias ? alertaCor : ink700, bold);
-    linha(m.quantidade != null ? `${m.quantidade.toLocaleString("pt-BR")} ${m.unidade || ""}`.trim() : "—", 690, 110, 9, ink500);
-    y -= 18;
-  }
-
-  y -= 8;
-  page.drawRectangle({ x: 40, y, width: 762, height: 0.6, color: PALETTE.paper["200"] });
-  y -= 20;
-  page.drawText(`Total de MTRs sem recebimento além do limite: ${mtrs.length}`, { x: 40, y, size: 10, font: bold, color: ink900 });
-  y -= 16;
-  page.drawText("Ação recomendada: avisar os clientes geradores para confirmarem com as empresas destinatárias o recebimento das cargas.", {
-    x: 40, y, size: 8.5, font, color: ink500, maxWidth: 760,
-  });
-
-  drawNagalliFooter(page, font, bold);
-
-  const bytes = await pdf.save();
-  return { buffer: new Uint8Array(bytes), nomeArquivo: `alerta-mtrs-salvos-${new Date().toISOString().slice(0, 10)}.pdf` };
-}
-
 export interface MtrsSalvosPorDestinadorItem {
   numero: string;
   destinadorNome: string | null;
@@ -1263,9 +950,9 @@ export async function gerarPdfMtrsSalvosPorDestinador(
 
   let y = topo - 24;
 
-  page.drawText("MTRs AGUARDANDO CONFIRMAÇÃO DE RECEBIMENTO", { x: 40, y, size: 15, font: bold, color: ink900 });
+  page.drawText("RELAÇÃO DE MTRs SALVOS", { x: 40, y, size: 15, font: bold, color: ink900 });
   y -= 16;
-  page.drawText('Manifestos com situação "Salvo" no SINIR — aguardando ação do destinador', {
+  page.drawText('Manifestos com situação "Salvo" no SINIR — agrupados por destinador', {
     x: 40, y, size: 9, font, color: ink700,
   });
   y -= 12;
@@ -1303,18 +990,6 @@ export async function gerarPdfMtrsSalvosPorDestinador(
     }
     y -= 12;
   }
-
-  y -= 4;
-  page.drawRectangle({ x: 40, y, width: 762, height: 0.6, color: PALETTE.paper["200"] });
-  y -= 20;
-  page.drawText(`Total de MTRs pendentes de recebimento: ${mtrs.length} — distribuídos entre ${ordenados.length} destinador(es).`, {
-    x: 40, y, size: 10, font: bold, color: ink900,
-  });
-  y -= 15;
-  page.drawText(
-    "Solicitamos que os destinadores listados acessem o portal SINIR e confirmem o recebimento das cargas para regularização dos manifestos.",
-    { x: 40, y, size: 8.5, font, color: ink500, maxWidth: 760 }
-  );
 
   drawNagalliFooter(page, font, bold);
 

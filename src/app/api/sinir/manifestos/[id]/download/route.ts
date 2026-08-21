@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { logAuditoria } from "@/lib/audit";
-import { baixarCertificadoPdf, baixarManifestoPdf, consultarCertificadoMtr, gerarPdfSimulado, SinirError } from "@/lib/sinir";
+import { baixarCertificadoPdf, baixarManifestoPdf, consultarCertificadoMtr, SinirError } from "@/lib/sinir";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -62,12 +62,9 @@ export async function GET(req: NextRequest, { params }: Params) {
       buffer = resultado.buffer;
       nomeArquivo = resultado.filename;
     } else {
-      const resultado =
-        conexao.modo === "mock"
-          ? await gerarPdfSimulado(manifesto)
-          : await baixarManifestoPdf(conexaoCompleta, manifesto.numero);
+      const resultado = await baixarManifestoPdf(conexaoCompleta, manifesto.numero);
       buffer = resultado.buffer;
-      nomeArquivo = "nomeArquivo" in resultado ? resultado.nomeArquivo : resultado.filename;
+      nomeArquivo = resultado.filename;
     }
 
     await logAuditoria(

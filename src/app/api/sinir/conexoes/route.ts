@@ -43,13 +43,10 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { nome, cnpj, unidade, empreendimentoId, token, modo, venceEm } = body;
+  const { nome, cnpj, unidade, empreendimentoId, token, venceEm } = body;
 
-  if (!nome || !cnpj || !unidade) {
-    return NextResponse.json({ error: "nome, cnpj e unidade são obrigatórios" }, { status: 400 });
-  }
-  if (modo && modo !== "mock" && modo !== "real") {
-    return NextResponse.json({ error: "modo deve ser 'mock' ou 'real'" }, { status: 400 });
+  if (!nome || !cnpj || !unidade || !token) {
+    return NextResponse.json({ error: "nome, cnpj, unidade e token são obrigatórios" }, { status: 400 });
   }
 
   const ehPrivilegiado = perfil === "socio" || perfil === "admin";
@@ -63,8 +60,8 @@ export async function POST(req: NextRequest) {
       cnpj: String(cnpj).replace(/\D/g, ""),
       unidade: String(unidade),
       empreendimentoId: empreendimentoId ? Number(empreendimentoId) : null,
-      token: token ? criptografar(String(token)) : null,
-      modo: modo === "real" ? "real" : "mock",
+      token: criptografar(String(token)),
+      modo: "real",
       venceEm: venceEm ? new Date(venceEm) : null,
     },
   });

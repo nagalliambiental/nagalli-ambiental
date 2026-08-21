@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { logAuditoria } from "@/lib/audit";
-import { gerarPdfAlertaMtrsSalvos } from "@/lib/sinir";
+import { gerarPdfMtrsSalvosPorDestinador } from "@/lib/sinir";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -11,53 +11,41 @@ export async function GET(req: NextRequest) {
   }
 
   const conexaoId = Number(req.nextUrl.searchParams.get("conexaoId"));
-  const limiteDias = Number(req.nextUrl.searchParams.get("limiteDias")) || 7;
-
   if (!conexaoId) {
     return NextResponse.json({ error: "conexaoId é obrigatório" }, { status: 400 });
   }
 
-  const conexao = await prisma.sinirConexao.findUnique({ where: { id: conexaoId } });
+  const conexao = await prisma.sinirConexao.findUnique({
+    where: { id: conexaoId },
+    include: { empreendimento: true },
+  });
   if (!conexao) {
     return NextResponse.json({ error: "Conexão não encontrada" }, { status: 404 });
   }
 
-  const limite = new Date();
-  limite.setDate(limite.getDate() - limiteDias);
-
   const manifestos = await prisma.sinirManifesto.findMany({
-    where: {
-      conexaoId,
-      status: { in: ["SALVO", "EMITIDO"] },
-      dataExpedicao: { lt: limite },
-    },
-    orderBy: { dataExpedicao: "asc" },
+    where: { conexaoId, status: "SALVO" },
+    orderBy: [{ destinadorNome: "asc" }, { dataExpedicao: "asc" }],
   });
 
-  const hoje = new Date();
-  const mtrs = manifestos.map((m) => {
-    const base = m.dataExpedicao || hoje;
-    const dias = Math.max(1, Math.floor((hoje.getTime() - base.getTime()) / 86400000));
-    return {
+  const empreendimentoNome = conexao.empreendimento?.apelido || conexao.nome;
+  const unidadeSinir = conexao.empreendimento?.unidadeSinir || conexao.unidade;
+
+  const resultado = await gerarPdfMtrsSalvosPorDestinador(
+    empreendimentoNome,
+    unidadeSinir,
+    manifestos.map((m) => ({
       numero: m.numero,
-      clienteNome: m.clienteNome,
-      empreendNome: m.empreendNome,
-      transportadorNome: m.transportadorNome,
       destinadorNome: m.destinadorNome,
-      quantidade: m.quantidade,
-      unidade: m.unidade,
       dataExpedicao: m.dataExpedicao,
-      diasEmSalvo: dias,
-    };
-  });
-
-  const resultado = await gerarPdfAlertaMtrsSalvos(conexao.nome, limiteDias, mtrs);
+    }))
+  );
 
   await logAuditoria(
     "DOWNLOAD",
     "SinirRelatorio",
     0,
-    { acao: "relatorioSalvos", conexao: conexao.nome, limiteDias, mtrs: mtrs.length },
+    { acao: "relatorioSalvos", conexao: conexao.nome, mtrs: manifestos.length },
     session.user?.id ? Number(session.user.id) : undefined
   );
 

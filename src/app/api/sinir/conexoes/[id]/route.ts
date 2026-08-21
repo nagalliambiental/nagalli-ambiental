@@ -22,26 +22,17 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   }
 
   const body = await req.json();
-  const { nome, cnpj, unidade, empreendimentoId, token, modo, venceEm, ativo } = body;
+  const { nome, cnpj, unidade, empreendimentoId, token, venceEm, ativo } = body;
 
   const data: Record<string, unknown> = {};
   if (nome !== undefined) data.nome = nome;
   if (cnpj !== undefined) data.cnpj = String(cnpj).replace(/\D/g, "");
   if (unidade !== undefined) data.unidade = String(unidade);
   if (empreendimentoId !== undefined) data.empreendimentoId = empreendimentoId ? Number(empreendimentoId) : null;
-  if (modo !== undefined) {
-    if (modo !== "mock" && modo !== "real") {
-      return NextResponse.json({ error: "modo deve ser 'mock' ou 'real'" }, { status: 400 });
-    }
-    data.modo = modo;
-  }
-  if (token !== undefined) {
-    data.token = token ? criptografar(String(token)) : null;
-  }
-  if (venceEm !== undefined) {
-    data.venceEm = venceEm ? new Date(venceEm) : null;
-  }
+  if (token !== undefined) data.token = criptografar(String(token));
+  if (venceEm !== undefined) data.venceEm = venceEm ? new Date(venceEm) : null;
   if (ativo !== undefined) data.ativo = Boolean(ativo);
+  data.modo = "real";
 
   const atualizada = await prisma.sinirConexao.update({
     where: { id: Number(id) },

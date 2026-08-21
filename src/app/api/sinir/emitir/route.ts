@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
       "CRIAR",
       "SinirManifesto",
       conexao.id,
-      { acao: "emitir", conexao: conexao.nome, numero: resultado.numero, simulacao: resultado.simulacao, resumo },
+      { acao: "emitir", conexao: conexao.nome, numero: resultado.numero, resumo },
       session.user?.id ? Number(session.user.id) : undefined
     );
 

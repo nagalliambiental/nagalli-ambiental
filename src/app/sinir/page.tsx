@@ -8,7 +8,7 @@ import { useToast } from "@/components/Toast";
 
 type ToastFn = (message: string, type?: "success" | "error" | "info" | "warning") => void;
 
-type Tab = "painel" | "meusMtrs" | "emitir" | "modelos" | "contatos" | "conexoes";
+type Tab = "painel" | "meusMtrs" | "emitir" | "modelos" | "conexoes";
 
 interface Conexao {
   id: number;
@@ -145,6 +145,8 @@ const STATUS_BADGE: Record<string, string> = {
   ARMAZ_TEMPORARIO: "bg-purple-50 text-purple-700",
 };
 
+const POR_PAGINA = 15;
+
 function fmtData(v: string | null) {
   if (!v) return "—";
   return new Date(v).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
@@ -279,7 +281,7 @@ export default function SinirPage() {
             { key: "meusMtrs", label: "Meus MTRs" },
             { key: "emitir", label: "Emitir MTR" },
             { key: "modelos", label: "Modelos" },
-            { key: "contatos", label: "Contatos" },
+            
             ...(ehPrivilegiado ? [{ key: "conexoes" as Tab, label: "Conexões" }] : []),
           ] as { key: Tab; label: string }[]
         ).map((t) => (
@@ -332,8 +334,6 @@ export default function SinirPage() {
         <ModelosTab conexoes={conexoes} modelos={modelos} onChanged={() => carregarModelos()} toast={toast} />
       )}
 
-      {tab === "contatos" && <ContatosTab empreendimentos={empreendimentos} toast={toast} />}
-
       {tab === "conexoes" && ehPrivilegiado && (
         <ConexoesTab conexoes={conexoes} empreendimentos={empreendimentos} onChanged={() => carregarConexoes()} toast={toast} />
       )}
@@ -358,6 +358,10 @@ function PainelTab(props: {
 }) {
   const { conexoes, empreendimentos, manifestos, loading, certificados, pendentes, cancelados, filtro, setFiltro, onVerificar, toast } = props;
   const [verificando, setVerificando] = useState(false);
+  const [paginaManifestos, setPaginaManifestos] = useState(0);
+  const totalPaginasM = Math.max(1, Math.ceil(manifestos.length / POR_PAGINA));
+  const paginaM = Math.min(paginaManifestos, totalPaginasM - 1);
+  const visiveisM = manifestos.slice(paginaM * POR_PAGINA, paginaM * POR_PAGINA + POR_PAGINA);
   const [conexaoId, setConexaoId] = useState("");
   const [dataInicial, setDataInicial] = useState(() => {
     const d = new Date();
@@ -507,7 +511,7 @@ function PainelTab(props: {
         return;
       }
       onVerificar();
-      toast(`MTR ${m.numero} cancelado${data?.simulacao ? " (simulação)" : ""}`, "success");
+      toast(`MTR ${m.numero} cancelado`, "success");
       setModalCancel(null);
       setJustificativaCancel("");
     } catch {
@@ -551,7 +555,7 @@ function PainelTab(props: {
         toast(data.error || "Falha ao verificar", "error");
         return;
       }
-      setResumoVerif({ total: data.total, certificados: data.certificados, pendentes: data.pendentes, modo: data.conexao.modo });
+      setResumoVerif({ total: data.total, certificados: data.certificados, pendentes: data.pendentes, modo: "real" });
       onVerificar();
       toast(data.pendentes > 0 ? `${data.pendentes} carga(s) sem certificação` : "Todas as cargas certificadas", data.pendentes > 0 ? "warning" : "success");
     } catch {
@@ -570,7 +574,7 @@ function PainelTab(props: {
             <label className="text-xs text-[var(--color-ink-500)]">Conexão</label>
             <select value={conexaoEfetiva} onChange={(e) => setConexaoId(e.target.value)} className="rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm">
               {conexoes.map((c) => (
-                <option key={c.id} value={c.id}>{c.nome} — unid. {c.unidade}{c.modo === "mock" ? " (simulação)" : ""}</option>
+                <option key={c.id} value={c.id}>{c.nome} — unid. {c.unidade}</option>
               ))}
             </select>
           </div>
@@ -658,14 +662,14 @@ function PainelTab(props: {
         <div className="mb-3 flex items-center justify-between">
           <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Manifestos</h2>
           <div className="flex items-center gap-2 text-xs">
-            <button onClick={() => setFiltro("todos")} className={`rounded-full px-3 py-1 font-medium ${filtro === "todos" ? "bg-[var(--color-brand-500)] text-white" : "bg-[var(--color-paper-100)] text-[var(--color-ink-600)]"}`}>
+            <button onClick={() => { setFiltro("todos"); setPaginaManifestos(0); }} className={`rounded-full px-3 py-1 font-medium ${filtro === "todos" ? "bg-[var(--color-brand-500)] text-white" : "bg-[var(--color-paper-100)] text-[var(--color-ink-600)]"}`}>
               Todos ({certificados + pendentes + cancelados})
             </button>
-            <button onClick={() => setFiltro("pendentes")} className={`rounded-full px-3 py-1 font-medium ${filtro === "pendentes" ? "bg-amber-500 text-white" : "bg-[var(--color-paper-100)] text-[var(--color-ink-600)]"}`}>
+            <button onClick={() => { setFiltro("pendentes"); setPaginaManifestos(0); }} className={`rounded-full px-3 py-1 font-medium ${filtro === "pendentes" ? "bg-amber-500 text-white" : "bg-[var(--color-paper-100)] text-[var(--color-ink-600)]"}`}>
               Pendentes ({pendentes})
             </button>
-            <button onClick={() => setFiltro("certificados")} className={`rounded-full px-3 py-1 font-medium ${filtro === "certificados" ? "bg-green-600 text-white" : "bg-[var(--color-paper-100)] text-[var(--color-ink-600)]"}`}>
-              Certificados ({certificados})
+            <button onClick={() => { setFiltro("certificados"); setPaginaManifestos(0); }} className={`rounded-full px-3 py-1 font-medium ${filtro === "certificados" ? "bg-green-600 text-white" : "bg-[var(--color-paper-100)] text-[var(--color-ink-600)]"}`}>
+              Com CDF ({certificados})
             </button>
           </div>
         </div>
@@ -693,7 +697,7 @@ function PainelTab(props: {
                 </tr>
               </thead>
               <tbody>
-                {manifestos.map((m) => (
+                {visiveisM.map((m) => (
                   <tr key={m.id} className="border-b border-[var(--color-paper-100)] hover:bg-[var(--color-paper-50)]">
                     <td className="py-2 px-2 font-mono text-xs text-[var(--color-ink-700)]">{m.numero}</td>
                     <td className="py-2 px-2 text-[var(--color-ink-700)]">{m.clienteNome || "—"}</td>
@@ -716,7 +720,7 @@ function PainelTab(props: {
                         >
                           <FileDown size={15} />
                         </button>
-                        {m.conexao.modo === "real" && m.certificado && m.status !== "CANCELADO" && (
+                        {m.certificado && m.status !== "CANCELADO" && (
                           <button
                             onClick={() => baixarCdf(m)}
                             title="Baixar CDF (Certificado de Destinação Final) — disponível após o destinador confirmar a destinação"
@@ -749,6 +753,27 @@ function PainelTab(props: {
             </table>
           </div>
         )}
+        {manifestos.length > POR_PAGINA && (
+          <div className="mt-3 flex items-center justify-between text-xs text-[var(--color-ink-600)]">
+            <span>{manifestos.length} registro(s) — Página {paginaM + 1} de {totalPaginasM}</span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setPaginaManifestos(Math.max(0, paginaM - 1))}
+                disabled={paginaM === 0}
+                className="rounded-md border border-[var(--color-paper-200)] px-3 py-1 font-medium hover:bg-[var(--color-paper-50)] disabled:opacity-40"
+              >
+                Anterior
+              </button>
+              <button
+                onClick={() => setPaginaManifestos(Math.min(totalPaginasM - 1, paginaM + 1))}
+                disabled={paginaM >= totalPaginasM - 1}
+                className="rounded-md border border-[var(--color-paper-200)] px-3 py-1 font-medium hover:bg-[var(--color-paper-50)] disabled:opacity-40"
+              >
+                Próxima
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {modalCancel && (
@@ -767,7 +792,7 @@ function PainelTab(props: {
               </button>
             </div>
             <p className="mb-3 text-sm text-[var(--color-ink-600)]">
-              O cancelamento será enviado ao SINIR{modalCancel.conexao.modo === "mock" ? " (modo simulação)" : ""}. Esta ação não pode ser desfeita.
+              O cancelamento será enviado ao SINIR. Esta ação não pode ser desfeita.
             </p>
             <div className="flex flex-col gap-1">
               <label className="text-xs font-medium text-[var(--color-ink-500)]">Justificativa *</label>
@@ -831,6 +856,7 @@ function MeusMtrsTab(props: {
   const [selecionados, setSelecionados] = useState<number[]>([]);
   const [enviandoNotif, setEnviandoNotif] = useState(false);
   const [carregandoContatos, setCarregandoContatos] = useState(false);
+  const [paginaLista, setPaginaLista] = useState(0);
 
   const pad = (n: number) => String(n).padStart(2, "0");
   const hoje = new Date();
@@ -845,6 +871,10 @@ function MeusMtrsTab(props: {
     (m) => (m.status === "SALVO" || m.status === "EMITIDO") && !m.certificado
   );
   const emAtraso = salvos.filter((m) => diasEmSalvo(m) > limiteDias);
+  const listaFiltrada = filtro === "pendentes" ? salvos : lista;
+  const totalPaginasL = Math.max(1, Math.ceil(listaFiltrada.length / POR_PAGINA));
+  const paginaL = Math.min(paginaLista, totalPaginasL - 1);
+  const visiveisL = listaFiltrada.slice(paginaL * POR_PAGINA, paginaL * POR_PAGINA + POR_PAGINA);
 
   async function consultarSinir(idConexao?: string) {
     const conexaoUsar = idConexao || conexaoEfetiva;
@@ -1003,10 +1033,10 @@ function MeusMtrsTab(props: {
           <div>
             <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Meus MTRs — consulta semanal</h2>
             <p className="mt-1 text-sm text-[var(--color-ink-500)]">
-              Busca no SINIR todos os MTRs do período escolhido em que a empresa consta (gerador, transportador, destinador ou armazenador) — períodos maiores que 30 dias são divididos automaticamente. Situação de cada MTR: <b className="text-green-700">Recebido</b> = tudo ok; <b className="text-red-700">Salvo há mais de {limiteDias} dias</b> = avisar o cliente.
+              Busca no SINIR todos os MTRs do período escolhido em que a empresa consta (gerador, transportador, destinador ou armazenador) — períodos maiores que 30 dias são divididos automaticamente.
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <select
               value={conexaoEfetiva}
               onChange={(e) => {
@@ -1014,10 +1044,10 @@ function MeusMtrsTab(props: {
                 setLista([]);
                 consultarSinir(e.target.value);
               }}
-              className="rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm"
+              className="max-w-[280px] min-w-0 rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm"
             >
               {conexoes.map((c) => (
-                <option key={c.id} value={c.id}>{c.nome} — unid. {c.unidade}{c.modo === "mock" ? " (simulação)" : ""}</option>
+                <option key={c.id} value={c.id}>{c.nome} — unid. {c.unidade}</option>
               ))}
             </select>
             <div className="flex items-center gap-1.5 text-sm">
@@ -1065,7 +1095,7 @@ function MeusMtrsTab(props: {
 
         {emAtraso.length > 0 && (
           <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-            <b>{emAtraso.length} MTR(s) em situação SALVO há mais de {limiteDias} dias</b> — envie o relatório ao chefe para avisar os clientes que as cargas não foram recebidas pelas empresas destinatárias.
+            <b>{emAtraso.length} MTR(s) em situação SALVO há mais de {limiteDias} dias</b>
           </div>
         )}
       </div>
@@ -1074,10 +1104,10 @@ function MeusMtrsTab(props: {
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Lista de MTRs ({lista.length})</h2>
           <div className="flex gap-2 text-xs">
-            <button onClick={() => setFiltro("todos")} className={`rounded-full px-3 py-1 font-medium ${filtro === "todos" ? "bg-[var(--color-brand-500)] text-white" : "bg-[var(--color-paper-100)] text-[var(--color-ink-600)]"}`}>
+            <button onClick={() => { setFiltro("todos"); setPaginaLista(0); }} className={`rounded-full px-3 py-1 font-medium ${filtro === "todos" ? "bg-[var(--color-brand-500)] text-white" : "bg-[var(--color-paper-100)] text-[var(--color-ink-600)]"}`}>
               Todos ({lista.length})
             </button>
-            <button onClick={() => setFiltro("pendentes")} className={`rounded-full px-3 py-1 font-medium ${filtro === "pendentes" ? "bg-amber-500 text-white" : "bg-[var(--color-paper-100)] text-[var(--color-ink-600)]"}`}>
+            <button onClick={() => { setFiltro("pendentes"); setPaginaLista(0); }} className={`rounded-full px-3 py-1 font-medium ${filtro === "pendentes" ? "bg-amber-500 text-white" : "bg-[var(--color-paper-100)] text-[var(--color-ink-600)]"}`}>
               Sem recebimento ({salvos.length})
             </button>
           </div>
@@ -1106,8 +1136,7 @@ function MeusMtrsTab(props: {
                 </tr>
               </thead>
               <tbody>
-                {lista
-                  .filter((m) => (filtro === "pendentes" ? (m.status === "SALVO" || m.status === "EMITIDO") && !m.certificado : true))
+                {visiveisL
                   .map((m) => {
                     const salvo = (m.status === "SALVO" || m.status === "EMITIDO") && !m.certificado;
                     const atrasado = salvo && diasEmSalvo(m) > limiteDias;
@@ -1129,7 +1158,7 @@ function MeusMtrsTab(props: {
                           ) : salvo ? (
                             <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${atrasado ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>
                               {atrasado ? <AlertTriangle size={12} /> : <Clock size={12} />}
-                              Salvo há {diasEmSalvo(m)} dia(s){atrasado ? " — avisar cliente" : ""}
+                              Salvo há {diasEmSalvo(m)} dia(s)
                             </span>
                           ) : (
                             <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${STATUS_BADGE[m.status] || "bg-[var(--color-paper-100)] text-[var(--color-ink-600)]"}`}>
@@ -1148,7 +1177,7 @@ function MeusMtrsTab(props: {
                             >
                               <FileDown size={15} />
                             </button>
-                            {m.conexao?.modo === "real" && m.certificado && m.status !== "CANCELADO" && (
+                            {m.certificado && m.status !== "CANCELADO" && (
                               <button
                                 onClick={() => {
                                   toast("Consultando o CDF no SINIR...", "info");
@@ -1167,6 +1196,27 @@ function MeusMtrsTab(props: {
                   })}
               </tbody>
             </table>
+          </div>
+        )}
+        {listaFiltrada.length > POR_PAGINA && (
+          <div className="mt-3 flex items-center justify-between text-xs text-[var(--color-ink-600)]">
+            <span>{listaFiltrada.length} registro(s) — Página {paginaL + 1} de {totalPaginasL}</span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setPaginaLista(Math.max(0, paginaL - 1))}
+                disabled={paginaL === 0}
+                className="rounded-md border border-[var(--color-paper-200)] px-3 py-1 font-medium hover:bg-[var(--color-paper-50)] disabled:opacity-40"
+              >
+                Anterior
+              </button>
+              <button
+                onClick={() => setPaginaLista(Math.min(totalPaginasL - 1, paginaL + 1))}
+                disabled={paginaL >= totalPaginasL - 1}
+                className="rounded-md border border-[var(--color-paper-200)] px-3 py-1 font-medium hover:bg-[var(--color-paper-50)] disabled:opacity-40"
+              >
+                Próxima
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -1716,7 +1766,7 @@ function abrirModalResiduo(indice?: number) {
       toast("Preencha os CNPJs (14 dígitos) do transportador e destinador", "error");
       return;
     }
-    const modoReal = conexoes.find((c) => c.id === Number(conexaoEfetiva))?.modo !== "mock";
+    const modoReal = true;
     if (modoReal && (!form.transportadorUnidade || !form.destinadorUnidade)) {
       toast("Informe o código da unidade do transportador e do destinador (visível no portal SINIR — DMR/emissão)", "error");
       return;
@@ -1800,7 +1850,7 @@ function abrirModalResiduo(indice?: number) {
       }
       setResultado(data);
       onEmitido();
-      toast(data.simulacao ? "MTR emitido em modo simulação" : "MTR emitido no SINIR", "success");
+      toast("MTR emitido no SINIR", "success");
     } catch {
       toast("Erro ao emitir MTR", "error");
     } finally {
@@ -1838,7 +1888,7 @@ function abrirModalResiduo(indice?: number) {
           <label className="text-xs font-medium text-[var(--color-ink-500)]">Conexão</label>
           <select value={conexaoEfetiva} onChange={(e) => setForm((f) => ({ ...f, conexaoId: e.target.value }))} className={inputCls}>
             {conexoes.map((c) => (
-              <option key={c.id} value={c.id}>{c.nome} — unid. {c.unidade}{c.modo === "mock" ? " (simulação)" : ""}</option>
+              <option key={c.id} value={c.id}>{c.nome} — unid. {c.unidade}</option>
             ))}
           </select>
         </div>
@@ -2097,7 +2147,7 @@ function abrirModalResiduo(indice?: number) {
         <div className="mt-4 rounded-lg border border-[var(--color-paper-200)] bg-[var(--color-paper-50)] p-4">
           <p className="flex items-center gap-2 text-sm font-medium text-[var(--color-ink-800)]">
             <CheckCircle2 size={16} className="text-green-600" />
-            MTR {resultado.numero} {resultado.simulacao && <span className="rounded bg-blue-50 px-1.5 py-0.5 text-xs text-blue-700">simulação</span>}
+            MTR {resultado.numero}
           </p>
         </div>
       )}
@@ -2574,7 +2624,7 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtr[]; onChange
             <select value={form.conexaoId} onChange={(e) => setForm((f) => ({ ...f, conexaoId: e.target.value }))} className={inputCls}>
               <option value="">Qualquer conexão</option>
               {conexoes.map((c) => (
-                <option key={c.id} value={c.id}>{c.nome} — unid. {c.unidade}{c.modo === "mock" ? " (simulação)" : ""}</option>
+                <option key={c.id} value={c.id}>{c.nome} — unid. {c.unidade}</option>
               ))}
             </select>
           </div>
@@ -2879,186 +2929,7 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtr[]; onChange
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-// ---------- Contatos ----------
-
-function ContatosTab(props: { empreendimentos: EmpreendimentoOpcao[]; toast: ToastFn }) {
-  const { empreendimentos, toast } = props;
-  const [empreendimentoId, setEmpreendimentoId] = useState("");
-  const [contatos, setContatos] = useState<ContatoEmpreendimento[]>([]);
-  const [carregando, setCarregando] = useState(false);
-  const [salvando, setSalvando] = useState(false);
-  const [form, setForm] = useState({ nome: "", email: "", cargo: "", telefone: "" });
-
-  const trocarEmpreendimento = async (idEmp: string) => {
-    setEmpreendimentoId(idEmp);
-    if (!idEmp) {
-      setContatos([]);
-      return;
-    }
-    setCarregando(true);
-    try {
-      const res = await fetch(`/api/contatos?empreendimentoId=${idEmp}`);
-      if (res.ok) setContatos(await res.json());
-    } catch {
-      toast("Falha ao carregar os contatos", "error");
-    } finally {
-      setCarregando(false);
-    }
-  };
-
-  async function adicionar() {
-    if (!empreendimentoId) {
-      toast("Selecione um empreendimento", "error");
-      return;
-    }
-    if (!form.nome.trim() || !form.email.trim()) {
-      toast("Informe nome e e-mail do contato", "error");
-      return;
-    }
-    setSalvando(true);
-    try {
-      const res = await fetch("/api/contatos", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, empreendimentoId: Number(empreendimentoId) }),
-      });
-      const data = await res.json().catch(() => null);
-      if (!res.ok) {
-        toast(data?.error || "Falha ao salvar o contato", "error");
-        return;
-      }
-      toast("Contato cadastrado", "success");
-      setForm({ nome: "", email: "", cargo: "", telefone: "" });
-      trocarEmpreendimento(empreendimentoId);
-    } catch {
-      toast("Falha ao salvar o contato", "error");
-    } finally {
-      setSalvando(false);
-    }
-  }
-
-  async function excluir(c: ContatoEmpreendimento) {
-    if (!confirm(`Remover o contato ${c.nome} (${c.email})?`)) return;
-    try {
-      const res = await fetch(`/api/contatos/${c.id}`, { method: "DELETE" });
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        toast(data?.error || "Falha ao remover o contato", "error");
-        return;
-      }
-      toast("Contato removido", "success");
-      trocarEmpreendimento(empreendimentoId);
-    } catch {
-      toast("Falha ao remover o contato", "error");
-    }
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
-        <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Contatos por empreendimento</h2>
-        <p className="mt-1 text-sm text-[var(--color-ink-500)]">
-          Pessoas específicas de cada empresa para receber as notificações de MTRs pendentes — o e-mail vinculado ao CNPJ nem sempre é o contato correto.
-        </p>
-
-        <div className="mt-4 flex flex-wrap items-end gap-3">
-          <div>
-            <label className="mb-1 block text-xs font-medium text-[var(--color-ink-500)]">Empreendimento</label>
-            <select
-              value={empreendimentoId}
-              onChange={(e) => trocarEmpreendimento(e.target.value)}
-              className="rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm"
-            >
-              <option value="">Selecione...</option>
-              {empreendimentos.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.apelido} — {e.cliente?.apelido}{e.unidadeSinir ? ` · unid. ${e.unidadeSinir}` : ""}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {empreendimentoId && (
-          <div className="mt-4 grid gap-2 sm:grid-cols-5">
-            <input
-              placeholder="Nome *"
-              value={form.nome}
-              onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))}
-              className="rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm"
-            />
-            <input
-              placeholder="E-mail *"
-              type="email"
-              value={form.email}
-              onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-              className="rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm"
-            />
-            <input
-              placeholder="Cargo"
-              value={form.cargo}
-              onChange={(e) => setForm((f) => ({ ...f, cargo: e.target.value }))}
-              className="rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm"
-            />
-            <input
-              placeholder="Telefone"
-              value={form.telefone}
-              onChange={(e) => setForm((f) => ({ ...f, telefone: e.target.value }))}
-              className="rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm"
-            />
-            <button
-              onClick={adicionar}
-              disabled={salvando}
-              className="focus-ring transition-brand flex items-center justify-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
-            >
-              {salvando ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />}
-              Adicionar
-            </button>
-          </div>
-        )}
-      </div>
-
-      {empreendimentoId && (
-        <div className="shadow-card overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">
-          <table className="w-full text-sm">
-            <thead className="bg-[var(--color-paper-50)]">
-              <tr>
-                <th className="px-4 py-2.5 text-left font-medium text-[var(--color-ink-500)]">Nome</th>
-                <th className="px-4 py-2.5 text-left font-medium text-[var(--color-ink-500)]">Cargo</th>
-                <th className="px-4 py-2.5 text-left font-medium text-[var(--color-ink-500)]">E-mail</th>
-                <th className="px-4 py-2.5 text-left font-medium text-[var(--color-ink-500)]">Telefone</th>
-                <th className="px-4 py-2.5 text-right font-medium text-[var(--color-ink-500)]">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {carregando ? (
-                <tr><td colSpan={5} className="px-4 py-6 text-center text-[var(--color-ink-500)]"><Loader2 size={16} className="mr-2 inline animate-spin" /> Carregando...</td></tr>
-              ) : contatos.length === 0 ? (
-                <tr><td colSpan={5} className="px-4 py-6 text-center text-[var(--color-ink-500)]">Nenhum contato cadastrado para este empreendimento.</td></tr>
-              ) : (
-                contatos.map((c) => (
-                  <tr key={c.id} className="border-t border-[var(--color-paper-100)]">
-                    <td className="px-4 py-2.5 font-medium text-[var(--color-ink-900)]">{c.nome}</td>
-                    <td className="px-4 py-2.5 text-[var(--color-ink-700)]">{c.cargo || "—"}</td>
-                    <td className="px-4 py-2.5 text-[var(--color-ink-700)]">{c.email}</td>
-                    <td className="px-4 py-2.5 text-[var(--color-ink-700)]">{c.telefone || "—"}</td>
-                    <td className="px-4 py-2.5 text-right">
-                      <button onClick={() => excluir(c)} title="Remover contato" className="rounded-md p-1.5 text-[var(--color-ink-600)] hover:bg-red-50 hover:text-red-700">
-                        <Trash2 size={15} />
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
+</div>
   );
 }
 
@@ -3066,7 +2937,7 @@ function ContatosTab(props: { empreendimentos: EmpreendimentoOpcao[]; toast: Toa
 
 function ConexoesTab(props: { conexoes: Conexao[]; empreendimentos: EmpreendimentoOpcao[]; onChanged: () => void; toast: ToastFn }) {
   const { conexoes, empreendimentos, onChanged, toast } = props;
-  const [form, setForm] = useState({ nome: "", cnpj: "", unidade: "", empreendimentoId: "", token: "", modo: "mock", venceEm: "" });
+  const [form, setForm] = useState({ nome: "", cnpj: "", unidade: "", empreendimentoId: "", token: "", modo: "real", venceEm: "" });
   const [salvando, setSalvando] = useState(false);
   const [buscandoCnpj, setBuscandoCnpj] = useState(false);
 
@@ -3137,7 +3008,7 @@ function ConexoesTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimen
         toast(data.error || "Falha ao salvar", "error");
         return;
       }
-      toast(form.modo === "real" ? "Conexão real cadastrada (token criptografado)" : "Conexão de simulação cadastrada", "success");
+      toast("Conexão real cadastrada (token criptografado)", "success");
       setForm({ nome: "", cnpj: "", unidade: "", empreendimentoId: "", token: "", modo: "mock", venceEm: "" });
       onChanged();
     } catch {
@@ -3213,7 +3084,6 @@ function ConexoesTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimen
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium text-[var(--color-ink-500)]">Modo</label>
             <select value={form.modo} onChange={(e) => setForm((f) => ({ ...f, modo: e.target.value }))} className={inputCls}>
-              <option value="mock">Simulação (sem token)</option>
               <option value="real">Real (com token)</option>
             </select>
           </div>
