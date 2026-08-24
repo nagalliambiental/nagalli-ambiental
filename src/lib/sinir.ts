@@ -868,7 +868,41 @@ export async function cancelarManifesto(
   return { numero, simulacao: false };
 }
 
-// ---------- DMR// ---------- DMR (relatório no modelo do SINIR) ----------
+// ---------- Consulta de Classe por Resíduo ----------
+
+export async function consultarClassePorResiduo(
+  conexao: SinirConexaoCompleta,
+  resCodigoIbama: string
+): Promise<string> {
+  if (!resCodigoIbama) return "Não identificado";
+
+  const resultado = await apiFetch(conexao, "/retornaListaClassePorResiduo", {
+    method: "POST",
+    body: { resCodigoIbama },
+  });
+
+  const env = (resultado || {}) as { erro?: boolean; mensagem?: string; objeto?: unknown };
+  if (env.erro) {
+    return "Não identificado";
+  }
+
+  const obj = (env.objeto || env) as Record<string, unknown>;
+  const claCodigo = num(obj.claCodigo) ?? num(obj.claCodigoIbama) ?? undefined;
+  const mapaClasse: Record<number, string> = {
+    1: "A", // Classe I - Perigosos
+    2: "B", // Classe II A - Não inertes
+    3: "C", // Classe II B - Inertes
+  };
+  if (claCodigo && mapaClasse[claCodigo]) return mapaClasse[claCodigo];
+  return "D";
+}
+
+function num(v: unknown): number | null {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+// ---------- DMR (relatório no modelo do SINIR) ----------
 
 export interface DmrDeclarante {
   cnpj: string;

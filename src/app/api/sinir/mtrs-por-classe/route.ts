@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { logAuditoria } from "@/lib/audit";
-import { gerarPdfMtrsPorClasse } from "@/lib/sinir";
+import { consultarClassePorResiduo, gerarPdfMtrsPorClasse } from "@/lib/sinir";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   }
 
   const conexaoId = Number(req.nextUrl.searchParams.get("conexaoId"));
-  const filtro = req.nextUrl.searchParams.get("filtro") || "todos";
+  const filtro = req.nextUrl.searchParams.get("filtro") || "recebidos";
 
   if (!conexaoId) {
     return NextResponse.json({ error: "conexaoId é obrigatório" }, { status: 400 });
@@ -25,17 +25,39 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Conexão não encontrada" }, { status: 404 });
   }
 
-  const where: Record<string, unknown> = { conexaoId, status: "RECEBIDO" };
-  if (filtro === "pendentes") {
-    where.status = { in: ["SALVO", "EMITIDO"] };
-    where.certificado = false;
-  } else if (filtro === "certificados") {
+  const conexaoCompleta = {
+    id: conexao.id,
+    nome: conexao.nome,
+    cnpj: conexao.cnpj,
+    unidade: conexao.unidade,
+    token: conexao.token,
+    modo: conexao.modo,
+    venceEm: conexao.venceEm,
+    ativo: conexao.ativo,
+    ultimoUsoEm: conexao.ultimoUsoEm,
+  };
+
+  const filtroStatus = (() => {
+    switch (filtro) {
+      case "pendentes": return { in: ["SALVO", "EMITIDO"] };
+      case "certificados": return { equals: true };
+      case "cancelados": return { in: ["CANCELADO"] };
+      case "recebidos":
+      default: return { equals: "RECEBIDO" };
+    }
+  })();
+
+  const where: Record<string, unknown> = { conexaoId };
+  if (filtro !== "recebidos") {
+    where.status = filtroStatus;
+  } else {
+    where.status = "RECEBIDO";
+  }
+  if (filtro === "certificados") {
     where.certificado = true;
-  } else if (filtro === "cancelados") {
-    where.status = "CANCELADO";
   }
 
-  const manifestos = await prisma.sinirManifesto.findMany({
+  const manifestosLocais = await prisma.sinirManifesto.findMany({
     where,
     orderBy: [{ destinadorNome: "asc" }, { dataExpedicao: "asc" }],
   });
@@ -43,15 +65,34 @@ export async function GET(req: NextRequest) {
   const empreendimentoNome = conexao.empreendimento?.apelido || conexao.nome;
   const unidadeSinir = conexao.empreendimento?.unidadeSinir || conexao.unidade;
 
-  const mtrsPorClasse = manifestos.map((m) => ({
-    numero: m.numero,
-    classeRisco: m.classeRisco || "",
-    classeNome: m.classeNome || "Não identificado",
-    dataExpedicao: m.dataExpedicao,
-    destinadorNome: m.destinadorNome,
-    quantidade: m.quantidade,
-    unidade: m.unidade,
-  }));
+  const mtrsPorClasse: MtrPorClasseItem[] = [];
+
+  for (const m of manifestosLocais) {
+    let classeNome = "Não identificado";
+    let classeRisco = "";
+
+    const residuos = (m.residuos as unknown as Array<Record<string, unknown>>) || [];
+    if (residuos.length > 0) {
+      const primeiroResiduo = residuos[0];
+      const resCodigoIbama = (primeiroResiduo.resCodigoIbama as string) || (primeiroResiduo.resCodigo as string) || "";
+
+      if (resCodigoIbama) {
+        const classe = await consultarClassePorResiduo(conexaoCompleta, resCodigoIbama);
+        classeNome = classe;
+        classeRisco = resCodigoIbama;
+      }
+    }
+
+    mtrsPorClasse.push({
+      numero: m.numero,
+      classeRisco,
+      classeNome,
+      dataExpedicao: m.dataExpedicao,
+      destinadorNome: m.destinadorNome,
+      quantidade: m.quantidade,
+      unidade: m.unidade,
+    });
+  }
 
   const resultado = await gerarPdfMtrsPorClasse(empreendimentoNome, unidadeSinir, mtrsPorClasse);
 
@@ -59,7 +100,7 @@ export async function GET(req: NextRequest) {
     "DOWNLOAD",
     "SinirRelatorio",
     0,
-    { acao: "mtrsPorClasse", conexao: conexao.nome, mtrs: manifestos.length },
+    { acao: "mtrsPorClasse", conexao: conexao.nome, mtrs: manifestosLocais.length },
     session.user?.id ? Number(session.user.id) : undefined
   );
 
@@ -70,4 +111,14 @@ export async function GET(req: NextRequest) {
       "Content-Disposition": `attachment; filename="${resultado.nomeArquivo}"`,
     },
   });
+}
+
+interface MtrPorClasseItem {
+  numero: string;
+  classeRisco: string;
+  classeNome: string;
+  dataExpedicao: Date | null;
+  destinadorNome: string | null;
+  quantidade?: number | null;
+  unidade?: string | null;
 }
