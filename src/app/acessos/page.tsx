@@ -141,7 +141,7 @@ export default function AcessosPage() {
         actions={
           <div className="flex items-center gap-3">
             <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por login ou descrição..."
-              className="w-72 rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+              className="w-full sm:w-72 rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
             <select value={tipo} onChange={(e) => setTipo(e.target.value)}
               className="rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]"
             >
@@ -242,10 +242,10 @@ function Section({ title, icon: Icon, acessos, onDelete }: { title: string; icon
             <div key={a.id} className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-4">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Key size={14} className="text-[var(--color-brand-500)]" />
-                    <span className="font-medium text-sm text-[var(--color-ink-900)]">{a.login}</span>
-                    <span className="text-xs text-[var(--color-ink-400)] font-mono">{a.senha}</span>
+                    <span className="font-medium text-sm text-[var(--color-ink-900)] break-all">{a.login}</span>
+                    <span className="text-xs text-[var(--color-ink-400)] font-mono break-all">{a.senha}</span>
                   </div>
                   <p className="mt-1 text-sm text-[var(--color-ink-600)]">{a.descricao}</p>
                   {a.cliente && (

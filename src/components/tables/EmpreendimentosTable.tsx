@@ -17,14 +17,18 @@ interface EmpData {
 
 export function EmpreendimentosTable({ data }: { data: EmpData[] }) {
   const columns: Column<EmpData>[] = [
-    { header: "Apelido", sortable: true, sortKey: "apelido", render: (e) => <Link href={`/empreendimentos/${e.id}`} className="font-medium text-[var(--color-ink-900)] hover:text-[var(--color-brand-600)] hover:underline">{e.apelido}</Link> },
-    { header: "Cliente", render: (e) => <Link href={`/clientes/${e.cliente.id}`} className="hover:text-[var(--color-brand-600)] hover:underline">{e.cliente.apelido}</Link> },
+    { header: "Apelido", sortable: true, sortKey: "apelido", render: (e) => <Link href={`/empreendimentos/${e.id}`} className="font-medium text-[var(--color-ink-900)] hover:text-[var(--color-brand-600)] hover:underline"><span className="block max-w-[220px] truncate" title={e.apelido}>{e.apelido}</span></Link> },
+    { header: "Cliente", hideBelow: "md", render: (e) => <Link href={`/clientes/${e.cliente.id}`} className="hover:text-[var(--color-brand-600)] hover:underline"><span className="block max-w-[220px] truncate" title={e.cliente.apelido}>{e.cliente.apelido}</span></Link> },
     {
       header: "Endereço",
       className: "max-w-xs truncate",
-      render: (e) => [e.rua, e.numero && e.numero !== "0" && e.numero !== "S/N" ? e.numero : null, e.bairro].filter(Boolean).join(", ") || e.municipio || "-",
+      hideBelow: "lg",
+      render: (e) => {
+        const endereco = [e.rua, e.numero && e.numero !== "0" && e.numero !== "S/N" ? e.numero : null, e.bairro].filter(Boolean).join(", ") || e.municipio || "-";
+        return <span className="block max-w-[220px] truncate" title={endereco}>{endereco}</span>;
+      },
     },
-    { header: "Processos", headerClassName: "text-center", className: "text-center", render: (e) => e._count.processos },
+    { header: "Processos", headerClassName: "text-center", className: "text-center", hideBelow: "xl", render: (e) => e._count.processos },
     { header: "Ações", render: (e) => <RowActions detailUrl={`/empreendimentos/${e.id}`} editUrl={`/empreendimentos/${e.id}/editar`} entity="empreendimento" entityName="Empreendimento" endpoint={`/api/empreendimentos/${e.id}`} /> },
   ];
   return (

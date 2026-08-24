@@ -12,7 +12,15 @@ export interface Column<T extends { id: number }> {
   headerClassName?: string;
   sortable?: boolean;
   sortKey?: string;
+  hideBelow?: "sm" | "md" | "lg" | "xl";
 }
+
+const HIDE_BELOW_CLASS: Record<NonNullable<Column<{ id: number }>["hideBelow"]>, string> = {
+  sm: "hidden sm:table-cell",
+  md: "hidden md:table-cell",
+  lg: "hidden lg:table-cell",
+  xl: "hidden xl:table-cell",
+};
 
 interface DataTableProps<T extends { id: number }> {
   data: T[];
@@ -23,6 +31,7 @@ interface DataTableProps<T extends { id: number }> {
   extraBulkActions?: React.ReactNode | ((selectedIds: number[]) => React.ReactNode);
   extraRow?: (item: T) => React.ReactNode;
   pageSize?: number;
+  renderMobileCard?: (item: T) => React.ReactNode;
 }
 
 export function DataTable<T extends { id: number }>({
@@ -34,6 +43,7 @@ export function DataTable<T extends { id: number }>({
   extraBulkActions,
   extraRow,
   pageSize = 20,
+  renderMobileCard,
 }: DataTableProps<T>) {
   const { toast } = useToast();
   const router = useRouter();
@@ -139,7 +149,7 @@ export function DataTable<T extends { id: number }>({
       )}
       {data.length > 0 ? (
         <>
-          <div className="overflow-x-auto">
+          <div className={renderMobileCard ? "hidden overflow-x-auto md:block" : "overflow-x-auto"}>
             <table className="w-full text-sm">
               <colgroup>
                 <col className="w-[3%]" />
@@ -160,7 +170,7 @@ export function DataTable<T extends { id: number }>({
                   {columns.map((col, i) => (
                     <th
                       key={i}
-                      className={`text-left p-4 ${col.headerClassName || ""} ${col.sortable ? "cursor-pointer select-none hover:text-[var(--color-ink-700)]" : ""}`}
+                      className={`text-left p-4 ${col.hideBelow ? HIDE_BELOW_CLASS[col.hideBelow] : ""} ${col.headerClassName || ""} ${col.sortable ? "cursor-pointer select-none hover:text-[var(--color-ink-700)]" : ""}`}
                       onClick={() => col.sortable && col.sortKey && handleSort(col.sortKey)}
                     >
                       <span className="inline-flex items-center gap-1">
@@ -186,7 +196,7 @@ export function DataTable<T extends { id: number }>({
                         />
                       </td>
                       {columns.map((col, i) => (
-                        <td key={i} className={`p-4 ${col.className || ""}`}>
+                        <td key={i} className={`p-4 ${col.hideBelow ? HIDE_BELOW_CLASS[col.hideBelow] : ""} ${col.className || ""}`}>
                           {col.render(item)}
                         </td>
                       ))}
@@ -197,6 +207,14 @@ export function DataTable<T extends { id: number }>({
               </tbody>
             </table>
           </div>
+
+          {renderMobileCard && (
+            <ul className="divide-y divide-[var(--color-paper-100)] md:hidden">
+              {paginated.map((item) => (
+                <li key={item.id}>{renderMobileCard(item)}</li>
+              ))}
+            </ul>
+          )}
 
           <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--color-paper-200)] bg-[var(--color-paper-50)] px-4 py-3">
             <span className="text-xs font-medium tabular-nums text-[var(--color-ink-500)]">

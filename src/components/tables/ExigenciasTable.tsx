@@ -23,11 +23,11 @@ interface ExigenciaData {
 
 export function ExigenciasTable({ data }: { data: ExigenciaData[] }) {
   const columns: Column<ExigenciaData>[] = [
-    { header: "Descrição", sortable: true, sortKey: "descricao", className: "max-w-xs truncate", render: (e) => <Link href={`/exigencias/${e.id}`} className="font-medium text-[var(--color-ink-900)] hover:text-[var(--color-brand-600)] hover:underline">{e.descricao}</Link> },
-    { header: "Processo", render: (e) => <Link href={`/processos/${e.processo.id}`} className="font-mono text-sm text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)] hover:underline">{e.processo.numProtocolo}</Link> },
-    { header: "Tipo", render: (e) => e.processo.tipo },
-    { header: "Órgão", render: (e) => e.processo.orgao.sigla },
-    { header: "Empreendimento", render: (e) => e.processo.empreendimento.apelido },
+    { header: "Descrição", sortable: true, sortKey: "descricao", className: "max-w-xs truncate", render: (e) => <Link href={`/exigencias/${e.id}`} title={e.descricao} className="block max-w-[220px] truncate font-medium text-[var(--color-ink-900)] hover:text-[var(--color-brand-600)] hover:underline">{e.descricao}</Link> },
+    { header: "Processo", hideBelow: "md", render: (e) => <Link href={`/processos/${e.processo.id}`} className="font-mono text-sm text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)] hover:underline">{e.processo.numProtocolo}</Link> },
+    { header: "Tipo", hideBelow: "lg", render: (e) => e.processo.tipo },
+    { header: "Órgão", hideBelow: "lg", render: (e) => e.processo.orgao.sigla },
+    { header: "Empreendimento", hideBelow: "lg", render: (e) => e.processo.empreendimento.apelido },
     {
       header: "Prazo",
       sortable: true, sortKey: "prazo",

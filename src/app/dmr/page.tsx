@@ -181,7 +181,7 @@ export default function DmrPage() {
 
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5 mb-6">
         <h2 className="font-display text-base font-semibold mb-3">Adicionar empreendimento ao controle (DMR)</h2>
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row">
           <div className="relative flex-1">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-ink-400)]" />
             <input
@@ -242,16 +242,16 @@ export default function DmrPage() {
           <p className="text-sm text-[var(--color-ink-500)]">Nenhum empreendimento cadastrado. Adicione um acima.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full table-fixed text-sm">
+            <table className="w-full min-w-[760px] table-fixed text-sm">
               <colgroup>
-                <col className="w-[3%]" />
-                <col className="w-[22%]" />
-                <col className="w-[22%]" />
-                <col className="w-[11%]" />
-                <col className="w-[11%]" />
-                <col className="w-[11%]" />
-                <col className="w-[11%]" />
-                <col className="w-[9%]" />
+                <col className="w-[4%]" />
+                <col className="w-[16%]" />
+                <col className="w-[20%]" />
+                <col className="w-[14%]" />
+                <col className="w-[14%]" />
+                <col className="w-[14%]" />
+                <col className="w-[14%]" />
+                <col className="w-[4%]" />
               </colgroup>
               <thead>
                 <tr className="border-b border-[var(--color-paper-200)] bg-[var(--color-paper-50)] text-left text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-500)]">
@@ -310,7 +310,7 @@ export default function DmrPage() {
                             <select
                               value={combined}
                               onChange={(e) => alterar(e.target.value)}
-                              className={`w-full max-w-[90px] rounded border px-1 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-500)] ${
+                              className={`w-full max-w-[90px] rounded border px-1.5 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-500)] ${
                                 ambosOk ? "border-green-300 bg-green-50" : algumPendente ? "border-amber-300 bg-amber-50" : "border-[var(--color-paper-200)] bg-white"
                               }`}
                             >
@@ -327,7 +327,7 @@ export default function DmrPage() {
                                 value={enviadaEm ? enviadaEm.slice(0, 10) : ""}
                                 onChange={(e) => registrarEnvio(r.id, campoEnviada as string, e.target.value)}
                                 title="Data de envio da DMR no portal"
-                                className="w-[110px] rounded border border-[var(--color-paper-200)] px-1 py-0.5 text-[10px] text-[var(--color-ink-600)] focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-500)]"
+                                className="w-full min-w-0 max-w-[92px] rounded border border-[var(--color-paper-200)] px-1.5 py-0.5 text-[10px] text-[var(--color-ink-600)] focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-500)]"
                               />
                               {enviadaEm && <span className="text-[10px] font-medium text-green-600" title="Enviada em">✓</span>}
                             </div>

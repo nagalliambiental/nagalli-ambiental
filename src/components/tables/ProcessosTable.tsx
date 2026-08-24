@@ -31,10 +31,10 @@ const statusColors: Record<string, string> = {
 
 export function ProcessosTable({ data }: { data: ProcessoData[] }) {
   const columns: Column<ProcessoData>[] = [
-    { header: "Protocolo", sortable: true, sortKey: "numProtocolo", render: (p) => <Link href={`/processos/${p.id}`} className="font-mono text-sm text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)] hover:underline">{p.numProtocolo}</Link> },
-    { header: "Tipo", sortable: true, sortKey: "tipo", render: (p) => p.tipo },
-    { header: "Órgão", render: (p) => <span className="font-medium text-[var(--color-ink-900)]">{p.orgao.sigla}</span> },
-    { header: "Empreendimento", render: (p) => <Link href={`/empreendimentos/${p.empreendimento.id}`} className="hover:text-[var(--color-brand-600)] hover:underline">{p.empreendimento.apelido}</Link> },
+    { header: "Protocolo", sortable: true, sortKey: "numProtocolo", render: (p) => <Link href={`/processos/${p.id}`} className="font-mono text-sm text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)] hover:underline"><span className="block max-w-[220px] truncate" title={p.numProtocolo}>{p.numProtocolo}</span></Link> },
+    { header: "Tipo", sortable: true, sortKey: "tipo", hideBelow: "lg", render: (p) => <span className="block max-w-[220px] truncate" title={p.tipo}>{p.tipo}</span> },
+    { header: "Órgão", hideBelow: "md", render: (p) => <span className="font-medium text-[var(--color-ink-900)]">{p.orgao.sigla}</span> },
+    { header: "Empreendimento", hideBelow: "lg", render: (p) => <Link href={`/empreendimentos/${p.empreendimento.id}`} className="hover:text-[var(--color-brand-600)] hover:underline"><span className="block max-w-[220px] truncate" title={p.empreendimento.apelido}>{p.empreendimento.apelido}</span></Link> },
     {
       header: "Status",
       sortable: true, sortKey: "status",
@@ -46,6 +46,7 @@ export function ProcessosTable({ data }: { data: ProcessoData[] }) {
     },
     {
       header: "Validade",
+      hideBelow: "md",
       render: (p) => (p.validade ? format(new Date(p.validade), "dd/MM/yyyy", { locale: ptBR }) : "—"),
     },
     { header: "Ações", render: (p) => <RowActions detailUrl={`/processos/${p.id}`} editUrl={`/processos/${p.id}/editar`} entity="processo" entityName="Processo" endpoint={`/api/processos/${p.id}`} /> },

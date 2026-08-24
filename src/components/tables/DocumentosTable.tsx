@@ -40,9 +40,8 @@ export function DocumentosTable({ data }: { data: DocData[] }) {
     {
       header: "Nome",
       sortable: true, sortKey: "nome",
-      className: "max-w-xs truncate",
       render: (d) => (
-        <Link href={`/documentos/${d.id}`} className="font-medium text-[var(--color-ink-900)] hover:text-[var(--color-brand-600)] hover:underline">
+        <Link href={`/documentos/${d.id}`} title={d.nome} className="block max-w-[220px] truncate font-medium text-[var(--color-ink-900)] hover:text-[var(--color-brand-600)] hover:underline">
           {d.nome}
         </Link>
       ),
@@ -56,9 +55,9 @@ export function DocumentosTable({ data }: { data: DocData[] }) {
         </span>
       ),
     },
-    { header: "Processo", render: (d) => <span className="font-mono text-sm">{d.processo?.numProtocolo || "—"}</span> },
-    { header: "Tamanho", render: (d) => formatBytes(d.tamanho) },
-    { header: "Data", sortable: true, sortKey: "criadoEm", render: (d) => format(new Date(d.criadoEm), "dd/MM/yyyy", { locale: ptBR }) },
+    { header: "Processo", hideBelow: "lg", render: (d) => <span className="font-mono text-sm">{d.processo?.numProtocolo || "—"}</span> },
+    { header: "Tamanho", hideBelow: "lg", render: (d) => formatBytes(d.tamanho) },
+    { header: "Data", sortable: true, sortKey: "criadoEm", hideBelow: "xl", render: (d) => format(new Date(d.criadoEm), "dd/MM/yyyy", { locale: ptBR }) },
     {
       header: "Ações",
       render: (d) => (

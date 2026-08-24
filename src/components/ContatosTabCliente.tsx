@@ -27,7 +27,7 @@ interface ContatosTabClienteProps {
   clienteId: string;
 }
 
-export function ContatosTabCliente({ empreendimentos, clienteId }: ContatosTabClienteProps) {
+export function ContatosTabCliente({ empreendimentos }: ContatosTabClienteProps) {
   const { toast } = useToast();
   const [empreendimentoId, setEmpreendimentoId] = useState("");
   const [contatos, setContatos] = useState<ContatoEmpreendimento[]>([]);
@@ -140,7 +140,7 @@ export function ContatosTabCliente({ empreendimentos, clienteId }: ContatosTabCl
         <div className="mt-6 flex flex-col items-center gap-2 py-8 text-[var(--color-ink-500)]">
           <Building2 size={24} />
           <p className="text-sm">Nenhum empreendimento cadastrado para este cliente.</p>
-          <p className="text-xs">Adicione um empreendimento na aba "Empreendimentos" para começar a cadastrar contatos.</p>
+          <p className="text-xs">Adicione um empreendimento na aba &quot;Empreendimentos&quot; para começar a cadastrar contatos.</p>
         </div>
       </div>
     );

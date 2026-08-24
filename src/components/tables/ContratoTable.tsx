@@ -28,13 +28,14 @@ function getSituacao(r: ContratoData) {
 
 export function ContratoTable({ data }: { data: ContratoData[] }) {
   const columns: Column<ContratoData>[] = [
-    { header: "Cliente", sortable: true, sortKey: "clienteId", render: (r) => <Link href={`/clientes/${r.cliente.id}`} className="font-medium text-[var(--color-ink-900)] hover:text-[var(--color-brand-600)] hover:underline">{r.cliente.apelido}</Link> },
+    { header: "Cliente", sortable: true, sortKey: "clienteId", hideBelow: "md", render: (r) => <Link href={`/clientes/${r.cliente.id}`} className="font-medium text-[var(--color-ink-900)] hover:text-[var(--color-brand-600)] hover:underline">{r.cliente.apelido}</Link> },
     {
       header: "Empreendimento",
+      hideBelow: "lg",
       render: (r) => (r.empreendimento ? <Link href={`/empreendimentos/${r.empreendimento.id}`} className="text-[var(--color-brand-600)] hover:underline">{r.empreendimento.apelido}</Link> : "—"),
     },
-    { header: "Serviço / Processo", render: (r) => <span className="line-clamp-1 max-w-[260px]">{r.servicoProcesso}</span> },
-    { header: "Assinatura", sortable: true, sortKey: "dataAssinatura", render: (r) => format(new Date(r.dataAssinatura), "dd/MM/yyyy", { locale: ptBR }) },
+    { header: "Serviço / Processo", render: (r) => <span className="block max-w-[220px] truncate" title={r.servicoProcesso}>{r.servicoProcesso}</span> },
+    { header: "Assinatura", sortable: true, sortKey: "dataAssinatura", hideBelow: "xl", render: (r) => format(new Date(r.dataAssinatura), "dd/MM/yyyy", { locale: ptBR }) },
     { header: "Validade", sortable: true, sortKey: "dataValidade", render: (r) => format(new Date(r.dataValidade), "dd/MM/yyyy", { locale: ptBR }) },
     {
       header: "Situação",

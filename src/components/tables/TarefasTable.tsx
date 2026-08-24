@@ -32,14 +32,14 @@ const prioridadeColors: Record<string, string> = {
 
 export function TarefasTable({ data }: { data: TarefaData[] }) {
   const columns: Column<TarefaData>[] = [
-    { header: "Título", sortable: true, sortKey: "titulo", className: "max-w-xs truncate", render: (t) => <Link href={`/tarefas/${t.id}`} className="font-medium text-[var(--color-ink-900)] hover:text-[var(--color-brand-600)] hover:underline">{t.titulo}</Link> },
+    { header: "Título", sortable: true, sortKey: "titulo", className: "max-w-xs truncate", render: (t) => <Link href={`/tarefas/${t.id}`} className="font-medium text-[var(--color-ink-900)] hover:text-[var(--color-brand-600)] hover:underline"><span className="block max-w-[220px] truncate" title={t.titulo}>{t.titulo}</span></Link> },
     {
       header: "Prioridade",
       sortable: true, sortKey: "prioridade",
       render: (t) => <span className={`text-sm font-medium ${prioridadeColors[t.prioridade] || "text-[var(--color-ink-700)]"}`}>{prioridadeLabels[t.prioridade] || t.prioridade}</span>,
     },
-    { header: "Responsável", render: (t) => t.responsavel.nome },
-    { header: "Criador", render: (t) => t.usuario.nome },
+    { header: "Responsável", hideBelow: "md", render: (t) => t.responsavel.nome },
+    { header: "Criador", hideBelow: "lg", render: (t) => t.usuario.nome },
     {
       header: "Status",
       sortable: true, sortKey: "status",
@@ -47,6 +47,7 @@ export function TarefasTable({ data }: { data: TarefaData[] }) {
     },
     {
       header: "Vencimento",
+      hideBelow: "md",
       render: (t) => (t.dataVencimento ? format(new Date(t.dataVencimento), "dd/MM/yyyy", { locale: ptBR }) : "—"),
     },
     { header: "Ações", render: (t) => <RowActions detailUrl={`/tarefas/${t.id}`} editUrl={`/tarefas/${t.id}/editar`} entity="tarefa" entityName="Tarefa" endpoint={`/api/tarefas/${t.id}`} /> },

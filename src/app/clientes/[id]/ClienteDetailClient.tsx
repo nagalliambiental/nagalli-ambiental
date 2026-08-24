@@ -244,7 +244,7 @@ export function ClienteDetailClient({
         title={cliente.apelido}
         subtitle="Detalhes do cliente"
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {podeVerFinanceiro && (
               <VisibilidadeToggle endpoint={`/api/clientes/${id}`} visibilidade={cliente.visibilidade} />
             )}
@@ -321,7 +321,7 @@ export function ClienteDetailClient({
       )}
 
       <div className="mb-6 border-b border-[var(--color-paper-200)]">
-        <nav className="flex gap-6">
+        <nav className="flex flex-wrap gap-x-6 gap-y-2">
           {tabs.map((t) => (
             <button
               key={t.key}
@@ -546,8 +546,8 @@ export function ClienteDetailClient({
                 {exporting ? "Exportando..." : "Exportar ZIP"}
               </button>
             </div>
-            <div className="flex items-end gap-3">
-              <div className="flex-1">
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="w-full sm:flex-1">
                 <label className="block text-xs font-medium text-[var(--color-ink-500)] mb-1">Arquivo</label>
                 <input
                   type="file"
@@ -599,10 +599,10 @@ export function ClienteDetailClient({
               <h2 className="font-display text-base font-semibold mb-4">Documentos enviados</h2>
               <div className="space-y-2">
                 {documentos.map((d) => (
-                  <div key={d.id} className="flex items-center justify-between border-b border-[var(--color-paper-200)] pb-2 text-sm">
-                    <div className="flex items-center gap-3">
-                      <FileText size={16} className="text-[var(--color-ink-400)]" />
-                      <span className="text-[var(--color-ink-700)]">{d.nome}</span>
+                  <div key={d.id} className="flex items-center justify-between gap-3 border-b border-[var(--color-paper-200)] pb-2 text-sm">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <FileText size={16} className="shrink-0 text-[var(--color-ink-400)]" />
+                      <span title={d.nome} className="min-w-0 truncate text-[var(--color-ink-700)]">{d.nome}</span>
                       <span className="text-xs text-[var(--color-ink-400)]">({(d.tamanho / 1024).toFixed(1)} KB)</span>
                     </div>
                     <div className="flex items-center gap-3">

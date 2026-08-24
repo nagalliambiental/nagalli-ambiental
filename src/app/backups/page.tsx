@@ -45,25 +45,25 @@ export default async function BackupsPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--color-paper-200)] bg-[var(--color-paper-50)] text-left text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-500)]">
-                  <th className="px-5 py-3 font-medium">Data</th>
-                  <th className="px-5 py-3 font-medium">Origem</th>
-                  <th className="px-5 py-3 font-medium">Gerado por</th>
-                  <th className="px-5 py-3 font-medium">Tamanho</th>
-                  <th className="px-5 py-3 font-medium text-right">Ação</th>
+                  <th className="px-3 py-3 font-medium">Data</th>
+                  <th className="hidden md:table-cell px-3 py-3 font-medium">Origem</th>
+                  <th className="hidden md:table-cell px-3 py-3 font-medium">Gerado por</th>
+                  <th className="hidden lg:table-cell px-3 py-3 font-medium">Tamanho</th>
+                  <th className="px-3 py-3 font-medium text-right">Ação</th>
                 </tr>
               </thead>
               <tbody>
                 {backups.map((b) => (
                   <tr key={b.id} className="border-b border-[var(--color-paper-200)] last:border-0 hover:bg-[var(--color-paper-50)] transition-colors">
-                    <td className="px-5 py-3 text-[var(--color-ink-800)]">{formatDataHora(b.criadoEm)}</td>
-                    <td className="px-5 py-3">
+                    <td className="px-3 py-3 text-[var(--color-ink-800)]">{formatDataHora(b.criadoEm)}</td>
+                    <td className="hidden md:table-cell px-3 py-3">
                       <span className={`inline-block rounded px-2 py-1 text-xs font-medium ${b.origem === "manual" ? "bg-amber-50 text-amber-700" : "bg-green-50 text-green-700"}`}>
                         {b.origem === "manual" ? "Manual" : "Automático"}
                       </span>
                     </td>
-                    <td className="px-5 py-3 text-[var(--color-ink-600)]">{b.usuario?.nome || "—"}</td>
-                    <td className="px-5 py-3 text-[var(--color-ink-600)]">{formatTamanho(b.tamanho)}</td>
-                    <td className="px-5 py-3 text-right">
+                    <td className="hidden md:table-cell px-3 py-3 text-[var(--color-ink-600)]"><span className="block max-w-[180px] truncate" title={b.usuario?.nome || undefined}>{b.usuario?.nome || "—"}</span></td>
+                    <td className="hidden lg:table-cell px-3 py-3 text-[var(--color-ink-600)]">{formatTamanho(b.tamanho)}</td>
+                    <td className="px-3 py-3 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <a
                           href={`/api/backups/${b.id}`}

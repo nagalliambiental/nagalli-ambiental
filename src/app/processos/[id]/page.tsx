@@ -85,7 +85,7 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
         title={`Processo ${processo.numProtocolo}`}
         subtitle={processo.tipo}
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Link
               href={`/processos/${processo.id}/editar`}
               className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]"

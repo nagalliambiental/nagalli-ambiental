@@ -45,14 +45,14 @@ export function ClientesTable({ data }: { data: ClienteData[] }) {
           >
             {expandedId === c.id ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
           </button>
-          <Link href={`/clientes/${c.id}`} className="font-medium text-[var(--color-ink-900)] hover:text-[var(--color-brand-600)] hover:underline">{c.apelido}</Link>
+          <Link href={`/clientes/${c.id}`} className="font-medium text-[var(--color-ink-900)] hover:text-[var(--color-brand-600)] hover:underline"><span className="block max-w-[220px] truncate" title={c.apelido}>{c.apelido}</span></Link>
         </div>
       ),
     },
-    { header: "Razão Social", sortable: true, sortKey: "razaoSocial", render: (c) => c.razaoSocial },
-    { header: "CNPJ", sortable: true, sortKey: "cnpj", render: (c) => c.cnpj },
-    { header: "Telefone", render: (c) => c.telefone },
-    { header: "Empreendimentos", headerClassName: "text-center", className: "text-center", render: (c) => c._count.empreendimentos },
+    { header: "Razão Social", sortable: true, sortKey: "razaoSocial", hideBelow: "md", render: (c) => <span className="block max-w-[220px] truncate" title={c.razaoSocial}>{c.razaoSocial}</span> },
+    { header: "CNPJ", sortable: true, sortKey: "cnpj", hideBelow: "md", render: (c) => c.cnpj },
+    { header: "Telefone", hideBelow: "xl", render: (c) => c.telefone },
+    { header: "Empreendimentos", headerClassName: "text-center", className: "text-center", hideBelow: "xl", render: (c) => c._count.empreendimentos },
     { header: "Ações", render: (c) => <RowActions detailUrl={`/clientes/${c.id}`} editUrl={`/clientes/${c.id}/editar`} entity="cliente" entityName="Cliente" endpoint={`/api/clientes/${c.id}`} /> },
   ];
 

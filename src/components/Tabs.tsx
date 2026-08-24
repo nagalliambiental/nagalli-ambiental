@@ -16,7 +16,7 @@ export function Tabs({ tabs }: { tabs: TabItem[] }) {
   return (
     <div>
       <div className="mb-6 border-b border-[var(--color-paper-200)]">
-        <nav className="flex gap-6">
+        <nav className="flex flex-wrap gap-x-6 gap-y-2">
           {tabs.map((t) => (
             <button
               key={t.key}

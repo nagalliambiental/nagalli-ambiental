@@ -50,33 +50,33 @@ export default async function UsuariosPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[var(--color-paper-200)] bg-[var(--color-paper-50)] text-left text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-500)]">
-                <th className="text-left p-4 font-medium">Nome</th>
-                <th className="text-left p-4 font-medium">Email</th>
-                <th className="text-left p-4 font-medium">Perfil</th>
-                <th className="text-center p-4 font-medium">Tarefas</th>
-                <th className="text-center p-4 font-medium">Ativo</th>
-                <th className="text-left p-4 font-medium">Ações</th>
+                <th className="text-left px-3 py-3 font-medium">Nome</th>
+                <th className="text-left px-3 py-3 font-medium">Email</th>
+                <th className="text-left hidden md:table-cell px-3 py-3 font-medium">Perfil</th>
+                <th className="text-center hidden lg:table-cell px-3 py-3 font-medium">Tarefas</th>
+                <th className="text-center hidden lg:table-cell px-3 py-3 font-medium">Ativo</th>
+                <th className="text-left px-3 py-3 font-medium">Ações</th>
               </tr>
             </thead>
             <tbody>
               {usuarios.map((u) => (
                 <tr key={u.id} className="border-t border-[var(--color-paper-200)] text-[var(--color-ink-700)] hover:bg-[var(--color-paper-50)] transition-colors">
-                  <td className="p-4 font-medium text-[var(--color-ink-900)]">{u.nome}</td>
-                  <td className="p-4">{u.email}</td>
-                  <td className="p-4">
+                  <td className="px-3 py-3 font-medium text-[var(--color-ink-900)]"><span className="block max-w-[200px] truncate" title={u.nome}>{u.nome}</span></td>
+                  <td className="px-3 py-3"><span className="block max-w-[200px] truncate" title={u.email}>{u.email}</span></td>
+                  <td className="hidden md:table-cell px-3 py-3">
                     <span className={`inline-block rounded px-2 py-1 text-xs font-medium ${perfilColors[u.perfil] || "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]"}`}>
                       {perfilLabels[u.perfil] || u.perfil}
                     </span>
                   </td>
-                  <td className="p-4 text-center">{u._count.tarefas}</td>
-                  <td className="p-4 text-center">
+                  <td className="hidden lg:table-cell px-3 py-3 text-center">{u._count.tarefas}</td>
+                  <td className="hidden lg:table-cell px-3 py-3 text-center">
                     {u.ativo ? (
                       <Check size={18} className="text-[var(--color-brand-600)]" />
                     ) : (
                       <X size={18} className="text-[var(--color-river-700)]" />
                     )}
                   </td>
-                  <td className="p-4">
+                  <td className="px-3 py-3">
                     <RowActions detailUrl={`/usuarios/${u.id}`} editUrl={`/usuarios/${u.id}`} entity="usuario" entityName="Usuário" endpoint={`/api/usuarios/${u.id}`} />
                   </td>
                 </tr>

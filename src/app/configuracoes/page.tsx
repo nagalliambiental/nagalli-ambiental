@@ -414,9 +414,9 @@ function LogsTab() {
                 <th className="text-left py-2 px-2 font-medium text-[var(--color-ink-700)]">Data/Hora</th>
                 <th className="text-left py-2 px-2 font-medium text-[var(--color-ink-700)]">Ação</th>
                 <th className="text-left py-2 px-2 font-medium text-[var(--color-ink-700)]">Entidade</th>
-                <th className="text-left py-2 px-2 font-medium text-[var(--color-ink-700)]">ID</th>
+                <th className="text-left hidden md:table-cell py-2 px-2 font-medium text-[var(--color-ink-700)]">ID</th>
                 <th className="text-left py-2 px-2 font-medium text-[var(--color-ink-700)]">Usuário</th>
-                <th className="text-left py-2 px-2 font-medium text-[var(--color-ink-700)]">Detalhes</th>
+                <th className="text-left hidden lg:table-cell py-2 px-2 font-medium text-[var(--color-ink-700)]">Detalhes</th>
               </tr>
             </thead>
             <tbody>
@@ -429,10 +429,10 @@ function LogsTab() {
                     </span>
                   </td>
                   <td className="py-2 px-2 text-[var(--color-ink-600)] capitalize">{log.entidade}</td>
-                  <td className="py-2 px-2 text-[var(--color-ink-600)]">{log.entidadeId}</td>
-                  <td className="py-2 px-2 text-[var(--color-ink-600)]">{log.usuario?.nome || "—"}</td>
-                  <td className="py-2 px-2 text-[var(--color-ink-500)] max-w-[220px] truncate">
-                    {log.dados ? <span title={log.dados} className="cursor-help font-mono text-xs">{log.dados}</span> : "—"}
+                  <td className="hidden md:table-cell py-2 px-2 text-[var(--color-ink-600)]">{log.entidadeId}</td>
+                  <td className="py-2 px-2 text-[var(--color-ink-600)]"><span className="block max-w-[160px] truncate" title={log.usuario?.nome || undefined}>{log.usuario?.nome || "—"}</span></td>
+                  <td className="hidden lg:table-cell py-2 px-2 text-[var(--color-ink-500)]">
+                    {log.dados ? <span title={log.dados} className="block max-w-[200px] truncate cursor-help font-mono text-xs">{log.dados}</span> : "—"}
                   </td>
                 </tr>
               ))}

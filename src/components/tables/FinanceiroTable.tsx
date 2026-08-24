@@ -27,10 +27,10 @@ const statusColors: Record<string, string> = {
 
 export function FinanceiroTable({ data }: { data: FinanceiroData[] }) {
   const columns: Column<FinanceiroData>[] = [
-    { header: "Cliente", render: (r) => <Link href={`/clientes/${r.cliente.id}`} className="font-medium text-[var(--color-ink-900)] hover:text-[var(--color-brand-600)] hover:underline">{r.cliente.apelido}</Link> },
-    { header: "Tipo", sortable: true, sortKey: "tipoCobranca", render: (r) => r.tipoCobranca },
+    { header: "Cliente", render: (r) => <Link href={`/clientes/${r.cliente.id}`} title={r.cliente.apelido} className="block max-w-[220px] truncate font-medium text-[var(--color-ink-900)] hover:text-[var(--color-brand-600)] hover:underline">{r.cliente.apelido}</Link> },
+    { header: "Tipo", sortable: true, sortKey: "tipoCobranca", hideBelow: "md", render: (r) => r.tipoCobranca },
     { header: "Valor", sortable: true, sortKey: "valor", headerClassName: "text-right", className: "text-right font-medium", render: (r) => r.valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) },
-    { header: "Pagamento", render: (r) => r.formaPagamento || "—" },
+    { header: "Pagamento", hideBelow: "lg", render: (r) => r.formaPagamento || "—" },
     {
       header: "Status",
       sortable: true, sortKey: "statusPagamento",
@@ -38,6 +38,7 @@ export function FinanceiroTable({ data }: { data: FinanceiroData[] }) {
     },
     {
       header: "Vencimento",
+      hideBelow: "sm",
       render: (r) => (r.dataVencimento ? format(new Date(r.dataVencimento), "dd/MM/yyyy", { locale: ptBR }) : "—"),
     },
     { header: "Ações", render: (r) => <RowActions detailUrl={`/financeiro/${r.id}`} editUrl={`/financeiro/${r.id}/editar`} entity="financeiro" entityName="Registro Financeiro" endpoint={`/api/financeiro/${r.id}`} /> },

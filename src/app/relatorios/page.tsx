@@ -37,7 +37,7 @@ function preview(url: string) {
 
 function DownloadButtons({ url, hook }: { url: string; hook: ReturnType<typeof useDownload> }) {
   return (
-    <div className="flex gap-2">
+    <div className="flex flex-wrap gap-2">
       <button onClick={() => preview(url)}
         className="focus-ring transition-brand flex items-center gap-2 rounded-lg border border-[var(--color-paper-200)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]">
         <Eye size={16} /> Visualizar
