@@ -9,6 +9,16 @@ function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+// Trimestre corrente (período de referência do SINIR): 24/08/2026 -> 3º trimestre = 01/07/2026 a 30/09/2026
+export function trimestreCorrente(ref = new Date()) {
+  const ano = ref.getFullYear();
+  const indice = Math.floor(ref.getMonth() / 3);
+  const inicio = new Date(ano, indice * 3, 1);
+  const fim = new Date(ano, indice * 3 + 3, 0, 23, 59, 59, 999);
+  const rotulo = `${indice + 1}º trimestre de ${ano}`;
+  return { inicio, fim, numero: indice + 1, ano, rotulo };
+}
+
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user) {
@@ -41,13 +51,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Nenhum contato válido selecionado" }, { status: 400 });
   }
 
+  const { inicio, fim, rotulo } = trimestreCorrente();
+
   const manifestos = await prisma.sinirManifesto.findMany({
-    where: { conexaoId: conexao.id, status: "SALVO" },
+    where: {
+      conexaoId: conexao.id,
+      status: "SALVO",
+      dataExpedicao: { gte: inicio, lte: fim },
+    },
     orderBy: [{ destinadorNome: "asc" }, { dataExpedicao: "asc" }],
     select: { numero: true, destinadorNome: true, dataExpedicao: true },
   });
   if (manifestos.length === 0) {
-    return NextResponse.json({ error: "Nenhum MTR na situação Salvo para esta conexão — consulte o SINIR em Meus MTRs antes de notificar" }, { status: 400 });
+    return NextResponse.json(
+      { error: `Nenhum MTR na situação Salvo com emissão dentro do ${rotulo} (${inicio.toLocaleDateString("pt-BR")} a ${fim.toLocaleDateString("pt-BR")}) — consulte o SINIR em Meus MTRs antes de notificar` },
+      { status: 400 }
+    );
   }
 
   const empreendimentoNome = conexao.empreendimento?.apelido || conexao.nome;
@@ -72,7 +91,7 @@ export async function POST(req: NextRequest) {
       )
       .join("");
     secoesHtml +=
-      `<div style="margin:0 0 18px 0;"><p style="margin:0 0 6px 0;font-size:13px;font-weight:bold;letter-spacing:.04em;color:#36602c;text-transform:uppercase;">${esc(destinador)}</p>` +
+      `<div style="margin:0 0 18px 0;">      <p style="margin:0 0 6px 0;font-size:13px;font-weight:bold;letter-spacing:.04em;color:#36602c;text-transform:uppercase;">${esc(destinador)}</p>` +
       `<table style="width:100%;border-collapse:collapse;background:#faf9f4;border-radius:6px;font-size:13px;">${itens}</table></div>`;
   }
 
@@ -86,7 +105,8 @@ export async function POST(req: NextRequest) {
       <h2 style="margin:0 0 10px 0;font-size:17px;color:#1e2418;">MTRs aguardando confirmação de recebimento</h2>
       <p style="margin:0 0 6px 0;font-size:14px;color:#3d4534;line-height:1.55;">Prezado(a) parceiro(a),</p>
       <p style="margin:0 0 14px 0;font-size:14px;color:#3d4534;line-height:1.55;">
-        Os manifestos de transporte de resíduos listados abaixo encontram-se na situação <b>"Salvo"</b> no portal SINIR,
+        Os manifestos de transporte de resíduos listados abaixo, emitidos no período do <b>${esc(rotulo)}</b>
+        (${inicio.toLocaleDateString("pt-BR")} a ${fim.toLocaleDateString("pt-BR")}), encontram-se na situação <b>"Salvo"</b> no portal SINIR,
         aguardando a confirmação de recebimento pelo destinador. Solicitamos que as empresas responsáveis acessem o sistema
         e regularizem os recebimentos.
       </p>
@@ -106,12 +126,12 @@ export async function POST(req: NextRequest) {
   </div>
 </body></html>`;
 
-  const pdf = await gerarPdfMtrsSalvosPorDestinador(empreendimentoNome, unidadeSinir, manifestos);
+  const pdf = await gerarPdfMtrsSalvosPorDestinador(empreendimentoNome, unidadeSinir, manifestos, rotulo);
 
   try {
     const resultado = await enviarEmail({
       to: contatos.map((c) => c.email),
-      subject: `[Nagalli Ambiental] MTRs aguardando recebimento no SINIR — ${empreendimentoNome}`,
+      subject: `[Nagalli Ambiental] MTRs aguardando recebimento no SINIR — ${rotulo} — ${empreendimentoNome}`,
       html,
       anexos: [{ filename: pdf.nomeArquivo, content: Buffer.from(pdf.buffer) }],
     });

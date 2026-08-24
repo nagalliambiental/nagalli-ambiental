@@ -45,6 +45,7 @@ interface Manifesto {
   numero: string;
   status: string;
   certificado: boolean;
+  cdfNumero?: string | null;
   clienteNome: string | null;
   empreendNome: string | null;
   transportadorNome: string | null;
@@ -797,6 +798,11 @@ function diasEmSalvo(m: Manifesto) {
   return Math.max(0, Math.floor((Date.now() - base.getTime()) / 86400000));
 }
 
+// Rótulo do trimestre corrente (período de referência do SINIR)
+function rotuloTrimestre(ref = new Date()) {
+  return `${Math.floor(ref.getMonth() / 3) + 1}º trimestre de ${ref.getFullYear()}`;
+}
+
 function MeusMtrsTab(props: {
   conexoes: Conexao[];
   empreendimentos: EmpreendimentoOpcao[];
@@ -1119,6 +1125,7 @@ function MeusMtrsTab(props: {
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Transportador</th>
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Expedição</th>
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Classe</th>
+                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">CDF</th>
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Situação</th>
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Ações</th>
                 </tr>
@@ -1139,6 +1146,15 @@ function MeusMtrsTab(props: {
                         <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.transportadorNome || "—"}</td>
                         <td className="py-2 px-2 text-[var(--color-ink-600)] whitespace-nowrap">{fmtData(m.dataExpedicao)}</td>
                         <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.classeNome || "—"}</td>
+                        <td className="py-2 px-2">
+                          {m.cdfNumero ? (
+                            <span className="inline-flex items-center gap-1 rounded bg-emerald-50 px-1.5 py-0.5 font-mono text-xs font-medium text-emerald-700">
+                              <ShieldCheck size={12} /> {m.cdfNumero}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-[var(--color-ink-400)]">—</span>
+                          )}
+                        </td>
                         <td className="py-2 px-2">
                           {m.status === "RECEBIDO" ? (
                             <span className="inline-flex items-center gap-1 rounded bg-green-50 px-1.5 py-0.5 text-xs font-medium text-green-700">
@@ -1228,7 +1244,8 @@ function MeusMtrsTab(props: {
                 <b>{empreendimentoAtual?.apelido || conexaoAtual?.nome}</b>
                 {empreendimentoAtual?.unidadeSinir ? ` · Unidade SINIR ${empreendimentoAtual.unidadeSinir}` : ""}
                 {" — "}
-                <b>{salvosParaNotificar.length} MTR(s)</b> na situação Salvo, agrupados por destinador. O relatório em PDF vai em anexo.
+                <b>{salvosParaNotificar.length} MTR(s)</b> na situação Salvo no período do{" "}
+                <b>{rotuloTrimestre()}</b>, agrupados por destinador. O relatório em PDF vai em anexo.
               </div>
 
               {carregandoContatos ? (

@@ -18,6 +18,7 @@ export interface SinirManifestoDados {
   numero: string;
   status: SinirStatus | string;
   certificado: boolean;
+  cdfNumero?: string;
   clienteNome?: string;
   empreendNome?: string;
   transportadorNome?: string;
@@ -434,6 +435,7 @@ async function listarManifestosReais(
         numero,
         status,
         certificado,
+        cdfNumero: extrairCdfNumero(obj),
         clienteNome: gerador.nome || numeroString(obj.clienteNome),
         empreendNome: typeof obj.empreendimento === "string" ? obj.empreendimento : numeroString(obj.empreendNome),
         transportadorNome: transportador.nome || numeroString(obj.transportadorNome),
@@ -573,6 +575,7 @@ const gerador = extrairParceiro(obj.parceiroGerador || obj.gerador || obj.dadosG
     numero: numeroString(obj.manNumero) || numero,
     status,
     certificado,
+    cdfNumero: extrairCdfNumero(obj),
     clienteNome: gerador.nome || numeroString(obj.clienteNome),
     empreendNome: typeof obj.empreendimento === "string" ? obj.empreendimento : numeroString(obj.empreendNome),
     transportadorNome: transportador.nome || numeroString(obj.transportadorNome),
@@ -582,7 +585,12 @@ const gerador = extrairParceiro(obj.parceiroGerador || obj.gerador || obj.dadosG
     unidade: numeroString(obj.uniCodigo || obj.unidade),
     dataExpedicao: dataDeMs(obj.dataExpedicao || obj.manDataExpedicao || obj.manData),
     dataRecebimento: dataDeMs(obj.dataRecebimento || obj.manDataRecebimento || obj.manDataRecebimentoArmazenamentoTemporario),
-    classeRisco: numeroString(obj.marClasseRisco || obj.classeRisco || obj.claClasseRisco),
+    classeRisco:
+      numeroString(
+        ((Array.isArray(obj.listaManifestoResiduo) ? (obj.listaManifestoResiduo as Record<string, unknown>[])[0] : undefined)?.residuo as
+          | Record<string, unknown>
+          | undefined)?.resCodigoIbama
+      ) || numeroString(obj.marClasseRisco || obj.classeRisco),
     classeNome,
     residuos: Array.isArray(obj.listaManifestoResiduo) ? obj.listaManifestoResiduo : undefined,
   };
@@ -858,6 +866,21 @@ export interface ClasseIdentificada {
   resDescricao: string;
 }
 
+// Extrai o número do CDF emitido (código > 0 indica CDF existente)
+export function extrairCdfNumero(obj: Record<string, unknown>): string | undefined {
+  for (const candidato of [obj.cdfNumero, obj.cdfCodigo, obj.cdfEmitidoNumero]) {
+    if (candidato == null) continue;
+    const n = Number(candidato);
+    if (Number.isFinite(n)) {
+      if (n > 0) return String(n);
+      continue;
+    }
+    const s = String(candidato).trim();
+    if (s) return s;
+  }
+  return undefined;
+}
+
 export function classeDeResiduos(residuos: unknown): ClasseIdentificada {
   const lista = Array.isArray(residuos) ? residuos : [];
   for (const r of lista) {
@@ -1023,7 +1046,8 @@ export interface MtrsSalvosPorDestinadorItem {
 export async function gerarPdfMtrsSalvosPorDestinador(
   empreendimentoNome: string,
   unidadeSinir: string | null,
-  mtrs: MtrsSalvosPorDestinadorItem[]
+  mtrs: MtrsSalvosPorDestinadorItem[],
+  periodoRotulo?: string
 ): Promise<{ buffer: Uint8Array; nomeArquivo: string }> {
   const { PDFDocument, StandardFonts } = await import("pdf-lib");
   const { embedNagalliLogo, drawNagalliTopo, drawNagalliFooter, PALETTE } = await import("./report-branding");
@@ -1051,7 +1075,10 @@ export async function gerarPdfMtrsSalvosPorDestinador(
 
   page.drawText("RELAÇÃO DE MTRs SALVOS", { x: 40, y, size: 15, font: bold, color: ink900 });
   y -= 16;
-  page.drawText('Manifestos com situação "Salvo" no SINIR — agrupados por destinador', {
+  const subtitulo = periodoRotulo
+    ? `Manifestos com situação "Salvo" no SINIR no período do ${periodoRotulo} — agrupados por destinador`
+    : 'Manifestos com situação "Salvo" no SINIR — agrupados por destinador';
+  page.drawText(subtitulo, {
     x: 40, y, size: 9, font, color: ink700,
   });
   y -= 12;
