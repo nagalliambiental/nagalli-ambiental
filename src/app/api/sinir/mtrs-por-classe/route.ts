@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { logAuditoria } from "@/lib/audit";
-import { classeDeResiduos, consultarManifesto, gerarPdfMtrsPorClasse, type MtrPorClasseItem } from "@/lib/sinir";
+import { classeDeResiduos, consultarManifesto, gerarPdfMtrsPorClasse, trimestreCorrente, type MtrPorClasseItem } from "@/lib/sinir";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -53,6 +53,10 @@ export async function GET(req: NextRequest) {
     where.certificado = true;
   }
 
+  // Período do trimestre corrente do SINIR (data inicial e data final automáticas)
+  const { inicio, fim, rotulo } = trimestreCorrente();
+  where.dataExpedicao = { gte: inicio, lte: fim };
+
   const manifestosLocais = await prisma.sinirManifesto.findMany({
     where,
     orderBy: [{ dataExpedicao: "asc" }],
@@ -101,13 +105,13 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  const resultado = await gerarPdfMtrsPorClasse(empreendimentoNome, unidadeSinir, mtrsPorClasse);
+  const resultado = await gerarPdfMtrsPorClasse(empreendimentoNome, unidadeSinir, mtrsPorClasse, { inicio, fim, rotulo });
 
   await logAuditoria(
     "DOWNLOAD",
     "SinirRelatorio",
     0,
-    { acao: "mtrsPorClasse", conexao: conexao.nome, mtrs: manifestosLocais.length },
+    { acao: "mtrsPorClasse", conexao: conexao.nome, mtrs: manifestosLocais.length, periodo: rotulo },
     session.user?.id ? Number(session.user.id) : undefined
   );
 

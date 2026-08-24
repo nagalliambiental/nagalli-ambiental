@@ -91,6 +91,7 @@ export async function POST(req: NextRequest) {
         numero: m.numero,
         status: m.status,
         certificado: m.certificado,
+        cdfNumero: m.cdfNumero ?? null,
         clienteNome: m.clienteNome,
         empreendNome: m.empreendNome,
         transportadorNome: m.transportadorNome,
@@ -106,6 +107,7 @@ export async function POST(req: NextRequest) {
       update: {
         status: m.status,
         certificado: m.certificado,
+        ...(m.cdfNumero ? { cdfNumero: m.cdfNumero } : {}),
         clienteNome: m.clienteNome,
         empreendNome: m.empreendNome,
         transportadorNome: m.transportadorNome,
@@ -122,6 +124,7 @@ export async function POST(req: NextRequest) {
       ...m,
       classeNome: salvo.classeNome || m.classeNome || "Não identificado",
       classeRisco: m.classeRisco || salvo.classeRisco || "",
+      cdfNumero: m.cdfNumero || salvo.cdfNumero || undefined,
       id: salvo.id,
       conexao: { id: conexao.id, nome: conexao.nome, modo: conexao.modo },
     });

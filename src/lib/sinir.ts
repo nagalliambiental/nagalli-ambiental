@@ -835,6 +835,18 @@ export async function cancelarManifesto(
   return { numero, simulacao: false };
 }
 
+// ---------- Trimestre corrente (período de referência do SINIR) ----------
+
+// 24/08/2026 -> 3º trimestre = 01/07/2026 a 30/09/2026
+export function trimestreCorrente(ref = new Date()) {
+  const ano = ref.getFullYear();
+  const indice = Math.floor(ref.getMonth() / 3);
+  const inicio = new Date(ano, indice * 3, 1);
+  const fim = new Date(ano, indice * 3 + 3, 0, 23, 59, 59, 999);
+  const rotulo = `${indice + 1}º trimestre de ${ano}`;
+  return { inicio, fim, numero: indice + 1, ano, rotulo };
+}
+
 // ---------- Identificação de Classe a partir dos resíduos do manifesto ----------
 
 // Tabela oficial de classes do SINIR (claCodigo -> letra do relatório)
@@ -1149,7 +1161,8 @@ const SECOES_CLASSE: { letra: string; titulo: string; subtitulo: string }[] = [
 export async function gerarPdfMtrsPorClasse(
   empreendimentoNome: string,
   unidadeSinir: string | null,
-  mtrs: MtrPorClasseItem[]
+  mtrs: MtrPorClasseItem[],
+  periodo?: { inicio: Date; fim: Date; rotulo: string }
 ): Promise<{ buffer: Uint8Array; nomeArquivo: string }> {
   const { PDFDocument, StandardFonts } = await import("pdf-lib");
   const { embedNagalliLogo, drawNagalliTopo, drawNagalliFooter, PALETTE } = await import("./report-branding");
@@ -1177,11 +1190,15 @@ export async function gerarPdfMtrsPorClasse(
 
   page.drawText("RELATÓRIO DE MTRs POR CLASSE DE RESÍDUO", { x: 40, y, size: 15, font: bold, color: ink900 });
   y -= 16;
-  page.drawText("Classificação conforme catálogo SINIR/NBR 10.004/CONAMA 307 — classes A, B, C e D", {
+  const subtituloClasse = periodo
+    ? `Classificação conforme catálogo SINIR/NBR 10.004/CONAMA 307 — classes A, B, C e D — ${periodo.rotulo}`
+    : "Classificação conforme catálogo SINIR/NBR 10.004/CONAMA 307 — classes A, B, C e D";
+  page.drawText(subtituloClasse, {
     x: 40, y, size: 9, font, color: ink700,
   });
   y -= 12;
-  const linhaInfo = `Empreendimento: ${empreendimentoNome}${unidadeSinir ? `   |   Unidade SINIR: ${unidadeSinir}` : ""}   |   Gerado em: ${new Date().toLocaleDateString("pt-BR")}   |   Total de MTRs: ${mtrs.length}`;
+  const fmt = (d: Date) => d.toLocaleDateString("pt-BR");
+  const linhaInfo = `Empreendimento: ${empreendimentoNome}${unidadeSinir ? `   |   Unidade SINIR: ${unidadeSinir}` : ""}${periodo ? `   |   Período: ${fmt(periodo.inicio)} a ${fmt(periodo.fim)}` : ""}   |   Gerado em: ${new Date().toLocaleDateString("pt-BR")}   |   Total de MTRs: ${mtrs.length}`;
   page.drawText(linhaInfo, { x: 40, y, size: 9, font, color: ink500 });
   y -= 14;
 

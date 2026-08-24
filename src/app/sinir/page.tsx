@@ -147,6 +147,13 @@ const STATUS_BADGE: Record<string, string> = {
   ARMAZ_TEMPORARIO: "bg-purple-50 text-purple-700",
 };
 
+const CLASSE_BADGE: Record<string, string> = {
+  A: "border-red-200 bg-red-50 text-red-700",
+  B: "border-amber-200 bg-amber-50 text-amber-700",
+  C: "border-sky-200 bg-sky-50 text-sky-700",
+  D: "border-slate-200 bg-slate-100 text-slate-600",
+};
+
 const POR_PAGINA = 15;
 
 function fmtData(v: string | null) {
@@ -993,15 +1000,32 @@ function MeusMtrsTab(props: {
 
   return (
     <div className="space-y-4">
-      <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="shadow-card overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">
+        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[var(--color-paper-200)] px-5 py-4">
           <div>
-            <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Meus MTRs — consulta semanal</h2>
-            <p className="mt-1 text-sm text-[var(--color-ink-500)]">
-              Busca no SINIR todos os MTRs do período escolhido em que a empresa consta (gerador, transportador, destinador ou armazenador) — períodos maiores que 30 dias são divididos automaticamente.
+            <h2 className="font-display flex items-center gap-2.5 text-base font-semibold text-[var(--color-ink-900)]">
+              <span className="grid size-9 place-items-center rounded-xl bg-[var(--color-brand-50)] text-[var(--color-brand-600)]">
+                <Truck size={17} />
+              </span>
+              Meus MTRs
+            </h2>
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--color-ink-500)]">
+              Busca no SINIR todos os MTRs do período escolhido em que a empresa consta (gerador, transportador, destinador ou armazenador). Períodos maiores que 30 dias são divididos automaticamente.
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => consultarSinir()}
+            disabled={consultando || conexoes.length === 0}
+            className="focus-ring transition-brand flex shrink-0 items-center gap-2 self-center rounded-lg bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-brand-600)] disabled:opacity-50"
+          >
+            {consultando ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+            {consultando ? "Consultando..." : "Consultar SINIR"}
+          </button>
+        </div>
+
+        <div className="grid gap-3 px-5 py-4 sm:grid-cols-2 lg:grid-cols-[minmax(220px,1fr)_auto]">
+          <div>
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-500)]">Conexão</label>
             <select
               value={conexaoEfetiva}
               onChange={(e) => {
@@ -1009,125 +1033,166 @@ function MeusMtrsTab(props: {
                 setLista([]);
                 consultarSinir(e.target.value);
               }}
-              className="max-w-[280px] min-w-0 rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm"
+              className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:border-[var(--color-brand-500)]"
             >
               {conexoes.map((c) => (
                 <option key={c.id} value={c.id}>{c.nome} — unid. {c.unidade}</option>
               ))}
             </select>
-            <div className="flex items-center gap-1.5 text-sm">
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-500)]">Período da consulta</label>
+            <div className="flex items-center gap-2">
               <input
                 type="date"
                 value={dataInicial}
                 onChange={(e) => setDataInicial(e.target.value)}
-                className="rounded-lg border border-[var(--color-paper-200)] px-2 py-2 text-sm"
+                className="rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm focus:border-[var(--color-brand-500)]"
               />
-              <span className="text-[var(--color-ink-500)]">até</span>
+              <span className="text-xs font-medium text-[var(--color-ink-400)]">até</span>
               <input
                 type="date"
                 value={dataFinal}
                 onChange={(e) => setDataFinal(e.target.value)}
-                className="rounded-lg border border-[var(--color-paper-200)] px-2 py-2 text-sm"
+                className="rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm focus:border-[var(--color-brand-500)]"
               />
             </div>
-            <button
-              onClick={() => consultarSinir()}
-              disabled={consultando || conexoes.length === 0}
-              className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
-            >
-              {consultando ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
-              {consultando ? "Consultando..." : "Consultar SINIR"}
-            </button>
-            <button
-              onClick={gerarAlertaPdf}
-              disabled={gerandoAlerta || emAtraso.length === 0}
-              className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
-            >
-              {gerandoAlerta ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={16} />}
-              {gerandoAlerta ? "Gerando..." : "Relação MTRs Salvos"}
-            </button>
-            <button
-              onClick={abrirModalNotificar}
-              disabled={salvosParaNotificar.length === 0 || conexoes.length === 0}
-              title="Enviar por e-mail aos contatos do empreendimento a relação de MTRs na situação Salvo, agrupados por destinador"
-              className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-[var(--color-ink-700)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-ink-900)] disabled:opacity-50"
-            >
-              <Mail size={16} />
-              Notificar por e-mail
-            </button>
-            <button
-              onClick={async () => {
-                toast("Gerando relatório por classe de resíduo...", "info");
-                try {
-                  const res = await fetch(`/api/sinir/mtrs-por-classe?conexaoId=${conexaoEfetiva}&filtro=recebidos`);
-                  if (!res.ok) {
-                    const data = await res.json().catch(() => null);
-                    throw new Error(data?.error || "Falha ao gerar relatório");
-                  }
-                  const blob = await res.blob();
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = url;
-                  a.download = `mtrs-por-classe-${new Date().toISOString().slice(0, 10)}.pdf`;
-                  document.body.appendChild(a);
-                  a.click();
-                  a.remove();
-                  URL.revokeObjectURL(url);
-                  toast("Relatório por classe gerado com sucesso", "success");
-                } catch (e) {
-                  toast(e instanceof Error ? e.message : "Falha ao gerar relatório", "error");
-                }
-              }}
-              className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg bg-[var(--color-ink-700)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--color-ink-900)]"
-            >
-              <FileText size={12} />
-              Imprimir por classe
-            </button>
           </div>
         </div>
 
-        {emAtraso.length > 0 && (
-          <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-            <b>{emAtraso.length} MTR(s) em situação SALVO há mais de {limiteDias} dias</b>
-          </div>
-        )}
+        <div className="flex flex-wrap items-center gap-2 px-5 pb-5">
+          <button
+            onClick={() => consultarSinir()}
+            disabled={consultando || conexoes.length === 0}
+            className="focus-ring transition-brand flex items-center gap-2 rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-50)] disabled:opacity-50 sm:hidden"
+          >
+            {consultando ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+            Consultar
+          </button>
+          <div className="mr-auto" aria-hidden />
+          <button
+            onClick={async () => {
+              toast(`Gerando relatório por classe de resíduo (${rotuloTrimestre()})...`, "info");
+              try {
+                const res = await fetch(`/api/sinir/mtrs-por-classe?conexaoId=${conexaoEfetiva}&filtro=recebidos`);
+                if (!res.ok) {
+                  const data = await res.json().catch(() => null);
+                  throw new Error(data?.error || "Falha ao gerar relatório");
+                }
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `mtrs-por-classe-${new Date().toISOString().slice(0, 10)}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+                toast("Relatório por classe gerado com sucesso", "success");
+              } catch (e) {
+                toast(e instanceof Error ? e.message : "Falha ao gerar relatório", "error");
+              }
+            }}
+            className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-50)]"
+          >
+            <FileText size={15} />
+            Imprimir por classe
+          </button>
+          <button
+            onClick={abrirModalNotificar}
+            disabled={salvosParaNotificar.length === 0 || conexoes.length === 0}
+            title="Enviar por e-mail aos contatos do empreendimento a relação de MTRs na situação Salvo, agrupados por destinador"
+            className="focus-ring transition-brand flex items-center gap-2 rounded-lg border border-[var(--color-ink-900)] bg-[var(--color-ink-900)] px-3.5 py-2 text-sm font-medium text-white hover:bg-black disabled:opacity-50"
+          >
+            <Mail size={15} />
+            Notificar por e-mail
+          </button>
+          <button
+            onClick={gerarAlertaPdf}
+            disabled={gerandoAlerta || emAtraso.length === 0}
+            title="Gera o PDF com os MTRs na situação Salvo para cobrar os destinadores"
+            className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-red-600 px-3.5 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-700 disabled:opacity-50"
+          >
+            {gerandoAlerta ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={16} />}
+            Relação MTRs Salvos
+          </button>
+        </div>
       </div>
 
-      <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Lista de MTRs ({lista.length})</h2>
-          <div className="flex gap-2 text-xs">
-            <button onClick={() => { setFiltro("todos"); setPaginaLista(0); }} className={`rounded-full px-3 py-1 font-medium ${filtro === "todos" ? "bg-[var(--color-brand-500)] text-white" : "bg-[var(--color-paper-100)] text-[var(--color-ink-600)]"}`}>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        {[
+          { rotulo: "Total de MTRs", valor: lista.length, Icone: FileText, chip: "bg-[var(--color-paper-100)] text-[var(--color-ink-600)]", destaque: "text-[var(--color-ink-900)]" },
+          { rotulo: "Recebidos", valor: lista.filter((m) => m.status === "RECEBIDO").length, Icone: CheckCircle2, chip: "bg-green-50 text-green-600", destaque: "text-green-700" },
+          { rotulo: "Sem recebimento", valor: salvos.length, Icone: Clock, chip: "bg-amber-50 text-amber-600", destaque: "text-amber-700" },
+          { rotulo: `Salvos há mais de ${limiteDias} dias`, valor: emAtraso.length, Icone: AlertTriangle, chip: "bg-red-50 text-red-600", destaque: "text-red-700" },
+          { rotulo: "Com CDF", valor: lista.filter((m) => m.certificado).length, Icone: ShieldCheck, chip: "bg-emerald-50 text-emerald-600", destaque: "text-emerald-700" },
+        ].map(({ rotulo, valor, Icone, chip, destaque }) => (
+          <div key={rotulo} className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-4">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium text-[var(--color-ink-500)]">{rotulo}</p>
+              <span className={`grid size-7 place-items-center rounded-lg ${chip}`}>
+                <Icone size={14} />
+              </span>
+            </div>
+            <p className={`mt-2 font-display text-2xl font-bold tabular-nums ${destaque}`}>{valor}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="shadow-card overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-paper-200)] px-5 py-4">
+          <h2 className="font-display flex items-center gap-2 text-base font-semibold text-[var(--color-ink-900)]">
+            MTRs encontrados
+            <span className="rounded-full bg-[var(--color-paper-100)] px-2 py-0.5 text-xs font-semibold tabular-nums text-[var(--color-ink-600)]">{lista.length}</span>
+          </h2>
+          <div className="flex rounded-lg border border-[var(--color-paper-200)] bg-[var(--color-paper-50)] p-1 text-xs font-medium">
+            <button
+              onClick={() => { setFiltro("todos"); setPaginaLista(0); }}
+              className={`rounded-md px-3 py-1.5 transition-brand ${filtro === "todos" ? "bg-white text-[var(--color-ink-900)] shadow-sm" : "text-[var(--color-ink-500)] hover:text-[var(--color-ink-700)]"}`}
+            >
               Todos ({lista.length})
             </button>
-            <button onClick={() => { setFiltro("pendentes"); setPaginaLista(0); }} className={`rounded-full px-3 py-1 font-medium ${filtro === "pendentes" ? "bg-amber-500 text-white" : "bg-[var(--color-paper-100)] text-[var(--color-ink-600)]"}`}>
+            <button
+              onClick={() => { setFiltro("pendentes"); setPaginaLista(0); }}
+              className={`rounded-md px-3 py-1.5 transition-brand ${filtro === "pendentes" ? "bg-white text-amber-700 shadow-sm" : "text-[var(--color-ink-500)] hover:text-[var(--color-ink-700)]"}`}
+            >
               Sem recebimento ({salvos.length})
             </button>
           </div>
         </div>
 
+        {emAtraso.length > 0 && (
+          <div className="flex items-center gap-2 border-b border-red-200 bg-red-50 px-5 py-2.5 text-sm text-red-800">
+            <AlertTriangle size={15} className="shrink-0" />
+            <span><b>{emAtraso.length} MTR(s)</b> em situação SALVO há mais de {limiteDias} dias — gere a relação e cobre os destinadores.</span>
+          </div>
+        )}
+
         {consultando ? (
-          <div className="flex items-center justify-center py-12">
+          <div className="flex flex-col items-center justify-center gap-2 py-14 text-sm text-[var(--color-ink-500)]">
             <Loader2 size={24} className="animate-spin text-[var(--color-brand-500)]" />
+            Consultando o SINIR...
           </div>
         ) : lista.length === 0 ? (
-          <p className="py-8 text-center text-sm text-[var(--color-ink-500)]">
-            Nenhum MTR para o período informado. Ajuste as datas e clique em &quot;Consultar SINIR&quot;.
-          </p>
+          <div className="flex flex-col items-center justify-center gap-1 py-14 text-center">
+            <FileText size={28} className="mb-1 text-[var(--color-ink-300)]" />
+            <p className="text-sm font-medium text-[var(--color-ink-700)]">Nenhum MTR para o período informado</p>
+            <p className="text-sm text-[var(--color-ink-500)]">Ajuste as datas e clique em &quot;Consultar SINIR&quot;.</p>
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-[var(--color-paper-200)] text-left">
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Número</th>
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Gerador</th>
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Destinador</th>
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Transportador</th>
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Expedição</th>
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Classe</th>
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">CDF</th>
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Situação</th>
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Ações</th>
+                <tr className="bg-[var(--color-paper-50)] text-left text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-500)]">
+                  <th className="py-2.5 pl-5 pr-2">Número</th>
+                  <th className="px-2 py-2.5">Gerador</th>
+                  <th className="px-2 py-2.5">Destinador</th>
+                  <th className="px-2 py-2.5">Transportador</th>
+                  <th className="px-2 py-2.5">Expedição</th>
+                  <th className="px-2 py-2.5">Classe</th>
+                  <th className="px-2 py-2.5">CDF</th>
+                  <th className="px-2 py-2.5">Situação</th>
+                  <th className="py-2.5 pl-2 pr-5 text-right">PDF</th>
                 </tr>
               </thead>
               <tbody>
@@ -1135,50 +1200,59 @@ function MeusMtrsTab(props: {
                   .map((m) => {
                     const salvo = (m.status === "SALVO" || m.status === "EMITIDO") && !m.certificado;
                     const atrasado = salvo && diasEmSalvo(m) > limiteDias;
+                    const letraClasse = (m.classeNome || "").toUpperCase().replace(/[^ABCD]/g, "").charAt(0);
                     return (
                       <tr
                         key={m.id}
-                        className={`border-b border-[var(--color-paper-100)] ${atrasado ? "bg-red-50" : salvo ? "bg-amber-50/50" : ""}`}
+                        className={`border-b border-[var(--color-paper-100)] transition-colors last:border-b-0 hover:bg-[var(--color-paper-50)] ${atrasado ? "bg-red-50/70 hover:bg-red-50" : salvo ? "bg-amber-50/40" : ""}`}
                       >
-                        <td className="py-2 px-2 font-mono text-xs text-[var(--color-ink-700)]">{m.numero}</td>
-                        <td className="py-2 px-2 text-[var(--color-ink-700)]">{m.clienteNome || "—"}</td>
-                        <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.destinadorNome || "—"}</td>
-                        <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.transportadorNome || "—"}</td>
-                        <td className="py-2 px-2 text-[var(--color-ink-600)] whitespace-nowrap">{fmtData(m.dataExpedicao)}</td>
-                        <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.classeNome || "—"}</td>
-                        <td className="py-2 px-2">
-                          {m.cdfNumero ? (
-                            <span className="inline-flex items-center gap-1 rounded bg-emerald-50 px-1.5 py-0.5 font-mono text-xs font-medium text-emerald-700">
-                              <ShieldCheck size={12} /> {m.cdfNumero}
+                        <td className="whitespace-nowrap py-2.5 pl-5 pr-2 font-mono text-xs font-semibold text-[var(--color-ink-700)]">{m.numero}</td>
+                        <td className="max-w-[180px] truncate px-2 py-2.5 text-[var(--color-ink-700)]" title={m.clienteNome || undefined}>{m.clienteNome || "—"}</td>
+                        <td className="max-w-[180px] truncate px-2 py-2.5 text-[var(--color-ink-600)]" title={m.destinadorNome || undefined}>{m.destinadorNome || "—"}</td>
+                        <td className="max-w-[160px] truncate px-2 py-2.5 text-[var(--color-ink-600)]" title={m.transportadorNome || undefined}>{m.transportadorNome || "—"}</td>
+                        <td className="whitespace-nowrap px-2 py-2.5 tabular-nums text-[var(--color-ink-600)]">{fmtData(m.dataExpedicao)}</td>
+                        <td className="px-2 py-2.5">
+                          {letraClasse ? (
+                            <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-bold ${CLASSE_BADGE[letraClasse]}`}>
+                              Classe {letraClasse}
                             </span>
                           ) : (
                             <span className="text-xs text-[var(--color-ink-400)]">—</span>
                           )}
                         </td>
-                        <td className="py-2 px-2">
+                        <td className="px-2 py-2.5">
+                          {m.cdfNumero ? (
+                            <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 font-mono text-xs font-semibold text-emerald-700">
+                              <ShieldCheck size={12} /> {m.cdfNumero}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-[var(--color-ink-300)]">—</span>
+                          )}
+                        </td>
+                        <td className="px-2 py-2.5">
                           {m.status === "RECEBIDO" ? (
-                            <span className="inline-flex items-center gap-1 rounded bg-green-50 px-1.5 py-0.5 text-xs font-medium text-green-700">
-                              <CheckCircle2 size={12} /> Recebido — ok
+                            <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">
+                              <CheckCircle2 size={12} /> Recebido
                             </span>
                           ) : salvo ? (
-                            <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${atrasado ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>
+                            <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold ${atrasado ? "animate-pulse bg-red-200 text-red-800" : "bg-amber-100 text-amber-700"}`}>
                               {atrasado ? <AlertTriangle size={12} /> : <Clock size={12} />}
                               Salvo há {diasEmSalvo(m)} dia(s)
                             </span>
                           ) : (
-                            <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${STATUS_BADGE[m.status] || "bg-[var(--color-paper-100)] text-[var(--color-ink-600)]"}`}>
-                              {m.status === "CANCELADO" ? <XCircle size={12} /> : m.status === "RECEBIDO" ? <CheckCircle2 size={12} /> : null}
+                            <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_BADGE[m.status] || "bg-[var(--color-paper-100)] text-[var(--color-ink-600)]"}`}>
+                              {m.status === "CANCELADO" ? <XCircle size={12} /> : null}
                               {m.status === "ARMAZ_TEMPORARIO" ? "Armazenamento temporário" : m.status}
-                        {m.certificado && <ShieldCheck size={12} />}
+                              {m.certificado && <ShieldCheck size={12} />}
                             </span>
                           )}
                         </td>
-                        <td className="py-2 px-2">
-                          <div className="flex items-center gap-1">
+                        <td className="py-2.5 pl-2 pr-5 text-right">
+                          <div className="flex items-center justify-end gap-1">
                             <button
                               onClick={() => baixarArquivoMeusMtrs("mtr", m)}
                               title="Baixar PDF do MTR"
-                              className="rounded-md p-1.5 text-[var(--color-ink-600)] hover:bg-[var(--color-paper-100)] hover:text-[var(--color-brand-600)]"
+                              className="focus-ring rounded-lg border border-[var(--color-paper-200)] p-1.5 text-[var(--color-ink-600)] transition-brand hover:border-[var(--color-brand-400)] hover:bg-[var(--color-brand-50)] hover:text-[var(--color-brand-600)]"
                             >
                               <FileDown size={15} />
                             </button>
@@ -1189,7 +1263,7 @@ function MeusMtrsTab(props: {
                                   baixarArquivoMeusMtrs("cdf", m);
                                 }}
                                 title="Baixar CDF (Certificado de Destinação Final) — disponível após o destinador confirmar a destinação"
-                                className="rounded-md p-1.5 text-[var(--color-ink-600)] hover:bg-green-50 hover:text-green-700"
+                                className="focus-ring rounded-lg border border-emerald-200 p-1.5 text-emerald-600 transition-brand hover:bg-emerald-50 hover:text-emerald-700"
                               >
                                 <ShieldCheck size={15} />
                               </button>
@@ -1204,20 +1278,20 @@ function MeusMtrsTab(props: {
           </div>
         )}
         {listaFiltrada.length > POR_PAGINA && (
-          <div className="mt-3 flex items-center justify-between text-xs text-[var(--color-ink-600)]">
-            <span>{listaFiltrada.length} registro(s) — Página {paginaL + 1} de {totalPaginasL}</span>
-            <div className="flex gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--color-paper-200)] bg-[var(--color-paper-50)] px-5 py-2.5 text-xs text-[var(--color-ink-600)]">
+            <span className="tabular-nums">{listaFiltrada.length} registro(s) — Página {paginaL + 1} de {totalPaginasL}</span>
+            <div className="flex items-center gap-1.5">
               <button
                 onClick={() => setPaginaLista(Math.max(0, paginaL - 1))}
                 disabled={paginaL === 0}
-                className="rounded-md border border-[var(--color-paper-200)] px-3 py-1 font-medium hover:bg-[var(--color-paper-50)] disabled:opacity-40"
+                className="focus-ring rounded-md border border-[var(--color-paper-200)] bg-white px-3 py-1.5 font-medium transition-brand hover:bg-[var(--color-paper-100)] disabled:opacity-40"
               >
                 Anterior
               </button>
               <button
                 onClick={() => setPaginaLista(Math.min(totalPaginasL - 1, paginaL + 1))}
                 disabled={paginaL >= totalPaginasL - 1}
-                className="rounded-md border border-[var(--color-paper-200)] px-3 py-1 font-medium hover:bg-[var(--color-paper-50)] disabled:opacity-40"
+                className="focus-ring rounded-md border border-[var(--color-paper-200)] bg-white px-3 py-1.5 font-medium transition-brand hover:bg-[var(--color-paper-100)] disabled:opacity-40"
               >
                 Próxima
               </button>

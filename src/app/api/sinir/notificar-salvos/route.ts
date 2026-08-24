@@ -2,21 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { logAuditoria } from "@/lib/audit";
-import { gerarPdfMtrsSalvosPorDestinador } from "@/lib/sinir";
+import { gerarPdfMtrsSalvosPorDestinador, trimestreCorrente } from "@/lib/sinir";
 import { enviarEmail } from "@/lib/resend";
 
 function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-}
-
-// Trimestre corrente (período de referência do SINIR): 24/08/2026 -> 3º trimestre = 01/07/2026 a 30/09/2026
-export function trimestreCorrente(ref = new Date()) {
-  const ano = ref.getFullYear();
-  const indice = Math.floor(ref.getMonth() / 3);
-  const inicio = new Date(ano, indice * 3, 1);
-  const fim = new Date(ano, indice * 3 + 3, 0, 23, 59, 59, 999);
-  const rotulo = `${indice + 1}º trimestre de ${ano}`;
-  return { inicio, fim, numero: indice + 1, ano, rotulo };
 }
 
 export async function POST(req: NextRequest) {
