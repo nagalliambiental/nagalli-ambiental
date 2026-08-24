@@ -27,6 +27,8 @@ export interface SinirManifestoDados {
   unidade?: string;
   dataExpedicao?: Date;
   dataRecebimento?: Date;
+  classeRisco?: string;
+  classeNome?: string;
 }
 
 export interface SinirConexaoCompleta {
@@ -436,6 +438,8 @@ async function listarManifestosReais(
         unidade: numeroString(obj.uniCodigo || obj.unidade),
         dataExpedicao: dataDeMs(obj.dataExpedicao || obj.manDataExpedicao || obj.manData),
         dataRecebimento: dataDeMs(obj.dataRecebimento || obj.manDataRecebimento || obj.manDataRecebimentoArmazenamentoTemporario),
+        classeRisco: numeroString(obj.marClasseRisco || obj.classeRisco || obj.claClasseRisco),
+        classeNome: numeroString(obj.claNome || obj.classeNome || obj.claDescricao),
       });
     }
 
@@ -554,6 +558,8 @@ export async function consultarManifesto(
     unidade: numeroString(obj.uniCodigo || obj.unidade),
     dataExpedicao: dataDeMs(obj.dataExpedicao || obj.manDataExpedicao || obj.manData),
     dataRecebimento: dataDeMs(obj.dataRecebimento || obj.manDataRecebimento || obj.manDataRecebimentoArmazenamentoTemporario),
+    classeRisco: numeroString(obj.marClasseRisco || obj.classeRisco || obj.claClasseRisco),
+    classeNome: numeroString(obj.claNome || obj.classeNome || obj.claDescricao),
   };
 }
 

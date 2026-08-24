@@ -302,6 +302,7 @@ export default function SinirPage() {
       {tab === "painel" && (
         <PainelTab
           conexoes={conexoes}
+          empreendimentos={empreendimentos}
           manifestos={manifestos}
           loading={manifestosLoading}
           certificados={certificados}
@@ -344,6 +345,7 @@ export default function SinirPage() {
 
 function PainelTab(props: {
   conexoes: Conexao[];
+  empreendimentos: EmpreendimentoOpcao[];
   manifestos: Manifesto[];
   loading: boolean;
   certificados: number;
@@ -354,7 +356,7 @@ function PainelTab(props: {
   onVerificar: () => void;
   toast: ToastFn;
 }) {
-  const { conexoes, manifestos, loading, certificados, pendentes, cancelados, filtro, setFiltro, onVerificar, toast } = props;
+  const { conexoes, empreendimentos, manifestos, loading, certificados, pendentes, cancelados, filtro, setFiltro, onVerificar, toast } = props;
   const [verificando, setVerificando] = useState(false);
   const [paginaManifestos, setPaginaManifestos] = useState(0);
   const totalPaginasM = Math.max(1, Math.ceil(manifestos.length / POR_PAGINA));
@@ -367,11 +369,53 @@ function PainelTab(props: {
   });
   const [dataFinal, setDataFinal] = useState(() => new Date().toISOString().slice(0, 10));
   const [resumoVerif, setResumoVerif] = useState<{ total: number; certificados: number; pendentes: number; modo: string } | null>(null);
+  const [dmrEmpId, setDmrEmpId] = useState("");
+  const [dmrTrimestre, setDmrTrimestre] = useState(String(Math.floor((new Date().getMonth()) / 3) + 1));
+  const [dmrAno, setDmrAno] = useState(String(new Date().getFullYear()));
+  const [enviandoControle, setEnviandoControle] = useState(false);
   const [modalCancel, setModalCancel] = useState<Manifesto | null>(null);
   const [justificativaCancel, setJustificativaCancel] = useState("");
   const [cancelando, setCancelando] = useState(false);
 
   const conexaoEfetiva = conexoes.some((c) => c.id === Number(conexaoId)) ? conexaoId : conexoes.length ? String(conexoes[0].id) : "";
+
+  async function marcarNoControle() {
+    if (!dmrEmpId) {
+      toast("Selecione o empreendimento", "error");
+      return;
+    }
+    setEnviandoControle(true);
+    try {
+      let registroId: number | undefined;
+      const res = await fetch("/api/controle-dmr", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ empreendimentoId: Number(dmrEmpId) }),
+      });
+      if (res.status === 201) {
+        registroId = (await res.json()).id;
+      } else {
+        const data = await res.json();
+        const resLista = await fetch("/api/controle-dmr");
+        if (!resLista.ok) throw new Error(data.error || "Falha ao listar controle DMR");
+        const lista = await resLista.json();
+        registroId = lista.find((r: { empreendimentoId: number }) => r.empreendimentoId === Number(dmrEmpId))?.id;
+        if (!registroId) throw new Error(data.error || "Registro não encontrado no controle DMR");
+      }
+      const prefixo = `t${dmrTrimestre}`;
+      const resPatch = await fetch(`/api/controle-dmr/${registroId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [`${prefixo}Dmr`]: "OK", [`${prefixo}Mtr`]: "OK" }),
+      });
+      if (!resPatch.ok) throw new Error("Falha ao atualizar status");
+      toast(`Enviado ao controle DMR como OK (${dmrTrimestre}º trimestre)`, "success");
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Erro ao enviar para o controle DMR", "error");
+    } finally {
+      setEnviandoControle(false);
+    }
+  }
 
   async function baixarArquivo(tipo: "mtr" | "cdf", m: Manifesto) {
     const prefixo = tipo === "cdf" ? "CDF" : "MTR";
@@ -529,6 +573,46 @@ function PainelTab(props: {
               <p className={`text-xs ${resumoVerif.pendentes > 0 ? "text-amber-600" : "text-[var(--color-ink-500)]"}`}>Sem certificação</p>
             </div>
           </div>
+        )}
+      </div>
+
+      <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Declaração DMR</h2>
+          <span className="text-xs text-[var(--color-ink-400)]">Modelo de referência do SINIR — envio oficial no portal mtr.sinir.gov.br</span>
+        </div>
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-[var(--color-ink-500)]">Empreendimento (declarante)</label>
+            <select value={dmrEmpId} onChange={(e) => setDmrEmpId(e.target.value)} className="rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm">
+              <option value="">Selecione...</option>
+              {empreendimentos.map((e) => (
+                <option key={e.id} value={e.id}>{e.cliente.apelido} — {e.apelido}{e.unidadeSinir ? ` — unid. ${e.unidadeSinir}` : ""}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-[var(--color-ink-500)]">Trimestre</label>
+            <select value={dmrTrimestre} onChange={(e) => setDmrTrimestre(e.target.value)} className="rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm">
+              <option value="1">1º trimestre</option>
+              <option value="2">2º trimestre</option>
+              <option value="3">3º trimestre</option>
+              <option value="4">4º trimestre</option>
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-[var(--color-ink-500)]">Ano</label>
+            <input type="number" value={dmrAno} onChange={(e) => setDmrAno(e.target.value)} className="w-24 rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm" />
+          </div>
+          <button onClick={marcarNoControle} disabled={enviandoControle || !dmrEmpId}
+            title="Adiciona o empreendimento ao módulo DMR e marca este trimestre como OK"
+            className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50">
+            {enviandoControle ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+            {enviandoControle ? "Enviando..." : "Enviar ao controle DMR (OK)"}
+          </button>
+        </div>
+        {!conexaoEfetiva && (
+          <p className="mt-3 text-xs text-[var(--color-ink-500)]">Selecione a conexão no card de verificação para usar seus manifestos na DMR.</p>
         )}
       </div>
 
