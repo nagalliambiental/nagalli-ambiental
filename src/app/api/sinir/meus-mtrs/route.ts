@@ -95,6 +95,8 @@ export async function POST(req: NextRequest) {
         unidade: m.unidade,
         dataExpedicao: m.dataExpedicao,
         dataRecebimento: m.dataRecebimento,
+        classeRisco: m.classeRisco,
+        classeNome: m.classeNome,
       },
       update: {
         status: m.status,
@@ -108,6 +110,8 @@ export async function POST(req: NextRequest) {
         unidade: m.unidade,
         dataExpedicao: m.dataExpedicao,
         dataRecebimento: m.dataRecebimento,
+        classeRisco: m.classeRisco,
+        classeNome: m.classeNome,
       },
     });
     itens.push({

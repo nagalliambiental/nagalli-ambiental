@@ -632,36 +632,6 @@ function PainelTab(props: {
             </button>
           </div>
         </div>
-        <div className="mb-3 flex items-center justify-end">
-          <button
-            onClick={async () => {
-              toast("Gerando relatório por classe de resíduo...", "info");
-              try {
-                const res = await fetch(`/api/sinir/mtrs-por-classe?conexaoId=${conexaoEfetiva}&filtro=${filtro}`);
-                if (!res.ok) {
-                  const data = await res.json().catch(() => null);
-                  throw new Error(data?.error || "Falha ao gerar relatório");
-                }
-                const blob = await res.blob();
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = `mtrs-por-classe-${new Date().toISOString().slice(0, 10)}.pdf`;
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
-                URL.revokeObjectURL(url);
-                toast("Relatório por classe gerado com sucesso", "success");
-              } catch (e) {
-                toast(e instanceof Error ? e.message : "Falha ao gerar relatório", "error");
-              }
-            }}
-            className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg bg-[var(--color-ink-700)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--color-ink-900)]"
-          >
-            <FileText size={12} />
-            Imprimir por classe
-          </button>
-        </div>
 
         {loading ? (
           <div className="flex items-center justify-center py-12">
@@ -1208,6 +1178,34 @@ function MeusMtrsTab(props: {
                                 <ShieldCheck size={15} />
                               </button>
                             )}
+                            <button
+                              onClick={async () => {
+                                toast("Gerando relatório por classe de resíduo...", "info");
+                                try {
+                                  const res = await fetch(`/api/sinir/mtrs-por-classe?conexaoId=${conexaoEfetiva}&filtro=recebidos`);
+                                  if (!res.ok) {
+                                    const data = await res.json().catch(() => null);
+                                    throw new Error(data?.error || "Falha ao gerar relatório");
+                                  }
+                                  const blob = await res.blob();
+                                  const url = URL.createObjectURL(blob);
+                                  const a = document.createElement("a");
+                                  a.href = url;
+                                  a.download = `mtrs-por-classe-${new Date().toISOString().slice(0, 10)}.pdf`;
+                                  document.body.appendChild(a);
+                                  a.click();
+                                  a.remove();
+                                  URL.revokeObjectURL(url);
+                                  toast("Relatório por classe gerado com sucesso", "success");
+                                } catch (e) {
+                                  toast(e instanceof Error ? e.message : "Falha ao gerar relatório", "error");
+                                }
+                              }}
+                              title="Imprimir relatório por classe de resíduo (apenas MTRs Recebidos)"
+                              className="rounded-md p-1.5 text-[var(--color-ink-600)] hover:bg-[var(--color-ink-700)] hover:text-white"
+                            >
+                              <FileText size={15} />
+                            </button>
                           </div>
                         </td>
                       </tr>
