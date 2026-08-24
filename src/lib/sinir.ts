@@ -427,9 +427,28 @@ async function listarManifestosReais(
 
       // Extrai a classe do primeiro resíduo (assumindo que todos têm a mesma classe)
       const primeiroResiduo = residuos[0];
-      const claCodigo = typeof primeiroResiduo?.claCodigo === "number" ? primeiroResiduo.claCodigo
-        : typeof primeiroResiduo?.claCodigo === "string" ? Number(primeiroResiduo.claCodigo)
-        : undefined;
+      // Tenta múltiplos nomes de campo possíveis para o código da classe
+      const tentarCampos = [
+        "claCodigo",
+        "claCodigoIbama",
+        "claClasse",
+        "claClasseRisco",
+        "claClasseIbama",
+        "resClasse",
+        "resClasseRisco",
+        "marClasseRisco",
+      ];
+      let claCodigo: number | undefined;
+      for (const campo of tentarCampos) {
+        const valor = primeiroResiduo?.[campo];
+        if (valor !== undefined) {
+          const num = typeof valor === "number" ? valor : typeof valor === "string" ? Number(valor) : NaN;
+          if (Number.isFinite(num)) {
+            claCodigo = num;
+            break;
+          }
+        }
+      }
 
       // Mapeia código da classe para classificação A/B/C/D (IBAMA)
       const mapaClasse: Record<number, string> = {
@@ -555,19 +574,40 @@ export async function consultarManifesto(
 
   const obj = (env.objeto || env) as Record<string, unknown>;
   const { status, certificado } = statusDeManifestoReal(obj);
-  const gerador = extrairParceiro(obj.parceiroGerador || obj.gerador || obj.dadosGerador);
-  const transportador = extrairParceiro(obj.parceiroTransportador || obj.transportador);
-  const destinador = extrairParceiro(obj.parceiroDestinador || obj.destinador);
+const gerador = extrairParceiro(obj.parceiroGerador || obj.gerador || obj.dadosGerador);
+      const transportador = extrairParceiro(obj.parceiroTransportador || obj.transportador);
+      const destinador = extrairParceiro(obj.parceiroDestinador || obj.destinador);
+      const residuos = Array.isArray(obj.listaManifestoResiduo) ? (obj.listaManifestoResiduo as Record<string, unknown>[]) : [];
 
-  const residuos = Array.isArray(obj.listaManifestoResiduo) ? (obj.listaManifestoResiduo as Record<string, unknown>[]) : [];
+      // Tenta múltiplos nomes de campo possíveis para o código da classe
       const primeiroResiduo = residuos[0];
-      const claCodigo = typeof primeiroResiduo?.claCodigo === "number" ? primeiroResiduo.claCodigo
-        : typeof primeiroResiduo?.claCodigo === "string" ? Number(primeiroResiduo.claCodigo)
-        : undefined;
+      const tentarCampos = [
+        "claCodigo",
+        "claCodigoIbama",
+        "claClasse",
+        "claClasseRisco",
+        "claClasseIbama",
+        "resClasse",
+        "resClasseRisco",
+        "marClasseRisco",
+      ];
+      let claCodigo: number | undefined;
+      for (const campo of tentarCampos) {
+        const valor = primeiroResiduo?.[campo];
+        if (valor !== undefined) {
+          const num = typeof valor === "number" ? valor : typeof valor === "string" ? Number(valor) : NaN;
+          if (Number.isFinite(num)) {
+            claCodigo = num;
+            break;
+          }
+        }
+      }
+
+      // Mapeia código da classe para classificação A/B/C/D (IBAMA)
       const mapaClasse: Record<number, string> = {
-        1: "A",
-        2: "B",
-        3: "C",
+        1: "A", // Classe I - Perigosos
+        2: "B", // Classe II A - Não inertes
+        3: "C", // Classe II B - Inertes
       };
       const classeNome = claCodigo ? (mapaClasse[claCodigo] || "D") : "Não identificado";
 
