@@ -302,7 +302,6 @@ export default function SinirPage() {
       {tab === "painel" && (
         <PainelTab
           conexoes={conexoes}
-          empreendimentos={empreendimentos}
           manifestos={manifestos}
           loading={manifestosLoading}
           certificados={certificados}
@@ -345,7 +344,6 @@ export default function SinirPage() {
 
 function PainelTab(props: {
   conexoes: Conexao[];
-  empreendimentos: EmpreendimentoOpcao[];
   manifestos: Manifesto[];
   loading: boolean;
   certificados: number;
@@ -356,7 +354,7 @@ function PainelTab(props: {
   onVerificar: () => void;
   toast: ToastFn;
 }) {
-  const { conexoes, empreendimentos, manifestos, loading, certificados, pendentes, cancelados, filtro, setFiltro, onVerificar, toast } = props;
+  const { conexoes, manifestos, loading, certificados, pendentes, cancelados, filtro, setFiltro, onVerificar, toast } = props;
   const [verificando, setVerificando] = useState(false);
   const [paginaManifestos, setPaginaManifestos] = useState(0);
   const totalPaginasM = Math.max(1, Math.ceil(manifestos.length / POR_PAGINA));
@@ -369,90 +367,11 @@ function PainelTab(props: {
   });
   const [dataFinal, setDataFinal] = useState(() => new Date().toISOString().slice(0, 10));
   const [resumoVerif, setResumoVerif] = useState<{ total: number; certificados: number; pendentes: number; modo: string } | null>(null);
-  const [dmrEmpId, setDmrEmpId] = useState("");
-  const [dmrTrimestre, setDmrTrimestre] = useState(String(Math.floor((new Date().getMonth()) / 3) + 1));
-  const [dmrAno, setDmrAno] = useState(String(new Date().getFullYear()));
-  const [gerandoDmr, setGerandoDmr] = useState(false);
-  const [enviandoControle, setEnviandoControle] = useState(false);
   const [modalCancel, setModalCancel] = useState<Manifesto | null>(null);
   const [justificativaCancel, setJustificativaCancel] = useState("");
   const [cancelando, setCancelando] = useState(false);
 
   const conexaoEfetiva = conexoes.some((c) => c.id === Number(conexaoId)) ? conexaoId : conexoes.length ? String(conexoes[0].id) : "";
-
-  async function marcarNoControle() {
-    if (!dmrEmpId) {
-      toast("Selecione o empreendimento", "error");
-      return;
-    }
-    setEnviandoControle(true);
-    try {
-      let registroId: number | undefined;
-      const res = await fetch("/api/controle-dmr", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ empreendimentoId: Number(dmrEmpId) }),
-      });
-      if (res.status === 201) {
-        registroId = (await res.json()).id;
-      } else {
-        const data = await res.json();
-        const resLista = await fetch("/api/controle-dmr");
-        if (!resLista.ok) throw new Error(data.error || "Falha ao listar controle DMR");
-        const lista = await resLista.json();
-        registroId = lista.find((r: { empreendimentoId: number }) => r.empreendimentoId === Number(dmrEmpId))?.id;
-        if (!registroId) throw new Error(data.error || "Registro não encontrado no controle DMR");
-      }
-      const prefixo = `t${dmrTrimestre}`;
-      const resPatch = await fetch(`/api/controle-dmr/${registroId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ [`${prefixo}Dmr`]: "OK", [`${prefixo}Mtr`]: "OK" }),
-      });
-      if (!resPatch.ok) throw new Error("Falha ao atualizar status");
-      toast(`Enviado ao controle DMR como OK (${dmrTrimestre}º trimestre)`, "success");
-    } catch (e) {
-      toast(e instanceof Error ? e.message : "Erro ao enviar para o controle DMR", "error");
-    } finally {
-      setEnviandoControle(false);
-    }
-  }
-
-  async function gerarDmr() {
-    if (!conexaoEfetiva || !dmrEmpId) {
-      toast("Selecione a conexão e o empreendimento para a DMR", "error");
-      return;
-    }
-    setGerandoDmr(true);
-    try {
-      const params = new URLSearchParams({
-        conexaoId: conexaoEfetiva,
-        empreendimentoId: dmrEmpId,
-        trimestre: dmrTrimestre,
-        ano: dmrAno,
-      });
-      const res = await fetch(`/api/sinir/dmr?${params}`);
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        toast(data?.error || "Falha ao gerar a DMR", "error");
-        return;
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `DMR-${dmrTrimestre}T-${dmrAno}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      toast("DMR gerada — envio oficial deve ser feito no portal mtr.sinir.gov.br", "success");
-    } catch {
-      toast("Falha ao gerar a DMR", "error");
-    } finally {
-      setGerandoDmr(false);
-    }
-  }
 
   async function baixarArquivo(tipo: "mtr" | "cdf", m: Manifesto) {
     const prefixo = tipo === "cdf" ? "CDF" : "MTR";
@@ -593,7 +512,7 @@ function PainelTab(props: {
           </button>
         </div>
         {conexoes.length === 0 && (
-          <p className="mt-3 text-xs text-[var(--color-ink-500)]">Nenhuma conexão cadastrada — vá na aba Conexões para adicionar (modo simulação já funciona sem token).</p>
+          <p className="mt-3 text-xs text-[var(--color-ink-500)]">Nenhuma conexão cadastrada — vá na aba Conexões para adicionar.</p>
         )}
         {resumoVerif && (
           <div className="mt-4 grid grid-cols-3 gap-3">
@@ -610,51 +529,6 @@ function PainelTab(props: {
               <p className={`text-xs ${resumoVerif.pendentes > 0 ? "text-amber-600" : "text-[var(--color-ink-500)]"}`}>Sem certificação</p>
             </div>
           </div>
-        )}
-      </div>
-
-      <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Declaração DMR</h2>
-          <span className="text-xs text-[var(--color-ink-400)]">Modelo de referência do SINIR — envio oficial no portal mtr.sinir.gov.br</span>
-        </div>
-        <div className="flex flex-wrap items-end gap-2">
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-[var(--color-ink-500)]">Empreendimento (declarante)</label>
-            <select value={dmrEmpId} onChange={(e) => setDmrEmpId(e.target.value)} className="rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm">
-              <option value="">Selecione...</option>
-              {empreendimentos.map((e) => (
-                <option key={e.id} value={e.id}>{e.cliente.apelido} — {e.apelido}{e.unidadeSinir ? ` — unid. ${e.unidadeSinir}` : ""}</option>
-              ))}
-            </select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-[var(--color-ink-500)]">Trimestre</label>
-            <select value={dmrTrimestre} onChange={(e) => setDmrTrimestre(e.target.value)} className="rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm">
-              <option value="1">1º trimestre</option>
-              <option value="2">2º trimestre</option>
-              <option value="3">3º trimestre</option>
-              <option value="4">4º trimestre</option>
-            </select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-[var(--color-ink-500)]">Ano</label>
-            <input type="number" value={dmrAno} onChange={(e) => setDmrAno(e.target.value)} className="w-24 rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm" />
-          </div>
-          <button onClick={gerarDmr} disabled={gerandoDmr || !conexaoEfetiva || !dmrEmpId}
-            className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-[var(--color-ink-800)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-ink-900)] disabled:opacity-50">
-            {gerandoDmr ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={16} />}
-            {gerandoDmr ? "Gerando..." : "Gerar DMR (PDF)"}
-          </button>
-          <button onClick={marcarNoControle} disabled={enviandoControle || !dmrEmpId}
-            title="Adiciona o empreendimento ao módulo DMR e marca este trimestre como OK"
-            className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50">
-            {enviandoControle ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
-            {enviandoControle ? "Enviando..." : "Enviar ao controle DMR (OK)"}
-          </button>
-        </div>
-        {!conexaoEfetiva && (
-          <p className="mt-3 text-xs text-[var(--color-ink-500)]">Selecione a conexão no card de verificação para usar seus manifestos na DMR.</p>
         )}
       </div>
 
@@ -1902,7 +1776,7 @@ function abrirModalResiduo(indice?: number) {
   return (
     <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
       <h2 className="font-display mb-1 text-base font-semibold text-[var(--color-ink-900)]">Emitir Manifesto (MTR)</h2>
-      <p className="mb-2 text-sm text-[var(--color-ink-500)]">Em modo simulação gera um MTR fictício. Em modo real envia ao SINIR com o token da conexão. Busque transportador e destinador pelo CNPJ — os dados de endereço são preenchidos automaticamente.</p>
+      <p className="mb-2 text-sm text-[var(--color-ink-500)]">Busque transportador e destinador pelo CNPJ — os dados de endereço são preenchidos automaticamente.</p>
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <div className="flex flex-col gap-1 md:col-span-2">
@@ -3057,27 +2931,10 @@ function ConexoesTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimen
     }
   }
 
-  async function trocarModo(conexao: Conexao, novoModo: string) {
-    const res = await fetch(`/api/sinir/conexoes/${conexao.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ modo: novoModo }),
-    });
-    if (res.ok) {
-      toast(novoModo === "real" ? "Modo real ativado — o token será usado nas próximas chamadas" : "Modo simulação ativado", "success");
-      onChanged();
-    } else {
-      toast("Falha ao alterar o modo", "error");
-    }
-  }
-
   return (
     <div className="space-y-4">
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
         <h2 className="font-display mb-3 text-base font-semibold text-[var(--color-ink-900)]">Nova conexão</h2>
-        <p className="mb-4 text-sm text-[var(--color-ink-500)]">
-          Em <b>modo simulação</b> funciona sem token (dados fictícios). Para conversar com o SINIR de verdade, gere o token no portal (Configurações → Gerar Token API WS) e cadastre em <b>modo real</b> — o token fica criptografado.
-        </p>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <div className="flex flex-col gap-1 md:col-span-2">
             <label className="text-xs font-medium text-[var(--color-ink-500)]">Vincular empreendimento (preenche automaticamente)</label>
@@ -3149,7 +3006,6 @@ function ConexoesTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimen
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Nome</th>
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">CNPJ</th>
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Unidade</th>
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Modo</th>
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Token</th>
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Vencimento</th>
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Ações</th>
@@ -3161,15 +3017,6 @@ function ConexoesTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimen
                     <td className="py-2 px-2 font-medium text-[var(--color-ink-800)]">{c.nome}</td>
                     <td className="py-2 px-2 text-[var(--color-ink-600)]">{c.cnpj}</td>
                     <td className="py-2 px-2 text-[var(--color-ink-600)]">{c.unidade}</td>
-                    <td className="py-2 px-2">
-                      <button
-                        onClick={() => trocarModo(c, c.modo === "mock" ? "real" : "mock")}
-                        className={`rounded px-1.5 py-0.5 text-xs font-medium ${c.modo === "mock" ? "bg-blue-50 text-blue-700" : "bg-green-50 text-green-700"}`}
-                        title="Clique para alternar entre simulação e real"
-                      >
-                        {c.modo === "mock" ? "simulação" : "real"} — clicar alterna
-                      </button>
-                    </td>
                     <td className="py-2 px-2 text-[var(--color-ink-600)]">
                       {c.temToken ? <span className="flex items-center gap-1 text-xs text-green-700"><CheckCircle2 size={12} /> token salvo</span> : <span className="text-xs text-[var(--color-ink-400)]">sem token</span>}
                     </td>
