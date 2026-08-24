@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Conexão não encontrada" }, { status: 404 });
   }
 
-  const where: Record<string, unknown> = { conexaoId };
+  const where: Record<string, unknown> = { conexaoId, status: "RECEBIDO" };
   if (filtro === "pendentes") {
     where.status = { in: ["SALVO", "EMITIDO"] };
     where.certificado = false;

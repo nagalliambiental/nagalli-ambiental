@@ -425,6 +425,20 @@ async function listarManifestosReais(
         .filter((v): v is string => Boolean(v))
         .join("; ");
 
+      // Extrai a classe do primeiro resíduo (assumindo que todos têm a mesma classe)
+      const primeiroResiduo = residuos[0];
+      const claCodigo = typeof primeiroResiduo?.claCodigo === "number" ? primeiroResiduo.claCodigo
+        : typeof primeiroResiduo?.claCodigo === "string" ? Number(primeiroResiduo.claCodigo)
+        : undefined;
+
+      // Mapeia código da classe para classificação A/B/C/D (IBAMA)
+      const mapaClasse: Record<number, string> = {
+        1: "A", // Classe I - Perigosos
+        2: "B", // Classe II A - Não inertes
+        3: "C", // Classe II B - Inertes
+      };
+      const classeNome = claCodigo ? (mapaClasse[claCodigo] || "D") : "Não identificado";
+
       manifestos.push({
         numero,
         status,
@@ -439,7 +453,7 @@ async function listarManifestosReais(
         dataExpedicao: dataDeMs(obj.dataExpedicao || obj.manDataExpedicao || obj.manData),
         dataRecebimento: dataDeMs(obj.dataRecebimento || obj.manDataRecebimento || obj.manDataRecebimentoArmazenamentoTemporario),
         classeRisco: numeroString(obj.marClasseRisco || obj.classeRisco || obj.claClasseRisco),
-        classeNome: numeroString(obj.claNome || obj.classeNome || obj.claDescricao),
+        classeNome,
       });
     }
 
@@ -545,6 +559,18 @@ export async function consultarManifesto(
   const transportador = extrairParceiro(obj.parceiroTransportador || obj.transportador);
   const destinador = extrairParceiro(obj.parceiroDestinador || obj.destinador);
 
+  const residuos = Array.isArray(obj.listaManifestoResiduo) ? (obj.listaManifestoResiduo as Record<string, unknown>[]) : [];
+      const primeiroResiduo = residuos[0];
+      const claCodigo = typeof primeiroResiduo?.claCodigo === "number" ? primeiroResiduo.claCodigo
+        : typeof primeiroResiduo?.claCodigo === "string" ? Number(primeiroResiduo.claCodigo)
+        : undefined;
+      const mapaClasse: Record<number, string> = {
+        1: "A",
+        2: "B",
+        3: "C",
+      };
+      const classeNome = claCodigo ? (mapaClasse[claCodigo] || "D") : "Não identificado";
+
   return {
     numero: numeroString(obj.manNumero) || numero,
     status,
@@ -559,7 +585,7 @@ export async function consultarManifesto(
     dataExpedicao: dataDeMs(obj.dataExpedicao || obj.manDataExpedicao || obj.manData),
     dataRecebimento: dataDeMs(obj.dataRecebimento || obj.manDataRecebimento || obj.manDataRecebimentoArmazenamentoTemporario),
     classeRisco: numeroString(obj.marClasseRisco || obj.classeRisco || obj.claClasseRisco),
-    classeNome: numeroString(obj.claNome || obj.classeNome || obj.claDescricao),
+    classeNome,
   };
 }
 
