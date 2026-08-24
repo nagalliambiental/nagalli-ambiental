@@ -1180,17 +1180,18 @@ function MeusMtrsTab(props: {
             <p className="text-sm text-[var(--color-ink-500)]">Ajuste as datas e clique em &quot;Consultar SINIR&quot;.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <>
+          <div className="hidden overflow-x-auto md:block">
+            <table className="w-full text-xs xl:text-sm">
               <thead>
                 <tr className="bg-[var(--color-paper-50)] text-left text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-500)]">
                   <th className="py-2.5 pl-5 pr-2">Número</th>
-                  <th className="px-2 py-2.5">Gerador</th>
+                  <th className="hidden px-2 py-2.5 lg:table-cell">Gerador</th>
                   <th className="px-2 py-2.5">Destinador</th>
-                  <th className="px-2 py-2.5">Transportador</th>
+                  <th className="hidden px-2 py-2.5 lg:table-cell">Transportador</th>
                   <th className="px-2 py-2.5">Expedição</th>
                   <th className="px-2 py-2.5">Classe</th>
-                  <th className="px-2 py-2.5">CDF</th>
+                  <th className="hidden px-2 py-2.5 xl:table-cell">CDF</th>
                   <th className="px-2 py-2.5">Situação</th>
                   <th className="py-2.5 pl-2 pr-5 text-right">PDF</th>
                 </tr>
@@ -1208,8 +1209,8 @@ function MeusMtrsTab(props: {
                       >
                         <td className="whitespace-nowrap py-2.5 pl-5 pr-2 font-mono text-xs font-semibold text-[var(--color-ink-700)]">{m.numero}</td>
                         <td className="max-w-[180px] truncate px-2 py-2.5 text-[var(--color-ink-700)]" title={m.clienteNome || undefined}>{m.clienteNome || "—"}</td>
-                        <td className="max-w-[180px] truncate px-2 py-2.5 text-[var(--color-ink-600)]" title={m.destinadorNome || undefined}>{m.destinadorNome || "—"}</td>
-                        <td className="max-w-[160px] truncate px-2 py-2.5 text-[var(--color-ink-600)]" title={m.transportadorNome || undefined}>{m.transportadorNome || "—"}</td>
+                        <td className="hidden max-w-[180px] truncate px-2 py-2.5 text-[var(--color-ink-600)] lg:table-cell" title={m.destinadorNome || undefined}>{m.destinadorNome || "—"}</td>
+                        <td className="hidden max-w-[160px] truncate px-2 py-2.5 text-[var(--color-ink-600)] lg:table-cell" title={m.transportadorNome || undefined}>{m.transportadorNome || "—"}</td>
                         <td className="whitespace-nowrap px-2 py-2.5 tabular-nums text-[var(--color-ink-600)]">{fmtData(m.dataExpedicao)}</td>
                         <td className="px-2 py-2.5">
                           {letraClasse ? (
@@ -1220,7 +1221,7 @@ function MeusMtrsTab(props: {
                             <span className="text-xs text-[var(--color-ink-400)]">—</span>
                           )}
                         </td>
-                        <td className="px-2 py-2.5">
+                        <td className="hidden px-2 py-2.5 xl:table-cell">
                           {m.cdfNumero ? (
                             <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 font-mono text-xs font-semibold text-emerald-700">
                               <ShieldCheck size={12} /> {m.cdfNumero}
@@ -1276,6 +1277,100 @@ function MeusMtrsTab(props: {
               </tbody>
             </table>
           </div>
+
+          <ul className="divide-y divide-[var(--color-paper-100)] md:hidden">
+            {visiveisL.map((m) => {
+              const salvo = (m.status === "SALVO" || m.status === "EMITIDO") && !m.certificado;
+              const atrasado = salvo && diasEmSalvo(m) > limiteDias;
+              const letraClasse = (m.classeNome || "").toUpperCase().replace(/[^ABCD]/g, "").charAt(0);
+              return (
+                <li key={m.id} className={`px-4 py-3 ${atrasado ? "bg-red-50/70" : salvo ? "bg-amber-50/40" : ""}`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono text-xs font-semibold text-[var(--color-ink-700)]">{m.numero}</span>
+                    {m.status === "RECEBIDO" ? (
+                      <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">
+                        <CheckCircle2 size={12} /> Recebido
+                      </span>
+                    ) : salvo ? (
+                      <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold ${atrasado ? "bg-red-200 text-red-800" : "bg-amber-100 text-amber-700"}`}>
+                        {atrasado ? <AlertTriangle size={12} /> : <Clock size={12} />}
+                        Salvo há {diasEmSalvo(m)} dia(s)
+                      </span>
+                    ) : (
+                      <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_BADGE[m.status] || "bg-[var(--color-paper-100)] text-[var(--color-ink-600)]"}`}>
+                        {m.status === "CANCELADO" ? <XCircle size={12} /> : null}
+                        {m.status === "ARMAZ_TEMPORARIO" ? "Armazenamento temporário" : m.status}
+                        {m.certificado && <ShieldCheck size={12} />}
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-1.5 text-sm font-medium text-[var(--color-ink-900)]">{m.destinadorNome || "—"}</p>
+                  <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
+                    <div className="min-w-0">
+                      <dt className="text-[var(--color-ink-400)]">Gerador</dt>
+                      <dd className="truncate text-[var(--color-ink-700)]">{m.clienteNome || "—"}</dd>
+                    </div>
+                    <div className="min-w-0">
+                      <dt className="text-[var(--color-ink-400)]">Transportador</dt>
+                      <dd className="truncate text-[var(--color-ink-700)]">{m.transportadorNome || "—"}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-[var(--color-ink-400)]">Expedição</dt>
+                      <dd className="tabular-nums text-[var(--color-ink-700)]">{fmtData(m.dataExpedicao)}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-[var(--color-ink-400)]">Classe</dt>
+                      <dd>
+                        {letraClasse ? (
+                          <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-bold ${CLASSE_BADGE[letraClasse]}`}>
+                            Classe {letraClasse}
+                          </span>
+                        ) : (
+                          <span className="text-[var(--color-ink-300)]">—</span>
+                        )}
+                      </dd>
+                    </div>
+                    <div className="col-span-2">
+                      <dt className="text-[var(--color-ink-400)]">CDF</dt>
+                      <dd>
+                        {m.cdfNumero ? (
+                          <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 font-mono text-xs font-semibold text-emerald-700">
+                            <ShieldCheck size={12} /> {m.cdfNumero}
+                          </span>
+                        ) : (
+                          <span className="text-[var(--color-ink-300)]">—</span>
+                        )}
+                      </dd>
+                    </div>
+                  </dl>
+                  <div className="mt-2.5 flex items-center gap-2">
+                    <button
+                      onClick={() => baixarArquivoMeusMtrs("mtr", m)}
+                      title="Baixar PDF do MTR"
+                      className="focus-ring flex items-center gap-1.5 rounded-lg border border-[var(--color-paper-200)] px-2.5 py-1.5 text-xs font-medium text-[var(--color-ink-600)] transition-brand hover:border-[var(--color-brand-400)] hover:bg-[var(--color-brand-50)] hover:text-[var(--color-brand-600)]"
+                    >
+                      <FileDown size={13} />
+                      PDF do MTR
+                    </button>
+                    {m.certificado && m.status !== "CANCELADO" && (
+                      <button
+                        onClick={() => {
+                          toast("Consultando o CDF no SINIR...", "info");
+                          baixarArquivoMeusMtrs("cdf", m);
+                        }}
+                        title="Baixar CDF (Certificado de Destinação Final) — disponível após o destinador confirmar a destinação"
+                        className="focus-ring flex items-center gap-1.5 rounded-lg border border-emerald-200 px-2.5 py-1.5 text-xs font-medium text-emerald-600 transition-brand hover:bg-emerald-50 hover:text-emerald-700"
+                      >
+                        <ShieldCheck size={13} />
+                        CDF
+                      </button>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+          </>
         )}
         {listaFiltrada.length > POR_PAGINA && (
           <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--color-paper-200)] bg-[var(--color-paper-50)] px-5 py-2.5 text-xs text-[var(--color-ink-600)]">
