@@ -48,7 +48,7 @@ function DownloadButtons({ url, hook }: { url: string; hook: ReturnType<typeof u
         {hook.loading ? "Gerando..." : "Baixar PDF"}
       </button>
       <button onClick={() => hook.download("xlsx")} disabled={hook.loading}
-        className="focus-ring transition-brand flex items-center gap-2 rounded-lg border border-[var(--color-green-600)] bg-green-50 px-4 py-2.5 text-sm font-medium text-[var(--color-green-700)] hover:bg-green-100 disabled:opacity-50">
+        className="focus-ring transition-brand flex items-center gap-2 rounded-lg border border-green-600 bg-green-50 px-4 py-2.5 text-sm font-medium text-green-700 hover:bg-green-100 disabled:opacity-50">
         <FileText size={16} /> Excel
       </button>
     </div>

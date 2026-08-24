@@ -3,7 +3,8 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Topbar } from "@/components/Topbar";
-import { DollarSign, Plus } from "lucide-react";
+import { Banknote, CheckCircle2, Clock, DollarSign, Plus, Wallet } from "lucide-react";
+import { StatCard } from "@/components/StatCard";
 import { FinanceiroTable } from "@/components/tables/FinanceiroTable";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 
@@ -24,6 +25,10 @@ export default async function FinanceiroPage() {
     orderBy: { criadoEm: "desc" },
   });
 
+  const pagos = registros.filter((r) => r.statusPagamento === "pago");
+  const emAberto = registros.filter((r) => r.statusPagamento !== "pago");
+  const totalEmAberto = emAberto.reduce((soma, r) => soma + r.valor, 0);
+
   return (
     <div>
       <Breadcrumbs items={[{ label: "Financeiro" }]} />
@@ -42,6 +47,18 @@ export default async function FinanceiroPage() {
           </div>
         }
       />
+
+      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard label="Lançamentos na lista" value={registros.length} icon={Wallet} accent="brand" />
+        <StatCard label="Pagos" value={pagos.length} icon={CheckCircle2} accent="success" />
+        <StatCard label="Em aberto" value={emAberto.length} icon={Clock} accent="warning" />
+        <StatCard
+          label="Total em aberto"
+          value={"R$ " + totalEmAberto.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          icon={Banknote}
+          accent="danger"
+        />
+      </div>
 
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">
         <FinanceiroTable data={registros} />

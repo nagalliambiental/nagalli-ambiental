@@ -1,5 +1,13 @@
 import type { LucideIcon } from "lucide-react";
 
+const TONES = {
+  brand: "bg-[var(--color-brand-50)] text-[var(--color-brand-600)]",
+  river: "bg-[var(--color-river-100)] text-[var(--color-river-700)]",
+  success: "bg-green-50 text-green-600",
+  warning: "bg-amber-50 text-amber-600",
+  danger: "bg-red-50 text-red-600",
+} as const;
+
 export function StatCard({
   label,
   value,
@@ -11,26 +19,21 @@ export function StatCard({
   value: string | number;
   hint?: string;
   icon: LucideIcon;
-  accent?: "brand" | "river";
+  accent?: keyof typeof TONES;
 }) {
-  const accentBg =
-    accent === "river" ? "bg-[var(--color-river-100)]" : "bg-[var(--color-brand-50)]";
-  const accentText =
-    accent === "river" ? "text-[var(--color-river-700)]" : "text-[var(--color-brand-600)]";
-
   return (
-    <div className="shadow-card h-full rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-sm text-[var(--color-ink-500)]">{label}</p>
-          <p className="font-display mt-2 text-3xl font-semibold text-[var(--color-ink-900)]">
+    <div className="shadow-card h-full rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-4">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="truncate text-xs font-medium text-[var(--color-ink-500)]">{label}</p>
+          <p className="font-display mt-1.5 text-2xl font-bold tabular-nums text-[var(--color-ink-900)]">
             {value}
           </p>
-          {hint && <p className="mt-1 text-xs text-[var(--color-ink-500)]">{hint}</p>}
+          {hint && <p className="mt-1 truncate text-xs text-[var(--color-ink-500)]">{hint}</p>}
         </div>
-        <div className={`rounded-lg p-2.5 ${accentBg}`}>
-          <Icon size={20} className={accentText} strokeWidth={2} />
-        </div>
+        <span className={`grid size-8 shrink-0 place-items-center rounded-lg ${TONES[accent]}`}>
+          <Icon size={15} strokeWidth={2} />
+        </span>
       </div>
     </div>
   );

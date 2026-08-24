@@ -3,8 +3,9 @@ import type { Prisma } from "@prisma/client";
 import Link from "next/link";
 import { Topbar } from "@/components/Topbar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
-import { FolderOpen, Plus } from "lucide-react";
+import { CheckCircle2, Files, FolderOpen, Link2, Plus } from "lucide-react";
 import { FilterSelect } from "@/components/FilterSelect";
+import { StatCard } from "@/components/StatCard";
 import { DocumentosTable } from "@/components/tables/DocumentosTable";
 
 export const dynamic = "force-dynamic";
@@ -31,6 +32,22 @@ export default async function DocumentosPage({
     },
     orderBy: { criadoEm: "desc" },
   });
+
+  const comProcesso = documentos.filter((d) => d.processoId != null).length;
+  const comExigencia = documentos.filter((d) => d.exigenciaId != null).length;
+
+  const contagemTipos = new Map<string, number>();
+  for (const doc of documentos) {
+    contagemTipos.set(doc.tipo, (contagemTipos.get(doc.tipo) ?? 0) + 1);
+  }
+  let tipoPredominante = "-";
+  let maxCount = 0;
+  for (const [t, c] of contagemTipos) {
+    if (c > maxCount) {
+      maxCount = c;
+      tipoPredominante = t;
+    }
+  }
 
   return (
     <div>
@@ -64,6 +81,19 @@ export default async function DocumentosPage({
           </div>
         }
       />
+
+      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard label="Documentos" value={documentos.length} icon={FolderOpen} accent="brand" />
+        <StatCard label="Vinculados a processos" value={comProcesso} icon={Link2} accent="river" />
+        <StatCard label="Atendem exigências" value={comExigencia} icon={CheckCircle2} accent="success" />
+        <StatCard
+          label="Tipo predominante"
+          value={tipoPredominante}
+          hint={maxCount > 0 ? `${maxCount} documento(s)` : undefined}
+          icon={Files}
+          accent="warning"
+        />
+      </div>
 
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">
         <DocumentosTable data={documentos} />

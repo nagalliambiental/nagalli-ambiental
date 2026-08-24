@@ -44,7 +44,7 @@ export default async function BackupsPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-[var(--color-paper-200)] text-left text-xs uppercase tracking-wide text-[var(--color-ink-400)]">
+                <tr className="border-b border-[var(--color-paper-200)] bg-[var(--color-paper-50)] text-left text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-500)]">
                   <th className="px-5 py-3 font-medium">Data</th>
                   <th className="px-5 py-3 font-medium">Origem</th>
                   <th className="px-5 py-3 font-medium">Gerado por</th>
@@ -54,7 +54,7 @@ export default async function BackupsPage() {
               </thead>
               <tbody>
                 {backups.map((b) => (
-                  <tr key={b.id} className="border-b border-[var(--color-paper-200)] last:border-0 hover:bg-[var(--color-paper-50)]">
+                  <tr key={b.id} className="border-b border-[var(--color-paper-200)] last:border-0 hover:bg-[var(--color-paper-50)] transition-colors">
                     <td className="px-5 py-3 text-[var(--color-ink-800)]">{formatDataHora(b.criadoEm)}</td>
                     <td className="px-5 py-3">
                       <span className={`inline-block rounded px-2 py-1 text-xs font-medium ${b.origem === "manual" ? "bg-amber-50 text-amber-700" : "bg-green-50 text-green-700"}`}>

@@ -2,7 +2,8 @@ import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import Link from "next/link";
 import { Topbar } from "@/components/Topbar";
-import { Plus, MapPin } from "lucide-react";
+import { Plus, MapPin, CheckCircle2, CircleSlash } from "lucide-react";
+import { StatCard } from "@/components/StatCard";
 import { EmpreendimentosTable } from "@/components/tables/EmpreendimentosTable";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { GerarDocumentosButton } from "@/components/GerarDocumentosButton";
@@ -29,6 +30,10 @@ export default async function EmpreendimentosPage() {
     orderBy: { apelido: "asc" },
   });
 
+  const totalEmpreendimentos = empreendimentos.length;
+  const empreendimentosAtivos = empreendimentos.filter((e) => e.ativo).length;
+  const empreendimentosInativos = empreendimentos.filter((e) => !e.ativo).length;
+
   return (
     <div>
       <Breadcrumbs items={[{ label: "Empreendimentos" }]} />
@@ -48,6 +53,27 @@ export default async function EmpreendimentosPage() {
           </div>
         }
       />
+
+      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-3">
+        <StatCard
+          label="Empreendimentos"
+          value={totalEmpreendimentos}
+          icon={MapPin}
+          accent="brand"
+        />
+        <StatCard
+          label="Ativos"
+          value={empreendimentosAtivos}
+          icon={CheckCircle2}
+          accent="success"
+        />
+        <StatCard
+          label="Inativos"
+          value={empreendimentosInativos}
+          icon={CircleSlash}
+          accent="danger"
+        />
+      </div>
 
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">
         <EmpreendimentosTable data={empreendimentos} />

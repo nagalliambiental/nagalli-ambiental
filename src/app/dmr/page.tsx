@@ -254,7 +254,7 @@ export default function DmrPage() {
                 <col className="w-[9%]" />
               </colgroup>
               <thead>
-                <tr className="border-b border-[var(--color-paper-200)] text-[var(--color-ink-500)]">
+                <tr className="border-b border-[var(--color-paper-200)] bg-[var(--color-paper-50)] text-left text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-500)]">
                   <th className="p-2 text-center">
                     <input
                       type="checkbox"
@@ -273,7 +273,7 @@ export default function DmrPage() {
               </thead>
               <tbody>
                   {registros.map((r) => (
-                  <tr key={r.id} className="border-b border-[var(--color-paper-50)] hover:bg-[var(--color-paper-50)]">
+                  <tr key={r.id} className="border-b border-[var(--color-paper-50)] hover:bg-[var(--color-paper-50)] transition-colors">
                     <td className="p-2 text-center">
                       <input
                         type="checkbox"

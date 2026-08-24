@@ -3,7 +3,8 @@ import type { Prisma } from "@prisma/client";
 import Link from "next/link";
 import { Topbar } from "@/components/Topbar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
-import { FolderKanban, Plus, Clock3 } from "lucide-react";
+import { StatCard } from "@/components/StatCard";
+import { FolderKanban, Plus, Clock3, AlertTriangle, FileText } from "lucide-react";
 import { FilterSelect } from "@/components/FilterSelect";
 import { ProcessosTable } from "@/components/tables/ProcessosTable";
 import { atualizarProcessosVencidos } from "@/lib/vencidos";
@@ -42,6 +43,10 @@ export default async function ProcessosPage({
   });
 
   const totalVencidos = await prisma.processo.count({ where: { status: "vencido", ativo: true } });
+  const [protocolados, emAndamento] = await Promise.all([
+    prisma.processo.count({ where: { status: "protocolado", ativo: true } }),
+    prisma.processo.count({ where: { status: "em_andamento", ativo: true } }),
+  ]);
 
   return (
     <div>
@@ -74,6 +79,12 @@ export default async function ProcessosPage({
         }
       />
 
+      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard label="Processos na lista" value={processos.length} icon={FolderKanban} />
+        <StatCard label="Em andamento" value={emAndamento} icon={Clock3} accent="river" />
+        <StatCard label="Protocolados" value={protocolados} icon={FileText} />
+        <StatCard label="Vencidos" value={totalVencidos} icon={AlertTriangle} accent={totalVencidos > 0 ? "danger" : "success"} />
+      </div>
       <div className="mb-4 flex gap-2 border-b border-[var(--color-paper-200)]">
         <Link
           href="/processos"

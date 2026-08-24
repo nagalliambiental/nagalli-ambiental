@@ -215,7 +215,7 @@ export default function AcessosPage() {
             <div className="mt-6 flex justify-end gap-3">
               <button onClick={() => { setShowModal(false); setFormClienteId(""); setFormEmpId(""); setEmpreendimentos([]); }} className="rounded-lg border border-[var(--color-paper-200)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]">Cancelar</button>
               <button onClick={handleCreate} disabled={saving}
-                className="flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">
+                className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">
                 {saving ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
                 {saving ? "Salvando..." : "Criar"}
               </button>

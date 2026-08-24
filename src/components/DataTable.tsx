@@ -148,7 +148,7 @@ export function DataTable<T extends { id: number }>({
                 ))}
               </colgroup>
               <thead>
-                <tr className="border-b border-[var(--color-paper-200)] bg-[var(--color-paper-50)] text-[var(--color-ink-500)]">
+                <tr className="border-b border-[var(--color-paper-200)] bg-[var(--color-paper-50)] text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-500)]">
                   <th className="p-4 text-center">
                     <input
                       type="checkbox"
@@ -160,7 +160,7 @@ export function DataTable<T extends { id: number }>({
                   {columns.map((col, i) => (
                     <th
                       key={i}
-                      className={`text-left p-4 font-medium ${col.headerClassName || ""} ${col.sortable ? "cursor-pointer select-none hover:text-[var(--color-ink-700)]" : ""}`}
+                      className={`text-left p-4 ${col.headerClassName || ""} ${col.sortable ? "cursor-pointer select-none hover:text-[var(--color-ink-700)]" : ""}`}
                       onClick={() => col.sortable && col.sortKey && handleSort(col.sortKey)}
                     >
                       <span className="inline-flex items-center gap-1">
@@ -176,7 +176,7 @@ export function DataTable<T extends { id: number }>({
               <tbody>
                 {paginated.map((item) => (
                   <React.Fragment key={item.id}>
-                    <tr className="border-t border-[var(--color-paper-200)] text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]">
+                    <tr className="border-t border-[var(--color-paper-100)] text-[var(--color-ink-700)] transition-colors last:border-b-0 hover:bg-[var(--color-paper-50)]">
                       <td className="p-4 text-center">
                         <input
                           type="checkbox"
@@ -198,16 +198,16 @@ export function DataTable<T extends { id: number }>({
             </table>
           </div>
 
-          <div className="flex items-center justify-between border-t border-[var(--color-paper-200)] px-4 py-3">
-            <span className="text-sm text-[var(--color-ink-500)]">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--color-paper-200)] bg-[var(--color-paper-50)] px-4 py-3">
+            <span className="text-xs font-medium tabular-nums text-[var(--color-ink-500)]">
               {sorted.length} registro(s) — Página {safePage} de {totalPages}
             </span>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 disabled={safePage <= 1}
                 onClick={() => setPage(safePage - 1)}
-                className="focus-ring flex items-center gap-1 rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-1.5 text-sm text-[var(--color-ink-600)] hover:bg-[var(--color-paper-100)] disabled:opacity-30"
+                className="focus-ring flex items-center gap-1 rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-ink-600)] transition-brand hover:bg-[var(--color-paper-100)] disabled:opacity-40"
               >
                 <ChevronLeft size={14} />
                 Anterior
@@ -216,7 +216,7 @@ export function DataTable<T extends { id: number }>({
                 type="button"
                 disabled={safePage >= totalPages}
                 onClick={() => setPage(safePage + 1)}
-                className="focus-ring flex items-center gap-1 rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-1.5 text-sm text-[var(--color-ink-600)] hover:bg-[var(--color-paper-100)] disabled:opacity-30"
+                className="focus-ring flex items-center gap-1 rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-ink-600)] transition-brand hover:bg-[var(--color-paper-100)] disabled:opacity-40"
               >
                 Próximo
                 <ChevronRight size={14} />

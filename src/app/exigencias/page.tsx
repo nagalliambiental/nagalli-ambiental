@@ -1,8 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Topbar } from "@/components/Topbar";
-import { AlertTriangle, Plus } from "lucide-react";
+import { AlertTriangle, Plus, ListChecks, CheckCircle2, Clock } from "lucide-react";
 import { ExigenciasTable } from "@/components/tables/ExigenciasTable";
+import { StatCard } from "@/components/StatCard";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 
 export const dynamic = "force-dynamic";
@@ -25,6 +26,11 @@ export default async function ExigenciasPage() {
     orderBy: [{ cumprida: "asc" }, { prazo: "asc" }],
   });
 
+  const agora = new Date();
+  const cumpridas = exigencias.filter((e) => e.cumprida === true).length;
+  const pendentes = exigencias.filter((e) => !e.cumprida).length;
+  const vencidas = exigencias.filter((e) => !e.cumprida && e.prazo < agora).length;
+
   return (
     <div>
       <Breadcrumbs items={[{ label: "Exigências" }]} />
@@ -43,6 +49,13 @@ export default async function ExigenciasPage() {
           </div>
         }
       />
+
+      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard label="Exigências na lista" value={exigencias.length} icon={ListChecks} accent="brand" />
+        <StatCard label="Cumpridas" value={cumpridas} icon={CheckCircle2} accent="success" />
+        <StatCard label="Pendentes" value={pendentes} icon={Clock} accent="warning" />
+        <StatCard label="Vencidas" value={vencidas} icon={AlertTriangle} accent="danger" />
+      </div>
 
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">
         <ExigenciasTable data={exigencias} />

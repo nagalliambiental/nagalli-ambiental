@@ -3,9 +3,10 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Topbar } from "@/components/Topbar";
-import { Plus, FileSignature } from "lucide-react";
+import { Plus, FileSignature, FileText, CheckCircle2, CalendarClock, AlertTriangle } from "lucide-react";
 import { ContratoTable } from "@/components/tables/ContratoTable";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { StatCard } from "@/components/StatCard";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,15 @@ export default async function ContratosPage() {
     orderBy: { criadoEm: "desc" },
   });
 
+  const agora = new Date();
+  const em30Dias = new Date(agora.getTime() + 30 * 24 * 60 * 60 * 1000);
+  const totalContratos = registros.length;
+  const contratosAtivos = registros.filter((r) => r.ativo === true).length;
+  const aVencer30Dias = registros.filter(
+    (r) => r.ativo === true && r.dataValidade >= agora && r.dataValidade <= em30Dias,
+  ).length;
+  const vencidos = registros.filter((r) => r.dataValidade < agora).length;
+
   return (
     <div>
       <Breadcrumbs items={[{ label: "Contratos" }]} />
@@ -43,6 +53,18 @@ export default async function ContratosPage() {
           </div>
         }
       />
+
+      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard label="Contratos" value={totalContratos} icon={FileText} accent="brand" />
+        <StatCard label="Ativos" value={contratosAtivos} icon={CheckCircle2} accent="success" />
+        <StatCard
+          label="A vencer em 30 dias"
+          value={aVencer30Dias}
+          icon={CalendarClock}
+          accent="warning"
+        />
+        <StatCard label="Vencidos" value={vencidos} icon={AlertTriangle} accent="danger" />
+      </div>
 
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">
         <ContratoTable data={registros} />

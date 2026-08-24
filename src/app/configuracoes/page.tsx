@@ -410,7 +410,7 @@ function LogsTab() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-[var(--color-paper-200)]">
+              <tr className="border-b border-[var(--color-paper-200)] bg-[var(--color-paper-50)] text-left text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-500)]">
                 <th className="text-left py-2 px-2 font-medium text-[var(--color-ink-700)]">Data/Hora</th>
                 <th className="text-left py-2 px-2 font-medium text-[var(--color-ink-700)]">Ação</th>
                 <th className="text-left py-2 px-2 font-medium text-[var(--color-ink-700)]">Entidade</th>
@@ -421,7 +421,7 @@ function LogsTab() {
             </thead>
             <tbody>
               {logs.map((log) => (
-                <tr key={log.id} className="border-b border-[var(--color-paper-100)] hover:bg-[var(--color-paper-50)]">
+                <tr key={log.id} className="border-b border-[var(--color-paper-100)] hover:bg-[var(--color-paper-50)] transition-colors">
                   <td className="py-2 px-2 text-[var(--color-ink-600)] whitespace-nowrap">{formatDate(log.criadoEm)}</td>
                   <td className="py-2 px-2">
                     <span className={`inline-block rounded px-1.5 py-0.5 text-xs font-medium ${acaoColors[log.acao.toUpperCase()] || "text-[var(--color-ink-600)] bg-[var(--color-paper-100)]"}`}>

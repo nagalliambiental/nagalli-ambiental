@@ -49,7 +49,7 @@ export default async function UsuariosPage() {
         {usuarios.length > 0 ? (
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-[var(--color-paper-200)] text-[var(--color-ink-500)]">
+              <tr className="border-b border-[var(--color-paper-200)] bg-[var(--color-paper-50)] text-left text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-500)]">
                 <th className="text-left p-4 font-medium">Nome</th>
                 <th className="text-left p-4 font-medium">Email</th>
                 <th className="text-left p-4 font-medium">Perfil</th>
@@ -60,7 +60,7 @@ export default async function UsuariosPage() {
             </thead>
             <tbody>
               {usuarios.map((u) => (
-                <tr key={u.id} className="border-t border-[var(--color-paper-200)] text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]">
+                <tr key={u.id} className="border-t border-[var(--color-paper-200)] text-[var(--color-ink-700)] hover:bg-[var(--color-paper-50)] transition-colors">
                   <td className="p-4 font-medium text-[var(--color-ink-900)]">{u.nome}</td>
                   <td className="p-4">{u.email}</td>
                   <td className="p-4">
