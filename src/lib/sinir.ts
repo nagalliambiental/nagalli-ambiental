@@ -426,38 +426,9 @@ async function listarManifestosReais(
         .filter((v): v is string => Boolean(v))
         .join("; ");
 
-      // Extrai a classe do primeiro resíduo (assumindo que todos têm a mesma classe)
-      const primeiroResiduo = residuos[0];
-      // Tenta múltiplos nomes de campo possíveis para o código da classe
-      const tentarCampos = [
-        "claCodigo",
-        "claCodigoIbama",
-        "claClasse",
-        "claClasseRisco",
-        "claClasseIbama",
-        "resClasse",
-        "resClasseRisco",
-        "marClasseRisco",
-      ];
-      let claCodigo: number | undefined;
-      for (const campo of tentarCampos) {
-        const valor = primeiroResiduo?.[campo];
-        if (valor !== undefined) {
-          const num = typeof valor === "number" ? valor : typeof valor === "string" ? Number(valor) : NaN;
-          if (Number.isFinite(num)) {
-            claCodigo = num;
-            break;
-          }
-        }
-      }
-
-      // Mapeia código da classe para classificação A/B/C/D (IBAMA)
-      const mapaClasse: Record<number, string> = {
-        1: "A", // Classe I - Perigosos
-        2: "B", // Classe II A - Não inertes
-        3: "C", // Classe II B - Inertes
-      };
-      const classeNome = claCodigo ? (mapaClasse[claCodigo] || "D") : "Não identificado";
+      // A classe vem aninhada em listaManifestoResiduo[].classe (quando o endpoint retorna)
+      const identClasse = classeDeResiduos(residuos);
+      const classeNome = identClasse.letra || "Não identificado";
 
       manifestos.push({
         numero,

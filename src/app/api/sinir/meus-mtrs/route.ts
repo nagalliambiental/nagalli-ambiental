@@ -79,6 +79,11 @@ export async function POST(req: NextRequest) {
   };
   const itens: ManifestoEnriquecido[] = [];
   for (const m of manifestos) {
+    // A consulta em lote não retorna resíduos/classe — preserva o que já está no banco
+    const temClasseNova = Boolean(m.classeNome) && m.classeNome !== "Não identificado";
+    const dadosClasseUpdate = temClasseNova
+      ? { classeRisco: m.classeRisco, classeNome: m.classeNome }
+      : {};
     const salvo = await prisma.sinirManifesto.upsert({
       where: { conexaoId_numero: { conexaoId: conexao.id, numero: m.numero } },
       create: {
@@ -96,7 +101,7 @@ export async function POST(req: NextRequest) {
         dataExpedicao: m.dataExpedicao,
         dataRecebimento: m.dataRecebimento,
         classeRisco: m.classeRisco,
-        classeNome: m.classeNome,
+        classeNome: m.classeNome === "Não identificado" ? null : m.classeNome,
       },
       update: {
         status: m.status,
@@ -110,12 +115,13 @@ export async function POST(req: NextRequest) {
         unidade: m.unidade,
         dataExpedicao: m.dataExpedicao,
         dataRecebimento: m.dataRecebimento,
-        classeRisco: m.classeRisco,
-        classeNome: m.classeNome,
+        ...dadosClasseUpdate,
       },
     });
     itens.push({
       ...m,
+      classeNome: salvo.classeNome || m.classeNome || "Não identificado",
+      classeRisco: m.classeRisco || salvo.classeRisco || "",
       id: salvo.id,
       conexao: { id: conexao.id, nome: conexao.nome, modo: conexao.modo },
     });

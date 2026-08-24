@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { logAuditoria } from "@/lib/audit";
-import { verificarManifestos } from "@/lib/sinir";
+import { verificarManifestos, classeDeResiduos } from "@/lib/sinir";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -64,6 +64,10 @@ export async function POST(req: NextRequest) {
 
   // Sincroniza com o banco: upsert por (conexaoId, numero)
   for (const m of manifestos) {
+    const ident = classeDeResiduos(m.residuos);
+    const dadosClasse = ident.letra
+      ? { classeNome: ident.letra, classeRisco: ident.resCodigoIbama || m.classeRisco || null }
+      : {};
     await prisma.sinirManifesto.upsert({
       where: { conexaoId_numero: { conexaoId: conexao.id, numero: m.numero } },
       create: {
@@ -81,6 +85,7 @@ export async function POST(req: NextRequest) {
         dataExpedicao: m.dataExpedicao,
         dataRecebimento: m.dataRecebimento,
         residuos: m.residuos as Prisma.InputJsonValue,
+        ...dadosClasse,
       },
       update: {
         status: m.status,
@@ -95,6 +100,7 @@ export async function POST(req: NextRequest) {
         dataExpedicao: m.dataExpedicao,
         dataRecebimento: m.dataRecebimento,
         residuos: m.residuos as Prisma.InputJsonValue,
+        ...dadosClasse,
       },
     });
   }
