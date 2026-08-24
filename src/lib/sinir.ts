@@ -29,6 +29,7 @@ export interface SinirManifestoDados {
   dataRecebimento?: Date;
   classeRisco?: string;
   classeNome?: string;
+  residuos?: Array<Record<string, unknown>>;
 }
 
 export interface SinirConexaoCompleta {
@@ -473,6 +474,7 @@ async function listarManifestosReais(
         dataRecebimento: dataDeMs(obj.dataRecebimento || obj.manDataRecebimento || obj.manDataRecebimentoArmazenamentoTemporario),
         classeRisco: numeroString(obj.marClasseRisco || obj.classeRisco || obj.claClasseRisco),
         classeNome,
+        residuos,
       });
     }
 
@@ -626,6 +628,7 @@ const gerador = extrairParceiro(obj.parceiroGerador || obj.gerador || obj.dadosG
     dataRecebimento: dataDeMs(obj.dataRecebimento || obj.manDataRecebimento || obj.manDataRecebimentoArmazenamentoTemporario),
     classeRisco: numeroString(obj.marClasseRisco || obj.classeRisco || obj.claClasseRisco),
     classeNome,
+    residuos: Array.isArray(obj.listaManifestoResiduo) ? obj.listaManifestoResiduo : undefined,
   };
 }
 
@@ -820,7 +823,7 @@ export async function baixarCertificadoPdf(
     conexao,
     `/downloadCertificado/${encodeURIComponent(codigo)}?formato=pdf`,
     "Erro ao baixar o CDF do SINIR",
-    { method: "POST", accept: "application/pdf" }
+    { method: "POST", accept: "*/*" }
   );
 
   const buffer = new Uint8Array(await res.arrayBuffer());
@@ -828,7 +831,7 @@ export async function baixarCertificadoPdf(
     const amostra = new TextDecoder().decode(buffer.slice(0, 200)).trim();
     throw new SinirError(`O SINIR não retornou um PDF válido para este CDF${amostra ? ` — resposta: ${amostra}` : " (corpo vazio)"}`, 502);
   }
-  return { buffer, filename: `CDF-${codigo}.pdf` };
+return { buffer, filename: `CDF-${codigo}.pdf` };
 }
 
 // ---------- Cancelamento ----------

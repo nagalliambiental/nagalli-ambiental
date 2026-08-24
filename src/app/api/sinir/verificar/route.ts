@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { logAuditoria } from "@/lib/audit";
 import { verificarManifestos } from "@/lib/sinir";
 
@@ -79,6 +80,7 @@ export async function POST(req: NextRequest) {
         unidade: m.unidade,
         dataExpedicao: m.dataExpedicao,
         dataRecebimento: m.dataRecebimento,
+        residuos: m.residuos as Prisma.InputJsonValue,
       },
       update: {
         status: m.status,
@@ -92,6 +94,7 @@ export async function POST(req: NextRequest) {
         unidade: m.unidade,
         dataExpedicao: m.dataExpedicao,
         dataRecebimento: m.dataRecebimento,
+        residuos: m.residuos as Prisma.InputJsonValue,
       },
     });
   }
