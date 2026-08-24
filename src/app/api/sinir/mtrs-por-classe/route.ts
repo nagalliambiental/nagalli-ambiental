@@ -12,6 +12,7 @@ export async function GET(req: NextRequest) {
 
   const conexaoId = Number(req.nextUrl.searchParams.get("conexaoId"));
   const filtro = req.nextUrl.searchParams.get("filtro") || "recebidos";
+  const classeFiltro = req.nextUrl.searchParams.get("classe") || "";
 
   if (!conexaoId) {
     return NextResponse.json({ error: "conexaoId é obrigatório" }, { status: 400 });
@@ -83,6 +84,11 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // Aplica filtro de classe se especificado
+    if (classeFiltro && classeNome !== classeFiltro) {
+      continue;
+    }
+
     mtrsPorClasse.push({
       numero: m.numero,
       classeRisco,
@@ -100,7 +106,7 @@ export async function GET(req: NextRequest) {
     "DOWNLOAD",
     "SinirRelatorio",
     0,
-    { acao: "mtrsPorClasse", conexao: conexao.nome, mtrs: manifestosLocais.length },
+    { acao: "mtrsPorClasse", conexao: conexao.nome, mtrs: manifestosLocais.length, filtroClasse: classeFiltro || "todas" },
     session.user?.id ? Number(session.user.id) : undefined
   );
 

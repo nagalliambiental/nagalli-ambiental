@@ -816,6 +816,7 @@ function MeusMtrsTab(props: {
   const [enviandoNotif, setEnviandoNotif] = useState(false);
   const [carregandoContatos, setCarregandoContatos] = useState(false);
   const [paginaLista, setPaginaLista] = useState(0);
+  const [classeFiltro, setClasseFiltro] = useState("");
 
   const pad = (n: number) => String(n).padStart(2, "0");
   const hoje = new Date();
@@ -1049,11 +1050,24 @@ function MeusMtrsTab(props: {
               <Mail size={16} />
               Notificar por e-mail
             </button>
-            <button
+            <div className="flex items-center gap-2">
+              <select
+                value={classeFiltro}
+                onChange={(e) => setClasseFiltro(e.target.value)}
+                className="rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm"
+              >
+                <option value="">Todas as classes</option>
+                <option value="A">Classe A (Perigosos)</option>
+                <option value="B">Classe B (Não inertes)</option>
+                <option value="C">Classe C (Inertes)</option>
+                <option value="D">Classe D (Outros)</option>
+              </select>
+<button
               onClick={async () => {
+                const filtroAtual = filtro === "todos" ? "recebidos" : filtro;
                 toast("Gerando relatório por classe de resíduo...", "info");
                 try {
-                  const res = await fetch(`/api/sinir/mtrs-por-classe?conexaoId=${conexaoEfetiva}&filtro=recebidos`);
+                  const res = await fetch(`/api/sinir/mtrs-por-classe?conexaoId=${conexaoEfetiva}&filtro=${filtroAtual}&classe=${classeFiltro}`);
                   if (!res.ok) {
                     const data = await res.json().catch(() => null);
                     throw new Error(data?.error || "Falha ao gerar relatório");
@@ -1062,7 +1076,7 @@ function MeusMtrsTab(props: {
                   const url = URL.createObjectURL(blob);
                   const a = document.createElement("a");
                   a.href = url;
-                  a.download = `mtrs-por-classe-${new Date().toISOString().slice(0, 10)}.pdf`;
+                  a.download = `mtrs-por-classe-${classeFiltro || "todas"}-${new Date().toISOString().slice(0, 10)}.pdf`;
                   document.body.appendChild(a);
                   a.click();
                   a.remove();
@@ -1077,6 +1091,7 @@ function MeusMtrsTab(props: {
               <FileText size={12} />
               Imprimir por classe
             </button>
+            </div>
           </div>
         </div>
 
