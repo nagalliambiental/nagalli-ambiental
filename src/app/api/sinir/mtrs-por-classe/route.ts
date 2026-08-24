@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { logAuditoria } from "@/lib/audit";
-import { consultarClassePorResiduo, gerarPdfMtrsPorClasse } from "@/lib/sinir";
+import { classeDeResiduos, consultarManifesto, gerarPdfMtrsPorClasse, type MtrPorClasseItem } from "@/lib/sinir";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -12,7 +12,6 @@ export async function GET(req: NextRequest) {
 
   const conexaoId = Number(req.nextUrl.searchParams.get("conexaoId"));
   const filtro = req.nextUrl.searchParams.get("filtro") || "recebidos";
-  const classeFiltro = req.nextUrl.searchParams.get("classe") || "";
 
   if (!conexaoId) {
     return NextResponse.json({ error: "conexaoId é obrigatório" }, { status: 400 });
@@ -49,18 +48,14 @@ export async function GET(req: NextRequest) {
   })();
 
   const where: Record<string, unknown> = { conexaoId };
-  if (filtro !== "recebidos") {
-    where.status = filtroStatus;
-  } else {
-    where.status = "RECEBIDO";
-  }
+  where.status = filtro === "recebidos" ? "RECEBIDO" : filtroStatus;
   if (filtro === "certificados") {
     where.certificado = true;
   }
 
   const manifestosLocais = await prisma.sinirManifesto.findMany({
     where,
-    orderBy: [{ destinadorNome: "asc" }, { dataExpedicao: "asc" }],
+    orderBy: [{ dataExpedicao: "asc" }],
   });
 
   const empreendimentoNome = conexao.empreendimento?.apelido || conexao.nome;
@@ -69,32 +64,38 @@ export async function GET(req: NextRequest) {
   const mtrsPorClasse: MtrPorClasseItem[] = [];
 
   for (const m of manifestosLocais) {
-    let classeNome = "Não identificado";
-    let classeRisco = "";
+    let residuos = m.residuos as unknown[];
 
-    const residuos = (m.residuos as unknown as Array<Record<string, unknown>>) || [];
-    if (residuos.length > 0) {
-      const primeiroResiduo = residuos[0];
-      const resCodigoIbama = (primeiroResiduo.resCodigoIbama as string) || (primeiroResiduo.resCodigo as string) || "";
-
-      if (resCodigoIbama) {
-        const classe = await consultarClassePorResiduo(conexaoCompleta, resCodigoIbama);
-        classeNome = classe;
-        classeRisco = resCodigoIbama;
+    // Se o manifesto não tem resíduos salvos, consulta o SINIR individualmente e salva
+    if (!Array.isArray(residuos) || residuos.length === 0) {
+      try {
+        const detalhe = await consultarManifesto(conexaoCompleta, m.numero);
+        if (detalhe && Array.isArray(detalhe.residuos) && detalhe.residuos.length > 0) {
+          residuos = detalhe.residuos;
+          await prisma.sinirManifesto.update({
+            where: { id: m.id },
+            data: { residuos: residuos as never },
+          });
+        }
+      } catch {
+        // segue sem resíduo — cairá em "não identificado"
       }
     }
 
-    // Aplica filtro de classe se especificado
-    if (classeFiltro && classeNome !== classeFiltro) {
-      continue;
-    }
+    const ident = classeDeResiduos(residuos);
+    const letra = ident.letra || "D";
+    const descSinir = ident.descricaoSinir
+      ? `Classe ${ident.letra} (${ident.descricaoSinir})`
+      : "Não identificada";
 
     mtrsPorClasse.push({
       numero: m.numero,
-      classeRisco,
-      classeNome,
+      classeRisco: ident.resCodigoIbama || "",
+      classeNome: letra,
       dataExpedicao: m.dataExpedicao,
       destinadorNome: m.destinadorNome,
+      resDescricao: ident.resDescricao || null,
+      descricaoSinir: descSinir,
       quantidade: m.quantidade,
       unidade: m.unidade,
     });
@@ -106,7 +107,7 @@ export async function GET(req: NextRequest) {
     "DOWNLOAD",
     "SinirRelatorio",
     0,
-    { acao: "mtrsPorClasse", conexao: conexao.nome, mtrs: manifestosLocais.length, filtroClasse: classeFiltro || "todas" },
+    { acao: "mtrsPorClasse", conexao: conexao.nome, mtrs: manifestosLocais.length },
     session.user?.id ? Number(session.user.id) : undefined
   );
 
@@ -117,14 +118,4 @@ export async function GET(req: NextRequest) {
       "Content-Disposition": `attachment; filename="${resultado.nomeArquivo}"`,
     },
   });
-}
-
-interface MtrPorClasseItem {
-  numero: string;
-  classeRisco: string;
-  classeNome: string;
-  dataExpedicao: Date | null;
-  destinadorNome: string | null;
-  quantidade?: number | null;
-  unidade?: string | null;
 }

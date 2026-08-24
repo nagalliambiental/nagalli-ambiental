@@ -472,7 +472,9 @@ async function listarManifestosReais(
         unidade: numeroString(obj.uniCodigo || obj.unidade),
         dataExpedicao: dataDeMs(obj.dataExpedicao || obj.manDataExpedicao || obj.manData),
         dataRecebimento: dataDeMs(obj.dataRecebimento || obj.manDataRecebimento || obj.manDataRecebimentoArmazenamentoTemporario),
-        classeRisco: numeroString(obj.marClasseRisco || obj.classeRisco || obj.claClasseRisco),
+    classeRisco: numeroString(
+      ((residuos[0] as Record<string, unknown> | undefined)?.residuo as Record<string, unknown> | undefined)?.resCodigoIbama
+    ) || numeroString(obj.marClasseRisco || obj.classeRisco),
         classeNome,
         residuos,
       });
@@ -581,37 +583,20 @@ const gerador = extrairParceiro(obj.parceiroGerador || obj.gerador || obj.dadosG
       const destinador = extrairParceiro(obj.parceiroDestinador || obj.destinador);
       const residuos = Array.isArray(obj.listaManifestoResiduo) ? (obj.listaManifestoResiduo as Record<string, unknown>[]) : [];
 
-      // Tenta múltiplos nomes de campo possíveis para o código da classe
-      const primeiroResiduo = residuos[0];
-      const tentarCampos = [
-        "claCodigo",
-        "claCodigoIbama",
-        "claClasse",
-        "claClasseRisco",
-        "claClasseIbama",
-        "resClasse",
-        "resClasseRisco",
-        "marClasseRisco",
-      ];
-      let claCodigo: number | undefined;
-      for (const campo of tentarCampos) {
-        const valor = primeiroResiduo?.[campo];
-        if (valor !== undefined) {
-          const num = typeof valor === "number" ? valor : typeof valor === "string" ? Number(valor) : NaN;
-          if (Number.isFinite(num)) {
-            claCodigo = num;
-            break;
-          }
+      // A classe vem aninhada em listaManifestoResiduo[].classe.claCodigo
+      let classeNome = "Não identificado";
+      for (const r of residuos) {
+        const classe = ((r as Record<string, unknown>)?.classe || {}) as Record<string, unknown>;
+        const claCodigo = num(classe.claCodigo);
+        if (claCodigo != null && MAPA_CLASSE_LETRA[claCodigo]) {
+          classeNome = MAPA_CLASSE_LETRA[claCodigo];
+          break;
         }
+        const desc = String(classe.claDescricao || "").toUpperCase();
+        if (desc.includes("CLASSE I") && !desc.includes("II")) { classeNome = "A"; break; }
+        if (desc.includes("II A") || desc.includes("II-A")) { classeNome = "B"; break; }
+        if (desc.includes("II B") || desc.includes("II-B")) { classeNome = "C"; break; }
       }
-
-      // Mapeia código da classe para classificação A/B/C/D (IBAMA)
-      const mapaClasse: Record<number, string> = {
-        1: "A", // Classe I - Perigosos
-        2: "B", // Classe II A - Não inertes
-        3: "C", // Classe II B - Inertes
-      };
-      const classeNome = claCodigo ? (mapaClasse[claCodigo] || "D") : "Não identificado";
 
   return {
     numero: numeroString(obj.manNumero) || numero,
@@ -871,46 +856,67 @@ export async function cancelarManifesto(
   return { numero, simulacao: false };
 }
 
-// ---------- Consulta de Classe por Resíduo ----------
+// ---------- Identificação de Classe a partir dos resíduos do manifesto ----------
 
-export async function consultarClassePorResiduo(
-  conexao: SinirConexaoCompleta,
-  resCodigoIbama: string
-): Promise<string> {
-  if (!resCodigoIbama) return "Não identificado";
+// Tabela oficial de classes do SINIR (claCodigo -> letra do relatório)
+const MAPA_CLASSE_LETRA: Record<number, string> = {
+  1: "A", // CLASSE I - Perigosos (NBR 10.004)
+  2: "D", // OUTROS
+  11: "A", // CLASSE A (RCC)
+  12: "B", // CLASSE B (RCC)
+  13: "C", // CLASSE C (RCC)
+  14: "D", // CLASSE D (RCC)
+  21: "A", // GRUPO A1 (RSS)
+  22: "A", // GRUPO A2 (RSS)
+  23: "A", // GRUPO A3 (RSS)
+  24: "A", // GRUPO A4 (RSS)
+  25: "A", // GRUPO A5 (RSS)
+  32: "B", // GRUPO B (RSS)
+  33: "C", // GRUPO C (RSS)
+  34: "D", // GRUPO D (RSS)
+  35: "D", // GRUPO E (RSS)
+  41: "A", // GRUPO A (RSS)
+  42: "C", // CLASSE II B - Inertes (NBR 10.004)
+  43: "B", // CLASSE II A - Não inertes (NBR 10.004)
+};
 
-  const resultado = await apiFetch(conexao, `/retornaListaClassePorResiduo/${encodeURIComponent(resCodigoIbama)}`);
+export interface ClasseIdentificada {
+  letra: string;
+  descricaoSinir: string;
+  resCodigoIbama: string;
+  resDescricao: string;
+}
 
-  const env = (resultado || {}) as { erro?: boolean; mensagem?: string; objeto?: unknown };
-  if (env.erro) {
-    return "Não identificado";
+export function classeDeResiduos(residuos: unknown): ClasseIdentificada {
+  const lista = Array.isArray(residuos) ? residuos : [];
+  for (const r of lista) {
+    const item = (r || {}) as Record<string, unknown>;
+    const residuo = (item.residuo || {}) as Record<string, unknown>;
+    const classe = (item.classe || {}) as Record<string, unknown>;
+
+    const claCodigo = num(classe.claCodigo);
+    const claDescricao = String(classe.claDescricao || "").trim();
+    const resCodigoIbama = String(residuo.resCodigoIbama || "").trim();
+    const resDescricao = String(residuo.resDescricao || "").trim();
+
+    let letra = "";
+    if (claCodigo != null && MAPA_CLASSE_LETRA[claCodigo]) letra = MAPA_CLASSE_LETRA[claCodigo];
+    else {
+      const d = claDescricao.toUpperCase();
+      if (d.includes("CLASSE I") && !d.includes("II")) letra = "A";
+      else if (d.includes("II A") || d.includes("II-A")) letra = "B";
+      else if (d.includes("II B") || d.includes("II-B")) letra = "C";
+      else if (/CLASSE A\b|GRUPO A/.test(d)) letra = "A";
+      else if (/CLASSE B\b|GRUPO B/.test(d)) letra = "B";
+      else if (/CLASSE C\b|GRUPO C/.test(d)) letra = "C";
+      else if (/CLASSE D\b|GRUPO [DE]/.test(d)) letra = "D";
+    }
+
+    if (letra) {
+      return { letra, descricaoSinir: claDescricao || "Sem descrição", resCodigoIbama, resDescricao };
+    }
   }
-
-  const obj = (env.objeto || env) as Record<string, unknown>;
-  const claCodigo = num(obj.claCodigo) ?? num(obj.claCodigoIbama) ?? undefined;
-  const mapaClasse: Record<number, string> = {
-    1: "A", // Classe I - Perigosos
-    2: "B", // Classe II A - Não inertes
-    3: "C", // Classe II B - Inertes
-    11: "A", // CLASSE A (RCC)
-    12: "B", // CLASSE B (RCC)
-    13: "B", // CLASSE C (RCC)
-    14: "B", // CLASSE D (RCC)
-    21: "A", // GRUPO A1 (RSS)
-    22: "A", // GRUPO A2 (RSS)
-    23: "A", // GRUPO A3 (RSS)
-    24: "A", // GRUPO A4 (RSS)
-    25: "A", // GRUPO A5 (RSS)
-    32: "B", // GRUPO B (RSS)
-    33: "B", // GRUPO C (RSS)
-    34: "B", // GRUPO D (RSS)
-    35: "B", // GRUPO E (RSS)
-    41: "A", // GRUPO A (RSS)
-    42: "B", // CLASSE II B
-    43: "A", // CLASSE I
-  };
-  if (claCodigo && mapaClasse[claCodigo]) return mapaClasse[claCodigo];
-  return "D";
+  return { letra: "", descricaoSinir: "", resCodigoIbama: "", resDescricao: "" };
 }
 
 function num(v: unknown): number | null {
@@ -1129,9 +1135,18 @@ export interface MtrPorClasseItem {
   classeNome: string;
   dataExpedicao: Date | null;
   destinadorNome: string | null;
+  resDescricao?: string | null;
+  descricaoSinir?: string | null;
   quantidade?: number | null;
   unidade?: string | null;
 }
+
+const SECOES_CLASSE: { letra: string; titulo: string; subtitulo: string }[] = [
+  { letra: "A", titulo: "CLASSE A", subtitulo: "Resíduos perigosos — Classe I (NBR 10.004), RCC Classe A e RSS Grupo A" },
+  { letra: "B", titulo: "CLASSE B", subtitulo: "Não inertes — Classe II A (NBR 10.004), RCC Classe B e RSS Grupo B" },
+  { letra: "C", titulo: "CLASSE C", subtitulo: "Inertes — Classe II B (NBR 10.004), RCC Classe C e RSS Grupo C" },
+  { letra: "D", titulo: "CLASSE D", subtitulo: "Outros — RCC Classes D, RSS Grupos D/E e resíduos não especificados" },
+];
 
 export async function gerarPdfMtrsPorClasse(
   empreendimentoNome: string,
@@ -1141,13 +1156,13 @@ export async function gerarPdfMtrsPorClasse(
   const { PDFDocument, StandardFonts } = await import("pdf-lib");
   const { embedNagalliLogo, drawNagalliTopo, drawNagalliFooter, PALETTE } = await import("./report-branding");
 
-  const grupos = new Map<string, MtrPorClasseItem[]>();
+  const gruposPorLetra = new Map<string, MtrPorClasseItem[]>();
+  for (const letra of ["A", "B", "C", "D"]) gruposPorLetra.set(letra, []);
   for (const m of mtrs) {
-    const chave = m.classeNome || "Classe não identificada";
-    if (!grupos.has(chave)) grupos.set(chave, []);
-    grupos.get(chave)!.push(m);
+    const letra = (m.classeNome || "").toUpperCase().replace(/[^ABCD]/g, "").charAt(0);
+    if (letra && gruposPorLetra.has(letra)) gruposPorLetra.get(letra)!.push(m);
+    else gruposPorLetra.get("D")!.push(m);
   }
-  const ordenados = [...grupos.entries()].sort((a, b) => a[0].localeCompare(b[0], "pt-BR"));
 
   const pdf = await PDFDocument.create();
   const font = await pdf.embedFont(StandardFonts.Helvetica);
@@ -1162,22 +1177,18 @@ export async function gerarPdfMtrsPorClasse(
 
   let y = topo - 24;
 
-  page.drawText("RELAÇÃO DE MTRs POR CLASSE DE RESÍDUO", { x: 40, y, size: 15, font: bold, color: ink900 });
+  page.drawText("RELATÓRIO DE MTRs POR CLASSE DE RESÍDUO", { x: 40, y, size: 15, font: bold, color: ink900 });
   y -= 16;
-  page.drawText('Manifestos agrupados por classe de resíduo (conforme catálogo SINIR)', {
+  page.drawText("Classificação conforme catálogo SINIR/NBR 10.004/CONAMA 307 — classes A, B, C e D", {
     x: 40, y, size: 9, font, color: ink700,
   });
   y -= 12;
-  const linhaInfo = `Empreendimento: ${empreendimentoNome}${unidadeSinir ? `   |   Unidade SINIR: ${unidadeSinir}` : ""}   |   Gerado em: ${new Date().toLocaleDateString("pt-BR")}`;
+  const linhaInfo = `Empreendimento: ${empreendimentoNome}${unidadeSinir ? `   |   Unidade SINIR: ${unidadeSinir}` : ""}   |   Gerado em: ${new Date().toLocaleDateString("pt-BR")}   |   Total de MTRs: ${mtrs.length}`;
   page.drawText(linhaInfo, { x: 40, y, size: 9, font, color: ink500 });
   y -= 14;
 
   page.drawRectangle({ x: 40, y, width: 762, height: 0.6, color: PALETTE.paper["200"] });
   y -= 20;
-
-  if (ordenados.length === 0) {
-    page.drawText("Nenhum MTR para este empreendimento.", { x: 40, y, size: 10, font, color: ink700 });
-  }
 
   const novaPagina = () => {
     const p = pdf.addPage([842, 595]);
@@ -1185,24 +1196,42 @@ export async function gerarPdfMtrsPorClasse(
     return { p, y: topo - 16 };
   };
 
-  for (const [classe, lista] of ordenados) {
+  for (const secao of SECOES_CLASSE) {
     if (y < 110) ({ p: page, y } = novaPagina());
 
-    page.drawRectangle({ x: 40, y: y - 4, width: 762, height: 18, color: PALETTE.brand["50"] });
-    page.drawText(`CLASSE: ${classe.toUpperCase()}`, { x: 48, y, size: 11, font: bold, color: PALETTE.brand["700"] });
-    y -= 22;
+    const lista = gruposPorLetra.get(secao.letra)!;
 
-    for (const m of lista) {
-      if (y < 70) ({ p: page, y } = novaPagina());
-      page.drawCircle({ x: 46, y: y + 3, size: 1.6, color: PALETTE.brand["600"] });
-      page.drawText(`MTR ${m.numero}`, { x: 56, y, size: 9.5, font: bold, color: ink900 });
-      const dataTxt = m.dataExpedicao ? `— emitido em ${m.dataExpedicao.toLocaleDateString("pt-BR")}` : "— data de emissão não registrada";
-      const destTxt = m.destinadorNome ? `— destinador: ${m.destinadorNome}` : "";
-      const qtdTxt = m.quantidade != null ? `— qtd: ${m.quantidade.toLocaleString("pt-BR")} ${m.unidade || ""}`.trim() : "";
-      page.drawText(`${dataTxt} ${destTxt} ${qtdTxt}`.trim(), { x: 220, y, size: 9.5, font, color: ink700 });
-      y -= 17;
+    page.drawRectangle({ x: 40, y: y - 4, width: 762, height: 20, color: PALETTE.brand["600"] });
+    page.drawText(`${secao.titulo} — ${lista.length} MTR(s)`, {
+      x: 48, y: y + 2, size: 11.5, font: bold, color: PALETTE.paper["50"],
+    });
+    y -= 14;
+    page.drawText(secao.subtitulo, { x: 48, y, size: 8, font, color: ink500 });
+    y -= 16;
+
+    if (lista.length === 0) {
+      page.drawText("Nenhum MTR nesta classe.", { x: 56, y, size: 9, font, color: ink700 });
+      y -= 20;
+    } else {
+      for (const m of lista) {
+        if (y < 70) ({ p: page, y } = novaPagina());
+        page.drawCircle({ x: 46, y: y + 3, size: 1.6, color: PALETTE.brand["600"] });
+        page.drawText(`MTR ${m.numero}`, { x: 56, y, size: 9.5, font: bold, color: ink900 });
+
+        const partes: string[] = [];
+        partes.push(m.dataExpedicao ? `emitido em ${m.dataExpedicao.toLocaleDateString("pt-BR")}` : "data não registrada");
+        if (m.destinadorNome) partes.push(`destinador: ${m.destinadorNome}`);
+        if (m.quantidade != null) partes.push(`qtd: ${m.quantidade.toLocaleString("pt-BR")} ${m.unidade || ""}`.trim());
+        if (m.resDescricao) partes.push(`resíduo: ${m.resDescricao}`);
+        else if (m.descricaoSinir) partes.push(m.descricaoSinir);
+
+        let linha = partes.join("  |  ");
+        if (linha.length > 118) linha = `${linha.slice(0, 115)}...`;
+        page.drawText(linha, { x: 150, y, size: 8.5, font, color: ink700 });
+        y -= 17;
+      }
+      y -= 10;
     }
-    y -= 12;
   }
 
   drawNagalliFooter(page, font, bold);
