@@ -818,9 +818,9 @@ export async function baixarCertificadoPdf(
 
   const res = await fetchDownload(
     conexao,
-    `/mtr/imprimir/imprimeCertificado/${encodeURIComponent(codigo)}`,
+    `/downloadCertificado/${encodeURIComponent(codigo)}?formato=pdf`,
     "Erro ao baixar o CDF do SINIR",
-    { method: "GET", accept: "*/*" }
+    { method: "POST", accept: "application/pdf" }
   );
 
   const buffer = new Uint8Array(await res.arrayBuffer());
@@ -876,10 +876,7 @@ export async function consultarClassePorResiduo(
 ): Promise<string> {
   if (!resCodigoIbama) return "Não identificado";
 
-  const resultado = await apiFetch(conexao, "/retornaListaClassePorResiduo", {
-    method: "POST",
-    body: { resCodigoIbama },
-  });
+  const resultado = await apiFetch(conexao, `/retornaListaClassePorResiduo/${encodeURIComponent(resCodigoIbama)}`);
 
   const env = (resultado || {}) as { erro?: boolean; mensagem?: string; objeto?: unknown };
   if (env.erro) {
@@ -892,6 +889,22 @@ export async function consultarClassePorResiduo(
     1: "A", // Classe I - Perigosos
     2: "B", // Classe II A - Não inertes
     3: "C", // Classe II B - Inertes
+    11: "A", // CLASSE A (RCC)
+    12: "B", // CLASSE B (RCC)
+    13: "B", // CLASSE C (RCC)
+    14: "B", // CLASSE D (RCC)
+    21: "A", // GRUPO A1 (RSS)
+    22: "A", // GRUPO A2 (RSS)
+    23: "A", // GRUPO A3 (RSS)
+    24: "A", // GRUPO A4 (RSS)
+    25: "A", // GRUPO A5 (RSS)
+    32: "B", // GRUPO B (RSS)
+    33: "B", // GRUPO C (RSS)
+    34: "B", // GRUPO D (RSS)
+    35: "B", // GRUPO E (RSS)
+    41: "A", // GRUPO A (RSS)
+    42: "B", // CLASSE II B
+    43: "A", // CLASSE I
   };
   if (claCodigo && mapaClasse[claCodigo]) return mapaClasse[claCodigo];
   return "D";
