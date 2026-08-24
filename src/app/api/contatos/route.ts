@@ -37,31 +37,33 @@ export async function POST(req: NextRequest) {
   const telefone = typeof body.telefone === "string" && body.telefone.trim() ? body.telefone.trim() : null;
   const empreendimentoId = Number(body.empreendimentoId);
 
-  if (!nome || !email || !Number.isFinite(empreendimentoId)) {
-    return NextResponse.json({ error: "Nome, e-mail e empreendimento são obrigatórios" }, { status: 400 });
+  if (!nome || !email) {
+    return NextResponse.json({ error: "Nome e e-mail são obrigatórios" }, { status: 400 });
   }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return NextResponse.json({ error: "E-mail inválido" }, { status: 400 });
   }
 
-  const empreendimento = await prisma.empreendimento.findUnique({ where: { id: empreendimentoId } });
-  if (!empreendimento) {
-    return NextResponse.json({ error: "Empreendimento não encontrado" }, { status: 404 });
-  }
-
-  const existente = await prisma.contato.findFirst({ where: { email, empreendimentoId } });
-  if (existente) {
-    return NextResponse.json({ error: "Já existe um contato com este e-mail neste empreendimento" }, { status: 409 });
+  // empreendimentoId é opcional - se não informado, cria contato sem vínculo a empreendimento
+  if (Number.isFinite(empreendimentoId) && empreendimentoId > 0) {
+    const empreendimento = await prisma.empreendimento.findUnique({ where: { id: empreendimentoId } });
+    if (!empreendimento) {
+      return NextResponse.json({ error: "Empreendimento não encontrado" }, { status: 404 });
+    }
+    const existente = await prisma.contato.findFirst({ where: { email, empreendimentoId } });
+    if (existente) {
+      return NextResponse.json({ error: "Já existe um contato com este e-mail neste empreendimento" }, { status: 409 });
+    }
   }
 
   const contato = await prisma.contato.create({
-    data: { nome, email, cargo, telefone, empreendimentoId },
+    data: { nome, email, cargo, telefone, empreendimentoId: Number.isFinite(empreendimentoId) && empreendimentoId > 0 ? empreendimentoId : null },
     include: {
       empreendimento: { select: { id: true, apelido: true, unidadeSinir: true, cliente: { select: { apelido: true } } } },
     },
   });
 
-  await logAuditoria("CRIAR", "Contato", contato.id, { nome, email, empreendimento: empreendimento.apelido },
+  await logAuditoria("CRIAR", "Contato", contato.id, { nome, email, empreendimentoId: contato.empreendimentoId },
     session.user?.id ? Number(session.user.id) : undefined);
 
   return NextResponse.json(contato, { status: 201 });

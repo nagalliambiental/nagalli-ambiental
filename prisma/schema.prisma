@@ -430,8 +430,8 @@ model Contato {
   email            String
   cargo            String?
   telefone         String?
-  empreendimentoId Int
-  empreendimento   Empreendimento @relation(fields: [empreendimentoId], references: [id], onDelete: Cascade)
+  empreendimentoId Int?
+  empreendimento   Empreendimento? @relation(fields: [empreendimentoId], references: [id], onDelete: SetNull)
   ativo            Boolean  @default(true)
   criadoEm         DateTime @default(now())
   atualizadoEm     DateTime @updatedAt
@@ -493,6 +493,8 @@ model SinirManifesto {
   dataRecebimento DateTime?
   justificativa String?
   dataCancelamento DateTime?
+  classeRisco   String?
+  classeNome    String?
   criadoEm      DateTime @default(now())
   atualizadoEm  DateTime @updatedAt
   conexao       SinirConexao @relation(fields: [conexaoId], references: [id], onDelete: Cascade)

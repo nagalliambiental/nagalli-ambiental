@@ -32,7 +32,7 @@ export default async function ClienteDetailPage(props: { params: Promise<{ id: s
         id: true, apelido: true, razaoSocial: true, cnpj: true, telefone: true, email: true, respLegal: true, visibilidade: true, criadoEm: true,
         empreendimentos: {
           select: {
-            id: true, apelido: true, municipio: true, uf: true, rua: true, numero: true, bairro: true,
+            id: true, apelido: true, unidadeSinir: true, municipio: true, uf: true, rua: true, numero: true, bairro: true,
             _count: { select: { processos: true } },
             controleDmr: { select: { id: true, ano: true, t1Dmr: true, t2Dmr: true, t3Dmr: true, t4Dmr: true, t1Mtr: true, t2Mtr: true, t3Mtr: true, t4Mtr: true } },
           },

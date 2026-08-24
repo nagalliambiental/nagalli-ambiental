@@ -17,8 +17,9 @@ import { TEMPLATES } from "@/lib/templates";
 import { HistoricoTab } from "@/components/HistoricoTab";
 import { AcessosTab } from "@/components/AcessosTab";
 import { VisibilidadeToggle } from "@/components/VisibilidadeToggle";
+import { ContatosTabCliente } from "@/components/ContatosTabCliente";
 
-type Tab = "info" | "empreendimentos" | "documentos" | "financeiro" | "historico" | "acessos";
+type Tab = "info" | "empreendimentos" | "documentos" | "financeiro" | "historico" | "acessos" | "contatos";
 
 interface ClienteData {
   id: number;
@@ -47,6 +48,7 @@ interface ClienteData {
 interface EmpreendimentoData {
   id: number;
   apelido: string;
+  unidadeSinir?: string | null;
   rua: string | null;
   numero: string | null;
   bairro: string | null;
@@ -221,6 +223,7 @@ export function ClienteDetailClient({
     { key: "info", label: "Informações" },
     { key: "empreendimentos", label: "Empreendimentos", count: cliente.empreendimentos.length },
     { key: "documentos", label: "Documentos", count: cliente.documentosGerados.length + documentos.length },
+    { key: "contatos", label: "Contatos" },
     { key: "historico", label: "Histórico" },
     { key: "acessos", label: "Acessos" },
   ];
@@ -667,6 +670,18 @@ export function ClienteDetailClient({
             </div>
           )}
         </div>
+      )}
+
+      {tab === "contatos" && (
+        <ContatosTabCliente
+          empreendimentos={cliente.empreendimentos.map((e) => ({
+            id: e.id,
+            apelido: e.apelido,
+            unidadeSinir: e.unidadeSinir,
+            cliente: { apelido: cliente.apelido },
+          }))}
+          clienteId={id}
+        />
       )}
 
       {tab === "historico" && (
