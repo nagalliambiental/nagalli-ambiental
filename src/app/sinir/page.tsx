@@ -54,6 +54,7 @@ interface Manifesto {
   unidade: string | null;
   dataExpedicao: string | null;
   dataRecebimento: string | null;
+  classeNome: string | null;
   conexao: { id: number; nome: string; modo: string };
 }
 
@@ -1078,6 +1079,34 @@ function MeusMtrsTab(props: {
               <Mail size={16} />
               Notificar por e-mail
             </button>
+            <button
+              onClick={async () => {
+                toast("Gerando relatório por classe de resíduo...", "info");
+                try {
+                  const res = await fetch(`/api/sinir/mtrs-por-classe?conexaoId=${conexaoEfetiva}&filtro=recebidos`);
+                  if (!res.ok) {
+                    const data = await res.json().catch(() => null);
+                    throw new Error(data?.error || "Falha ao gerar relatório");
+                  }
+                  const blob = await res.blob();
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `mtrs-por-classe-${new Date().toISOString().slice(0, 10)}.pdf`;
+                  document.body.appendChild(a);
+                  a.click();
+                  a.remove();
+                  URL.revokeObjectURL(url);
+                  toast("Relatório por classe gerado com sucesso", "success");
+                } catch (e) {
+                  toast(e instanceof Error ? e.message : "Falha ao gerar relatório", "error");
+                }
+              }}
+              className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg bg-[var(--color-ink-700)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--color-ink-900)]"
+            >
+              <FileText size={12} />
+              Imprimir por classe
+            </button>
           </div>
         </div>
 
@@ -1119,6 +1148,7 @@ function MeusMtrsTab(props: {
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Destinador</th>
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Transportador</th>
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Expedição</th>
+                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Classe</th>
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Situação</th>
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Ações</th>
                 </tr>
@@ -1138,6 +1168,7 @@ function MeusMtrsTab(props: {
                         <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.destinadorNome || "—"}</td>
                         <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.transportadorNome || "—"}</td>
                         <td className="py-2 px-2 text-[var(--color-ink-600)] whitespace-nowrap">{fmtData(m.dataExpedicao)}</td>
+                        <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.classeNome || "—"}</td>
                         <td className="py-2 px-2">
                           {m.status === "RECEBIDO" ? (
                             <span className="inline-flex items-center gap-1 rounded bg-green-50 px-1.5 py-0.5 text-xs font-medium text-green-700">
