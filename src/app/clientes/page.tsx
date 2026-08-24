@@ -7,7 +7,7 @@ import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { GerarDocumentosButton } from "@/components/GerarDocumentosButton";
 import { auth } from "@/lib/auth";
 import { ehPrivilegiado } from "@/lib/perfil";
-import { ClientesAbas } from "@/components/ClientesAbas";
+import { ClientesTable } from "@/components/tables/ClientesTable";
 
 export const dynamic = "force-dynamic";
 
@@ -32,14 +32,14 @@ export default async function ClientesPage() {
     orderBy: { apelido: "asc" },
   });
 
-  const clientesParaAbas = clientes.map((c) => ({
+  const clientesParaTabela = clientes.map((c) => ({
     id: c.id,
     apelido: c.apelido,
     razaoSocial: c.razaoSocial,
     cnpj: c.cnpj,
     telefone: c.telefone || "",
     _count: { empreendimentos: c._count.empreendimentos },
-    empreendimentos: c.empreendimentos,
+    empreendimentos: c.empreendimentos.map((e) => ({ id: e.id, apelido: e.apelido })),
   }));
 
   return (
@@ -63,7 +63,7 @@ export default async function ClientesPage() {
       />
 
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">
-        <ClientesAbas clientes={clientesParaAbas} />
+        <ClientesTable data={clientesParaTabela} />
       </div>
     </div>
   );
