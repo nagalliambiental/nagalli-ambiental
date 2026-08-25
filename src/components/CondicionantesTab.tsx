@@ -347,7 +347,7 @@ export function CondicionantesTab({ processoId, textoLegado }: { processoId: num
                       <span className={`hidden shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold sm:inline-flex ${s.cor}`}>{s.texto}</span>
                     ) : null;
                   })()}
-                  {item.origem === "extracao" && (
+                  {item.origem === "extracao" && item.tipo !== "informativa" && (
                     <span className="hidden shrink-0 rounded-full border border-[var(--color-river-200)] bg-[var(--color-river-50)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-river-700)] sm:inline-flex">OCR</span>
                   )}
                   {item.documentos.length > 0 && (
