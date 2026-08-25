@@ -39,6 +39,7 @@ export interface CamposLicenca {
   validade: string | null;
   numLicenca: string | null;
   numProtocolo: string | null;
+  dataProtocolo: string | null;
   condicionantes: string | null;
 }
 
@@ -73,18 +74,33 @@ export async function extrairTextoPdf(buffer: Buffer): Promise<string> {
   }
 }
 
+export function limparTextoPdf(texto: string): string {
+  let t = texto;
+  t = t.replace(/^\s*(?:P[aá]gina\s+)?\d{1,4}\s*\/\s*\d{1,4}\s*$/gm, "");
+  t = t.replace(/^\s*(?:P[aá]gina\s+)\d{1,4}(?:\s+de\s+\d{1,4})?\s*$/gim, "");
+  t = t.replace(/^\s*\d{1,4}\s*\/\s*\d{1,4}\s*$/gm, "");
+  t = t.replace(/^\s*\d{1,4}\s*$/gm, "");
+  t = t.replace(/\s*-\n\s*/g, "");
+  t = t.replace(/([a-záàâãéêíóôõúç])\n([a-záàâãéêíóôõúç])/gi, "$1 $2");
+  t = t.replace(/([.,;:!?)])\n([A-ZÀ-Ü])/g, "$1 $2");
+  t = t.replace(/\n{3,}/g, "\n\n");
+  return t;
+}
+
 export async function extrairTextoComOcr(buffer: Buffer, ext: string): Promise<string> {
   if (ext === "pdf") {
     const textoLocal = await extrairTextoPdf(buffer);
-    if (textoLocal.replace(/\s+/g, "").length >= 30) return textoLocal;
+    if (textoLocal.replace(/\s+/g, "").length >= 30) return limparTextoPdf(textoLocal);
     try {
-      return await runOcr(buffer, ext);
+      const ocr = await runOcr(buffer, ext);
+      return limparTextoPdf(ocr);
     } catch {
-      return textoLocal;
+      return limparTextoPdf(textoLocal);
     }
   }
   try {
-    return await runOcr(buffer, ext);
+    const ocr = await runOcr(buffer, ext);
+    return limparTextoPdf(ocr);
   } catch {
     return "";
   }
@@ -164,6 +180,12 @@ const PADROES_DATA = [
   /(\d{2})\/(\d{2})\/(\d{4})/,
 ];
 
+const PADROES_DATA_EMISSAO = [
+  /data\s+de\s+(?:emiss[aã]o|protocolo|publica[çc][ãa]o)[:\s]*(\d{2})\/(\d{2})\/(\d{4})/i,
+  /protocol(?:o|ado)\s+em[:\s]*(\d{2})\/(\d{2})\/(\d{4})/i,
+  /emitido\s+em[:\s]*(\d{2})\/(\d{2})\/(\d{4})/i,
+];
+
 const PADROES_LICENCA = [
   /n[úu]mero\s+do\s+documento[^\d\n]*[\n\r\s]*(\d{3,})/i,
   /LICEN[ÇC]A\s+PR[ÉE]VIA[\n\r\s]+(\d{3,})/i,
@@ -200,6 +222,21 @@ export function extractFields(text: string): CamposLicenca {
     }
   }
 
+  let dataProtocolo: string | null = null;
+  for (const pat of PADROES_DATA_EMISSAO) {
+    const m = text.match(pat);
+    if (m) {
+      const [, d, mo, y] = m;
+      const dia = parseInt(d, 10);
+      const mes = parseInt(mo, 10);
+      const ano = parseInt(y, 10);
+      if (dia >= 1 && dia <= 31 && mes >= 1 && mes <= 12 && ano >= 2000 && ano <= 2100) {
+        dataProtocolo = `${y}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`;
+        break;
+      }
+    }
+  }
+
   let numLicenca: string | null = null;
   for (const pat of PADROES_LICENCA) {
     const m = text.match(pat);
@@ -227,6 +264,7 @@ export function extractFields(text: string): CamposLicenca {
     validade,
     numLicenca,
     numProtocolo,
+    dataProtocolo,
     condicionantes: extrairSecaoCondicionantes(text),
   };
 }

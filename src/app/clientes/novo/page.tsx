@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Building2, Mail, Loader2, X, ChevronLeft } from "lucide-react";
+import { Plus, Building2, Mail, Loader2, X, ChevronLeft, Search } from "lucide-react";
 import { useToast } from "@/components/Toast";
 
 interface ClienteFormData {
@@ -55,6 +55,8 @@ export default function NovoClientePage() {
   const [carregandoCliente, setCarregandoCliente] = useState(false);
   const [clienteId, setClienteId] = useState<number | null>(null);
   const [empreendimentos, setEmpreendimentos] = useState<EmpreendimentoOpcao[]>([]);
+  const [buscandoCnpj, setBuscandoCnpj] = useState(false);
+  const [buscandoCep, setBuscandoCep] = useState(false);
 
   // Cliente form state
   const [form, setForm] = useState<ClienteFormData>({
@@ -88,6 +90,75 @@ export default function NovoClientePage() {
   const [carregandoContatos, setCarregandoContatos] = useState(false);
   const [salvandoContato, setSalvandoContato] = useState(false);
   const [formContato, setFormContato] = useState({ nome: "", email: "", cargo: "", telefone: "" });
+
+  const CNPJ_MAP: Record<string, keyof ClienteFormData> = {
+    razaoSocial: "razaoSocial",
+    nomeFantasia: "nomeFantasia",
+    ramoAtividade: "ramoAtividade",
+    enderecoRua: "rua",
+    enderecoNumero: "numero",
+    enderecoComplemento: "complemento",
+    bairro: "bairro",
+    cep: "cep",
+    municipio: "municipio",
+    uf: "uf",
+    telefone: "telefone",
+    email: "email",
+  };
+
+  const CEP_MAP: Record<string, keyof ClienteFormData> = {
+    rua: "rua",
+    bairro: "bairro",
+    municipio: "municipio",
+    uf: "uf",
+    complemento: "complemento",
+  };
+
+  async function buscarCNPJ() {
+    const cnpj = form.cnpj.replace(/\D/g, "");
+    if (cnpj.length !== 14) return toast("Informe um CNPJ válido (14 dígitos)", "warning");
+    setBuscandoCnpj(true);
+    try {
+      const res = await fetch(`/api/cnpj/${cnpj}`);
+      if (!res.ok) return toast("CNPJ não encontrado", "error");
+      const d = await res.json();
+      setForm((prev) => {
+        const next = { ...prev };
+        for (const [apiKey, formKey] of Object.entries(CNPJ_MAP)) {
+          if (d[apiKey]) (next as Record<string, unknown>)[formKey] = d[apiKey];
+        }
+        return next;
+      });
+      toast("Dados do CNPJ preenchidos automaticamente", "success");
+    } catch {
+      toast("Erro ao consultar CNPJ", "error");
+    } finally {
+      setBuscandoCnpj(false);
+    }
+  }
+
+  async function buscarCEP() {
+    const cep = form.cep.replace(/\D/g, "");
+    if (cep.length !== 8) return toast("Informe um CEP válido (8 dígitos)", "warning");
+    setBuscandoCep(true);
+    try {
+      const res = await fetch(`/api/cep/${cep}`);
+      if (!res.ok) return toast("CEP não encontrado", "error");
+      const d = await res.json();
+      setForm((prev) => {
+        const next = { ...prev };
+        for (const [apiKey, formKey] of Object.entries(CEP_MAP)) {
+          if (d[apiKey]) (next as Record<string, unknown>)[formKey] = d[apiKey];
+        }
+        return next;
+      });
+      toast("Endereço preenchido pelo CEP", "success");
+    } catch {
+      toast("Erro ao consultar CEP", "error");
+    } finally {
+      setBuscandoCep(false);
+    }
+  }
 
   async function salvarCliente() {
     setCarregandoCliente(true);
@@ -276,14 +347,26 @@ export default function NovoClientePage() {
               </div>
               <div>
                 <label className={labelCls}>CNPJ *</label>
-                <input
-                  value={form.cnpj}
-                  onChange={(e) => setForm((f) => ({ ...f, cnpj: e.target.value.replace(/\D/g, "") }))}
-                  className={inputCls}
-                  placeholder="00000000000000"
-                  maxLength={14}
-                  required
-                />
+                <div className="flex gap-2">
+                  <input
+                    value={form.cnpj}
+                    onChange={(e) => setForm((f) => ({ ...f, cnpj: e.target.value.replace(/\D/g, "") }))}
+                    className={inputCls}
+                    placeholder="00000000000000"
+                    maxLength={14}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={buscarCNPJ}
+                    disabled={buscandoCnpj}
+                    className="focus-ring transition-brand flex shrink-0 items-center gap-1.5 rounded-lg bg-[var(--color-brand-500)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
+                    title="Buscar dados pelo CNPJ (Receita Federal)"
+                  >
+                    {buscandoCnpj ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+                    Buscar
+                  </button>
+                </div>
               </div>
               <div>
                 <label className={labelCls}>Telefone *</label>
@@ -306,13 +389,25 @@ export default function NovoClientePage() {
               </div>
               <div>
                 <label className={labelCls}>CEP</label>
-                <input
-                  value={form.cep}
-                  onChange={(e) => setForm((f) => ({ ...f, cep: e.target.value.replace(/\D/g, "") }))}
-                  className={inputCls}
-                  placeholder="00000-000"
-                  maxLength={8}
-                />
+                <div className="flex gap-2">
+                  <input
+                    value={form.cep}
+                    onChange={(e) => setForm((f) => ({ ...f, cep: e.target.value.replace(/\D/g, "") }))}
+                    className={inputCls}
+                    placeholder="00000-000"
+                    maxLength={8}
+                  />
+                  <button
+                    type="button"
+                    onClick={buscarCEP}
+                    disabled={buscandoCep}
+                    className="focus-ring transition-brand flex shrink-0 items-center gap-1.5 rounded-lg bg-[var(--color-brand-500)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
+                    title="Buscar endereço pelo CEP (ViaCEP)"
+                  >
+                    {buscandoCep ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+                    Buscar
+                  </button>
+                </div>
               </div>
               <div>
                 <label className={labelCls}>Rua</label>

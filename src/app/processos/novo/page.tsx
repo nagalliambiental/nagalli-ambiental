@@ -150,10 +150,15 @@ export default function NovoProcessoPage() {
 
       setForm((prev) => ({
         ...prev,
+        numLicenca: data.numLicenca || prev.numLicenca,
+        numProtocolo: data.numProtocolo || prev.numProtocolo,
+        validade: data.validade || prev.validade,
+        dataProtocolo: data.dataProtocolo || prev.dataProtocolo,
         condicionantes: data.condicionantes || prev.condicionantes,
       }));
 
-      setExtractedFile(file.name);
+      const campos = [data.numLicenca, data.numProtocolo, data.validade, data.dataProtocolo, data.condicionantes].filter(Boolean);
+      setExtractedFile(campos.length > 0 ? `${file.name} — ${campos.length} campo(s) extraído(s)` : `${file.name} — nenhum campo identificado`);
     } catch {
       setError("Erro ao processar documento");
     } finally {

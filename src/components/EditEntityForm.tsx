@@ -282,14 +282,22 @@ export default function EditEntityForm({
         toast(data.error || "Erro ao processar documento", "error");
         return;
       }
-      const valor = data.condicionantes || "";
-      if (valor) {
-        setForm((prev) => ({ ...prev, [field.name]: valor }));
-        setDirty(true);
-        setUploadedFile(file.name);
-        toast("Condicionantes extraídas do documento", "success");
+      const camposPreenchidos: string[] = [];
+      setForm((prev) => {
+        const next = { ...prev };
+        if (data.numLicenca && "numLicenca" in next) { next.numLicenca = data.numLicenca; camposPreenchidos.push("Nº Licença"); }
+        if (data.numProtocolo && "numProtocolo" in next) { next.numProtocolo = data.numProtocolo; camposPreenchidos.push("Nº Protocolo"); }
+        if (data.validade && "validade" in next) { next.validade = data.validade; camposPreenchidos.push("Validade"); }
+        if (data.dataProtocolo && "dataProtocolo" in next) { next.dataProtocolo = data.dataProtocolo; camposPreenchidos.push("Data Protocolo"); }
+        if (data.condicionantes && field.name in next) { next[field.name as keyof typeof next] = data.condicionantes as never; camposPreenchidos.push("Condicionantes"); }
+        return next;
+      });
+      setDirty(true);
+      setUploadedFile(file.name);
+      if (camposPreenchidos.length > 0) {
+        toast(`Extraído: ${camposPreenchidos.join(", ")}`, "success");
       } else {
-        toast("Nenhuma condicionante detectada no documento", "info");
+        toast("Nenhum campo identificado no documento", "info");
       }
     } catch {
       toast("Erro ao processar documento", "error");
