@@ -25,7 +25,8 @@ const INICIOS_SECAO: RegExp[] = [
 
 const FINS_SECAO: RegExp[] = [
   /^\s*\d{1,2}\s*[.)]\s*[A-ZÀ-Ü][^\n]{2,70}$/m,
-  /^(?:ANEXOS?|ANEXO\s+[A-Z0-9]|OBSERVA[ÇC][ÕO]ES|ASSINATURAS?|RESPONS[ÁA]VEIS?|LOCAL\s+E\s+DATA|[A-ZÀ-Ü]{4,})\s*$/m,
+  /^\s*(?:DADOS\s+(?:DO|DA)\s+\w|DADOS\s+COMPLEMENTARES|DADOS\s+DO\s+TITULAR|DADOS\s+DO\s+PROPONENTE|DADOS\s+DO\s+REQUERENTE|DADOS\s+CONTRATANTE|DADOS\s+DO\s+CONTRATADO)\b[^\n]*$/im,
+  /^(?:ANEXOS?|ANEXO\s+[A-Z0-9]|OBSERVA[ÇC][ÕO]ES|ASSINATURAS?|RESPONS[ÁA]VEIS?|LOCAL\s+E\s+DATA|C[ÓO]DIGO\s+DE\s+BARRAS|[A-ZÀ-Ü]{4,})\s*$/m,
   /P[aá]gina\s+\d+/i,
   /Assinatura do Representante/i,
   /Esta LICEN[ÇC]A/i,
@@ -163,9 +164,18 @@ export function extrairSecaoCondicionantes(texto: string): string | null {
     .split("\n")
     .map((l) => l.trim())
     .filter((l) => l)
-    .filter((l) => !(CABECALHO_MAISCULAS.test(l) && l.length <= 40))
+    .filter((l) => {
+      if (!(CABECALHO_MAISCULAS.test(l) && l.length <= 40)) return true;
+      return false;
+    })
     .join("\n");
   secao = secao.replace(/\n{3,}/g, "\n\n").trim();
+
+  const CORTE_POR_SECAO = /\b(?:DADOS\s+(?:DO|DA|DOS|DAS)\s+\w|DADOS\s+COMPLEMENTARES|DADOS\s+DO\s+TITULAR|DADOS\s+DO\s+PROPONENTE|DADOS\s+DO\s+REQUERENTE|DADOS\s+CONTRATANTE|DADOS\s+DO\s+CONTRATADO|ENDERE[ÇC]O\s+(?:DO|DA)\s+\w|LOCALIZA[ÇC][ÃA]O|ATIVIDADES?\s+PROPOSTAS?|CAPACIDADE\s+INSTALADA|PARTICIPA[ÇC][ÃA]O\s+ACION[ÁA]RIA|OBJETO\s+SOCIAL|RAMO\s+DE\s+ATIVIDADE|FONTES?\s+DE\s+RECURSOS?|METAS?\s+E\s+INDICADORES?|VALIDADE\s+DA\s+LICEN[ÇC]A|VALIDADE\s+DO\s+REGISTRO|NORMAS?\s+APLIC[ÁA]VEIS|MEDIDAS?\s+MITIGADORAS?|PROGRAMAS?\s+DE\s+MONITORAMENTO|PLANO\s+DE\s+(?:EMERG[ÊE]NCIA|MANEJO|CONTROLE)|RESPONS[ÁA]VEL\s+T[ÉE]CNICO|REPRESSANTES?\s+AO\s+CUMPRIMENTO)\b/i;
+  const corteMatch = secao.match(CORTE_POR_SECAO);
+  if (corteMatch && corteMatch.index !== undefined && corteMatch.index > 20) {
+    secao = secao.slice(0, corteMatch.index).trim();
+  }
 
   return secao.length >= 20 ? secao : null;
 }
