@@ -181,15 +181,13 @@ export function extrairSecaoCondicionantes(texto: string): string | null {
   return secao.length >= 20 ? secao : null;
 }
 
-const FIM_DADOS_EMPREENDIMENTO = /\b(?:CONDICIONANTES|CONDI[ÇC][ÕO]ES\s+(?:E\s+RESTRI[ÇC][ÕO]ES\s+)?(?:ESPEC[ÍI]FICAS|PARTICULARES)|OBSERVA[ÇC][ÕO]ES|ANEXOS?|ASSINATURAS?|RESPONS[ÁA]VEIS?|DADOS\s+(?:COMPLEMENTARES|DO\s+TITULAR)|VALIDADE\s+DA\s+LICEN[ÇC]A)\b/i;
-
 export function extrairDadosEmpreendimento(texto: string): string | null {
   if (!texto) return null;
 
   const padroesInicio = [
     /[-–]?\s*DADOS\s+DO\s+EMPREENDIMENTO[:\s]*/i,
     /CARACTERIZA[ÇC][ÃA]O\s+DO\s+EMPREENDIMENTO[:\s]*/i,
-    /CARACTERIZA[ÇC][ÃA]O\s+D[OA]\s+EMPREEN DIMENTO[:\s]*/i,
+    /CARACTERIZA[ÇC][ÃA]O\s+D[OA]\s+EMPREENDIMENTO[:\s]*/i,
     /DADOS\s+DA\s+ATIVIDADE[:\s]*/i,
   ];
 
@@ -206,10 +204,32 @@ export function extrairDadosEmpreendimento(texto: string): string | null {
   }
   if (inicio === -1) return null;
 
-  const restante = texto.slice(fim);
-  const mFim = restante.match(FIM_DADOS_EMPREENDIMENTO);
-  if (mFim && mFim.index !== undefined) {
-    fim += mFim.index;
+  const blocoDados = texto.slice(fim);
+  const linhas = blocoDados.split("\n");
+
+  const RE_TRANSICAO = /(?:diz\s+respeito\s+somente|descri[çc][õo]es?\s+acima|itens?\s+abaixo|devendo\s+a\s+favorecida|d[ée]cima\s+acima)/i;
+  const RE_ITEM_NUM = /^\s*\d+\.\s+[A-ZÀ-Ü]/;
+  let primeiroItemNum = -1;
+
+  for (let i = 0; i < linhas.length; i++) {
+    const l = linhas[i].trim();
+    if (!l) continue;
+
+    if (RE_TRANSICAO.test(l)) {
+      fim += linhas.slice(0, i + 1).join("\n").length;
+      primeiroItemNum = -2;
+      break;
+    }
+
+    if (RE_ITEM_NUM.test(l) && primeiroItemNum === -1) {
+      primeiroItemNum = linhas.slice(0, i).join("\n").length;
+    }
+  }
+
+  if (primeiroItemNum === -2) {
+    // Already set by transition match
+  } else if (primeiroItemNum >= 0) {
+    fim += primeiroItemNum;
   } else {
     fim = Math.min(fim + 2000, texto.length);
   }
@@ -224,6 +244,8 @@ export function extrairDadosEmpreendimento(texto: string): string | null {
     .filter((l) => !(CABECALHO_MAISCULAS.test(l) && l.length <= 40))
     .join("\n");
   secao = secao.replace(/\n{3,}/g, "\n\n").trim();
+  secao = secao.replace(/\d+\s*[-–]?\s*$/m, "").trim();
+  secao = secao.replace(/\d+\s*[-–]\s*CONDICIONANTES\s*$/i, "").trim();
 
   return secao.length >= 10 ? secao : null;
 }
