@@ -73,7 +73,7 @@ test("dividirTextoEmItens junta fragmentos com 'bem como'", () => {
   assert.ok(itens[0].descricao.includes("bem como o cronograma"));
 });
 
-test("dividirTextoEmItens remove dados do empreendimento como itens isolados", () => {
+test("dividirTextoEmItens preserva dados do empreendimento como itens", () => {
   const texto = [
     "1. Deverá ser apresentado plano.",
     "Central Geradora Hidrelétrica - CGH I",
@@ -86,8 +86,8 @@ test("dividirTextoEmItens remove dados do empreendimento como itens isolados", (
   ].join("\n");
   const itens = dividirTextoEmItens(texto);
   assert.equal(itens.length, 3);
-  assert.ok(!itens.some(i => i.titulo === "Central Geradora Hidrelétrica - CGH I"));
-  assert.ok(!itens.some(i => i.titulo === "Rio Paraná, Bacia Paraná"));
+  assert.ok(itens[0].descricao.includes("Central Geradora"));
+  assert.ok(itens[1].descricao.includes("Rio Paraná"));
 });
 
 test("dividirTextoEmItens preserva condicionantes legítimas", () => {

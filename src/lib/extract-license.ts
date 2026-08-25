@@ -370,17 +370,6 @@ function ehContinuacao(anterior: string, proximo: string): boolean {
   return false;
 }
 
-function ehDadoEmpreendimento(titulo: string): boolean {
-  const t = titulo.trim();
-  if (t.length < 3) return true;
-  if (/^[\d\s.,°'"ºª/\-]+$/.test(t)) return true;
-  if (/\d+[°]\d+/.test(t) || /[°'"]\s*[NS]/.test(t) || /[°'"]\s*[LW]/.test(t)) return true;
-  if (/DADOS\s+DO\s+EMPREENDIMENTO/i.test(t)) return true;
-  if (/^(?:Central\s+Geradora|Usina|Barramento|Canal\s+(?:de\s+fuga|adutor)|Conduto\s+[Ff]orçado|Reservat[óo]rio|Pot[êe]ncia|Vaz[aã]o|N[íi]vel\s+(?:M[aá]ximo|Normal))/i.test(t)) return true;
-  if (/^Rio\s+\w/i.test(t) || /^Bacia\s+/i.test(t) || /^[-–]\s*(?:Central|Rio|Barramento|Área|Nível|Canal|Conduto|Reservat|Potência)/i.test(t)) return true;
-  return false;
-}
-
 export function dividirTextoEmItens(texto: string): ItemExtraido[] {
   const linhas = texto.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
 
@@ -407,7 +396,7 @@ export function dividirTextoEmItens(texto: string): ItemExtraido[] {
   }
 
   return mesclados
-    .filter((b) => b.length > 10 && !ehDadoEmpreendimento(b))
+    .filter((b) => b.length > 10)
     .map((b) => ({
       titulo: b.slice(0, 80) + (b.length > 80 ? "…" : ""),
       descricao: b.slice(0, 1000),
