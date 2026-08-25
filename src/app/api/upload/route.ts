@@ -46,6 +46,9 @@ export async function POST(request: Request) {
         exigenciaId: formData.get("exigenciaId")
           ? Number(formData.get("exigenciaId"))
           : null,
+        condicionanteId: formData.get("condicionanteId")
+          ? Number(formData.get("condicionanteId"))
+          : null,
         clienteId: formData.get("clienteId")
           ? Number(formData.get("clienteId"))
           : null,

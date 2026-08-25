@@ -183,10 +183,27 @@ model Processo {
   autorizacaoCorte AutorizacaoCorte?
   documentos       Documento[]
   exigencias       Exigencia[]
+  condicaoItens    Condicionante[]
   empreendimento   Empreendimento     @relation(fields: [empreendimentoId], references: [id])
   orgao            Orgao              @relation(fields: [orgaoId], references: [id])
   responsavel      Responsavel?       @relation(fields: [responsavelId], references: [id])
   timeline         TimelineProcesso[]
+}
+
+model Condicionante {
+  id           Int         @id @default(autoincrement())
+  titulo       String
+  descricao    String?
+  cumprida     Boolean     @default(false)
+  ordem        Int         @default(0)
+  origem       String      @default("manual")
+  processoId   Int
+  processo     Processo    @relation(fields: [processoId], references: [id], onDelete: Cascade)
+  documentos   Documento[]
+  criadoEm     DateTime    @default(now())
+  atualizadoEm DateTime    @updatedAt
+
+  @@index([processoId])
 }
 
 model AutorizacaoCorte {
@@ -221,20 +238,22 @@ model Exigencia {
 }
 
 model Documento {
-  id          Int        @id @default(autoincrement())
-  nome        String
-  tipo        String
-  caminho     String
-  tamanho     Int
-  processoId  Int?
-  exigenciaId Int?
-  criadoEm    DateTime   @default(now())
-  ativo       Boolean    @default(true)
-  clienteId   Int?
-  conteudo    Bytes?
-  cliente     Cliente?   @relation(fields: [clienteId], references: [id])
-  exigencia   Exigencia? @relation(fields: [exigenciaId], references: [id])
-  processo    Processo?  @relation(fields: [processoId], references: [id])
+  id              Int            @id @default(autoincrement())
+  nome            String
+  tipo            String
+  caminho         String
+  tamanho         Int
+  processoId      Int?
+  exigenciaId     Int?
+  condicionanteId Int?
+  criadoEm        DateTime       @default(now())
+  ativo           Boolean        @default(true)
+  clienteId       Int?
+  conteudo        Bytes?
+  cliente         Cliente?       @relation(fields: [clienteId], references: [id])
+  exigencia       Exigencia?     @relation(fields: [exigenciaId], references: [id])
+  condicionante   Condicionante? @relation(fields: [condicionanteId], references: [id])
+  processo        Processo?      @relation(fields: [processoId], references: [id])
 }
 
 model TimelineProcesso {

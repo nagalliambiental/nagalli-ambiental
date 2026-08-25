@@ -1,5 +1,6 @@
-const OCR_API = "https://api.ocr.space/parse/image";
 import pdfParse from "pdf-parse/lib/pdf-parse.js";
+
+const OCR_API = "https://api.ocr.space/parse/image";
 
 const MIME_TYPES: Record<string, string> = {
   png: "image/png",
@@ -11,20 +12,149 @@ const MIME_TYPES: Record<string, string> = {
   bmp: "image/bmp",
 };
 
-const CONDICIONANTES_HEADERS = [
-  /^\s*4\.\s*CONDICIONANTES\s*$/i,
-  /^\s*CONDICIONANTES\s*$/i,
-  /CONDICIONANTES\s+D[AE]?\s+(?:LICEN[ÇC]A|AUTORIZA[ÇC][ÃA]O)/i,
+const INICIOS_SECAO: RegExp[] = [
+  /^\s*\d{1,2}(?:\.\d+)*[.)\-]?\s*-?\s*CONDICIONANTES\b[^\n]*$/im,
+  /^\s*CONDICIONANTES\s+AMBIENTAIS?\b[^\n]*$/im,
+  /^\s*CONDICIONANTES\b[^\n]*$/im,
+  /CONDICIONANTES\s+D[AE]\s+(?:LICEN[ÇC]A|AUTORIZA[ÇC][ÃA]|OUTORGA)[^\n]*/i,
+  /^\s*\d{1,2}[.)\-]?\s*-?\s*CONDI[ÇC][ÕO]ES\s+(?:E\s+RESTRI[ÇC][ÕO]ES\s+)?(?:ESPEC[ÍI]FICAS|PARTICULARES)\b[^\n]*$/im,
+  /^\s*CONDI[ÇC][ÕO]ES\s+ESPEC[ÍI]FICAS\b[^\n]*$/im,
+  /^\s*CONDI[ÇC][ÕO]ES\s+GERAIS\b[^\n]*$/im,
+  /^\s*\d{1,2}[.)\-]?\s*-?\s*CONDI[ÇC][ÕO]ES\b[^\n]*$/im,
 ];
 
-const CONDICIONANTES_FOOTERS = [
-  /P[aá]gina \d+\/2/,
-  /Esta LICEN[ÇC]A/,
-  /Assinatura do Representante/,
-  /^\s*\d+\s*$/,
+const FINS_SECAO: RegExp[] = [
+  /^\s*\d{1,2}\s*[.)]\s*[A-ZÀ-Ü][^\n]{2,70}$/m,
+  /^(?:ANEXOS?|ANEXO\s+[A-Z0-9]|OBSERVA[ÇC][ÕO]ES|ASSINATURAS?|RESPONS[ÁA]VEIS?|LOCAL\s+E\s+DATA|[A-ZÀ-Ü]{4,})\s*$/m,
+  /P[aá]gina\s+\d+/i,
+  /Assinatura do Representante/i,
+  /Esta LICEN[ÇC]A/i,
+  /Esta AUTORIZA[ÇC][ÃA]O/i,
+  /Esta OUTORGA/i,
 ];
 
-const DATE_PATTERNS = [
+const CABECALHO_MAISCULAS = /^[A-ZÀ-Ü][A-ZÀ-Ü\s.\-/&(),º°]{3,60}$/;
+
+export interface CamposLicenca {
+  validade: string | null;
+  numLicenca: string | null;
+  numProtocolo: string | null;
+  condicionantes: string | null;
+}
+
+export async function runOcr(buffer: Buffer, ext: string): Promise<string> {
+  const mime = MIME_TYPES[ext] || "application/pdf";
+  const base64 = buffer.toString("base64");
+  const dataUri = `data:${mime};base64,${base64}`;
+  const apiKey = process.env.OCR_API_KEY || "helloworld";
+
+  const formData = new FormData();
+  formData.append("base64Image", dataUri);
+  formData.append("apikey", apiKey);
+  formData.append("language", "por");
+  formData.append("isOverlayRequired", "false");
+  formData.append("OCREngine", "2");
+
+  const res = await fetch(OCR_API, { method: "POST", body: formData });
+  if (!res.ok) throw new Error(`OCR API failed: ${res.status}`);
+  const json = await res.json();
+  if (json.IsErroredOnProcessing) {
+    throw new Error(json.ErrorMessage?.[0] || "OCR processing error");
+  }
+  return json.ParsedResults?.map((r: { ParsedText?: string }) => r.ParsedText || "").join("\n") || "";
+}
+
+export async function extrairTextoPdf(buffer: Buffer): Promise<string> {
+  try {
+    const parsed = await pdfParse(buffer);
+    return parsed?.text || "";
+  } catch {
+    return "";
+  }
+}
+
+export async function extrairTextoComOcr(buffer: Buffer, ext: string): Promise<string> {
+  if (ext === "pdf") {
+    const textoLocal = await extrairTextoPdf(buffer);
+    if (textoLocal.replace(/\s+/g, "").length >= 30) return textoLocal;
+    try {
+      return await runOcr(buffer, ext);
+    } catch {
+      return textoLocal;
+    }
+  }
+  try {
+    return await runOcr(buffer, ext);
+  } catch {
+    return "";
+  }
+}
+
+function removerLinhasRepetidas(secao: string): string {
+  const contagem = new Map<string, number>();
+  const linhas = secao.split("\n");
+  for (const linha of linhas) {
+    const chave = linha.trim();
+    if (!chave || chave.length > 80) continue;
+    contagem.set(chave, (contagem.get(chave) || 0) + 1);
+  }
+  const vistos = new Set<string>();
+  return linhas.filter((linha) => {
+    const chave = linha.trim();
+    if (!chave) return true;
+    if ((contagem.get(chave) || 0) > 1 && !vistos.has(chave)) {
+      vistos.add(chave);
+      return true;
+    }
+    return (contagem.get(chave) || 0) <= 1;
+  }).join("\n");
+}
+
+export function extrairSecaoCondicionantes(texto: string): string | null {
+  if (!texto) return null;
+
+  let inicio = -1;
+  for (const re of INICIOS_SECAO) {
+    const m = texto.match(re);
+    if (m && m.index !== undefined) {
+      inicio = m.index + m[0].length;
+      break;
+    }
+  }
+  if (inicio === -1) {
+    const m = texto.match(/CONDICIONANTES/i);
+    if (m && m.index !== undefined) inicio = m.index + m[0].length;
+  }
+  if (inicio === -1) return null;
+
+  let fim = texto.length;
+  for (const re of FINS_SECAO) {
+    const m = texto.slice(inicio + 10).match(re);
+    if (m && m.index !== undefined) {
+      const pos = inicio + 10 + m.index;
+      if (pos > inicio && pos < fim) fim = pos;
+    }
+  }
+
+  let secao = texto.slice(inicio, fim);
+
+  secao = secao.replace(/^\s*(?:P[aá]gina\s+\d+(?:\/\d+)?|\d{1,4})\s*$/gm, "");
+  secao = secao.replace(/https?:\/\/\S+/gi, "");
+  secao = removerLinhasRepetidas(secao);
+  secao = secao.replace(/[ \t]*-\n[ \t]*/g, "");
+  secao = secao.replace(/[ \t]+/g, " ");
+  secao = secao
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l)
+    .filter((l) => !(CABECALHO_MAISCULAS.test(l) && l.length <= 40))
+    .join("\n");
+  secao = secao.replace(/\n{3,}/g, "\n\n").trim();
+
+  return secao.length >= 20 ? secao : null;
+}
+
+const PADROES_DATA = [
   /validade[:\s]*(\d{2})\/(\d{2})\/(\d{4})/i,
   /v[aá]lido at[eé][:\s]*(\d{2})\/(\d{2})\/(\d{4})/i,
   /data\s+de\s+validade[:\s]*(\d{2})\/(\d{2})\/(\d{4})/i,
@@ -34,139 +164,29 @@ const DATE_PATTERNS = [
   /(\d{2})\/(\d{2})\/(\d{4})/,
 ];
 
-const LICENCA_PATTERNS = [
+const PADROES_LICENCA = [
   /n[úu]mero\s+do\s+documento[^\d\n]*[\n\r\s]*(\d{3,})/i,
   /LICEN[ÇC]A\s+PR[ÉE]VIA[\n\r\s]+(\d{3,})/i,
   /licen[cç]a\s*n[º°o]?\s*\.?\s*([\d\/\.\-]+)/i,
   /n[º°o]\s*(?:da\s+)?licen[cç]a[:\s]*([\d\/\.\-]+)/i,
+  /autoriza[çc][ãa]o\s*n[º°o]?\s*\.?\s*([\d\/\.\-]+)/i,
+  /outorga\s*n[º°o]?\s*\.?\s*([\d\/\.\-]+)/i,
   /licen[cç]a\s*(?:ambiental)?\s*:?\s*n[º°o]?\s*\.?\s*([\d\/\.\-]+)/i,
-  /licen[cç]a[:\s]*([\d\/\.\-]{3,})/i,
   /n[º°o]\s*\.?\s*([A-Z0-9][\d\/\.\-]{2,})/i,
 ];
 
-const PROTOCOLO_PATTERNS = [
+const PADROES_PROTOCOLO = [
   /n[úu]mero\s+do\s+protocolo[^\d]*?([\d][\d\.\/\-]{4,})/i,
   /protocolo\s*n[º°o]?\s*\.?\s*([\d\/\.\-]+)/i,
   /n[º°o]\s*(?:do\s+)?protocolo[:\s]*([\d\/\.\-]+)/i,
-  /protocolo[:\s]*([\d\/\.\-]+)/i,
+  /processo\s+(?:administrativo\s+)?n[º°o]?\s*\.?\s*([\d\/\.\-]+)/i,
   /processo[:\s]*n[º°o]?\s*\.?\s*([\d\/\.\-]+)/i,
   /n[º°o]\s*\.?\s*([\d\/\.\-]{3,})\s*\/\s*\d{4}/i,
 ];
 
-function mimeType(ext: string): string {
-  return MIME_TYPES[ext.toLowerCase()] || "image/jpeg";
-}
-
-function extractCondicionantes(text: string): string | null {
-  if (!text) return null;
-
-  let start = -1;
-  for (const re of CONDICIONANTES_HEADERS) {
-    const m = text.match(re);
-    if (m && m.index !== undefined) {
-      start = m.index + m[0].length;
-      break;
-    }
-  }
-  if (start === -1) {
-    const m = text.match(/CONDICIONANTES/i);
-    if (m && m.index !== undefined) {
-      start = m.index + m[0].length;
-    } else {
-      return null;
-    }
-  }
-
-  let end = text.length;
-  for (const re of CONDICIONANTES_FOOTERS) {
-    const m = text.slice(start).match(re);
-    if (m && m.index !== undefined && start + m.index < end) {
-      end = start + m.index;
-    }
-  }
-
-   let sec = text.slice(start, end);
-
-  const artifact = /^\s*(?:P[aá]gina\s+\d+(?:\/LP|\/\d+)?[^\S\r\n]*|LP\s+N[º°o]?\s*\d+|Instituto [ÁA]gua e Terra|Rua Engenheiros Rebou[çc]as.*|EM BRANCO.*)\s*$/gm;
-  sec = sec.replace(artifact, "");
-
-  // junta hífen de fincamento de linha ("licen-ça" -> "licença")
-  sec = sec.replace(/[ \t]*-\n[ \t]*/g, "");
-  // colapsa espaços/tabs horizontais em um único espaço
-  sec = sec.replace(/[ \t]+/g, " ");
-  // remove espaços ao final de cada linha e linhas em branco redundantes
-  sec = sec
-    .split("\n")
-    .map((l) => l.replace(/ $/, "").trim())
-    .filter((l) => l)
-    .join("\n");
-  // colapsa múltiplas quebras de linha
-  sec = sec.replace(/\n{3,}/g, "\n\n").trim();
-
-  if (!sec) return null;
-  return sec;
-}
-
-export async function extractFromBuffer(buffer: Buffer, ext: string) {
-  let text = "";
-
-  if (ext.toLowerCase() === "pdf") {
-    try {
-      const parsed = await pdfParse(buffer);
-      if (parsed?.text) text = parsed.text;
-    } catch (err) {
-      console.error("[PDF] native text extraction failed, falling back to OCR:", err);
-    }
-  }
-
-  if (!text || text.replace(/\s+/g, "").length < 30) {
-    text = await runOcr(buffer, ext);
-  }
-
-  console.log("[EXTRACT] text length:", text.length);
-  if (text) console.log("[EXTRACT] text preview:", text.slice(0, 500));
-  const result = extractFields(text);
-  console.log("[EXTRACT] extracted fields:", result);
-  return result;
-}
-
-async function runOcr(buffer: Buffer, ext: string): Promise<string> {
-  try {
-    const mime = mimeType(ext);
-    const blob = new Blob([new Uint8Array(buffer)], { type: mime });
-    const formData = new FormData();
-    formData.append("file", blob, `document.${ext}`);
-    formData.append("apikey", process.env.OCR_API_KEY || "helloworld");
-    formData.append("language", "por");
-    formData.append("isOverlayRequired", "false");
-    formData.append("OCREngine", process.env.OCR_ENGINE || "1");
-    formData.append("scale", "true");
-    formData.append("detectOrientation", "true");
-
-    const res = await fetch(OCR_API, {
-      method: "POST",
-      body: formData,
-    });
-
-    if (!res.ok) {
-      console.error("OCR.space HTTP error:", res.status, await res.text().catch(() => ""));
-    } else {
-      const json = await res.json();
-      if (json.IsErroredOnProcessing) {
-        console.error("OCR.space processing error:", json.ErrorMessage);
-      } else if (json.ParsedResults?.[0]?.ParsedText) {
-        return json.ParsedResults[0].ParsedText;
-      }
-    }
-  } catch (err) {
-    console.error("OCR fetch failed:", err);
-  }
-  return "";
-}
-
-export function extractFields(text: string) {
+export function extractFields(text: string): CamposLicenca {
   let validade: string | null = null;
-  for (const pat of DATE_PATTERNS) {
+  for (const pat of PADROES_DATA) {
     const m = text.match(pat);
     if (m) {
       const [, d, mo, y] = m;
@@ -181,7 +201,7 @@ export function extractFields(text: string) {
   }
 
   let numLicenca: string | null = null;
-  for (const pat of LICENCA_PATTERNS) {
+  for (const pat of PADROES_LICENCA) {
     const m = text.match(pat);
     if (m && m[1].trim().length > 2) {
       const raw = m[1].trim();
@@ -193,7 +213,7 @@ export function extractFields(text: string) {
   }
 
   let numProtocolo: string | null = null;
-  for (const pat of PROTOCOLO_PATTERNS) {
+  for (const pat of PADROES_PROTOCOLO) {
     const m = text.match(pat);
     if (m && m[1].trim().length > 2) {
       const raw = m[1].trim();
@@ -207,6 +227,43 @@ export function extractFields(text: string) {
     validade,
     numLicenca,
     numProtocolo,
-    condicionantes: extractCondicionantes(text),
+    condicionantes: extrairSecaoCondicionantes(text),
   };
+}
+
+const INICIO_ITEM = /^(?:\d+(?:\.\d+)*[.)\-]|\d+\.\d+|[-•*]\s|[a-z]\))/i;
+const PREFIXO_ITEM = /^(?:\d+(?:\.\d+)*[.)\-]|[-•*]\s|[a-z]\))\s*/i;
+
+export interface ItemExtraido {
+  titulo: string;
+  descricao: string;
+}
+
+export function dividirTextoEmItens(texto: string): ItemExtraido[] {
+  const linhas = texto.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const bruto: string[] = [];
+  let atual: string[] = [];
+
+  for (const linha of linhas) {
+    if (INICIO_ITEM.test(linha)) {
+      if (atual.length) bruto.push(atual.join(" "));
+      atual = [linha.replace(PREFIXO_ITEM, "")];
+    } else {
+      atual.push(linha);
+    }
+  }
+  if (atual.length) bruto.push(atual.join(" "));
+
+  return bruto
+    .filter((b) => b.length > 10)
+    .map((b) => ({
+      titulo: b.slice(0, 80) + (b.length > 80 ? "…" : ""),
+      descricao: b.slice(0, 1000),
+    }));
+}
+
+export async function extractFromBuffer(buffer: Buffer, ext: string): Promise<CamposLicenca> {
+  const text = await extrairTextoComOcr(buffer, ext);
+  const result = extractFields(text);
+  return result;
 }

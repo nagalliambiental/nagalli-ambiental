@@ -16,6 +16,7 @@ import RenovarButton from "@/components/RenovarButton";
 import { Tabs } from "@/components/Tabs";
 import { UltimaModificacao } from "@/components/UltimaModificacao";
 import CompensacaoCorteCard from "@/components/CompensacaoCorteCard";
+import { CondicionantesTab } from "@/components/CondicionantesTab";
 
 export const dynamic = "force-dynamic";
 
@@ -224,16 +225,7 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
           {
             key: "condicionantes",
             label: "Condicionantes",
-            content: (
-              <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
-                <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Condicionantes</h2>
-                {processo.condicionantes ? (
-                  <p className="text-sm text-[var(--color-ink-700)] whitespace-pre-wrap">{processo.condicionantes}</p>
-                ) : (
-                  <p className="text-sm text-[var(--color-ink-500)]">Nenhuma condicionante registrada.</p>
-                )}
-              </div>
-            ),
+            content: <CondicionantesTab processoId={processo.id} textoLegado={processo.condicionantes} />,
           },
           ...(processo.tipo === "Autorização Ambiental para Corte"
             ? [
