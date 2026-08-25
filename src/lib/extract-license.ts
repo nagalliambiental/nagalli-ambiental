@@ -403,6 +403,69 @@ export function dividirTextoEmItens(texto: string): ItemExtraido[] {
     }));
 }
 
+export function classificarCondicionante(texto: string): "exigência" | "informativa" {
+  const t = texto.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+  const padroesInformativa = [
+    /\ba presente licen[ca]\b/,
+    /\btrata[- ]se de\b/,
+    /\bdiz respeito\b/,
+    /\bdesta licen[ca]\b/,
+    /\bdesta autorizacao\b/,
+    /\bo objetivo\b/,
+    /\bo empreendimento\b/,
+    /\bo presente\b/,
+    /\ba finalidade\b/,
+    /\binformamos\b/,
+    /\besta licen[ca]\b/,
+    /\blhe informamos\b/,
+    /\bmediante\b/,
+  ];
+
+  const padroesExigencia = [
+    /\bdevera[sao]?\b/,
+    /\bobrigatori[oa]\b/,
+    /\bapresentar\b/,
+    /\bobter\b/,
+    /\brealizar\b/,
+    /\bmanter\b/,
+    /\bpossui?r\b/,
+    /\bservir[- ]se\b/,
+    /\bobservar\b/,
+    /\bcumprir\b/,
+    /\batender\b/,
+    /\bfornecer\b/,
+    /\bdisponibilizar\b/,
+    /\binformar\b/,
+    /\bcomunicar\b/,
+    /\benviar\b/,
+    /\bencaminhar\b/,
+    /\bnao poder[aao]\b/,
+    /\bnao dever[aao]\b/,
+    /\bnao e permitido\b/,
+    /\be proibido\b/,
+    /\be vedado\b/,
+    /\bdeve ser\b/,
+    /\bdevem ser\b/,
+    /\bdevem\b/,
+    /\bdeve\b/,
+  ];
+
+  let scoreInformativa = 0;
+  for (const p of padroesInformativa) {
+    if (p.test(t)) scoreInformativa++;
+  }
+
+  let scoreExigencia = 0;
+  for (const p of padroesExigencia) {
+    if (p.test(t)) scoreExigencia++;
+  }
+
+  if (scoreInformativa > scoreExigencia) return "informativa";
+  if (scoreExigencia > 0) return "exigência";
+  return "informativa";
+}
+
 export async function extractFromBuffer(buffer: Buffer, ext: string): Promise<CamposLicenca> {
   const text = await extrairTextoComOcr(buffer, ext);
   const result = extractFields(text);

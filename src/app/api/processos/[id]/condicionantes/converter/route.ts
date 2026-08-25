@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { logAuditoria } from "@/lib/audit";
+import { classificarCondicionante } from "@/lib/extract-license";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -60,6 +61,7 @@ export async function POST(_req: NextRequest, { params }: Params) {
       processoId,
       titulo: bloco.slice(0, 80) + (bloco.length > 80 ? "…" : ""),
       descricao: bloco.slice(0, 1000),
+      tipo: classificarCondicionante(bloco),
       ordem: i + 1,
       origem: "conversao",
     })),

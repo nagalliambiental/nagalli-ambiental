@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { logAuditoria } from "@/lib/audit";
-import { extrairTextoComOcr, extrairSecaoCondicionantes, dividirTextoEmItens, extrairDadosEmpreendimento } from "@/lib/extract-license";
+import { extrairTextoComOcr, extrairSecaoCondicionantes, dividirTextoEmItens, extrairDadosEmpreendimento, classificarCondicionante } from "@/lib/extract-license";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     });
 
     const todos = [
-      ...extraidas.map((c) => ({ titulo: c.titulo, descricao: c.descricao, tipo: "exigência" as const })),
+      ...extraidas.map((c) => ({ titulo: c.titulo, descricao: c.descricao, tipo: classificarCondicionante(c.descricao) })),
       ...(dadosEmp ? [{ titulo: "Dados do Empreendimento", descricao: dadosEmp, tipo: "informativa" as const }] : []),
     ];
 
