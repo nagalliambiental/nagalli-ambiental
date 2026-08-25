@@ -72,6 +72,7 @@ export default function NovoProcessoPage() {
     dataContato: "",
     alertaDias: "30",
     condicionantes: "",
+    dadosEmpreendimento: "",
     empreendimentoId: "",
     responsavelId: "",
     observacoes: "",
@@ -155,9 +156,10 @@ export default function NovoProcessoPage() {
         validade: data.validade || prev.validade,
         dataProtocolo: data.dataProtocolo || prev.dataProtocolo,
         condicionantes: data.condicionantes || prev.condicionantes,
+        dadosEmpreendimento: data.dadosEmpreendimento || prev.dadosEmpreendimento,
       }));
 
-      const campos = [data.numLicenca, data.numProtocolo, data.validade, data.dataProtocolo, data.condicionantes].filter(Boolean);
+      const campos = [data.numLicenca, data.numProtocolo, data.validade, data.dataProtocolo, data.condicionantes, data.dadosEmpreendimento].filter(Boolean);
       setExtractedFile(campos.length > 0 ? `${file.name} — ${campos.length} campo(s) extraído(s)` : `${file.name} — nenhum campo identificado`);
     } catch {
       setError("Erro ao processar documento");
@@ -299,6 +301,7 @@ export default function NovoProcessoPage() {
         dataContato: form.dataContato ? new Date(form.dataContato).toISOString() : undefined,
         alertaDias: Number(form.alertaDias) || 30,
         condicionantes: form.condicionantes || undefined,
+        dadosEmpreendimento: form.dadosEmpreendimento || undefined,
         empreendimentoId: Number(form.empreendimentoId),
         responsavelId: form.responsavelId ? Number(form.responsavelId) : undefined,
         observacoes: form.observacoes,

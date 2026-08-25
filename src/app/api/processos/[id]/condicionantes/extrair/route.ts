@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { logAuditoria } from "@/lib/audit";
-import { extrairTextoComOcr, extrairSecaoCondicionantes, dividirTextoEmItens } from "@/lib/extract-license";
+import { extrairTextoComOcr, extrairSecaoCondicionantes, dividirTextoEmItens, extrairDadosEmpreendimento } from "@/lib/extract-license";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -38,10 +38,22 @@ export async function POST(req: NextRequest, { params }: Params) {
       );
     }
 
+    const dadosEmp = extrairDadosEmpreendimento(texto);
     const secao = extrairSecaoCondicionantes(texto);
+
+    if (dadosEmp) {
+      await prisma.processo.update({
+        where: { id: processoId },
+        data: { dadosEmpreendimento: dadosEmp },
+      });
+    }
+
     if (!secao) {
       return NextResponse.json(
-        { error: "Documento não possui seção de CONDICIONANTES identificável. Verifique se é a licença/autorização completa." },
+        {
+          erro: "Documento não possui seção de CONDICIONANTES identificável.",
+          dadosEmpreendimento: dadosEmp ? "extraido" : null,
+        },
         { status: 422 }
       );
     }
@@ -76,7 +88,7 @@ export async function POST(req: NextRequest, { params }: Params) {
       itens: extraidas.length,
     });
 
-    return NextResponse.json({ criados: extraidas.length });
+    return NextResponse.json({ criados: extraidas.length, dadosEmpreendimento: dadosEmp ? "extraido" : null });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erro desconhecido";
     console.error("Erro ao extrair condicionantes:", message);

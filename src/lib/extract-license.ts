@@ -42,6 +42,7 @@ export interface CamposLicenca {
   numProtocolo: string | null;
   dataProtocolo: string | null;
   condicionantes: string | null;
+  dadosEmpreendimento: string | null;
 }
 
 export async function runOcr(buffer: Buffer, ext: string): Promise<string> {
@@ -180,6 +181,53 @@ export function extrairSecaoCondicionantes(texto: string): string | null {
   return secao.length >= 20 ? secao : null;
 }
 
+const FIM_DADOS_EMPREENDIMENTO = /\b(?:CONDICIONANTES|CONDI[ÇC][ÕO]ES\s+(?:E\s+RESTRI[ÇC][ÕO]ES\s+)?(?:ESPEC[ÍI]FICAS|PARTICULARES)|OBSERVA[ÇC][ÕO]ES|ANEXOS?|ASSINATURAS?|RESPONS[ÁA]VEIS?|DADOS\s+(?:COMPLEMENTARES|DO\s+TITULAR)|VALIDADE\s+DA\s+LICEN[ÇC]A)\b/i;
+
+export function extrairDadosEmpreendimento(texto: string): string | null {
+  if (!texto) return null;
+
+  const padroesInicio = [
+    /[-–]?\s*DADOS\s+DO\s+EMPREENDIMENTO[:\s]*/i,
+    /CARACTERIZA[ÇC][ÃA]O\s+DO\s+EMPREENDIMENTO[:\s]*/i,
+    /CARACTERIZA[ÇC][ÃA]O\s+D[OA]\s+EMPREEN DIMENTO[:\s]*/i,
+    /DADOS\s+DA\s+ATIVIDADE[:\s]*/i,
+  ];
+
+  let inicio = -1;
+  let fim = -1;
+
+  for (const re of padroesInicio) {
+    const m = texto.match(re);
+    if (m && m.index !== undefined) {
+      inicio = m.index;
+      fim = m.index + m[0].length;
+      break;
+    }
+  }
+  if (inicio === -1) return null;
+
+  const restante = texto.slice(fim);
+  const mFim = restante.match(FIM_DADOS_EMPREENDIMENTO);
+  if (mFim && mFim.index !== undefined) {
+    fim += mFim.index;
+  } else {
+    fim = Math.min(fim + 2000, texto.length);
+  }
+
+  let secao = texto.slice(inicio, fim);
+  secao = secao.replace(/^\s*(?:P[aá]gina\s+\d+(?:\/\d+)?|\d{1,4})\s*$/gm, "");
+  secao = secao.replace(/[ \t]+/g, " ");
+  secao = secao
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l)
+    .filter((l) => !(CABECALHO_MAISCULAS.test(l) && l.length <= 40))
+    .join("\n");
+  secao = secao.replace(/\n{3,}/g, "\n\n").trim();
+
+  return secao.length >= 10 ? secao : null;
+}
+
 const PADROES_DATA = [
   /validade[:\s]*(\d{2})\/(\d{2})\/(\d{4})/i,
   /v[aá]lido at[eé][:\s]*(\d{2})\/(\d{2})\/(\d{4})/i,
@@ -276,6 +324,7 @@ export function extractFields(text: string): CamposLicenca {
     numProtocolo,
     dataProtocolo,
     condicionantes: extrairSecaoCondicionantes(text),
+    dadosEmpreendimento: extrairDadosEmpreendimento(text),
   };
 }
 

@@ -175,8 +175,9 @@ model Processo {
   criadoEm         DateTime           @default(now())
   atualizadoEm     DateTime           @updatedAt
   numLicenca       String?
-  condicionantes   String?
-  dataProtocolo    DateTime?
+  condicionantes     String?
+  dadosEmpreendimento String?
+  dataProtocolo      DateTime?
   dataContato      DateTime?
   alertaDias       Int                @default(30)
   ativo            Boolean            @default(true)

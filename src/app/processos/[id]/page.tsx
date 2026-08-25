@@ -9,7 +9,7 @@ import { Topbar } from "@/components/Topbar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { FileText, Building2, Map, Calendar, Users, ClipboardList, FileCheck2, Clock, AlertTriangle, Edit3, ArrowLeft, MessageSquare } from "lucide-react";
+import { FileText, Building2, Map, Calendar, Users, ClipboardList, FileCheck2, Clock, AlertTriangle, Edit3, ArrowLeft, MessageSquare, Info } from "lucide-react";
 import Link from "next/link";
 import DeleteButton from "@/components/DeleteButton";
 import RenovarButton from "@/components/RenovarButton";
@@ -227,6 +227,25 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
             label: "Condicionantes",
             content: <CondicionantesTab processoId={processo.id} textoLegado={processo.condicionantes} />,
           },
+          ...(processo.dadosEmpreendimento
+            ? [
+                {
+                  key: "dadosEmpreendimento",
+                  label: "Dados do Empreendimento",
+                  content: (
+                    <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
+                      <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-3 flex items-center gap-2">
+                        <Info size={16} />
+                        Dados do Empreendimento
+                      </h2>
+                      <p className="text-sm text-[var(--color-ink-700)] whitespace-pre-wrap leading-relaxed">
+                        {processo.dadosEmpreendimento}
+                      </p>
+                    </div>
+                  ),
+                },
+              ]
+            : []),
           ...(processo.tipo === "Autorização Ambiental para Corte"
             ? [
                 {

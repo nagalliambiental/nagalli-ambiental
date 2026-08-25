@@ -290,6 +290,7 @@ export default function EditEntityForm({
         if (data.validade && "validade" in next) { next.validade = data.validade; camposPreenchidos.push("Validade"); }
         if (data.dataProtocolo && "dataProtocolo" in next) { next.dataProtocolo = data.dataProtocolo; camposPreenchidos.push("Data Protocolo"); }
         if (data.condicionantes && field.name in next) { next[field.name as keyof typeof next] = data.condicionantes as never; camposPreenchidos.push("Condicionantes"); }
+        if (data.dadosEmpreendimento && "dadosEmpreendimento" in next) { next.dadosEmpreendimento = data.dadosEmpreendimento; camposPreenchidos.push("Dados do Empreendimento"); }
         return next;
       });
       setDirty(true);
