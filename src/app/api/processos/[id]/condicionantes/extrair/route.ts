@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { logAuditoria } from "@/lib/audit";
-import { extrairTextoComOcr, extrairSecaoCondicionantes, dividirTextoEmItens } from "@/lib/extract-license";
+import { extrairTextoComOcr, extrairSecaoCondicionantes, dividirTextoEmItens, extrairDadosEmpreendimento } from "@/lib/extract-license";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -50,7 +50,10 @@ export async function POST(req: NextRequest, { params }: Params) {
     }
 
     const extraidas = dividirTextoEmItens(secao);
-    if (extraidas.length === 0) {
+
+    const dadosEmp = extrairDadosEmpreendimento(texto);
+
+    if (extraidas.length === 0 && !dadosEmp) {
       return NextResponse.json(
         { error: "Seção de condicionantes encontrada, mas não foi possível identificar itens numerados ou listados. Crie manualmente ou cole via 'Converter texto existente'." },
         { status: 422 }
@@ -63,11 +66,17 @@ export async function POST(req: NextRequest, { params }: Params) {
       select: { ordem: true },
     });
 
+    const todos = [
+      ...extraidas.map((c) => ({ titulo: c.titulo, descricao: c.descricao, tipo: "exigência" as const })),
+      ...(dadosEmp ? [{ titulo: "Dados do Empreendimento", descricao: dadosEmp, tipo: "informativa" as const }] : []),
+    ];
+
     await prisma.condicionante.createMany({
-      data: extraidas.map((c, i) => ({
+      data: todos.map((c, i) => ({
         processoId,
         titulo: c.titulo,
         descricao: c.descricao,
+        tipo: c.tipo,
         ordem: (ultima?.ordem ?? 0) + i + 1,
         origem: "extracao",
       })),
@@ -76,10 +85,10 @@ export async function POST(req: NextRequest, { params }: Params) {
     await logAuditoria("criar", "Condicionante", processoId, {
       acao: "extrairDocumento",
       arquivo: file.name,
-      itens: extraidas.length,
+      itens: todos.length,
     });
 
-    return NextResponse.json({ criados: extraidas.length });
+    return NextResponse.json({ criados: todos.length });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erro desconhecido";
     console.error("Erro ao extrair condicionantes:", message);
