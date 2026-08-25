@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ChevronDown, Plus, Upload, FileText, CheckCircle2, Circle, Trash2,
-  Loader2, Download, Sparkles, X, Pencil,
+  Loader2, Download, Sparkles, X, Pencil, AlertTriangle, Info,
 } from "lucide-react";
 import { useToast } from "@/components/Toast";
 
@@ -18,6 +18,8 @@ interface ItemCondicao {
   id: number;
   titulo: string;
   descricao: string | null;
+  tipo: string;
+  prazo: string | null;
   cumprida: boolean;
   ordem: number;
   origem: string;
@@ -139,6 +141,44 @@ export function CondicionantesTab({ processoId, textoLegado }: { processoId: num
       setItens((atual) => atual.map((i) => (i.id === item.id ? { ...i, cumprida: item.cumprida } : i)));
       toast("Falha ao atualizar", "error");
     }
+  }
+
+  async function classificar(item: ItemCondicao, tipo: string) {
+    setItens((atual) => atual.map((i) => (i.id === item.id ? { ...i, tipo } : i)));
+    const res = await fetch(`/api/condicionantes/${item.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tipo }),
+    });
+    if (!res.ok) {
+      setItens((atual) => atual.map((i) => (i.id === item.id ? { ...i, tipo: item.tipo } : i)));
+      toast("Falha ao classificar", "error");
+    }
+  }
+
+  async function definirPrazo(item: ItemCondicao, prazo: string | null) {
+    setItens((atual) => atual.map((i) => (i.id === item.id ? { ...i, prazo } : i)));
+    const res = await fetch(`/api/condicionantes/${item.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prazo }),
+    });
+    if (!res.ok) {
+      setItens((atual) => atual.map((i) => (i.id === item.id ? { ...i, prazo: item.prazo } : i)));
+      toast("Falha ao definir prazo", "error");
+    }
+  }
+
+  function statusPrazo(prazo: string | null): { cor: string; texto: string } | null {
+    if (!prazo) return null;
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const alvo = new Date(prazo + "T00:00:00");
+    const diff = Math.ceil((alvo.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
+    if (diff < 0) return { cor: "text-red-600 bg-red-50 border-red-200", texto: `Vencida há ${Math.abs(diff)} dia(s)` };
+    if (diff === 0) return { cor: "text-orange-600 bg-orange-50 border-orange-200", texto: "Vence hoje" };
+    if (diff <= 30) return { cor: "text-amber-600 bg-amber-50 border-amber-200", texto: `${diff} dia(s) restante(s)` };
+    return { cor: "text-green-600 bg-green-50 border-green-200", texto: `${diff} dia(s)` };
   }
 
   async function salvarEdicao(id: number) {
@@ -291,6 +331,22 @@ export function CondicionantesTab({ processoId, textoLegado }: { processoId: num
                   <span className={`min-w-0 flex-1 truncate text-sm ${item.cumprida ? "text-[var(--color-ink-500)] line-through" : "font-medium text-[var(--color-ink-900)]"}`} title={item.titulo}>
                     {item.titulo}
                   </span>
+                  {item.tipo === "exigencia" && !item.cumprida && (
+                    <span className="hidden shrink-0 items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 sm:inline-flex">
+                      <AlertTriangle size={10} /> Exigência
+                    </span>
+                  )}
+                  {item.tipo === "informativa" && (
+                    <span className="hidden shrink-0 items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-700 sm:inline-flex">
+                      <Info size={10} /> Informativa
+                    </span>
+                  )}
+                  {item.prazo && !item.cumprida && (() => {
+                    const s = statusPrazo(item.prazo);
+                    return s ? (
+                      <span className={`hidden shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold sm:inline-flex ${s.cor}`}>{s.texto}</span>
+                    ) : null;
+                  })()}
                   {item.origem === "extracao" && (
                     <span className="hidden shrink-0 rounded-full border border-[var(--color-river-200)] bg-[var(--color-river-50)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-river-700)] sm:inline-flex">OCR</span>
                   )}
@@ -327,6 +383,35 @@ export function CondicionantesTab({ processoId, textoLegado }: { processoId: num
                         {item.descricao || <span className="italic text-[var(--color-ink-300)]">Sem descrição — clique em editar para adicionar.</span>}
                       </p>
                     )}
+
+                    <div className="flex flex-wrap items-center gap-3 rounded-lg border border-[var(--color-paper-200)] bg-[var(--color-paper-50)] px-3 py-2.5">
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs font-medium text-[var(--color-ink-500)]">Classificação:</label>
+                        <select
+                          value={item.tipo}
+                          onChange={(e) => classificar(item, e.target.value)}
+                          className="focus-ring rounded-md border border-[var(--color-paper-200)] bg-white px-2 py-1 text-xs font-medium text-[var(--color-ink-700)]"
+                        >
+                          <option value="informativa">Informativa</option>
+                          <option value="exigencia">Exigência</option>
+                        </select>
+                      </div>
+                      {item.tipo === "exigencia" && (
+                        <div className="flex items-center gap-2">
+                          <label className="text-xs font-medium text-[var(--color-ink-500)]">Prazo:</label>
+                          <input
+                            type="date"
+                            value={item.prazo ? item.prazo.split("T")[0] : ""}
+                            onChange={(e) => definirPrazo(item, e.target.value || null)}
+                            className="focus-ring rounded-md border border-[var(--color-paper-200)] bg-white px-2 py-1 text-xs text-[var(--color-ink-700)]"
+                          />
+                          {item.prazo && (() => {
+                            const s = statusPrazo(item.prazo);
+                            return s ? <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${s.cor}`}>{s.texto}</span> : null;
+                          })()}
+                        </div>
+                      )}
+                    </div>
 
                     <div className="flex flex-wrap items-center gap-2">
                       <button

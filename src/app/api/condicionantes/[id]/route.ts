@@ -16,6 +16,13 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   if (typeof body?.titulo === "string" && body.titulo.trim()) data.titulo = body.titulo.trim().slice(0, 200);
   if (typeof body?.descricao === "string") data.descricao = body.descricao.slice(0, 1000);
   if (typeof body?.cumprida === "boolean") data.cumprida = body.cumprida;
+  if (body?.tipo === "informativa" || body?.tipo === "exigencia") data.tipo = body.tipo;
+  if (body?.prazo === null) {
+    data.prazo = null;
+  } else if (typeof body?.prazo === "string" && body.prazo) {
+    const d = new Date(body.prazo);
+    if (!isNaN(d.getTime())) data.prazo = d;
+  }
 
   if (Object.keys(data).length === 0) {
     return NextResponse.json({ error: "Nada para atualizar" }, { status: 400 });

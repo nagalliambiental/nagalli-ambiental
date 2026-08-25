@@ -194,6 +194,8 @@ model Condicionante {
   id           Int         @id @default(autoincrement())
   titulo       String
   descricao    String?
+  tipo         String      @default("informativa")
+  prazo        DateTime?
   cumprida     Boolean     @default(false)
   ordem        Int         @default(0)
   origem       String      @default("manual")

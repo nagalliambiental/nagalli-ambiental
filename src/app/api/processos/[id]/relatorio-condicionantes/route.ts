@@ -5,6 +5,7 @@ import { logAuditoria } from "@/lib/audit";
 import {
   buildCondicionantesData,
   renderCondicionantesDocx,
+  parseCondicionantes,
 } from "@/lib/templates/relatorio-condicionantes/generate";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
@@ -21,7 +22,10 @@ export async function GET(
   const { id } = await params;
   const processo = await prisma.processo.findUnique({
     where: { id: Number(id) },
-    include: { empreendimento: { include: { cliente: true } } },
+    include: {
+      empreendimento: { include: { cliente: true } },
+      condicaoItens: { orderBy: { ordem: "asc" } },
+    },
   });
 
   if (!processo) {
@@ -39,10 +43,26 @@ export async function GET(
     .join(", ");
   const localidade = cidadeUf || "Localidade";
 
+  const itensEstruturados = (processo as unknown as { condicaoItens?: Array<{ titulo: string; descricao: string | null; tipo: string; prazo: Date | null; cumprida: boolean }> }).condicaoItens;
+
+  let linhas: string[];
+  if (itensEstruturados && itensEstruturados.length > 0) {
+    linhas = itensEstruturados.map((c, i) => {
+      const num = `${i + 1}.`;
+      const tipo = c.tipo === "exigencia" ? " [EXIGÊNCIA]" : "";
+      const prazo = c.prazo ? ` — Prazo: ${new Date(c.prazo).toLocaleDateString("pt-BR")}` : "";
+      const desc = c.descricao || c.titulo;
+      return `${num} ${c.titulo}${tipo}${prazo}${desc !== c.titulo ? `\n   ${desc}` : ""}`;
+    });
+  } else {
+    linhas = parseCondicionantes((processo as { condicionantes?: string | null }).condicionantes);
+  }
+
   const data = buildCondicionantesData(
     processo,
     { razaoSocial: processo.empreendimento.cliente.razaoSocial },
-    `${localidade}, ${dataEmissao}`
+    `${localidade}, ${dataEmissao}`,
+    linhas
   );
 
   let buffer: Buffer;
