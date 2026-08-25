@@ -287,8 +287,32 @@ export interface ItemExtraido {
   descricao: string;
 }
 
+const PALAVRAS_CONTINUACAO = /^(?:e\/ou|bem como|inclu(?:indo|íveis?|a)|sendo|do|da|dos|das|com|em|no|na|nos|nas)\b/i;
+
+function ehContinuacao(anterior: string, proximo: string): boolean {
+  const a = anterior.trimEnd();
+  const p = proximo.trimStart();
+
+  if (a.endsWith(":") || a.endsWith(",") || a.endsWith(";")) return true;
+  if (/^[a-záàâãéêíóôõúç]/.test(p)) return true;
+  if (PALAVRAS_CONTINUACAO.test(p)) return true;
+  return false;
+}
+
+function ehDadoEmpreendimento(titulo: string): boolean {
+  const t = titulo.trim();
+  if (t.length < 3) return true;
+  if (/^[\d\s.,°'"ºª/\-]+$/.test(t)) return true;
+  if (/\d+[°]\d+/.test(t) || /[°'"]\s*[NS]/.test(t) || /[°'"]\s*[LW]/.test(t)) return true;
+  if (/DADOS\s+DO\s+EMPREENDIMENTO/i.test(t)) return true;
+  if (/^(?:Central\s+Geradora|Usina|Barramento|Canal\s+(?:de\s+fuga|adutor)|Conduto\s+[Ff]orçado|Reservat[óo]rio|Pot[êe]ncia|Vaz[aã]o|N[íi]vel\s+(?:M[aá]ximo|Normal))/i.test(t)) return true;
+  if (/^Rio\s+\w/i.test(t) || /^Bacia\s+/i.test(t) || /^[-–]\s*(?:Central|Rio|Barramento|Área|Nível|Canal|Conduto|Reservat|Potência)/i.test(t)) return true;
+  return false;
+}
+
 export function dividirTextoEmItens(texto: string): ItemExtraido[] {
   const linhas = texto.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+
   const bruto: string[] = [];
   let atual: string[] = [];
 
@@ -302,8 +326,17 @@ export function dividirTextoEmItens(texto: string): ItemExtraido[] {
   }
   if (atual.length) bruto.push(atual.join(" "));
 
-  return bruto
-    .filter((b) => b.length > 10)
+  const mesclados: string[] = [];
+  for (const item of bruto) {
+    if (mesclados.length > 0 && ehContinuacao(mesclados[mesclados.length - 1], item)) {
+      mesclados[mesclados.length - 1] += " " + item;
+    } else {
+      mesclados.push(item);
+    }
+  }
+
+  return mesclados
+    .filter((b) => b.length > 10 && !ehDadoEmpreendimento(b))
     .map((b) => ({
       titulo: b.slice(0, 80) + (b.length > 80 ? "…" : ""),
       descricao: b.slice(0, 1000),
