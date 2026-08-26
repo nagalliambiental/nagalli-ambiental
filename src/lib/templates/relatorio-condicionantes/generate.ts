@@ -8,7 +8,7 @@ export type CondicionanteLinha = {
   descricao: string;
 };
 
-const NUM_ITEM_RE = /^(?:\d{1,3}\.\s*|\d{1,3}\)\s*|\-\s*|\u2022\s*|\*\s*)/;
+const NUM_ITEM_RE = /^(?:\d{1,3}\.\s*|\d{1,3}\)\s*)/;
 const PAGE_FOOTER_RE = /^p\u00e1gina\s+\d+\//i;
 const BULLET_LETTER_RE = /^[a-z\u00e1\u00e9\u00ed\u00f3\u00fa]\)\s*/i;
 const EM_BRANCO_RE = /^\s*EM\s+BRANCO\s*$/i;
@@ -32,8 +32,7 @@ export function parseCondicionantes(raw: string | null | undefined): string[] {
       if (current) items.push(current);
       current = line;
     } else if (current) {
-      const compact = line.replace(/^[-\u2022*]\s*/, "");
-      current = `${current} ${compact}`;
+      current = `${current} ${line}`;
     } else {
       current = line;
     }
