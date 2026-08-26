@@ -22,12 +22,17 @@ const INICIOS_SECAO: RegExp[] = [
   /^\s*CONDI[ÇC][ÕO]ES\s+GERAIS\b[^\n]*$/im,
   /^\s*\d{1,2}[.)\-]?\s*-?\s*CONDI[ÇC][ÕO]ES\b[^\n]*$/im,
   /^\s*Condi[çc][õo]es\s*$/im,
+  /^\s*CL[ÁA]USULAS?\b[^\n]*$/im,
+  /^\s*OBRIGA[ÇC][ÕO]ES?\b[^\n]*$/im,
+  /CONDI[ÇC][ÕO]ES\s+D[AE]\s+OUTORGA[^\n]*/i,
+  /TERMOS?\s+D[AE]\s+OUTORGA[^\n]*/i,
+  /CONDI[ÇC][ÕO]ES\s+E\s+OBRIGA[ÇC][ÕO]ES[^\n]*/i,
 ];
 
 const FINS_SECAO: RegExp[] = [
   /^\s*\d{1,2}\s*[.)]\s*[A-ZÀ-Ü][^\n]{2,70}$/m,
   /^\s*(?:DADOS\s+(?:DO|DA)\s+\w|DADOS\s+COMPLEMENTARES|DADOS\s+DO\s+TITULAR|DADOS\s+DO\s+PROPONENTE|DADOS\s+DO\s+REQUERENTE|DADOS\s+CONTRATANTE|DADOS\s+DO\s+CONTRATADO)\b[^\n]*$/im,
-  /^(?:ANEXOS?|ANEXO\s+[A-Z0-9]|OBSERVA[ÇC][ÕO]ES|ASSINATURAS?|RESPONS[ÁA]VEIS?|LOCAL\s+E\s+DATA|C[ÓO]DIGO\s+DE\s+BARRAS|[A-ZÀ-Ü]{4,})\s*$/m,
+  /^(?:ANEXOS?|ANEXO\s+[A-Z0-9]|OBSERVA[ÇC][ÕO]ES|ASSINATURAS?|RESPONS[ÁA]VEIS?|LOCAL\s+E\s+DATA|C[ÓO]DIGO\s+DE\s+BARRAS)\s*$/m,
   /(?:^|\n)\s*P[aá]gina\s+\d+/i,
   /(?:^|\n)\s*Assinatura do Representante/i,
   /(?:^|\n)\s*Esta LICEN[ÇC]A/i,
