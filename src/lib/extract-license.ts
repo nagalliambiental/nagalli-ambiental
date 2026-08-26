@@ -292,11 +292,12 @@ const PADROES_LICENCA = [
 
 const PADROES_PROTOCOLO = [
   /n[úu]mero\s+do\s+protocolo[^\d]*?([\d][\d\.\/\-]{4,})/i,
+  /protocolado\s+sob\s+n[º°o]?\s*\.?\s*([\d\.\/\-]+)/i,
   /protocolo\s*n[º°o]?\s*\.?\s*([\d\/\.\-]+)/i,
   /n[º°o]\s*(?:do\s+)?protocolo[:\s]*([\d\/\.\-]+)/i,
   /processo\s+(?:administrativo\s+)?n[º°o]?\s*\.?\s*([\d\/\.\-]+)/i,
   /processo[:\s]*n[º°o]?\s*\.?\s*([\d\/\.\-]+)/i,
-  /n[º°o]\s*\.?\s*([\d\/\.\-]{3,})\s*\/\s*\d{4}/i,
+  /n[º°o]\s*\.?\s*([\d\/\.\-]{7,})\s*\/\s*\d{4}/i,
 ];
 
 export function extractFields(text: string): CamposLicenca {
