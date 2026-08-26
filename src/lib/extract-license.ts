@@ -83,6 +83,7 @@ export function limparTextoPdf(texto: string): string {
   t = t.replace(/^\s*P[aá]gina\s+\d+\/[^\n]*$/gim, "");
   t = t.replace(/^\s*\d{1,4}\s*\/\s*\d{1,4}\s*$/gm, "");
   t = t.replace(/^\s*\d{1,4}\s*$/gm, "");
+  t = t.replace(/\s*EM\s+BRANCO\s*/gi, " ");
   t = t.replace(/\s*-\n\s*/g, "");
   t = t.replace(/([a-záàâãéêíóôõúç])\n([a-záàâãéêíóôõúç])/gi, "$1 $2");
   t = t.replace(/([.,;:!?)])\n([A-ZÀ-Ü])/g, "$1 $2");
@@ -166,6 +167,7 @@ export function extrairSecaoCondicionantes(texto: string): string | null {
     .split("\n")
     .map((l) => l.trim())
     .filter((l) => l)
+    .filter((l) => !/^\s*EM\s+BRANCO\s*$/i.test(l))
     .filter((l) => {
       if (!(CABECALHO_MAISCULAS.test(l) && l.length <= 40)) return true;
       return false;
