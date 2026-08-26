@@ -1,8 +1,9 @@
 import { consultarLicencaIat, type DadosLicenca } from "@/lib/iat";
 import { consultarLicencaIma } from "@/lib/ima";
 import { consultarSia } from "@/lib/sia";
+import { consultarOutorgaSigarh, fromSigarh } from "@/lib/sigarh";
 
-export type OrigemLicenca = "IAT" | "IMA" | "SIA";
+export type OrigemLicenca = "IAT" | "IMA" | "SIA" | "SIGARH";
 
 export type LicencaImportada = {
   origem: OrigemLicenca;
@@ -57,6 +58,19 @@ export async function importarLicencaDoOrgao(opts: {
 
   if (!licenca && !protocolo) return null;
 
+  const ehOutorga = licenca.includes("/");
+
+  const tentarSigarh = async (): Promise<LicencaImportada | null> => {
+    if (!licenca) return null;
+    try {
+      const lista = await consultarOutorgaSigarh(licenca);
+      if (lista?.[0]) return fromSigarh(lista[0], licenca);
+    } catch {
+      // não é outorga ou SIGARH indisponível
+    }
+    return null;
+  };
+
   const tentarIat = async (): Promise<LicencaImportada | null> => {
     if (licenca) {
       try {
@@ -106,7 +120,14 @@ export async function importarLicencaDoOrgao(opts: {
   if (ehIma(sigla)) return tentarIma();
   if (ehIat(sigla)) return tentarIat();
 
-  const ordem = licenca.includes("/") ? [tentarIma, tentarIat] : [tentarIat, tentarIma];
+  if (ehOutorga) {
+    const r = await tentarSigarh();
+    if (r) return r;
+  }
+
+  const ordem = licenca.includes("/")
+    ? [tentarIma, tentarIat]
+    : [tentarIat, tentarIma];
   for (const tentar of ordem) {
     const r = await tentar();
     if (r) return r;
