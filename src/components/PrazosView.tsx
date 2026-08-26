@@ -60,7 +60,7 @@ function ListView({ processos, exigencias }: { processos: ProcessoPrazo[]; exige
       <div>
         <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-4 flex items-center gap-2">
           <CalendarIcon size={18} />
-          Prazos de Processos
+          Prazos de Licenças
         </h2>
         {processos.length > 0 ? (
           <div className="grid gap-3">

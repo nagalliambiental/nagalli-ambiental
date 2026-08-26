@@ -43,7 +43,7 @@ const statusColors: Record<string, string> = {
 export async function generateMetadata(props: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await props.params;
   const processo = await prisma.processo.findUnique({ where: { id: Number(id) } });
-  return { title: `Processo - ${processo?.numProtocolo || "Não encontrado"}` };
+  return { title: `Licença - ${processo?.numProtocolo || "Não encontrado"}` };
 }
 
 export default async function ProcessoDetailPage(props: { params: Promise<{ id: string }> }) {
@@ -72,18 +72,18 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
 
   return (
     <div>
-      <Breadcrumbs items={[{ label: "Processos", href: "/processos" }, { label: processo.numProtocolo }]} />
+      <Breadcrumbs items={[{ label: "Licenças", href: "/processos" }, { label: processo.numProtocolo }]} />
 
       <div className="mb-4">
         <Link href="/processos" className="focus-ring transition-brand inline-flex items-center gap-1.5 text-sm font-medium text-[var(--color-ink-600)] hover:text-[var(--color-brand-600)]">
           <ArrowLeft size={16} />
-          Voltar para processos
+          Voltar para licenças
         </Link>
       </div>
 
       <Topbar
         icon={ClipboardList}
-        title={`Processo ${processo.numProtocolo}`}
+        title={`Licença ${processo.numProtocolo}`}
         subtitle={processo.tipo}
         actions={
           <div className="flex flex-wrap items-center gap-2">
@@ -94,7 +94,7 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
               <Edit3 size={14} />
               Editar
             </Link>
-            <DeleteButton entity="Processo" endpoint={`/api/processos/${processo.id}`} redirectTo="/processos" />
+            <DeleteButton entity="Licença" endpoint={`/api/processos/${processo.id}`} redirectTo="/processos" />
             <RenovarButton processoId={processo.id} numProtocolo={processo.numProtocolo} />
             <a
               href={`/api/processos/${processo.id}/relatorio-condicionantes`}

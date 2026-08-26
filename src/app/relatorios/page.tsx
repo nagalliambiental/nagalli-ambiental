@@ -114,7 +114,7 @@ export default function RelatoriosPage() {
           <DownloadButtons url={`/api/relatorios/financeiro?status=${finStatus}`} hook={financeiro} />
         </Card>}
 
-        <Card icon={FileCheck2} title="Processos Ambientais" description="Consulte os processos por empreendimento: órgão, situação e validade da licença">
+        <Card icon={FileCheck2} title="Licenças Ambientais" description="Consulte as licenças por empreendimento: órgão, situação e validade da licença">
           <div className="mb-4">
             <label className="block text-xs font-medium text-[var(--color-ink-500)] mb-1">Filtrar por situação</label>
             <select value={procStatus} onChange={(e) => setProcStatus(e.target.value)}

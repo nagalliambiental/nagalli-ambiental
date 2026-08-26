@@ -188,7 +188,7 @@ export default async function EmpreendimentoDetailPage(props: { params: Promise<
           },
           {
             key: "processos",
-            label: "Processos",
+            label: "Licenças",
             count: processos.length,
             content: (
               <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">

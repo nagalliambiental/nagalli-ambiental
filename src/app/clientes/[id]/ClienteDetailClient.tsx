@@ -471,7 +471,7 @@ export function ClienteDetailClient({
                   <tr className="border-b border-[var(--color-paper-200)] text-[var(--color-ink-500)]">
                     <th className="text-left p-4 font-medium">Apelido</th>
                     <th className="text-left p-4 font-medium">Endereço</th>
-                    <th className="text-center p-4 font-medium">Processos</th>
+                    <th className="text-center p-4 font-medium">Licenças</th>
                     <th className="text-center p-4 font-medium">DMR</th>
                     <th className="text-center p-4 font-medium">Ações</th>
                   </tr>

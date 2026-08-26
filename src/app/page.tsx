@@ -66,7 +66,7 @@ export default async function DashboardPage() {
       <Topbar
         icon={LayoutDashboard}
         title="Dashboard"
-        subtitle="Visão geral dos processos e cadastros"
+        subtitle="Visão geral das licenças e cadastros"
         actions={
           <div className="flex flex-wrap items-center gap-3">
             <Link href="/clientes/novo" className="focus-ring transition-brand flex items-center gap-2 rounded-[var(--radius-card)] bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)]">
@@ -82,7 +82,7 @@ export default async function DashboardPage() {
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Processos Ativos" value={totalProcessos} icon={FileCheck2} accent="brand" />
+        <StatCard label="Licenças Ativas" value={totalProcessos} icon={FileCheck2} accent="brand" />
         <StatCard label="Clientes" value={totalClientes} icon={Building2} accent="river" />
         <StatCard label="Empreendimentos" value={totalEmpreendimentos} icon={Building2} accent="brand" />
         <Link href="/exigencias" className="block h-full">
@@ -124,7 +124,7 @@ export default async function DashboardPage() {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-red-900">Alertas de prazos a vencer ({totalAlertas})</p>
-                  <p className="text-xs text-red-700">Processos e exigências com vencimento próximo ou vencido</p>
+                  <p className="text-xs text-red-700">Licenças e exigências com vencimento próximo ou vencido</p>
                 </div>
               </div>
               <Link href="/prazos" className="focus-ring transition-brand rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">
@@ -195,7 +195,7 @@ export default async function DashboardPage() {
       <div className="mt-6">
         <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">
           <div className="flex items-center justify-between px-5 pt-5 pb-3">
-            <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Últimos Processos</h2>
+            <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Últimas Licenças</h2>
             <Link href="/processos" className="text-sm font-medium text-[var(--color-brand-600)] hover:underline">Ver todos</Link>
           </div>
           {processosRecentes.length > 0 ? (

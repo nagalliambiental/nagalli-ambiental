@@ -27,11 +27,11 @@ const FINS_SECAO: RegExp[] = [
   /^\s*\d{1,2}\s*[.)]\s*[A-ZÀ-Ü][^\n]{2,70}$/m,
   /^\s*(?:DADOS\s+(?:DO|DA)\s+\w|DADOS\s+COMPLEMENTARES|DADOS\s+DO\s+TITULAR|DADOS\s+DO\s+PROPONENTE|DADOS\s+DO\s+REQUERENTE|DADOS\s+CONTRATANTE|DADOS\s+DO\s+CONTRATADO)\b[^\n]*$/im,
   /^(?:ANEXOS?|ANEXO\s+[A-Z0-9]|OBSERVA[ÇC][ÕO]ES|ASSINATURAS?|RESPONS[ÁA]VEIS?|LOCAL\s+E\s+DATA|C[ÓO]DIGO\s+DE\s+BARRAS|[A-ZÀ-Ü]{4,})\s*$/m,
-  /P[aá]gina\s+\d+/i,
-  /Assinatura do Representante/i,
-  /Esta LICEN[ÇC]A/i,
-  /Esta AUTORIZA[ÇC][ÃA]O/i,
-  /Esta OUTORGA/i,
+  /(?:^|\n)\s*P[aá]gina\s+\d+/i,
+  /(?:^|\n)\s*Assinatura do Representante/i,
+  /(?:^|\n)\s*Esta LICEN[ÇC]A/i,
+  /(?:^|\n)\s*Esta AUTORIZA[ÇC][ÃA]O/i,
+  /(?:^|\n)\s*Esta OUTORGA/i,
 ];
 
 const CABECALHO_MAISCULAS = /^[A-ZÀ-Ü][A-ZÀ-Ü\s.\-/&(),º°]{3,60}$/;
@@ -80,6 +80,7 @@ export function limparTextoPdf(texto: string): string {
   let t = texto;
   t = t.replace(/^\s*(?:P[aá]gina\s+)?\d{1,4}\s*\/\s*\d{1,4}\s*$/gm, "");
   t = t.replace(/^\s*(?:P[aá]gina\s+)\d{1,4}(?:\s+de\s+\d{1,4})?\s*$/gim, "");
+  t = t.replace(/^\s*P[aá]gina\s+\d+\/[^\n]*$/gim, "");
   t = t.replace(/^\s*\d{1,4}\s*\/\s*\d{1,4}\s*$/gm, "");
   t = t.replace(/^\s*\d{1,4}\s*$/gm, "");
   t = t.replace(/\s*-\n\s*/g, "");
@@ -172,7 +173,7 @@ export function extrairSecaoCondicionantes(texto: string): string | null {
     .join("\n");
   secao = secao.replace(/\n{3,}/g, "\n\n").trim();
 
-  const CORTE_POR_SECAO = /\b(?:DADOS\s+(?:DO|DA|DOS|DAS)\s+\w|DADOS\s+COMPLEMENTARES|DADOS\s+DO\s+TITULAR|DADOS\s+DO\s+PROPONENTE|DADOS\s+DO\s+REQUERENTE|DADOS\s+CONTRATANTE|DADOS\s+DO\s+CONTRATADO|ENDERE[ÇC]O\s+(?:DO|DA)\s+\w|LOCALIZA[ÇC][ÃA]O|ATIVIDADES?\s+PROPOSTAS?|CAPACIDADE\s+INSTALADA|PARTICIPA[ÇC][ÃA]O\s+ACION[ÁA]RIA|OBJETO\s+SOCIAL|RAMO\s+DE\s+ATIVIDADE|FONTES?\s+DE\s+RECURSOS?|METAS?\s+E\s+INDICADORES?|VALIDADE\s+DA\s+LICEN[ÇC]A|VALIDADE\s+DO\s+REGISTRO|NORMAS?\s+APLIC[ÁA]VEIS|MEDIDAS?\s+MITIGADORAS?|PROGRAMAS?\s+DE\s+MONITORAMENTO|PLANO\s+DE\s+(?:EMERG[ÊE]NCIA|MANEJO|CONTROLE)|RESPONS[ÁA]VEL\s+T[ÉE]CNICO|REPRESSANTES?\s+AO\s+CUMPRIMENTO)\b/i;
+  const CORTE_POR_SECAO = /(?:^|\n)\s*(?:DADOS\s+(?:DO|DA|DOS|DAS)\s+\w|DADOS\s+COMPLEMENTARES|DADOS\s+DO\s+TITULAR|DADOS\s+DO\s+PROPONENTE|DADOS\s+DO\s+REQUERENTE|DADOS\s+CONTRATANTE|DADOS\s+DO\s+CONTRATADO|ENDERE[ÇC]O\s+(?:DO|DA)\s+\w|LOCALIZA[ÇC][ÃA]O|ATIVIDADES?\s+PROPOSTAS?|CAPACIDADE\s+INSTALADA|PARTICIPA[ÇC][ÃA]O\s+ACION[ÁA]RIA|OBJETO\s+SOCIAL|RAMO\s+DE\s+ATIVIDADE|FONTES?\s+DE\s+RECURSOS?|METAS?\s+E\s+INDICADORES?|VALIDADE\s+DA\s+LICEN[ÇC]A|VALIDADE\s+DO\s+REGISTRO|NORMAS?\s+APLIC[ÁA]VEIS|MEDIDAS?\s+MITIGADORAS?|PROGRAMAS?\s+DE\s+MONITORAMENTO|PLANO\s+DE\s+(?:EMERG[ÊE]NCIA|MANEJO|CONTROLE)|RESPONS[ÁA]VEL\s+T[ÉE]CNICO|REPRESSANTES?\s+AO\s+CUMPRIMENTO)\b/i;
   const corteMatch = secao.match(CORTE_POR_SECAO);
   if (corteMatch && corteMatch.index !== undefined && corteMatch.index > 20) {
     secao = secao.slice(0, corteMatch.index).trim();

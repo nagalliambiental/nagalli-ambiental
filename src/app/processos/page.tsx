@@ -11,7 +11,7 @@ import { atualizarProcessosVencidos } from "@/lib/vencidos";
 
 export const dynamic = "force-dynamic";
 
-export const metadata = { title: "Processos" };
+export const metadata = { title: "Licenças" };
 
 export default async function ProcessosPage({
   searchParams,
@@ -50,10 +50,10 @@ export default async function ProcessosPage({
 
   return (
     <div>
-      <Breadcrumbs items={[{ label: "Processos" }]} />
+      <Breadcrumbs items={[{ label: "Licenças" }]} />
       <Topbar
         icon={FolderKanban}
-        title="Processos"
+        title="Licenças"
         actions={
           <div className="flex flex-wrap items-center gap-3">
             <FilterSelect
@@ -73,14 +73,14 @@ export default async function ProcessosPage({
               className="focus-ring transition-brand flex items-center gap-2 rounded-[var(--radius-card)] bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)]"
             >
               <Plus size={16} />
-              Novo Processo
+              Nova Licença
             </Link>
           </div>
         }
       />
 
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard label="Processos na lista" value={processos.length} icon={FolderKanban} />
+        <StatCard label="Licenças na lista" value={processos.length} icon={FolderKanban} />
         <StatCard label="Em andamento" value={emAndamento} icon={Clock3} accent="river" />
         <StatCard label="Protocolados" value={protocolados} icon={FileText} />
         <StatCard label="Vencidos" value={totalVencidos} icon={AlertTriangle} accent={totalVencidos > 0 ? "danger" : "success"} />

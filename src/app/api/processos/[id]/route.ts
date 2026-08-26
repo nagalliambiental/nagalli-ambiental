@@ -20,6 +20,7 @@ export async function GET(
       id: true, numProtocolo: true, numLicenca: true, tipo: true, sistema: true,
       status: true, validade: true, dataProtocolo: true, dataContato: true,
       alertaDias: true, condicionantes: true, observacoes: true, criadoEm: true, atualizadoEm: true,
+      atividade: true, municipio: true,
       empreendimentoId: true, orgaoId: true, responsavelId: true,
       orgao: { select: { id: true, sigla: true, nome: true } },
       empreendimento: {
@@ -77,6 +78,8 @@ export async function PUT(
   if (body.sistema !== undefined) data.sistema = body.sistema;
   if (body.numProtocolo !== undefined) data.numProtocolo = body.numProtocolo;
   if (body.numLicenca !== undefined) data.numLicenca = body.numLicenca || null;
+  if (body.atividade !== undefined) data.atividade = body.atividade || null;
+  if (body.municipio !== undefined) data.municipio = body.municipio || null;
   if (body.validade !== undefined) data.validade = body.validade ? new Date(body.validade) : null;
   if (body.condicionantes !== undefined) data.condicionantes = body.condicionantes || null;
   if (body.dataProtocolo !== undefined) data.dataProtocolo = body.dataProtocolo ? new Date(body.dataProtocolo) : null;

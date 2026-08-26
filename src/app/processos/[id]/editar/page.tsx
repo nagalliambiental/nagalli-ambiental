@@ -25,10 +25,10 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
 
   return (
     <div>
-      <Breadcrumbs items={[{ label: "Processos", href: "/processos" }, { label: processo.numProtocolo, href: `/processos/${id}` }, { label: "Editar" }]} />
+      <Breadcrumbs items={[{ label: "Licenças", href: "/processos" }, { label: processo.numProtocolo, href: `/processos/${id}` }, { label: "Editar" }]} />
       <EditEntityForm
       entity="processo"
-      entityName="Processo"
+        entityName="Licença"
       endpoint={`/api/processos/${id}`}
       redirectTo={`/processos/${id}`}
       fields={[

@@ -37,7 +37,7 @@ export const NAV_ITEMS: NavItem[] = [
   {
     label: "Operacional", icon: FileCheck2,
     children: [
-      { label: "Processos", href: "/processos" },
+      { label: "Licenças", href: "/processos" },
       { label: "Exigências", href: "/exigencias" },
       { label: "Prazos", href: "/prazos" },
       { label: "Modelos", href: "/modelos" },

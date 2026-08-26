@@ -44,7 +44,7 @@ export default async function PrazosPage() {
   return (
     <div>
       <Breadcrumbs items={[{ label: "Prazos" }]} />
-      <Topbar icon={CalendarClock} title="Prazos" subtitle="Acompanhe os prazos de processos e exigências" />
+      <Topbar icon={CalendarClock} title="Prazos" subtitle="Acompanhe os prazos de licenças e exigências" />
       <PrazosView
         processos={processosComValidade.map((p) => ({
           id: p.id,

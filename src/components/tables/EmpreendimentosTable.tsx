@@ -28,7 +28,7 @@ export function EmpreendimentosTable({ data }: { data: EmpData[] }) {
         return <span className="block max-w-[220px] truncate" title={endereco}>{endereco}</span>;
       },
     },
-    { header: "Processos", headerClassName: "text-center", className: "text-center", hideBelow: "xl", render: (e) => e._count.processos },
+    { header: "Licenças", headerClassName: "text-center", className: "text-center", hideBelow: "xl", render: (e) => e._count.processos },
     { header: "Ações", render: (e) => <RowActions detailUrl={`/empreendimentos/${e.id}`} editUrl={`/empreendimentos/${e.id}/editar`} entity="empreendimento" entityName="Empreendimento" endpoint={`/api/empreendimentos/${e.id}`} /> },
   ];
   return (

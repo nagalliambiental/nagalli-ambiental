@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Topbar } from "@/components/Topbar";
 import { FolderKanban, Upload, Loader2, CheckCircle2, Search, Leaf } from "lucide-react";
@@ -20,7 +20,7 @@ const TIPOS = [
   "RGRCC",
 ];
 
-const SISTEMAS = ["SGA", "E-Protocolo", "SIMA"];
+const SISTEMAS = ["SGA", "E-Protocolo", "SIMA", "IMA"];
 
 const STATUSES = [
   { value: "protocolado", label: "Protocolado" },
@@ -67,6 +67,8 @@ export default function NovoProcessoPage() {
     orgaoId: "",
     numProtocolo: "",
     numLicenca: "",
+    atividade: "",
+    municipio: "",
     validade: "",
     dataProtocolo: "",
     dataContato: "",
@@ -83,6 +85,7 @@ export default function NovoProcessoPage() {
   const [extracting, setExtracting] = useState(false);
   const [extractedFile, setExtractedFile] = useState<string | null>(null);
   const [buscandoSia, setBuscandoSia] = useState(false);
+  const consultasFeitas = useRef(new Set<string>());
   const [corte, setCorte] = useState({
     quantidadeIndividuos: "",
     compensacaoExigida: false,
@@ -119,10 +122,6 @@ export default function NovoProcessoPage() {
     if (tipoAtual.startsWith("Licença") || tipoAtual.startsWith("Renovação de Licença")) return "180";
     if (tipoAtual.includes("Outorga") && !tipoAtual.startsWith("Dispensa")) return "45";
     return "30";
-  }
-
-  function ehOutorga(tipoAtual: string): boolean {
-    return tipoAtual.includes("Outorga") || tipoAtual.includes("SIGARH");
   }
 
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -173,112 +172,142 @@ export default function NovoProcessoPage() {
   }
 
   function toDateInput(value: string): string {
-    const m = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    const m = String(value).match(/(\d{2})\/(\d{2})\/(\d{4})/);
     return m ? `${m[3]}-${m[2]}-${m[1]}` : "";
   }
 
-  async function buscarDadosPublicos() {
-    const tipoFinal = getTipoFinal();
-    const protocolo = form.numProtocolo.replace(/\D/g, "");
-    const portaria = form.numLicenca.replace(/\D/g, "");
+  function normalizar(texto: string) {
+    return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  }
+
+  function matchModalidade(modalidade: string): string {
+    const n = normalizar(modalidade);
+    if (!n) return "";
+    const exato = TIPOS.find((t) => normalizar(t) === n);
+    if (exato) return exato;
+    return TIPOS.find((t) => n.includes(normalizar(t)) || normalizar(t).includes(n)) || "";
+  }
+
+  function validadeVencida(validade: string): boolean {
+    const iso = toDateInput(validade);
+    if (!iso) return false;
+    return new Date(`${iso}T12:00:00`) < new Date();
+  }
+
+  function aplicarImportacao(d: {
+    origem: string;
+    orgaoSigla: string;
+    sistema: string;
+    modalidade: string;
+    validade: string;
+    atividade: string;
+    municipio: string;
+    uf: string;
+    protocolo: string;
+    licenca: string;
+    emissao: string;
+    condicionantes: string;
+    razaoSocial: string;
+  }) {
+    const tipoMatch = matchModalidade(d.modalidade);
+    if (tipoMatch) {
+      setTipo(tipoMatch);
+      setTipoOutro("");
+      setForm((prev) => ({ ...prev, alertaDias: alertaPadraoPara(tipoMatch) }));
+    } else if (d.modalidade) {
+      setTipo("Outros");
+      setTipoOutro(d.modalidade);
+    }
+
+    if (SISTEMAS.includes(d.sistema)) {
+      setSistema(d.sistema);
+      setSistemaOutro("");
+    } else if (d.sistema) {
+      setSistema("Outro");
+      setSistemaOutro(d.sistema);
+    }
+
+    const orgao = orgaos.find((o) => o.sigla.toUpperCase() === d.orgaoSigla.toUpperCase());
+    const municipio = d.municipio
+      ? (d.uf && !d.municipio.includes("/") ? `${d.municipio}/${d.uf}` : d.municipio)
+      : "";
+
+    consultasFeitas.current.add(d.licenca.trim());
+    consultasFeitas.current.add(form.numLicenca.trim());
+
+    setForm((prev) => ({
+      ...prev,
+      orgaoId: orgao ? String(orgao.id) : prev.orgaoId,
+      numProtocolo: d.protocolo || prev.numProtocolo || d.licenca,
+      numLicenca: d.licenca || prev.numLicenca,
+      validade: toDateInput(d.validade) || prev.validade,
+      dataProtocolo: toDateInput(d.emissao) || prev.dataProtocolo,
+      atividade: d.atividade || prev.atividade,
+      municipio: municipio || prev.municipio,
+      condicionantes: d.condicionantes || prev.condicionantes,
+      status: validadeVencida(d.validade) ? "vencido" : "deferido",
+        observacoes: d.razaoSocial && !prev.observacoes.includes(d.razaoSocial)
+          ? [prev.observacoes, `${d.origem}: ${d.modalidade || "licença"} — ${d.razaoSocial}`].filter(Boolean).join("\n")
+          : prev.observacoes,
+    }));
+    setExtractedFile(`Dados importados do ${d.origem} (${d.modalidade || "licença"})`);
+    setError("");
+  }
+
+  async function consultarLicenca(opts: { licenca?: string; protocolo?: string; silencioso?: boolean }) {
+    const licenca = (opts.licenca || "").trim();
+    const protocolo = (opts.protocolo || "").trim();
+    if (!licenca && !protocolo) {
+      if (!opts.silencioso) setError("Informe o nº da licença (ou do protocolo) para buscar");
+      return;
+    }
+
+    const chave = licenca || protocolo;
+    if (opts.silencioso && consultasFeitas.current.has(chave)) return;
+
     const orgaoSelecionado = orgaos.find((o) => o.id === Number(form.orgaoId));
-    const ehIma = orgaoSelecionado?.sigla?.toUpperCase() === "IMA";
+    const qs = new URLSearchParams();
+    if (licenca) qs.set("licenca", licenca);
+    if (protocolo) qs.set("protocolo", protocolo);
+    if (orgaoSelecionado?.sigla) qs.set("orgao", orgaoSelecionado.sigla);
 
-    if (!protocolo && !portaria) {
-      setError("Informe o nº do protocolo (ou da portaria) para buscar");
-      return;
-    }
-
-    const preencherIma = (d: Record<string, unknown>) => {
-      setForm((prev) => ({
-        ...prev,
-        numProtocolo: String(d.protocolo || prev.numProtocolo),
-        numLicenca: String(d.licenca || prev.numLicenca),
-        validade: toDateInput(String(d.validade || "")) || prev.validade,
-        dataProtocolo: toDateInput(String(d.emissao || "")) || prev.dataProtocolo,
-        observacoes: [prev.observacoes, `IMA/SC: ${d.modalidade || "licença"} — ${d.razaoSocial || ""}`].filter(Boolean).join("\n"),
-      }));
-      setExtractedFile(`Dados do IMA/SC (${d.modalidade || "licença"})`);
-    };
-
-    if (ehIma) {
-      setBuscandoSia(true);
-      setError("");
-      try {
-        const res = await fetch(`/api/ima/consulta?${protocolo ? `protocolo=${protocolo}` : `licenca=${encodeURIComponent(portaria)}`}`);
-        if (res.ok) {
-          const dados = await res.json();
-          const d = Array.isArray(dados) ? dados[0] : null;
-          if (d) {
-            preencherIma(d);
-            setBuscandoSia(false);
-            return;
-          }
-        }
-      } catch {
-        // cai no fallback abaixo
-      }
-      setBuscandoSia(false);
-      setError("Nenhuma licença encontrada no IMA/SC");
-      return;
-    }
-
-    const urls = (ehOutorga: boolean) =>
-      ehOutorga
-        ? `/api/outorga/consulta?${protocolo ? `protocolo=${protocolo}` : `portaria=${portaria}`}`
-        : `/api/sia/consulta?protocolo=${protocolo}`;
-
-    const primarioSigarh = ehOutorga(tipoFinal);
-    const ordem: boolean[] = primarioSigarh ? [true, false] : [false, true];
-
-    const preencherOutorga = (d: Record<string, unknown>) => {
-      setForm((prev) => ({
-        ...prev,
-        numProtocolo: String(d.portaria || prev.numProtocolo),
-        numLicenca: String(d.portaria || prev.numLicenca),
-        validade: toDateInput(String(d.dataVencimento || "").split(" ")[0]) || prev.validade,
-        dataProtocolo: toDateInput(String(d.dataPublicacao || "")) || prev.dataProtocolo,
-        observacoes: [prev.observacoes, `SIGARH: ${d.usuario}`].filter(Boolean).join("\n"),
-      }));
-      setExtractedFile(`Dados do SIGARH (${d.tipoDocumento || "outorga"})`);
-    };
-
-    const preencherLicenca = (d: Record<string, unknown>) => {
-      setForm((prev) => ({
-        ...prev,
-        numProtocolo: String(d.protocolo || prev.numProtocolo),
-        numLicenca: String(d.numLicenca || prev.numLicenca),
-        validade: toDateInput(String(d.dataValidade || "")) || prev.validade,
-        dataProtocolo: toDateInput(String(d.dataEmissao || "")) || prev.dataProtocolo,
-        condicionantes: String(d.condicionantes || prev.condicionantes || ""),
-      }));
-      setExtractedFile(`Dados do SIA/IAP (${d.modalidade || "licença"})`);
-    };
-
-    for (const usarSigarh of ordem) {
-      setBuscandoSia(true);
-      setError("");
-      try {
-        const res = await fetch(urls(usarSigarh));
-        if (!res.ok) continue;
-        const dados = await res.json();
-        const d = usarSigarh ? (Array.isArray(dados) ? dados[0] : null) : dados;
-        if (!d) continue;
-        if (usarSigarh) {
-          preencherOutorga(d);
-        } else {
-          preencherLicenca(d);
-        }
+    setBuscandoSia(true);
+    if (!opts.silencioso) setError("");
+    try {
+      const res = await fetch(`/api/licencas/consulta?${qs.toString()}`);
+      if (res.ok) {
+        const d = await res.json();
+        consultasFeitas.current.add(chave);
+        if (d.licenca) consultasFeitas.current.add(String(d.licenca).trim());
+        aplicarImportacao(d);
         return;
-      } catch {
-        // tenta o próximo sistema
       }
+      if (!opts.silencioso) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || "Nenhuma licença encontrada no órgão");
+      }
+    } catch {
+      if (!opts.silencioso) setError("Falha ao consultar o órgão");
+    } finally {
+      setBuscandoSia(false);
     }
+  }
 
-    setBuscandoSia(false);
-    setError(primarioSigarh
-      ? "Nenhuma outorga encontrada no SIGARH"
-      : "Nenhuma licença encontrada no SIA/IAP");
+  useEffect(() => {
+    const num = form.numLicenca.trim();
+    if (num.length < 4) return;
+    const t = setTimeout(() => {
+      void consultarLicenca({ licenca: num, silencioso: true });
+    }, 800);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.numLicenca]);
+
+  async function buscarDadosPublicos() {
+    await consultarLicenca({
+      licenca: form.numLicenca,
+      protocolo: form.numProtocolo,
+    });
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -296,6 +325,8 @@ export default function NovoProcessoPage() {
         status: form.status || "protocolado",
         numProtocolo: form.numProtocolo,
         numLicenca: form.numLicenca || undefined,
+        atividade: form.atividade || undefined,
+        municipio: form.municipio || undefined,
         validade: form.validade ? new Date(form.validade).toISOString() : undefined,
         dataProtocolo: form.dataProtocolo ? new Date(form.dataProtocolo).toISOString() : undefined,
         dataContato: form.dataContato ? new Date(form.dataContato).toISOString() : undefined,
@@ -318,7 +349,7 @@ export default function NovoProcessoPage() {
 
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      setError(data.error || "Erro ao criar processo");
+      setError(data.error || "Erro ao criar licença");
       setSaving(false);
       return;
     }
@@ -329,21 +360,54 @@ export default function NovoProcessoPage() {
 
   return (
     <div>
-      <Topbar icon={FolderKanban} title="Novo Processo" subtitle="Cadastre um novo processo" />
+      <Topbar icon={FolderKanban} title="Nova Licença" subtitle="Digite o número da licença para importar os dados do órgão" />
       <div className="mx-auto max-w-2xl">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5 space-y-4">
-            <h2 className="font-display text-sm font-semibold text-[var(--color-ink-900)]">Dados do processo</h2>
+            <h2 className="font-display text-sm font-semibold text-[var(--color-ink-900)]">Importação inteligente</h2>
+            <div>
+              <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Nº Licença</label>
+              <div className="flex gap-2">
+                <input
+                  value={form.numLicenca}
+                  onChange={(e) => setField("numLicenca", e.target.value)}
+                  onBlur={() => {
+                    if (form.numLicenca.trim().length >= 4) void consultarLicenca({ licenca: form.numLicenca, silencioso: true });
+                  }}
+                  placeholder="Digite o número da licença"
+                  className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]"
+                />
+                <button
+                  type="button"
+                  onClick={buscarDadosPublicos}
+                  disabled={buscandoSia}
+                  className="focus-ring transition-brand flex shrink-0 items-center gap-1.5 rounded-lg bg-[var(--color-brand-500)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
+                  title="Buscar dados automaticamente no IAT/SGA ou IMA/SC"
+                >
+                  {buscandoSia ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+                  Buscar
+                </button>
+              </div>
+              <p className="mt-1 text-xs text-[var(--color-ink-500)]">
+                {buscandoSia
+                  ? "Consultando o órgão ambiental..."
+                  : "Ao digitar o número, o sistema consulta o IAT (PR) ou o IMA (SC) e preenche modalidade, validade, atividade e município."}
+              </p>
+            </div>
+          </div>
+
+          <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5 space-y-4">
+            <h2 className="font-display text-sm font-semibold text-[var(--color-ink-900)]">Dados da licença</h2>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Tipo</label>
+                <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Modalidade</label>
                 <select value={tipo} onChange={(e) => { setTipo(e.target.value); setField("alertaDias", alertaPadraoPara(e.target.value)); }} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" required>
                   <option value="">Selecione...</option>
                   {TIPOS.map((t) => <option key={t} value={t}>{t}</option>)}
                   <option value="Outros">Outros</option>
                 </select>
                 {tipo === "Outros" && (
-                  <input value={tipoOutro} onChange={(e) => setTipoOutro(e.target.value)} placeholder="Especifique o tipo" className="mt-2 w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" required />
+                  <input value={tipoOutro} onChange={(e) => setTipoOutro(e.target.value)} placeholder="Especifique a modalidade" className="mt-2 w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" required />
                 )}
               </div>
               <div>
@@ -352,6 +416,16 @@ export default function NovoProcessoPage() {
                   <option value="">Selecione...</option>
                   {orgaos.map((o) => <option key={o.id} value={o.id}>{o.sigla}</option>)}
                 </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Atividade</label>
+                <input value={form.atividade} onChange={(e) => setField("atividade", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Município</label>
+                <input value={form.municipio} onChange={(e) => setField("municipio", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -374,28 +448,7 @@ export default function NovoProcessoPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Nº Protocolo</label>
-                <div className="flex gap-2">
-                  <input value={form.numProtocolo} onChange={(e) => setField("numProtocolo", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" required />
-                  <button
-                    type="button"
-                    onClick={buscarDadosPublicos}
-                    disabled={buscandoSia}
-                    className="focus-ring transition-brand flex shrink-0 items-center gap-1.5 rounded-lg bg-[var(--color-brand-500)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
-                    title={orgaos.find((o) => o.id === Number(form.orgaoId))?.sigla?.toUpperCase() === "IMA"
-                      ? "Buscar dados automaticamente no IMA/SC"
-                      : "Buscar dados automaticamente: SIA/IAP para licenças ou SIGARH para outorgas"}
-                  >
-                    {buscandoSia ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
-                    Buscar
-                  </button>
-                </div>
-                <p className="mt-1 text-xs text-[var(--color-ink-500)]">A busca consulta apenas os sistemas SIGARH, SIA/SGA e IMA/SC. Demais órgãos devem ser preenchidos manualmente.</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Nº Licença</label>
-                <input value={form.numLicenca} onChange={(e) => setField("numLicenca", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+                <input value={form.numProtocolo} onChange={(e) => setField("numProtocolo", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" required />
               </div>
               <div>
                 <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Validade</label>

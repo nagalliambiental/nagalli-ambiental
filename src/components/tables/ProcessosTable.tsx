@@ -49,7 +49,7 @@ export function ProcessosTable({ data }: { data: ProcessoData[] }) {
       hideBelow: "md",
       render: (p) => (p.validade ? format(new Date(p.validade), "dd/MM/yyyy", { locale: ptBR }) : "—"),
     },
-    { header: "Ações", render: (p) => <RowActions detailUrl={`/processos/${p.id}`} editUrl={`/processos/${p.id}/editar`} entity="processo" entityName="Processo" endpoint={`/api/processos/${p.id}`} /> },
+    { header: "Ações", render: (p) => <RowActions detailUrl={`/processos/${p.id}`} editUrl={`/processos/${p.id}/editar`} entity="processo" entityName="Licença" endpoint={`/api/processos/${p.id}`} /> },
   ];
   return (
     <FilterableDataTable
