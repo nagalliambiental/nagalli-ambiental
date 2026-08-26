@@ -95,15 +95,17 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
             </Link>
             <DeleteButton entity="Licença" endpoint={`/api/processos/${processo.id}`} redirectTo="/processos" />
             <RenovarButton processoId={processo.id} numProtocolo={processo.numProtocolo} />
-            <a
-              href={`/api/processos/${processo.id}/relatorio-condicionantes`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg border border-[var(--color-river-200)] bg-[var(--color-river-50)] px-3 py-2 text-sm font-medium text-[var(--color-river-700)] hover:bg-[var(--color-river-100)]"
-            >
-              <FileText size={14} />
-              Relatório de condicionantes
-            </a>
+            {!/outorga/i.test(processo.tipo || "") && (
+              <a
+                href={`/api/processos/${processo.id}/relatorio-condicionantes`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg border border-[var(--color-river-200)] bg-[var(--color-river-50)] px-3 py-2 text-sm font-medium text-[var(--color-river-700)] hover:bg-[var(--color-river-100)]"
+              >
+                <FileText size={14} />
+                Relatório de condicionantes
+              </a>
+            )}
           </div>
         }
       />

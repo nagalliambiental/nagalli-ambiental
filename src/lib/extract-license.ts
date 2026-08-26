@@ -21,6 +21,7 @@ const INICIOS_SECAO: RegExp[] = [
   /^\s*CONDI[ÇC][ÕO]ES\s+ESPEC[ÍI]FICAS\b[^\n]*$/im,
   /^\s*CONDI[ÇC][ÕO]ES\s+GERAIS\b[^\n]*$/im,
   /^\s*\d{1,2}[.)\-]?\s*-?\s*CONDI[ÇC][ÕO]ES\b[^\n]*$/im,
+  /^\s*Condi[çc][õo]es\s*$/im,
 ];
 
 const FINS_SECAO: RegExp[] = [
@@ -79,7 +80,7 @@ export async function extrairTextoPdf(buffer: Buffer): Promise<string> {
 export function limparTextoPdf(texto: string): string {
   let t = texto;
   t = t.replace(/^\s*(?:P[aá]gina\s+)?\d{1,4}\s*\/\s*\d{1,4}\s*$/gm, "");
-  t = t.replace(/^\s*(?:P[aá]gina\s+)\d{1,4}(?:\s+de\s+\d{1,4})?\s*$/gim, "");
+  t = t.replace(/^\s*(?:P[aá]gina\s+)\d{1,4}(?:\s*de\s*\d{1,4})?\s*$/gim, "");
   t = t.replace(/^\s*P[aá]gina\s+\d+\/[^\n]*$/gim, "");
   t = t.replace(/^\s*\d{1,4}\s*\/\s*\d{1,4}\s*$/gm, "");
   t = t.replace(/^\s*\d{1,4}\s*$/gm, "");
@@ -168,6 +169,9 @@ export function extrairSecaoCondicionantes(texto: string): string | null {
     .map((l) => l.trim())
     .filter((l) => l)
     .filter((l) => !/^\s*EM\s+BRANCO\s*$/i.test(l))
+    .filter((l) => !/^\s*\d{2}\/\d{2}\/\d{4}\s*$/i.test(l))
+    .filter((l) => !/^\s*\d{2,}\.\d{3}\.\d{3}[\-\d\/]*\s*$/i.test(l))
+    .filter((l) => !/^\s*Condi[çc][õo]es\s*$/i.test(l))
     .filter((l) => {
       if (!(CABECALHO_MAISCULAS.test(l) && l.length <= 40)) return true;
       return false;
@@ -276,6 +280,7 @@ const PADROES_LICENCA = [
   /n[º°o]\s*(?:da\s+)?licen[cç]a[:\s]*([\d\/\.\-]+)/i,
   /autoriza[çc][ãa]o\s*n[º°o]?\s*\.?\s*([\d\/\.\-]+)/i,
   /outorga\s*n[º°o]?\s*\.?\s*([\d\/\.\-]+)/i,
+  /portaria[:\s]*(\d+\/\d+)/i,
   /licen[cç]a\s*(?:ambiental)?\s*:?\s*n[º°o]?\s*\.?\s*([\d\/\.\-]+)/i,
   /n[º°o]\s*\.?\s*([A-Z0-9][\d\/\.\-]{2,})/i,
 ];
@@ -325,7 +330,6 @@ export function extractFields(text: string): CamposLicenca {
     const m = text.match(pat);
     if (m && m[1].trim().length > 2) {
       const raw = m[1].trim();
-      if (raw.split("/").length === 3) continue;
       if (!/^\d+$/.test(raw.replace(/[\/\-\.]/g, ""))) continue;
       numLicenca = raw;
       break;
