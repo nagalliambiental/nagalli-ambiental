@@ -8,6 +8,8 @@ export interface ResultadoSigarh {
   nrCpfCnpj: string;
   dtPublicacao: string;
   dtVencimento: string;
+  dtCriacao: string;
+  nrProtocolo: string;
   nmEmpreendimento: string;
   nmTipoDocumento: string;
   nmTipoInterferencia: string;
@@ -15,10 +17,13 @@ export interface ResultadoSigarh {
   nmStatusTramitacao: string;
 }
 
-function epochMsToDate(ms: number): string {
+function epochMsToDateBR(ms: number): string {
   if (!ms) return "";
   const d = new Date(ms);
-  return d.toISOString().slice(0, 10);
+  const dd = String(d.getUTCDate()).padStart(2, "0");
+  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const yyyy = d.getUTCFullYear();
+  return `${dd}/${mm}/${yyyy}`;
 }
 
 export async function consultarOutorgaSigarh(
@@ -31,7 +36,7 @@ export async function consultarOutorgaSigarh(
   const params = new URLSearchParams({
     where,
     outFields:
-      "nr_portaria,st_portaria,nm_requerente,nr_cpf_cnpj,dt_publicacao,dt_vencimento,nm_empreendimento,nm_tipo_documento,nm_tipo_interferencia,nm_municipio_emp,nm_status_tramitacao",
+      "nr_portaria,st_portaria,nm_requerente,nr_cpf_cnpj,dt_publicacao,dt_vencimento,dt_criacao,nr_e_protocolo,nm_empreendimento,nm_tipo_documento,nm_tipo_interferencia,nm_municipio_emp,nm_status_tramitacao",
     f: "json",
     returnGeometry: "false",
   });
@@ -59,8 +64,10 @@ export async function consultarOutorgaSigarh(
       stPortaria: String(a.st_portaria ?? ""),
       nmRequerente: String(a.nm_requerente ?? ""),
       nrCpfCnpj: String(a.nr_cpf_cnpj ?? ""),
-      dtPublicacao: epochMsToDate(Number(a.dt_publicacao ?? 0)),
-      dtVencimento: epochMsToDate(Number(a.dt_vencimento ?? 0)),
+      dtPublicacao: epochMsToDateBR(Number(a.dt_publicacao ?? 0)),
+      dtVencimento: epochMsToDateBR(Number(a.dt_vencimento ?? 0)),
+      dtCriacao: epochMsToDateBR(Number(a.dt_criacao ?? 0)),
+      nrProtocolo: String(a.nr_e_protocolo ?? ""),
       nmEmpreendimento: String(a.nm_empreendimento ?? ""),
       nmTipoDocumento: String(a.nm_tipo_documento ?? ""),
       nmTipoInterferencia: String(a.nm_tipo_interferencia ?? ""),
@@ -98,9 +105,9 @@ export function fromSigarh(
     atividade: r.nmTipoInterferencia,
     municipio: r.nmMunicipioEmp,
     uf: "PR",
-    protocolo: r.nrPortaria,
+    protocolo: r.nrProtocolo || r.nrPortaria,
     licenca: portariaInformada || r.nrPortaria,
-    emissao: r.dtPublicacao,
+    emissao: r.dtCriacao || r.dtPublicacao,
     condicionantes: "",
     razaoSocial: r.nmRequerente,
   };
