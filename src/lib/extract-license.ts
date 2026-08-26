@@ -21,7 +21,7 @@ const INICIOS_SECAO: RegExp[] = [
   /^\s*CONDI[ÇC][ÕO]ES\s+ESPEC[ÍI]FICAS\b[^\n]*$/im,
   /^\s*CONDI[ÇC][ÕO]ES\s+GERAIS\b[^\n]*$/im,
   /^\s*\d{1,2}[.)\-]?\s*-?\s*CONDI[ÇC][ÕO]ES\b[^\n]*$/im,
-  /^\s*Condi[çc][õo]es\s*$/im,
+  /^\s*Condi[çc][õo]es\b/im,
   /^\s*CL[ÁA]USULAS?\b[^\n]*$/im,
   /^\s*OBRIGA[ÇC][ÕO]ES?\b[^\n]*$/im,
   /CONDI[ÇC][ÕO]ES\s+D[AE]\s+OUTORGA[^\n]*/i,
@@ -91,7 +91,7 @@ export function limparTextoPdf(texto: string): string {
   t = t.replace(/^\s*\d{1,4}\s*$/gm, "");
   t = t.replace(/\s*EM\s+BRANCO\s*/gi, " ");
   t = t.replace(/\s*-\n\s*/g, "");
-  t = t.replace(/([a-záàâãéêíóôõúç])\n([a-záàâãéêíóôõúç])/gi, "$1 $2");
+  t = t.replace(/([a-záàâãéêíóôõúç])\n([a-záàâãéêíóôõúç])/g, "$1 $2");
   t = t.replace(/([.,;:!?)])\n([A-ZÀ-Ü])/g, "$1 $2");
   t = t.replace(/\n{3,}/g, "\n\n");
   return t;
