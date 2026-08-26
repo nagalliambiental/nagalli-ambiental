@@ -24,7 +24,6 @@ export async function GET(
     where: { id: Number(id) },
     include: {
       empreendimento: { include: { cliente: true } },
-      condicaoItens: { orderBy: { ordem: "asc" } },
     },
   });
 
@@ -43,8 +42,6 @@ export async function GET(
     .join(", ");
   const localidade = cidadeUf || "Localidade";
 
-  const itensEstruturados = (processo as unknown as { condicaoItens?: Array<{ titulo: string; descricao: string | null; tipo: string; prazo: Date | null; cumprida: boolean }> }).condicaoItens;
-
   const LIMPAR_RE = [
     /EM\s+BRANCO/gi,
     /Instituto\s+\u00c1gua\s+e\s+Terra[^\n]*/gi,
@@ -60,18 +57,7 @@ export async function GET(
     return r.replace(/\s{2,}/g, " ").trim();
   }
 
-  let linhas: string[];
-  if (itensEstruturados && itensEstruturados.length > 0) {
-    linhas = itensEstruturados.map((c, i) => {
-      const num = `${i + 1}.`;
-      const tipo = c.tipo === "exigencia" ? " [EXIGÊNCIA]" : "";
-      const prazo = c.prazo ? ` — Prazo: ${new Date(c.prazo).toLocaleDateString("pt-BR")}` : "";
-      const texto = limparTexto(c.descricao || c.titulo);
-      return `${num} ${texto}${tipo}${prazo}`;
-    });
-  } else {
-    linhas = parseCondicionantes((processo as { condicionantes?: string | null }).condicionantes).map(limparTexto);
-  }
+  const linhas = parseCondicionantes((processo as { condicionantes?: string | null }).condicionantes).map(limparTexto);
 
   const data = buildCondicionantesData(
     processo,
