@@ -121,6 +121,11 @@ export default function NovoProcessoPage() {
     return sistema === "Outro" ? sistemaOutro : sistema;
   }
 
+  function orgaoMunicipal() {
+    const sigla = orgaos.find((o) => o.id === Number(form.orgaoId))?.sigla || "";
+    return ORGAOS_MUNICIPAIS.includes(sigla);
+  }
+
   function alertaPadraoPara(tipoAtual: string): string {
     if (tipoAtual.startsWith("Licença") || tipoAtual.startsWith("Renovação de Licença")) return "180";
     if (tipoAtual.includes("Outorga") && !tipoAtual.startsWith("Dispensa")) return "45";
@@ -442,43 +447,47 @@ export default function NovoProcessoPage() {
           </div>
 
           <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5 space-y-4">
-            <h2 className="font-display text-sm font-semibold text-[var(--color-ink-900)]">Importação inteligente</h2>
-            <div>
-              <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Nº Licença</label>
-              <div className="flex gap-2">
-                <input
-                  value={form.numLicenca}
-                  onChange={(e) => setField("numLicenca", e.target.value)}
-                  onBlur={() => {
-                    if (importacaoViaUpload.current) return;
-                    if (form.numLicenca.trim().length >= 4) void consultarLicenca({ licenca: form.numLicenca, silencioso: true });
-                  }}
-                  placeholder="Digite o número da licença"
-                  className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]"
-                />
-                <button
-                  type="button"
-                  onClick={buscarDadosPublicos}
-                  disabled={buscandoSia}
-                  className="focus-ring transition-brand flex shrink-0 items-center gap-1.5 rounded-lg bg-[var(--color-brand-500)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
-                  title="Buscar dados automaticamente no IAT/SGA ou IMA/SC"
-                >
-                  {buscandoSia ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
-                  Buscar
-                </button>
-              </div>
-              <p className="mt-1 text-xs text-[var(--color-ink-500)]">
-                {buscandoSia
-                  ? "Consultando o órgão ambiental..."
-                  : orgaos.find((o) => o.id === Number(form.orgaoId))?.sigla && ORGAOS_MUNICIPAIS.includes(orgaos.find((o) => o.id === Number(form.orgaoId))?.sigla || "")
-                    ? "Órgão municipal: a importação é feita pelo upload do documento (PDF)."
-                    : "Ao digitar o número, o sistema consulta o IAT (PR) ou o IMA (SC) e preenche modalidade, validade, atividade e município."}
-              </p>
-            </div>
-          </div>
-
-          <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5 space-y-4">
             <h2 className="font-display text-sm font-semibold text-[var(--color-ink-900)]">Dados da licença</h2>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Nº Licença</label>
+                <div className="flex gap-2">
+                  <input
+                    value={form.numLicenca}
+                    onChange={(e) => setField("numLicenca", e.target.value)}
+                    onBlur={() => {
+                      if (importacaoViaUpload.current) return;
+                      if (form.numLicenca.trim().length >= 4) void consultarLicenca({ licenca: form.numLicenca, silencioso: true });
+                    }}
+                    placeholder="Digite o número da licença"
+                    className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]"
+                  />
+                  <button
+                    type="button"
+                    onClick={buscarDadosPublicos}
+                    disabled={buscandoSia}
+                    className="focus-ring transition-brand flex shrink-0 items-center gap-1.5 rounded-lg bg-[var(--color-brand-500)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
+                    title="Buscar dados automaticamente no IAT/SGA ou IMA/SC"
+                  >
+                    {buscandoSia ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+                    Buscar
+                  </button>
+                </div>
+                <p className="mt-1 text-xs text-[var(--color-ink-500)]">
+                  {buscandoSia
+                    ? "Consultando o órgão ambiental..."
+                    : orgaoMunicipal()
+                      ? "Órgão municipal: a importação é feita pelo upload do documento (PDF)."
+                      : "Ao digitar o número, o sistema consulta o IAT (PR) ou o IMA (SC) e preenche modalidade, validade, atividade e município."}
+                </p>
+              </div>
+              {!orgaoMunicipal() && (
+                <div>
+                  <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Nº Protocolo</label>
+                  <input value={form.numProtocolo} onChange={(e) => setField("numProtocolo", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" required />
+                </div>
+              )}
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Modalidade</label>
@@ -528,10 +537,6 @@ export default function NovoProcessoPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Nº Protocolo</label>
-                <input value={form.numProtocolo} onChange={(e) => setField("numProtocolo", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" required />
-              </div>
-              <div>
                 <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Validade</label>
                 <input type="date" value={form.validade} onChange={(e) => setField("validade", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
               </div>
@@ -563,31 +568,6 @@ export default function NovoProcessoPage() {
               <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Condicionantes</label>
               <textarea value={form.condicionantes} onChange={(e) => setField("condicionantes", e.target.value)} rows={4} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
             </div>
-          </div>
-
-          <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5 space-y-4">
-            <h2 className="font-display text-sm font-semibold text-[var(--color-ink-900)]">Upload de Licença</h2>
-            <p className="text-xs text-[var(--color-ink-500)]">Anexe o documento da licença para preenchimento automático dos campos acima.</p>
-
-            <label className="focus-ring transition-brand flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-[var(--color-paper-200)] px-4 py-6 text-sm text-[var(--color-ink-500)] hover:border-[var(--color-brand-300)] hover:text-[var(--color-brand-600)]">
-              {extracting ? (
-                <>
-                  <Loader2 size={18} className="animate-spin" />
-                  Processando documento...
-                </>
-              ) : extractedFile ? (
-                <>
-                  <CheckCircle2 size={18} className="text-green-600" />
-                  <span className="text-green-700">{extractedFile}</span>
-                </>
-              ) : (
-                <>
-                  <Upload size={18} />
-                  <span>Clique para selecionar o arquivo da licença</span>
-                </>
-              )}
-              <input type="file" accept="image/*,.pdf" onChange={handleFileUpload} className="hidden" disabled={extracting} />
-            </label>
           </div>
 
           <div>
