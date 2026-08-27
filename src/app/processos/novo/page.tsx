@@ -455,10 +455,6 @@ export default function NovoProcessoPage() {
                   <input
                     value={form.numLicenca}
                     onChange={(e) => setField("numLicenca", e.target.value)}
-                    onBlur={() => {
-                      if (importacaoViaUpload.current) return;
-                      if (form.numLicenca.trim().length >= 4) void consultarLicenca({ licenca: form.numLicenca, silencioso: true });
-                    }}
                     placeholder="Digite o número da licença"
                     className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]"
                   />
