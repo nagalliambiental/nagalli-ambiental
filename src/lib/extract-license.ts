@@ -30,7 +30,7 @@ const INICIOS_SECAO: RegExp[] = [
 ];
 
 const FINS_SECAO: RegExp[] = [
-  /^\s*\d{1,2}\s*[.)]\s*[A-ZÀ-Ü][^\n]{2,70}$/m,
+  /^\s*\d{1,2}\s*[.)]\s+[A-ZÀ-Ü\s]{4,}$/m,
   /^\s*(?:DADOS\s+(?:DO|DA)\s+\w|DADOS\s+COMPLEMENTARES|DADOS\s+DO\s+TITULAR|DADOS\s+DO\s+PROPONENTE|DADOS\s+DO\s+REQUERENTE|DADOS\s+CONTRATANTE|DADOS\s+DO\s+CONTRATADO)\b[^\n]*$/im,
   /^(?:ANEXOS?|ANEXO\s+[A-Z0-9]|OBSERVA[ÇC][ÕO]ES|ASSINATURAS?|RESPONS[ÁA]VEIS?|LOCAL\s+E\s+DATA|C[ÓO]DIGO\s+DE\s+BARRAS)\s*$/m,
   /(?:^|\n)\s*P[aá]gina\s+\d+/i,
