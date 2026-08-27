@@ -40,6 +40,42 @@ test("extractFields retorna null quando não há condicionantes", () => {
   assert.equal(r.condicionantes, null);
 });
 
+test("extractFields extrai autorização do SINAFLOR (número, registro e período)", () => {
+  const texto = [
+    "Sistema Nacional de Controle da Origem dos Produtos Florestais",
+    "Escritório Regional do IAP de Curitiba",
+    "Autorização de Exploração - Corte de Árvore Isolada",
+    "Número da AutorizaçãoRegistro SinaflorValidade",
+    "2041.4.2026.5618124124762 08/07/2026 a  08/07/2028",
+    "CPF/CNPJ do DetentorDetentor da autorização",
+    "QUEST CAMPO LARGO SPE LTDA49.932.156/0001-08",
+    "2.01 Deverá manter o protocolo de compensação atualizado.",
+    "2.02 É expressamente proibido o corte de outras árvores.",
+  ].join("\n");
+
+  const r = extractFields(texto);
+  assert.equal(r.numLicenca, "2041.4.2026.5618");
+  assert.equal(r.numProtocolo, "124124762");
+  assert.equal(r.dataProtocolo, "2026-07-08");
+  assert.equal(r.validade, "2028-07-08");
+  assert.equal(r.orgaoSigla, "IAT");
+});
+
+test("extractFields não usa números de matrícula/decreto como licença SINAFLOR", () => {
+  const texto = [
+    "Escritório Regional do IAP de Curitiba",
+    "Número da AutorizaçãoRegistro SinaflorValidade",
+    "2041.4.2026.5618124124762 08/07/2026 a  08/07/2028",
+    "localizado em imóvel de matrícula nº 60.296, situado na Rua Rodolfo Castagnoli, nº 255",
+    "conforme Decreto Estadual nº 857/79, art. 7º",
+  ].join("\n");
+
+  const r = extractFields(texto);
+  assert.equal(r.numLicenca, "2041.4.2026.5618");
+  assert.equal(r.numProtocolo, "124124762");
+  assert.equal(r.validade, "2028-07-08");
+});
+
 test("dividirTextoEmItens junta linhas que terminam com ':'", () => {
   const texto = [
     "1. Condicionante importante:",

@@ -35,12 +35,27 @@ export async function POST(request: Request) {
     const data = await request.json();
     const usuarioId = Number((session.user as { id: string }).id);
 
-    const { autorizacaoCorte, ...raw } = data;
+    const { autorizacaoCorte, orgaoOutro, ...raw } = data;
+
+    const nomeOrgaoOutro = orgaoOutro ? String(orgaoOutro).trim() : "";
+    let orgaoId = raw.orgaoId ? Number(raw.orgaoId) : NaN;
+    if (nomeOrgaoOutro) {
+      const sigla = nomeOrgaoOutro.toUpperCase();
+      const orgao = await prisma.orgao.upsert({
+        where: { sigla },
+        update: { nome: sigla },
+        create: { sigla, nome: sigla },
+      });
+      orgaoId = orgao.id;
+    }
+    if (!Number.isInteger(orgaoId) || orgaoId <= 0) {
+      return NextResponse.json({ error: "Órgão inválido" }, { status: 400 });
+    }
 
     const processo = await prisma.processo.create({
       data: {
         tipo: String(raw.tipo),
-        orgaoId: Number(raw.orgaoId),
+        orgaoId,
         sistema: String(raw.sistema),
         numProtocolo: String(raw.numProtocolo),
         status: (raw.status as string) || "protocolado",

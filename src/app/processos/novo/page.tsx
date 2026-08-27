@@ -64,6 +64,7 @@ export default function NovoProcessoPage() {
   const [tipoOutro, setTipoOutro] = useState("");
   const [sistema, setSistema] = useState("");
   const [sistemaOutro, setSistemaOutro] = useState("");
+  const [orgaoOutro, setOrgaoOutro] = useState("");
   const [form, setForm] = useState({
     orgaoId: "",
     numProtocolo: "",
@@ -158,6 +159,16 @@ export default function NovoProcessoPage() {
       const data = await res.json();
       importacaoViaUpload.current = true;
 
+      let orgaoIdImportado: string | undefined;
+      if (data.orgaoSigla) {
+        const orgao = orgaos.find((o) => o.sigla.toUpperCase() === String(data.orgaoSigla).toUpperCase());
+        if (orgao) orgaoIdImportado = String(orgao.id);
+        else {
+          orgaoIdImportado = "outro";
+          setOrgaoOutro(String(data.orgaoSigla));
+        }
+      }
+
       setForm((prev) => {
         const next = {
           ...prev,
@@ -169,10 +180,7 @@ export default function NovoProcessoPage() {
           dadosEmpreendimento: data.dadosEmpreendimento || prev.dadosEmpreendimento,
         };
         if (data.municipio) next.municipio = data.municipio;
-        if (data.orgaoSigla) {
-          const orgao = orgaos.find((o) => o.sigla.toUpperCase() === String(data.orgaoSigla).toUpperCase());
-          if (orgao) next.orgaoId = String(orgao.id);
-        }
+        if (orgaoIdImportado !== undefined) next.orgaoId = orgaoIdImportado;
         if (data.razaoSocial && !prev.observacoes.includes(String(data.razaoSocial))) {
           next.observacoes = [prev.observacoes, `Documento: ${data.razaoSocial}`].filter(Boolean).join("\n");
         }
@@ -274,13 +282,18 @@ export default function NovoProcessoPage() {
     const municipio = d.municipio
       ? (d.uf && !d.municipio.includes("/") ? `${d.municipio}/${d.uf}` : d.municipio)
       : "";
+    let orgaoIdFinal = orgao ? String(orgao.id) : form.orgaoId;
+    if (!orgao && d.orgaoSigla) {
+      orgaoIdFinal = "outro";
+      setOrgaoOutro(d.orgaoSigla);
+    }
 
     consultasFeitas.current.add(d.licenca.trim());
     consultasFeitas.current.add(form.numLicenca.trim());
 
     setForm((prev) => ({
       ...prev,
-      orgaoId: orgao ? String(orgao.id) : prev.orgaoId,
+      orgaoId: orgaoIdFinal,
       numProtocolo: d.protocolo || prev.numProtocolo || d.licenca,
       numLicenca: d.licenca || prev.numLicenca,
       validade: toDateInput(d.validade) || prev.validade,
@@ -369,12 +382,19 @@ export default function NovoProcessoPage() {
     setSaving(true);
     setError("");
 
+    if (form.orgaoId === "outro" && !orgaoOutro.trim()) {
+      setError("Informe o nome/sigla do órgão selecionado em Outro");
+      setSaving(false);
+      return;
+    }
+
     const res = await fetch("/api/processos", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         tipo: getTipoFinal(),
-        orgaoId: Number(form.orgaoId),
+        orgaoId: form.orgaoId === "outro" ? undefined : Number(form.orgaoId),
+        orgaoOutro: form.orgaoId === "outro" ? orgaoOutro.trim() : undefined,
         sistema: getSistemaFinal(),
         status: form.status || "protocolado",
         numProtocolo: form.numProtocolo,
@@ -501,7 +521,11 @@ export default function NovoProcessoPage() {
                 <select value={form.orgaoId} onChange={(e) => setField("orgaoId", e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" required>
                   <option value="">Selecione...</option>
                   {orgaos.map((o) => <option key={o.id} value={o.id}>{o.sigla}</option>)}
+                  <option value="outro">Outro...</option>
                 </select>
+                {form.orgaoId === "outro" && (
+                  <input value={orgaoOutro} onChange={(e) => setOrgaoOutro(e.target.value)} placeholder="Digite o nome/sigla do órgão" className="mt-2 w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" required />
+                )}
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">

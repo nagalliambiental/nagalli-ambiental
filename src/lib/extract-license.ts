@@ -131,6 +131,9 @@ const PADROES_MODALIDADE = [
 ];
 
 export function extrairModalidade(text: string): string | null {
+  const mCorte = text.match(/autoriza[çc][ãa]o\s+de\s+explora[çc][ãa]o\s*[-–]?\s*corte/i);
+  if (mCorte) return "Autorização Ambiental para Corte";
+
   for (const pat of PADROES_MODALIDADE) {
     const m = text.match(pat);
     if (m) {
@@ -437,15 +440,31 @@ const PADROES_PROTOCOLO = [
 
 export function extractFields(text: string): CamposLicenca {
   let validade: string | null = null;
+  let dataProtocolo: string | null = null;
+  let numLicenca: string | null = null;
+  let numProtocolo: string | null = null;
 
-  const mPar = text.match(/data\s+de\s+emiss[aã]o[^\d]{0,20}(\d{2})\/(\d{2})\/(\d{4})\s*(\d{2})\/(\d{2})\/(\d{4})/i);
-  if (mPar) {
-    const [, , , , d2, mo2, y2] = mPar;
-    const dia = parseInt(d2, 10);
-    const mes = parseInt(mo2, 10);
-    const ano = parseInt(y2, 10);
-    if (dia >= 1 && dia <= 31 && mes >= 1 && mes <= 12 && ano >= 2000 && ano <= 2100) {
-      validade = `${y2}-${mo2.padStart(2, "0")}-${d2.padStart(2, "0")}`;
+  const mSinaflor = text.match(
+    /N[uú]mero\s+da\s+Autoriza[çc][ãa]o\s*Registro\s+Sinaflor\s*Validade\s*(\d{4}\.\d{1,2}\.\d{4}\.\d{4})\s*(\d{5,})\s+(\d{2})\/(\d{2})\/(\d{4})\s+[aà]\s+(\d{2})\/(\d{2})\/(\d{4})/i
+  );
+  if (mSinaflor) {
+    numLicenca = mSinaflor[1];
+    numProtocolo = mSinaflor[2];
+    const [, , , d1, mo1, y1, d2, mo2, y2] = mSinaflor;
+    dataProtocolo = `${y1}-${mo1.padStart(2, "0")}-${d1.padStart(2, "0")}`;
+    validade = `${y2}-${mo2.padStart(2, "0")}-${d2.padStart(2, "0")}`;
+  }
+
+  if (!validade) {
+    const mPar = text.match(/data\s+de\s+emiss[aã]o[^\d]{0,20}(\d{2})\/(\d{2})\/(\d{4})\s*(\d{2})\/(\d{2})\/(\d{4})/i);
+    if (mPar) {
+      const [, , , , d2, mo2, y2] = mPar;
+      const dia = parseInt(d2, 10);
+      const mes = parseInt(mo2, 10);
+      const ano = parseInt(y2, 10);
+      if (dia >= 1 && dia <= 31 && mes >= 1 && mes <= 12 && ano >= 2000 && ano <= 2100) {
+        validade = `${y2}-${mo2.padStart(2, "0")}-${d2.padStart(2, "0")}`;
+      }
     }
   }
 
@@ -465,45 +484,48 @@ export function extractFields(text: string): CamposLicenca {
     }
   }
 
-  let dataProtocolo: string | null = null;
-  for (const pat of PADROES_DATA_EMISSAO) {
-    const m = text.match(pat);
-    if (m) {
-      const [, d, mo, y] = m;
-      const dia = parseInt(d, 10);
-      const mes = parseInt(mo, 10);
-      const ano = parseInt(y, 10);
-      if (dia >= 1 && dia <= 31 && mes >= 1 && mes <= 12 && ano >= 2000 && ano <= 2100) {
-        dataProtocolo = `${y}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`;
-        break;
+  if (!dataProtocolo) {
+    for (const pat of PADROES_DATA_EMISSAO) {
+      const m = text.match(pat);
+      if (m) {
+        const [, d, mo, y] = m;
+        const dia = parseInt(d, 10);
+        const mes = parseInt(mo, 10);
+        const ano = parseInt(y, 10);
+        if (dia >= 1 && dia <= 31 && mes >= 1 && mes <= 12 && ano >= 2000 && ano <= 2100) {
+          dataProtocolo = `${y}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`;
+          break;
+        }
       }
     }
   }
 
-  let numLicenca: string | null = null;
-  const prefixado = extrairNumLicencaComPrefixo(text);
-  if (prefixado) {
-    numLicenca = prefixado;
-  } else {
-    for (const pat of PADROES_LICENCA) {
+  if (!numLicenca) {
+    const prefixado = extrairNumLicencaComPrefixo(text);
+    if (prefixado) {
+      numLicenca = prefixado;
+    } else {
+      for (const pat of PADROES_LICENCA) {
+        const m = text.match(pat);
+        if (m && m[1].trim().length > 2) {
+          const raw = m[1].trim();
+          if (!/^\d+$/.test(raw.replace(/[\/\-\.]/g, ""))) continue;
+          numLicenca = raw;
+          break;
+        }
+      }
+    }
+  }
+
+  if (!numProtocolo) {
+    for (const pat of PADROES_PROTOCOLO) {
       const m = text.match(pat);
       if (m && m[1].trim().length > 2) {
         const raw = m[1].trim();
-        if (!/^\d+$/.test(raw.replace(/[\/\-\.]/g, ""))) continue;
-        numLicenca = raw;
+        if (raw === numLicenca) continue;
+        numProtocolo = raw;
         break;
       }
-    }
-  }
-
-  let numProtocolo: string | null = null;
-  for (const pat of PADROES_PROTOCOLO) {
-    const m = text.match(pat);
-    if (m && m[1].trim().length > 2) {
-      const raw = m[1].trim();
-      if (raw === numLicenca) continue;
-      numProtocolo = raw;
-      break;
     }
   }
 
