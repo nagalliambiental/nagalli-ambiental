@@ -58,6 +58,8 @@ export async function importarLicencaDoOrgao(opts: {
 
   if (!licenca && !protocolo) return null;
 
+  if (/^(SMMA|SMA|SEMAM|SMAM|SEMMA)$/.test(sigla)) return null;
+
   const ehOutorga = licenca.includes("/");
 
   const tentarSigarh = async (): Promise<LicencaImportada | null> => {

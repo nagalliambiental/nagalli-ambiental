@@ -21,6 +21,7 @@ const TIPOS = [
 ];
 
 const SISTEMAS = ["SGA", "E-Protocolo", "SIMA", "IMA"];
+const ORGAOS_MUNICIPAIS = ["SMMA", "SMA", "SEMAM", "SMAM", "SEMMA"];
 
 const STATUSES = [
   { value: "protocolado", label: "Protocolado" },
@@ -86,6 +87,7 @@ export default function NovoProcessoPage() {
   const [extractedFile, setExtractedFile] = useState<string | null>(null);
   const [buscandoSia, setBuscandoSia] = useState(false);
   const consultasFeitas = useRef(new Set<string>());
+  const importacaoViaUpload = useRef(false);
   const [corte, setCorte] = useState({
     quantidadeIndividuos: "",
     compensacaoExigida: false,
@@ -147,19 +149,53 @@ export default function NovoProcessoPage() {
       }
 
       const data = await res.json();
+      importacaoViaUpload.current = true;
 
-      setForm((prev) => ({
-        ...prev,
-        numLicenca: data.numLicenca || prev.numLicenca,
-        numProtocolo: data.numProtocolo || prev.numProtocolo,
-        validade: data.validade || prev.validade,
-        dataProtocolo: data.dataProtocolo || prev.dataProtocolo,
-        condicionantes: data.condicionantes || prev.condicionantes,
-        dadosEmpreendimento: data.dadosEmpreendimento || prev.dadosEmpreendimento,
-      }));
+      setForm((prev) => {
+        const next = {
+          ...prev,
+          numLicenca: data.numLicenca || prev.numLicenca,
+          numProtocolo: data.numProtocolo || prev.numProtocolo,
+          validade: data.validade || prev.validade,
+          dataProtocolo: data.dataProtocolo || prev.dataProtocolo,
+          condicionantes: data.condicionantes || prev.condicionantes,
+          dadosEmpreendimento: data.dadosEmpreendimento || prev.dadosEmpreendimento,
+        };
+        if (data.municipio) next.municipio = data.municipio;
+        if (data.orgaoSigla) {
+          const orgao = orgaos.find((o) => o.sigla.toUpperCase() === String(data.orgaoSigla).toUpperCase());
+          if (orgao) next.orgaoId = String(orgao.id);
+        }
+        if (data.razaoSocial && !prev.observacoes.includes(String(data.razaoSocial))) {
+          next.observacoes = [prev.observacoes, `Documento: ${data.razaoSocial}`].filter(Boolean).join("\n");
+        }
+        return next;
+      });
 
-      const campos = [data.numLicenca, data.numProtocolo, data.validade, data.dataProtocolo, data.condicionantes, data.dadosEmpreendimento].filter(Boolean);
-      setExtractedFile(campos.length > 0 ? `${file.name} — ${campos.length} campo(s) extraído(s)` : `${file.name} — nenhum campo identificado`);
+      if (data.modalidade) {
+        const tipoMatch = matchModalidade(String(data.modalidade));
+        if (tipoMatch) {
+          setTipo(tipoMatch);
+          setTipoOutro("");
+          setForm((prev) => ({ ...prev, alertaDias: alertaPadraoPara(tipoMatch) }));
+        } else {
+          setTipo("Outros");
+          setTipoOutro(String(data.modalidade));
+        }
+      }
+
+      if (data.sistema) {
+        if (SISTEMAS.includes(String(data.sistema))) {
+          setSistema(String(data.sistema));
+          setSistemaOutro("");
+        } else {
+          setSistema("Outro");
+          setSistemaOutro(String(data.sistema));
+        }
+      }
+
+      const campos = [data.numLicenca, data.numProtocolo, data.validade, data.dataProtocolo, data.condicionantes, data.dadosEmpreendimento, data.orgaoSigla, data.municipio, data.modalidade].filter(Boolean);
+      setExtractedFile(campos.length > 0 ? `${file.name} — ${campos.length} campo(s) extraído(s) do documento` : `${file.name} — nenhum campo identificado`);
     } catch {
       setError("Erro ao processar documento");
     } finally {
@@ -262,6 +298,13 @@ export default function NovoProcessoPage() {
       return;
     }
 
+    const orgaoParaBusca = orgaos.find((o) => o.id === Number(form.orgaoId));
+    const siglaOrgao = orgaoParaBusca?.sigla.toUpperCase() || "";
+    if (/^(SMMA|SMA|SEMAM|SMAM|SEMMA)/.test(siglaOrgao)) {
+      if (!opts.silencioso) setError("Órgãos municipais não possuem consulta automática — faça a importação pelo upload do documento (PDF)");
+      return;
+    }
+
     const chave = licenca || protocolo;
     if (opts.silencioso && consultasFeitas.current.has(chave)) return;
 
@@ -297,6 +340,10 @@ export default function NovoProcessoPage() {
     const num = form.numLicenca.trim();
     if (num.length < 4) return;
     const t = setTimeout(() => {
+      if (importacaoViaUpload.current) {
+        importacaoViaUpload.current = false;
+        return;
+      }
       void consultarLicenca({ licenca: num, silencioso: true });
     }, 800);
     return () => clearTimeout(t);
@@ -372,6 +419,7 @@ export default function NovoProcessoPage() {
                   value={form.numLicenca}
                   onChange={(e) => setField("numLicenca", e.target.value)}
                   onBlur={() => {
+                    if (importacaoViaUpload.current) return;
                     if (form.numLicenca.trim().length >= 4) void consultarLicenca({ licenca: form.numLicenca, silencioso: true });
                   }}
                   placeholder="Digite o número da licença"
@@ -391,7 +439,9 @@ export default function NovoProcessoPage() {
               <p className="mt-1 text-xs text-[var(--color-ink-500)]">
                 {buscandoSia
                   ? "Consultando o órgão ambiental..."
-                  : "Ao digitar o número, o sistema consulta o IAT (PR) ou o IMA (SC) e preenche modalidade, validade, atividade e município."}
+                  : orgaos.find((o) => o.id === Number(form.orgaoId))?.sigla && ORGAOS_MUNICIPAIS.includes(orgaos.find((o) => o.id === Number(form.orgaoId))?.sigla || "")
+                    ? "Órgão municipal: a importação é feita pelo upload do documento (PDF)."
+                    : "Ao digitar o número, o sistema consulta o IAT (PR) ou o IMA (SC) e preenche modalidade, validade, atividade e município."}
               </p>
             </div>
           </div>

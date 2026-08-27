@@ -19,6 +19,13 @@ export async function GET(req: NextRequest) {
     );
   }
 
+  if (/^(SMMA|SMA|SEMAM|SMAM|SEMMA)$/i.test(orgao)) {
+    return NextResponse.json(
+      { error: "Órgão municipal não possui consulta automática — utilize o upload do documento (PDF)" },
+      { status: 400 }
+    );
+  }
+
   try {
     const dados = await importarLicencaDoOrgao({
       licenca: licenca || undefined,

@@ -49,6 +49,96 @@ export interface CamposLicenca {
   dataProtocolo: string | null;
   condicionantes: string | null;
   dadosEmpreendimento: string | null;
+  orgaoSigla: string | null;
+  sistema: string | null;
+  municipio: string | null;
+  razaoSocial: string | null;
+  modalidade: string | null;
+}
+
+const ORGAOS_MUNICIPAIS = new Set(["SMMA", "SMA", "SEMAM", "SMAM", "SEMMA"]);
+
+export function detectarOrgao(text: string): string | null {
+  const t = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  if (t.includes("prefeitura municipal de") || t.includes("secretaria municipal do meio ambiente") || t.includes("secretaria municipal de meio ambiente")) {
+    const m = text.match(/secretaria (?:do|de) meio ambiente/i);
+    if (m) return "SMMA";
+    return "SMMA";
+  }
+  if (t.includes("instituto agua e terra") || t.includes("instituto ambiental do parana") || /\biat\b|\biap\b/.test(t)) return "IAT";
+  if (t.includes("instituto do meio ambiente") || t.includes("instituto de meio ambiente")) {
+    const m = t.match(/ima\b|instituto(?: do| de) meio ambiente/i);
+    if (m) return "IMA";
+  }
+  if (t.includes("ibama") || t.includes("instituto brasileiro do meio ambiente")) return "IBAMA";
+  if (t.includes("fepam") || t.includes("fundacao estadual de protecao ambiental")) return "FEPAM";
+  if (t.includes("cetesb")) return "CETESB";
+  if (t.includes("imasul") || t.includes("instituto de meio ambiente de mato grosso do sul")) return "IMASUL";
+  return null;
+}
+
+export function ehOrgaoMunicipal(sigla: string): boolean {
+  return ORGAOS_MUNICIPAIS.has(sigla.toUpperCase());
+}
+
+export function detectarSistema(text: string, orgaoSigla: string | null): string | null {
+  if (/sima(?:\.curitiba|\.)?\s*\.?\s*pr/.test(text) || /sima\.curitiba\.pr\.gov\.br/i.test(text)) return "SIMA";
+  if (orgaoSigla === "IAT") return "SGA";
+  if (orgaoSigla === "IMA") return "IMA";
+  return null;
+}
+
+export function extrairCnpj(text: string): string | null {
+  const m = text.match(/CNPJ\s*[:\s]+\s*(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}|\d{14})/i);
+  if (m) return m[1].replace(/[^\d]/g, "");
+  const m2 = text.match(/\b(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})\b/);
+  if (m2) return m2[1].replace(/[^\d]/g, "");
+  return null;
+}
+
+export function extrairRazaoSocial(text: string): string | null {
+  const cnpj = extrairCnpj(text);
+  if (cnpj) {
+    const idx = text.indexOf(cnpj);
+    if (idx !== -1) {
+      const resto = text.slice(idx + cnpj.length).slice(0, 200);
+      const m = resto.match(/(?:^|\n)[ \t]*([A-ZÀ-Ü][A-ZÀ-Ü0-9.,\/&()\- ]{2,80}?\b(?:LTDA|EIRELI|ME|SC|S\/?A)\b[.]?)/i);
+      if (m && m[1].trim()) return m[1].trim();
+      const m2 = resto.match(/(?:^|\n)[ \t]*([A-ZÀ-Ü][A-ZÀ-Ü0-9.,\/&()\- ]{3,80})/);
+      if (m2 && m2[1].trim()) return m2[1].trim();
+    }
+  }
+  const m = text.match(/^[ \t]*([A-ZÀ-Ü][A-ZÀ-Ü0-9.,\/&()\- ]{2,80}?\b(?:LTDA|EIRELI|ME|SC|S\/?A)\b[.]?[^\n]*)$/im);
+  if (m) return m[1].trim();
+  return null;
+}
+
+export function extrairMunicipio(text: string): string | null {
+  const m = text.match(/(?:prefeitura municipal de|secretaria de meio ambiente de)[ \t]+([A-ZÀ-Ü][A-Za-záàâãéêíóôõúç]+)/i);
+  return m ? m[1].trim() : null;
+}
+
+const PADROES_MODALIDADE = [
+  /(renova[çc][ãa]o\s+da\s+licen[çc]a\s+de\s+opera[çc][ãa]o)/i,
+  /(licen[çc]a\s+pr[ée]via)/i,
+  /(licen[çc]a\s+de\s+instala[çc][ãa]o)/i,
+  /(licen[çc]a\s+de\s+opera[çc][ãa]o)/i,
+  /(autoriza[çc][ãa]o\s+ambiental\s+para\s+corte)/i,
+  /(autoriza[çc][ãa]o\s+ambiental\s+para\s+obra)/i,
+  /(dispensa\s+de\s+(?:licen[çc]a|outorga))/i,
+  /(outorga\s+de\s+direito\s+de\s+uso)/i,
+  /(outorga\s+pr[ée]via)/i,
+];
+
+export function extrairModalidade(text: string): string | null {
+  for (const pat of PADROES_MODALIDADE) {
+    const m = text.match(pat);
+    if (m) {
+      const val = m[1].trim().replace(/\s{2,}/g, " ");
+      if (val.length > 3) return val;
+    }
+  }
+  return null;
 }
 
 export async function runOcr(buffer: Buffer, ext: string): Promise<string> {
@@ -151,7 +241,7 @@ export function extrairSecaoCondicionantes(texto: string): string | null {
     const m = texto.match(/CONDICIONANTES/i);
     if (m && m.index !== undefined) inicio = m.index + m[0].length;
   }
-  if (inicio === -1) return null;
+  if (inicio === -1) return extrairCondicionantesItems(texto);
 
   let fim = texto.length;
   for (const re of FINS_SECAO) {
@@ -189,6 +279,39 @@ export function extrairSecaoCondicionantes(texto: string): string | null {
   if (corteMatch && corteMatch.index !== undefined && corteMatch.index > 20) {
     secao = secao.slice(0, corteMatch.index).trim();
   }
+
+  if (secao.length >= 20) return secao;
+
+  return extrairCondicionantesItems(texto);
+}
+
+function extrairCondicionantesItems(texto: string): string | null {
+  if (!texto) return null;
+
+  const mItem = texto.match(/^\s*\((\d{1,2})\)\s/m);
+  if (!mItem || mItem.index === undefined) return null;
+
+  let inicio = mItem.index;
+  const reFim =
+    /(?:^|\n)\s*(?:P[aá]gina\s+\d|Assinatura|ASSINADO|Requisitos?\s+(?:para|da|de)|Esta (?:Licen[çc]a|Autoriza[çc][ãa]o|Outorga)|LOCAL\s+E\s+DATA|CONDI[ÇC][ÕO]ES\s+GERAIS)/i;
+  const mFim = texto.slice(inicio + 5).match(reFim);
+  let fim = texto.length;
+  if (mFim && mFim.index !== undefined) {
+    fim = inicio + 5 + mFim.index;
+  }
+
+  let secao = texto.slice(inicio, fim);
+  secao = secao.replace(/^\s*(?:P[aá]gina\s+\d+(?:\/\d+)?|\d{1,4})\s*$/gm, "");
+  secao = secao.replace(/https?:\/\/\S+/gi, "");
+  secao = secao.replace(/[ \t]+/g, " ");
+  secao = secao
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l)
+    .filter((l) => !/^\d{2}\/\d{2}\/\d{4}\s*$/.test(l))
+    .filter((l) => !(CABECALHO_MAISCULAS.test(l) && l.length <= 40))
+    .join("\n");
+  secao = secao.replace(/\n{3,}/g, "\n\n").trim();
 
   return secao.length >= 20 ? secao : null;
 }
@@ -290,6 +413,18 @@ const PADROES_LICENCA = [
   /n[º°o]\s*\.?\s*([A-Z0-9][\d\/\.\-]{2,})/i,
 ];
 
+const PREFIXOS_VETADOS = new Set(["CNPJ", "CPF", "RUA", "NÚMERO", "NUMERO", "INSC", "HTTP", "PROTOCOLO", "PORTARIA", "LICENÇA", "LICENCA", "DOCUMENTO"]);
+
+export function extrairNumLicencaComPrefixo(text: string): string | null {
+  const m = text.match(/^(?:N[uú]mero[:\s]+)?([A-ZÀ-Ü]{2,6})[ \t\-.]{1,5}(\d{3,})[\s\-–]*(?:[A-ZÀ-Ü]|$)/m);
+  if (!m) return null;
+  const prefixo = m[1].toUpperCase();
+  if (PREFIXOS_VETADOS.has(prefixo)) return null;
+  const numero = m[2];
+  if (!/^\d{4,}$/.test(numero)) return null;
+  return `${prefixo} - ${numero}`;
+}
+
 const PADROES_PROTOCOLO = [
   /n[úu]mero\s+do\s+protocolo[^\d]*?([\d][\d\.\/\-]{4,})/i,
   /protocolado\s+sob\s+n[º°o]?\s*\.?\s*([\d\.\/\-]+)/i,
@@ -302,16 +437,30 @@ const PADROES_PROTOCOLO = [
 
 export function extractFields(text: string): CamposLicenca {
   let validade: string | null = null;
-  for (const pat of PADROES_DATA) {
-    const m = text.match(pat);
-    if (m) {
-      const [, d, mo, y] = m;
-      const dia = parseInt(d, 10);
-      const mes = parseInt(mo, 10);
-      const ano = parseInt(y, 10);
-      if (dia >= 1 && dia <= 31 && mes >= 1 && mes <= 12 && ano >= 2000 && ano <= 2100) {
-        validade = `${y}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`;
-        break;
+
+  const mPar = text.match(/data\s+de\s+emiss[aã]o[^\d]{0,20}(\d{2})\/(\d{2})\/(\d{4})\s*(\d{2})\/(\d{2})\/(\d{4})/i);
+  if (mPar) {
+    const [, , , , d2, mo2, y2] = mPar;
+    const dia = parseInt(d2, 10);
+    const mes = parseInt(mo2, 10);
+    const ano = parseInt(y2, 10);
+    if (dia >= 1 && dia <= 31 && mes >= 1 && mes <= 12 && ano >= 2000 && ano <= 2100) {
+      validade = `${y2}-${mo2.padStart(2, "0")}-${d2.padStart(2, "0")}`;
+    }
+  }
+
+  if (!validade) {
+    for (const pat of PADROES_DATA) {
+      const m = text.match(pat);
+      if (m) {
+        const [, d, mo, y] = m;
+        const dia = parseInt(d, 10);
+        const mes = parseInt(mo, 10);
+        const ano = parseInt(y, 10);
+        if (dia >= 1 && dia <= 31 && mes >= 1 && mes <= 12 && ano >= 2000 && ano <= 2100) {
+          validade = `${y}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`;
+          break;
+        }
       }
     }
   }
@@ -332,13 +481,18 @@ export function extractFields(text: string): CamposLicenca {
   }
 
   let numLicenca: string | null = null;
-  for (const pat of PADROES_LICENCA) {
-    const m = text.match(pat);
-    if (m && m[1].trim().length > 2) {
-      const raw = m[1].trim();
-      if (!/^\d+$/.test(raw.replace(/[\/\-\.]/g, ""))) continue;
-      numLicenca = raw;
-      break;
+  const prefixado = extrairNumLicencaComPrefixo(text);
+  if (prefixado) {
+    numLicenca = prefixado;
+  } else {
+    for (const pat of PADROES_LICENCA) {
+      const m = text.match(pat);
+      if (m && m[1].trim().length > 2) {
+        const raw = m[1].trim();
+        if (!/^\d+$/.test(raw.replace(/[\/\-\.]/g, ""))) continue;
+        numLicenca = raw;
+        break;
+      }
     }
   }
 
@@ -353,6 +507,8 @@ export function extractFields(text: string): CamposLicenca {
     }
   }
 
+  const orgaoSigla = detectarOrgao(text);
+
   return {
     validade,
     numLicenca,
@@ -360,6 +516,11 @@ export function extractFields(text: string): CamposLicenca {
     dataProtocolo,
     condicionantes: extrairSecaoCondicionantes(text),
     dadosEmpreendimento: extrairDadosEmpreendimento(text),
+    orgaoSigla,
+    sistema: detectarSistema(text, orgaoSigla),
+    municipio: extrairMunicipio(text),
+    razaoSocial: extrairRazaoSocial(text),
+    modalidade: extrairModalidade(text),
   };
 }
 
