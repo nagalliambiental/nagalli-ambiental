@@ -30,6 +30,7 @@ export default async function ClienteDetailPage(props: { params: Promise<{ id: s
       where: { id: Number(id) },
       select: {
         id: true, apelido: true, razaoSocial: true, cnpj: true, telefone: true, email: true, respLegal: true, visibilidade: true, criadoEm: true,
+        rua: true, numero: true, bairro: true, complemento: true, cep: true, municipio: true, uf: true, ativo: true,
         empreendimentos: {
           select: {
             id: true, apelido: true, unidadeSinir: true, municipio: true, uf: true, rua: true, numero: true, bairro: true,

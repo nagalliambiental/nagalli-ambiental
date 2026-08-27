@@ -7,12 +7,13 @@ import { Topbar } from "@/components/Topbar";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
-  Building2, Mail, Phone, User, FileText, MapPin, Map, Globe,
+  Building2, Mail, Phone, User, FileText, MapPin,
   Edit3, Trash2, Plus, ExternalLink, CheckCircle2, Clock, AlertTriangle,
   Loader2, X, Upload, Download, FolderArchive, ArrowLeft, ChevronDown as ChevronDownIcon
 } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/components/Toast";
+import { formatarEndereco } from "@/lib/endereco";
 import { TEMPLATES } from "@/lib/templates";
 import { HistoricoTab } from "@/components/HistoricoTab";
 import { AcessosTab } from "@/components/AcessosTab";
@@ -381,24 +382,25 @@ export function ClienteDetailClient({
               </div>
             </div>
 
-            {(cliente.rua || cliente.cep || cliente.municipio || cliente.uf) && (
-              <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
-                <div className="flex items-center gap-2 mb-4">
-                  <MapPin size={18} className="text-[var(--color-ink-500)]" />
-                  <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Endereço</h2>
+            {(() => {
+              const enderecoLinhas = formatarEndereco(cliente);
+              if (enderecoLinhas.length === 0) return null;
+              return (
+                <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <MapPin size={18} className="text-[var(--color-ink-500)]" />
+                    <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Endereço</h2>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    {enderecoLinhas.map((linha, i) => (
+                      <div key={i} className={i === 0 ? "col-span-2 text-[var(--color-ink-700)]" : "text-[var(--color-ink-500)]"}>
+                        {linha}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  {cliente.rua && <div className="col-span-2 text-[var(--color-ink-700)]">
-                    {cliente.rua}{cliente.numero && cliente.numero !== "0" && cliente.numero !== "S/N" ? `, ${cliente.numero}` : ""}
-                  </div>}
-                  {cliente.bairro && <div className="text-[var(--color-ink-500)]">Bairro: {cliente.bairro}</div>}
-                  {cliente.complemento && <div className="text-[var(--color-ink-500)]">Complemento: {cliente.complemento}</div>}
-                  {cliente.cep && <div className="text-[var(--color-ink-500)]">CEP: {cliente.cep}</div>}
-                  {cliente.municipio && <div className="flex items-center gap-1 text-[var(--color-ink-500)]"><Map size={14} />{cliente.municipio}</div>}
-                  {cliente.uf && <div className="flex items-center gap-1 text-[var(--color-ink-500)]"><Globe size={14} />{cliente.uf}</div>}
-                </div>
-              </div>
-            )}
+              );
+            })()}
 
             <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
               <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-3">Cadastro</h2>

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { logAuditoria } from "@/lib/audit";
 import { ehPrivilegiado } from "@/lib/perfil";
+import { encontrarConflitoCnpj } from "@/lib/cliente-cnpj";
 
 export async function GET() {
   try {
@@ -51,6 +52,14 @@ export async function POST(request: Request) {
       data.visibilidade = "publico";
     }
 
+    const conflito = await encontrarConflitoCnpj(prisma, String(body.cnpj));
+    if (conflito) {
+      return NextResponse.json(
+        { erro: "Não foi possível cadastrar o cliente. Já existe um cliente cadastrado com este CNPJ." },
+        { status: 400 }
+      );
+    }
+
     const cliente = await prisma.cliente.create({ data });
 
     await logAuditoria(
@@ -91,6 +100,8 @@ export async function PATCH(req: NextRequest) {
   const ids = req.nextUrl.searchParams.get("ids");
   if (!ids) return NextResponse.json({ erro: "ids é obrigatório" }, { status: 400 });
   const body = await req.json();
-  await prisma.cliente.updateMany({ where: { id: { in: ids.split(",").map(Number) } }, data: body });
+  const dados = { ...body };
+  delete dados.cnpj;
+  await prisma.cliente.updateMany({ where: { id: { in: ids.split(",").map(Number) } }, data: dados });
   return NextResponse.json({ ok: true });
 }

@@ -57,6 +57,7 @@ export default function NovoClientePage() {
   const [empreendimentos, setEmpreendimentos] = useState<EmpreendimentoOpcao[]>([]);
   const [buscandoCnpj, setBuscandoCnpj] = useState(false);
   const [buscandoCep, setBuscandoCep] = useState(false);
+  const [cnpjDuplicado, setCnpjDuplicado] = useState(false);
 
   // Cliente form state
   const [form, setForm] = useState<ClienteFormData>({
@@ -160,7 +161,28 @@ export default function NovoClientePage() {
     }
   }
 
+  async function verificarCnpjDuplicado() {
+    const cnpj = form.cnpj.replace(/\D/g, "");
+    if (cnpj.length !== 14) {
+      setCnpjDuplicado(false);
+      return;
+    }
+    try {
+      const res = await fetch(`/api/clientes/verificar-cnpj?cnpj=${encodeURIComponent(cnpj)}`);
+      if (res.ok) {
+        const d = (await res.json()) as { existe: boolean };
+        setCnpjDuplicado(d.existe);
+      }
+    } catch {
+      setCnpjDuplicado(false);
+    }
+  }
+
   async function salvarCliente() {
+    if (cnpjDuplicado) {
+      toast("Este CNPJ já está cadastrado para outro cliente.", "error");
+      return;
+    }
     setCarregandoCliente(true);
     try {
       const res = await fetch("/api/clientes", {
@@ -170,7 +192,7 @@ export default function NovoClientePage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        toast(data?.error || "Falha ao salvar cliente", "error");
+        toast(data?.erro || data?.error || "Falha ao salvar cliente", "error");
         return;
       }
       toast("Cliente cadastrado com sucesso", "success");
@@ -350,7 +372,12 @@ export default function NovoClientePage() {
                 <div className="flex gap-2">
                   <input
                     value={form.cnpj}
-                    onChange={(e) => setForm((f) => ({ ...f, cnpj: e.target.value.replace(/\D/g, "") }))}
+                    onChange={(e) => {
+                      const valor = e.target.value.replace(/\D/g, "");
+                      setForm((f) => ({ ...f, cnpj: valor }));
+                      setCnpjDuplicado(false);
+                      if (valor.length === 14) void verificarCnpjDuplicado();
+                    }}
                     className={inputCls}
                     placeholder="00000000000000"
                     maxLength={14}
@@ -367,6 +394,9 @@ export default function NovoClientePage() {
                     Buscar
                   </button>
                 </div>
+                {cnpjDuplicado && (
+                  <p className="mt-1 block text-xs text-red-600">Este CNPJ já está cadastrado para outro cliente.</p>
+                )}
               </div>
               <div>
                 <label className={labelCls}>Telefone *</label>

@@ -23,7 +23,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
   if (!emp) notFound();
 
   const clientes = await prisma.cliente.findMany({
-    select: { id: true, apelido: true },
+    select: { id: true, apelido: true, cnpj: true },
     orderBy: { apelido: "asc" },
   });
 
@@ -39,7 +39,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
         { name: "apelido", label: "Apelido", type: "text", required: true },
         {
           name: "clienteId", label: "Cliente", type: "select", required: true,
-          options: clientes.map((c) => ({ value: String(c.id), label: c.apelido })),
+          options: clientes.map((c) => ({ value: String(c.id), label: c.cnpj ? `${c.apelido} — ${c.cnpj}` : c.apelido })),
         },
         { name: "cnpj", label: "CNPJ", type: "text" },
         { name: "unidadeSinir", label: "Unidade do SINIR", type: "text" },

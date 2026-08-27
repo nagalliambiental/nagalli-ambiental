@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { logAuditoria } from "@/lib/audit";
 import { ehPrivilegiado } from "@/lib/perfil";
+import { encontrarConflitoCnpj } from "@/lib/cliente-cnpj";
 
 
 export async function GET(
@@ -96,9 +97,19 @@ export async function PUT(
       );
     }
 
-    const perfil = (session.user as { perfil?: string }).perfil;
+const perfil = (session.user as { perfil?: string }).perfil;
     if (!ehPrivilegiado(perfil) && "visibilidade" in data) {
       data.visibilidade = "publico";
+    }
+
+    if (data.cnpj) {
+      const conflito = await encontrarConflitoCnpj(prisma, String(data.cnpj), Number(id));
+      if (conflito) {
+        return NextResponse.json(
+          { erro: "Não foi possível atualizar o cliente. Já existe um cliente cadastrado com este CNPJ." },
+          { status: 400 }
+        );
+      }
     }
 
     const cliente = await prisma.cliente.update({

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { logAuditoria } from "@/lib/audit";
 import { ehPrivilegiado } from "@/lib/perfil";
+import { TransferenciaError, validarTransferencia, type ResultadoTransferencia } from "@/lib/transferir-empreendimento";
 
 
 export async function GET(
@@ -51,44 +52,85 @@ export async function PUT(
   const { id } = await params;
   const body = await request.json();
 
-  const atual = await prisma.empreendimento.findUnique({
-    where: { id: Number(id) },
-    select: { clienteId: true },
-  });
-  if (!atual) {
-    return NextResponse.json({ error: "Empreendimento não encontrado" }, { status: 404 });
+  const clienteIdInformado =
+    body.clienteId !== undefined && body.clienteId !== null && body.clienteId !== ""
+      ? Number(body.clienteId)
+      : undefined;
+  if (body.clienteId !== undefined && body.clienteId !== null && body.clienteId !== "" && Number.isNaN(clienteIdInformado)) {
+    return NextResponse.json({ error: "Cliente inválido" }, { status: 400 });
   }
 
-  const visibilidade = ehPrivilegiado(perfil) && body.visibilidade === "privado" ? "privado" : "publico";
+  try {
+    const { emp, transferencia } = await prisma.$transaction(async (tx) => {
+      const atual = await tx.empreendimento.findUnique({
+        where: { id: Number(id) },
+        select: { clienteId: true },
+      });
+      if (!atual) {
+        throw new TransferenciaError("Empreendimento não encontrado", 404);
+      }
 
-  const emp = await prisma.empreendimento.update({
-    where: { id: Number(id) },
-    data: {
-      apelido: body.apelido,
-      cnpj: body.cnpj ?? null,
-      unidadeSinir: body.unidadeSinir ?? null,
-      cep: body.cep ?? null,
-      municipio: body.municipio ?? null,
-      uf: body.uf ?? null,
-      rua: body.rua ?? null,
-      numero: body.numero ?? null,
-      bairro: body.bairro ?? null,
-      complemento: body.complemento ?? null,
-      descricao: body.descricao,
-      latitude: body.latitude ?? null,
-      longitude: body.longitude ?? null,
-      utmX: body.utmX ?? null,
-      utmY: body.utmY ?? null,
-      utmZona: body.utmZona != null ? Number(body.utmZona) : null,
-      utmHemisferio: body.utmHemisferio ?? null,
-      poligono: body.poligono ?? null,
-      clienteId: body.clienteId !== undefined && body.clienteId !== null && body.clienteId !== "" ? Number(body.clienteId) : atual.clienteId,
-      visibilidade,
-    },
-  });
+      let transferencia: ResultadoTransferencia | null = null;
+      if (clienteIdInformado !== undefined && clienteIdInformado !== atual.clienteId) {
+        transferencia = await validarTransferencia(tx, {
+          empreendimentoId: Number(id),
+          clienteNovoId: clienteIdInformado,
+        });
+      }
 
-  await logAuditoria("ATUALIZAR", "empreendimento", emp.id, body, Number((session.user as { id: string }).id));
-  return NextResponse.json(emp);
+      const visibilidade = ehPrivilegiado(perfil) && body.visibilidade === "privado" ? "privado" : "publico";
+
+      const emp = await tx.empreendimento.update({
+        where: { id: Number(id) },
+        data: {
+          apelido: body.apelido,
+          cnpj: body.cnpj ?? null,
+          unidadeSinir: body.unidadeSinir ?? null,
+          cep: body.cep ?? null,
+          municipio: body.municipio ?? null,
+          uf: body.uf ?? null,
+          rua: body.rua ?? null,
+          numero: body.numero ?? null,
+          bairro: body.bairro ?? null,
+          complemento: body.complemento ?? null,
+          descricao: body.descricao,
+          latitude: body.latitude ?? null,
+          longitude: body.longitude ?? null,
+          utmX: body.utmX ?? null,
+          utmY: body.utmY ?? null,
+          utmZona: body.utmZona != null ? Number(body.utmZona) : null,
+          utmHemisferio: body.utmHemisferio ?? null,
+          poligono: body.poligono ?? null,
+          clienteId: clienteIdInformado !== undefined ? clienteIdInformado : atual.clienteId,
+          visibilidade,
+        },
+      });
+
+      return { emp, transferencia };
+    });
+
+    const usuarioId = Number((session.user as { id: string }).id);
+    if (transferencia) {
+      await logAuditoria(
+        "TRANSFERIR",
+        "empreendimento",
+        emp.id,
+        {
+          apelido: emp.apelido,
+          clienteAnteriorId: transferencia.clienteAnteriorId,
+          clienteNovoId: transferencia.clienteNovoId,
+        },
+        usuarioId
+      );
+    }
+    await logAuditoria("ATUALIZAR", "empreendimento", emp.id, body, usuarioId);
+    return NextResponse.json(emp);
+  } catch (erro) {
+    if (erro instanceof TransferenciaError) {
+      return NextResponse.json({ error: erro.message }, { status: erro.status });
+    }
+    throw erro;
+  }
 }
 
 export async function PATCH(

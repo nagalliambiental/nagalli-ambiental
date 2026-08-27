@@ -141,7 +141,7 @@ export default function EditEntityForm({
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        setError(err.error || `Erro ao atualizar ${entityName}`);
+        setError(err.erro || err.error || `Erro ao atualizar ${entityName}`);
         return;
       }
 

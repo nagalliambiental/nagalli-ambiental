@@ -116,6 +116,8 @@ export async function PATCH(req: NextRequest) {
   const ids = req.nextUrl.searchParams.get("ids");
   if (!ids) return NextResponse.json({ error: "ids é obrigatório" }, { status: 400 });
   const body = await req.json();
-  await prisma.empreendimento.updateMany({ where: { id: { in: ids.split(",").map(Number) } }, data: body });
+  const dados = { ...body };
+  delete dados.clienteId;
+  await prisma.empreendimento.updateMany({ where: { id: { in: ids.split(",").map(Number) } }, data: dados });
   return NextResponse.json({ ok: true });
 }
