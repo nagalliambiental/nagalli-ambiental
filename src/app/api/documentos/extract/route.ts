@@ -19,6 +19,16 @@ export async function POST(request: Request) {
     const buffer = Buffer.from(await file.arrayBuffer());
     const extracted = await extractFromBuffer(buffer, ext);
 
+    const count = [
+      extracted.numLicenca,
+      extracted.numProtocolo,
+      extracted.validade,
+      extracted.dataProtocolo,
+      extracted.condicionantes,
+      extracted.orgaoSigla,
+    ].filter(Boolean).length;
+    console.log(`[extract] ${file.name} (${ext}): ${count} campo(s), orgao=${extracted.orgaoSigla || "-"}, licenca=${extracted.numLicenca || "-"}`);
+
     return NextResponse.json(extracted);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erro desconhecido";

@@ -85,6 +85,7 @@ export default function NovoProcessoPage() {
   const [error, setError] = useState("");
   const [extracting, setExtracting] = useState(false);
   const [extractedFile, setExtractedFile] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [buscandoSia, setBuscandoSia] = useState(false);
   const consultasFeitas = useRef(new Set<string>());
   const importacaoViaUpload = useRef(false);
@@ -132,6 +133,7 @@ export default function NovoProcessoPage() {
 
     setExtracting(true);
     setError("");
+    setUploadError(null);
 
     try {
       const body = new FormData();
@@ -144,7 +146,7 @@ export default function NovoProcessoPage() {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data.error || "Erro ao processar documento");
+        setUploadError(data.error || "Erro ao processar documento");
         return;
       }
 
@@ -197,7 +199,7 @@ export default function NovoProcessoPage() {
       const campos = [data.numLicenca, data.numProtocolo, data.validade, data.dataProtocolo, data.condicionantes, data.dadosEmpreendimento, data.orgaoSigla, data.municipio, data.modalidade].filter(Boolean);
       setExtractedFile(campos.length > 0 ? `${file.name} — ${campos.length} campo(s) extraído(s) do documento` : `${file.name} — nenhum campo identificado`);
     } catch {
-      setError("Erro ao processar documento");
+      setUploadError("Erro ao processar documento");
     } finally {
       setExtracting(false);
     }
@@ -410,6 +412,35 @@ export default function NovoProcessoPage() {
       <Topbar icon={FolderKanban} title="Nova Licença" subtitle="Digite o número da licença para importar os dados do órgão" />
       <div className="mx-auto max-w-2xl">
         <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5 space-y-4">
+            <h2 className="font-display text-sm font-semibold text-[var(--color-ink-900)]">Upload de Licença</h2>
+            <p className="text-xs text-[var(--color-ink-500)]">Anexe o documento da licença (PDF ou imagem) para preenchimento automático de nº da licença, protocolo, validade, condicionantes, tipo e órgão.</p>
+
+            <label className="focus-ring transition-brand flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-[var(--color-paper-200)] px-4 py-6 text-sm text-[var(--color-ink-500)] hover:border-[var(--color-brand-300)] hover:text-[var(--color-brand-600)]">
+              {extracting ? (
+                <>
+                  <Loader2 size={18} className="animate-spin" />
+                  Processando documento...
+                </>
+              ) : extractedFile ? (
+                <>
+                  <CheckCircle2 size={18} className="text-green-600" />
+                  <span className="text-green-700">{extractedFile}</span>
+                </>
+              ) : (
+                <>
+                  <Upload size={18} />
+                  <span>Clique para selecionar o arquivo da licença</span>
+                </>
+              )}
+              <input type="file" accept="image/*,.pdf" onChange={handleFileUpload} className="hidden" disabled={extracting} />
+            </label>
+
+            {uploadError && (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{uploadError}</div>
+            )}
+          </div>
+
           <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5 space-y-4">
             <h2 className="font-display text-sm font-semibold text-[var(--color-ink-900)]">Importação inteligente</h2>
             <div>
