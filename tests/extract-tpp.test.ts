@@ -100,3 +100,45 @@ test("extrairTpp captura todas as classes listadas sem a palavra Classe após o 
   assert.equal(r.numero, "121212");
   assert.equal(r.classesRisco, "Classe 1 — Explosivos\nClasse 5 — Substâncias Oxidantes e Peróxidos Orgânicos\nClasse 9 — Substâncias e Artigos Perigosos Diversos");
 });
+
+test("extrairTpp captura nº IBAMA com ponto de milhar e rótulo quebrado em linhas", () => {
+  const texto = [
+    "Autorização Ambiental para o Transporte Interestadual de Produtos Perigosos",
+    "N.º de registro no Banco de",
+    "Dados: 8.391.530",
+    "CPF/CNPJ: 95.387.023/0002-98",
+    "ATF2117N/ACaminhão",
+  ].join("\n");
+  const r = extrairTpp(texto);
+  assert.equal(r.numero, "8391530");
+});
+
+test("extrairTpp captura nº IBAMA quando o OCR embaralha o rótulo (Dados: depois do CPF/CNPJ)", () => {
+  const texto = [
+    "Autorização Ambiental para o Transporte Interestadual de Produtos Perigosos",
+    "N.° de registro no Banco de",
+    "CPF/CNPJ: 95.387.023/0002-98",
+    "Dados: 8391530",
+    "ATF2117 N/A Caminhão",
+  ].join("\n");
+  const r = extrairTpp(texto);
+  assert.equal(r.numero, "8391530");
+  assert.ok(r.veiculos?.includes("ATF2117 — Caminhão"));
+});
+
+test("extrairTpp captura placas no meio da linha quando há o tipo do veículo (padrão de OCR)", () => {
+  const texto = [
+    "Autorização Ambiental para o Transporte Interestadual de Produtos Perigosos",
+    "Registro no Banco de Dados: 7654321",
+    "Veículo autorizado ATF2117 — Caminhão",
+    "placa AXK6H52 è Caminhão",
+    "ATF2117 / AXK6H52 / AXX2623 Caminhão",
+    "Observações: com ABC1234 não é placa válida",
+  ].join("\n");
+  const r = extrairTpp(texto);
+  assert.equal(r.numero, "7654321");
+  assert.ok(r.veiculos?.includes("ATF2117 — Caminhão"));
+  assert.ok(r.veiculos?.includes("AXK6H52 — Caminhão"));
+  assert.ok(r.veiculos?.includes("AXX2623 — Caminhão"));
+  assert.ok(!r.veiculos?.includes("ABC1234"));
+});

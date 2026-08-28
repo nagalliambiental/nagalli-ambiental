@@ -15,33 +15,81 @@ function detectarTpp(texto: string): boolean {
 }
 
 const RE_PLACA = /^\s*(?:[-•*]\s*|\d{1,2}[.)\-]\s*)*([A-Z]{3}\d[A-Z0-9]\d{2})\s*(.*)$/i;
+const RE_TIPO_VEICULO =
+  /caminh[aã]o|cavalo\s+mec[aâ]nico|carreta|caminhonete|pick[- ]?up|\bvan\b|[\u00f4\u00f3]nibus|micro[- ]?\w{0,3}bus|equipamento|moto(?:cicleta)?|reboque|semirreboque|tanque/i;
+const RE_QUALQUER_PLACA = /[A-Z]{3}\d[A-Z0-9]\d{2}/gi;
+
+function primeiroNumeroRegistro(trecho: string): string | null {
+  const re = /(\d[\d.,]*)(?!\/)/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(trecho)) !== null) {
+    const n = m[1].replace(/[^\d]/g, "");
+    if (n.length >= 5 && n.length <= 8) return n;
+  }
+  return null;
+}
 
 function extrairNumeroRegistro(texto: string): string | null {
-  const m = texto.match(
-    /(?:n[ºo]\.?\s*de\s*)?registro\s+(?:no\s+)?banco\s+de\s*dados[^\d]{0,60}(\d{5,8})(?:\.\d{3})?(?!\d)/i
-  );
-  return m ? m[1] : null;
+  const rotulo =
+    /registro\s+(?:no\s+)?banco\s+de\s*dados[^\d]{0,60}|banco\s+de\s*dados\s*(?:n\s*[ºo]?\.?\s*de\s+)?registro\s+[^\d]{0,40}/i;
+  const m = texto.match(rotulo);
+  if (m) {
+    const trecho = texto.slice((m.index ?? 0) + m[0].length, (m.index ?? 0) + m[0].length + 120);
+    const n = primeiroNumeroRegistro(trecho);
+    if (n) return n;
+  }
+
+  const cpf = texto.match(/cpf\s*\/\s*cnpj\s*[:\s]*([\d.\/-]+)/i);
+  if (cpf) {
+    const inicio = Math.max(0, (cpf.index ?? 0) - 80);
+    const antes = texto.slice(inicio, cpf.index ?? 0);
+    const nAntes = primeiroNumeroRegistro(antes);
+    if (nAntes) return nAntes;
+
+    const fim = (cpf.index ?? 0) + cpf[0].length;
+    const depois = texto.slice(fim, fim + 120);
+    const longa = depois.match(/^\s*(?:dados?|registro)\s*[:.\s]*(\d[\d.,]*)/i);
+    if (longa) {
+      const n = longa[1].replace(/[^\d]/g, "");
+      if (n.length >= 5 && n.length <= 8) return n;
+    }
+  }
+
+  return null;
 }
 
 function extrairVeiculos(texto: string): string | null {
   const linhas = texto.split("\n");
   const veiculos: string[] = [];
   const vistos = new Set<string>();
+  const adicionar = (placa: string, tipo: string) => {
+    const p = placa.toUpperCase();
+    const t = tipo.trim();
+    if (!t || vistos.has(p)) return;
+    vistos.add(p);
+    veiculos.push(`${p} — ${t}`);
+  };
+
   for (const linha of linhas) {
+    const tipo = linha.match(RE_TIPO_VEICULO);
+    const placas = linha.match(RE_QUALQUER_PLACA);
+    if (tipo && placas) {
+      for (const p of placas) adicionar(p, tipo[0]);
+      continue;
+    }
     const m = linha.match(RE_PLACA);
     if (!m) continue;
-    const placa = m[1].toUpperCase();
-    let resto = m[2].trim();
-    resto = resto
+    const resto = m[2]
+      .trim()
       .replace(/^[-–—]\s*/, "")
       .replace(/^(?:N\s*\/\s*A\s*)+/, "")
       .replace(/^\d[\d.\/\s-]*/, "")
       .replace(/^(?:N\s*\/\s*A\s*)+/, "")
       .trim();
-    if (!resto || vistos.has(placa)) continue;
-    vistos.add(placa);
-    veiculos.push(`${placa} — ${resto}`);
+    if (!resto) continue;
+    adicionar(m[1], resto);
   }
+
   return veiculos.length ? veiculos.join("\n") : null;
 }
 
@@ -129,15 +177,15 @@ export async function extractTppFromBuffer(buffer: Buffer, ext: string): Promise
     .map(limparTextoPdf);
 
   let melhor: CamposTpp | null = null;
-  let melhoresCampos = -1;
+  let melhoresPontos = -1;
   for (const texto of candidatos) {
     const r = extrairTpp(texto);
     const qtd = [r.numero, r.cnpj, r.emitidoEm, r.validoAte, r.veiculos, r.classesRisco].filter(Boolean).length;
-    if (qtd > melhoresCampos) {
+    const pontos = qtd * 10 + (r.numero ? 1 : 0) + (r.veiculos ? 1 : 0);
+    if (pontos > melhoresPontos) {
       melhor = r;
-      melhoresCampos = qtd;
+      melhoresPontos = pontos;
     }
-    if (melhoresCampos >= 5) break;
   }
 
   return melhor ?? { numero: null, cnpj: null, emitidoEm: null, validoAte: null, veiculos: null, classesRisco: null };

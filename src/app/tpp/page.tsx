@@ -8,6 +8,7 @@ import { StatCard } from "@/components/StatCard";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Plus, Truck, CheckCircle2, CalendarClock, AlertTriangle, FileText, Pencil, RefreshCw } from "lucide-react";
+import DeleteButton from "@/components/DeleteButton";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "TPP" };
@@ -117,6 +118,7 @@ export default async function TppPage() {
                           <Link href={`/tpp/novo?renovar=${r.id}`} className="rounded-md p-1.5 text-[var(--color-ink-500)] hover:bg-[var(--color-paper-100)] hover:text-[var(--color-brand-600)]" title="Renovar">
                             <RefreshCw size={16} />
                           </Link>
+                          <DeleteButton entity="TPP" endpoint={`/api/tpp/${r.id}`} redirectTo="/tpp" iconOnly />
                         </div>
                       </td>
                     </tr>

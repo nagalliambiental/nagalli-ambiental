@@ -10,6 +10,7 @@ interface DeleteButtonProps {
   endpoint: string;
   redirectTo?: string;
   label?: string;
+  iconOnly?: boolean;
 }
 
 export default function DeleteButton({
@@ -17,6 +18,7 @@ export default function DeleteButton({
   endpoint,
   redirectTo,
   label = "Excluir",
+  iconOnly = false,
 }: DeleteButtonProps) {
   const [open, setOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -44,14 +46,25 @@ export default function DeleteButton({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="focus-ring transition-brand flex items-center gap-2 rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
-      >
-        <Trash2 size={16} />
-        {label}
-      </button>
+      {iconOnly ? (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          title={`Excluir ${entity}`}
+          className="rounded-md p-1.5 text-[var(--color-ink-500)] hover:bg-[var(--color-paper-100)] hover:text-red-600"
+        >
+          <Trash2 size={16} />
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="focus-ring transition-brand flex items-center gap-2 rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+        >
+          <Trash2 size={16} />
+          {label}
+        </button>
+      )}
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
