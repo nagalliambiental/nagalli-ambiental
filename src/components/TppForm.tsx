@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Upload, Loader2, CheckCircle2, FileText, RefreshCw } from "lucide-react";
 import { useToast } from "@/components/Toast";
@@ -58,7 +58,6 @@ function somarDias(data: string, dias: number): string {
 export default function TppForm({ modo, tppId, inicial, renovarId }: Props) {
   const router = useRouter();
   const { toast } = useToast();
-  const fileRef = useRef<HTMLInputElement>(null);
 
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [empreendimentos, setEmpreendimentos] = useState<Empreendimento[]>([]);
@@ -78,6 +77,7 @@ export default function TppForm({ modo, tppId, inicial, renovarId }: Props) {
   const [saving, setSaving] = useState(false);
   const [extracting, setExtracting] = useState(false);
   const [extractedMsg, setExtractedMsg] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [error, setError] = useState("");
   const renovarDe = renovarId || null;
 
@@ -130,6 +130,8 @@ export default function TppForm({ modo, tppId, inicial, renovarId }: Props) {
     if (!arquivo) return;
     setFile(arquivo);
     setExtracting(true);
+    setUploadError(null);
+    setExtractedMsg(null);
     setError("");
 
     try {
@@ -138,7 +140,7 @@ export default function TppForm({ modo, tppId, inicial, renovarId }: Props) {
       const res = await fetch("/api/tpp/extract", { method: "POST", body });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        toast(data.error || "Erro ao processar documento", "error");
+        setUploadError(data.error || "Erro ao processar documento");
         return;
       }
       const data = await res.json();
@@ -165,7 +167,7 @@ export default function TppForm({ modo, tppId, inicial, renovarId }: Props) {
           : `${arquivo.name} — documento não reconhecido como TPP`
       );
     } catch {
-      toast("Erro ao processar documento", "error");
+      setUploadError("Erro ao processar documento");
     } finally {
       setExtracting(false);
     }
@@ -241,27 +243,34 @@ export default function TppForm({ modo, tppId, inicial, renovarId }: Props) {
         </div>
       )}
 
-      <div>
-        <label className="mb-1 block text-sm font-medium text-[var(--color-ink-700)]">PDF da autorização</label>
-        <div className="flex items-center gap-3">
-          <input
-            ref={fileRef}
-            type="file"
-            accept="application/pdf,image/*"
-            onChange={handleFileUpload}
-            className="text-sm text-[var(--color-ink-700)] file:mr-3 file:rounded-lg file:border-0 file:bg-[var(--color-brand-50)] file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-[var(--color-brand-600)] hover:file:bg-[var(--color-brand-100)]"
-          />
-          {extracting && <Loader2 size={16} className="animate-spin text-[var(--color-brand-500)]" />}
-        </div>
-        {extractedMsg ? (
-          <p className="mt-1 flex items-center gap-1.5 text-xs text-[var(--color-brand-700)]">
-            <CheckCircle2 size={14} />
-            {extractedMsg}
-          </p>
-        ) : (
-          <p className="mt-1 text-xs text-[var(--color-ink-500)]">
-            Ao selecionar o PDF, o sistema preenche automaticamente nº, datas, veículos e classes de risco.
-          </p>
+      <div className="rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-4">
+        <h2 className="font-display text-sm font-semibold text-[var(--color-ink-900)]">Upload da Autorização</h2>
+        <p className="mt-0.5 text-xs text-[var(--color-ink-500)]">
+          Anexe o documento da autorização (PDF ou imagem) para preenchimento automático do nº do IBAMA, datas, placas dos veículos e classes de risco.
+        </p>
+
+        <label className="focus-ring transition-brand mt-3 flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-[var(--color-paper-200)] px-4 py-6 text-sm text-[var(--color-ink-500)] hover:border-[var(--color-brand-300)] hover:text-[var(--color-brand-600)]">
+          {extracting ? (
+            <>
+              <Loader2 size={18} className="animate-spin" />
+              Processando documento...
+            </>
+          ) : extractedMsg ? (
+            <>
+              <CheckCircle2 size={18} className="text-green-600" />
+              <span className="text-green-700">{extractedMsg}</span>
+            </>
+          ) : (
+            <>
+              <Upload size={18} />
+              <span>Clique para selecionar o arquivo da autorização</span>
+            </>
+          )}
+          <input type="file" accept="image/*,.pdf" onChange={handleFileUpload} className="hidden" disabled={extracting} />
+        </label>
+
+        {uploadError && (
+          <div className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{uploadError}</div>
         )}
       </div>
 

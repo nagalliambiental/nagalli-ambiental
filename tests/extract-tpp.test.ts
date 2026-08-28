@@ -61,3 +61,42 @@ test("extrairTpp retorna null para documentos que não são TPP", () => {
   assert.equal(r.validoAte, null);
   assert.equal(r.veiculos, null);
 });
+
+test("extrairTpp tolera linhas com bullets/índices e Nº de Registro com variação de rótulo", () => {
+  const texto = [
+    "Autorização Ambiental para o Transporte",
+    "Interestadual de Produtos Perigosos",
+    "Nº de Registro no Banco de Dados: 9834752",
+    "CPF/CNPJ: 12.345.678/0001-90",
+    "Veículos",
+    "1. ATF2I17 — Caminhão",
+    "2. - AXK6H52 - Caminhão",
+    "3. • GXM0H76 — Equipamento",
+    "4. EJI6C80 73512211 Caminhão",
+    "Classes de Risco",
+    "1. Classe 5 — Substâncias Oxidantes e Peróxidos Orgânicos",
+    "2. Classe 9 — Substâncias e Artigos Perigosos Diversos",
+  ].join("\n");
+  const r = extrairTpp(texto);
+  assert.equal(r.numero, "9834752");
+  assert.ok(r.veiculos?.includes("AXK6H52 — Caminhão"));
+  assert.ok(r.veiculos?.includes("GXM0H76 — Equipamento"));
+  assert.ok(r.veiculos?.includes("EJI6C80 — Caminhão"));
+  assert.ok(r.classesRisco?.includes("Classe 5 — Substâncias Oxidantes"));
+  assert.ok(r.classesRisco?.includes("Classe 9 — Substâncias e Artigos Perigosos Diversos"));
+});
+
+test("extrairTpp captura todas as classes listadas sem a palavra Classe após o cabeçalho", () => {
+  const texto = [
+    "Autorização Ambiental para o Transporte Interestadual de Produtos Perigosos",
+    "Registro no Banco de Dados: 121212",
+    "Classes de Risco:",
+    "1 - Explosivos",
+    "5 - Substâncias Oxidantes e Peróxidos Orgânicos",
+    "9 - Substâncias e Artigos Perigosos Diversos",
+    "Data de Emissão: 01/01/2026",
+  ].join("\n");
+  const r = extrairTpp(texto);
+  assert.equal(r.numero, "121212");
+  assert.equal(r.classesRisco, "Classe 1 — Explosivos\nClasse 5 — Substâncias Oxidantes e Peróxidos Orgânicos\nClasse 9 — Substâncias e Artigos Perigosos Diversos");
+});
