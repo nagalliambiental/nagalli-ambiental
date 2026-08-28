@@ -67,7 +67,6 @@ export default function TppForm({ modo, tppId, inicial, renovarId }: Props) {
     empreendimentoId: inicial?.empreendimentoId ? String(inicial.empreendimentoId) : "",
     dataEmissao: inicial ? String(inicial.dataEmissao).slice(0, 10) : "",
     dataValidade: inicial ? String(inicial.dataValidade).slice(0, 10) : "",
-    veiculos: inicial?.veiculos || "",
     classesRisco: inicial?.classesRisco || "",
     observacoes: inicial?.observacoes || "",
   });
@@ -102,7 +101,6 @@ export default function TppForm({ modo, tppId, inicial, renovarId }: Props) {
           ...prev,
           clienteId: String(data.clienteId),
           empreendimentoId: data.empreendimentoId ? String(data.empreendimentoId) : "",
-          veiculos: data.veiculos || "",
           classesRisco: data.classesRisco || "",
           observacoes: data.observacoes || "",
         }));
@@ -150,7 +148,6 @@ export default function TppForm({ modo, tppId, inicial, renovarId }: Props) {
         if (data.numero) next.numero = data.numero;
         if (data.emitidoEm) next.dataEmissao = toDateInput(data.emitidoEm);
         if (data.validoAte) next.dataValidade = toDateInput(data.validoAte);
-        if (data.veiculos) next.veiculos = data.veiculos;
         if (data.classesRisco) next.classesRisco = data.classesRisco;
         if (data.cnpj && !next.clienteId) {
           const cnpj = extrairCnpjDigitos(data.cnpj);
@@ -160,7 +157,7 @@ export default function TppForm({ modo, tppId, inicial, renovarId }: Props) {
         return next;
       });
 
-      const campos = [data.numero, data.emitidoEm, data.validoAte, data.veiculos, data.classesRisco].filter(Boolean).length;
+      const campos = [data.numero, data.emitidoEm, data.validoAte, data.classesRisco].filter(Boolean).length;
       setExtractedMsg(
         campos > 0
           ? `${arquivo.name} — ${campos} campo(s) extraído(s) do documento`
@@ -202,7 +199,6 @@ export default function TppForm({ modo, tppId, inicial, renovarId }: Props) {
       body.append("empreendimentoId", form.empreendimentoId);
       body.append("dataEmissao", form.dataEmissao);
       body.append("dataValidade", form.dataValidade);
-      body.append("veiculos", form.veiculos.trim());
       body.append("classesRisco", form.classesRisco.trim());
       body.append("observacoes", form.observacoes.trim());
       if (file) body.append("arquivo", file);
@@ -239,14 +235,14 @@ export default function TppForm({ modo, tppId, inicial, renovarId }: Props) {
       {renovarDe && (
         <div className="flex items-center gap-2 rounded-lg bg-[var(--color-brand-50)] px-3 py-2 text-sm text-[var(--color-brand-700)]">
           <RefreshCw size={16} />
-          Renovação: cliente, empreendimento, veículos e classes copiados da autorização anterior. Informe os dados do novo PDF ou faça o upload.
+          Renovação: cliente, empreendimento e classes copiados da autorização anterior. Informe os dados do novo PDF ou faça o upload.
         </div>
       )}
 
       <div className="rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-4">
         <h2 className="font-display text-sm font-semibold text-[var(--color-ink-900)]">Upload da Autorização</h2>
         <p className="mt-0.5 text-xs text-[var(--color-ink-500)]">
-          Anexe o documento da autorização (PDF ou imagem) para preenchimento automático do nº do IBAMA, datas, placas dos veículos e classes de risco.
+          Anexe o documento da autorização (PDF ou imagem) para preenchimento automático do nº do IBAMA, datas e classes de risco.
         </p>
 
         <label className="focus-ring transition-brand mt-3 flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-[var(--color-paper-200)] px-4 py-6 text-sm text-[var(--color-ink-500)] hover:border-[var(--color-brand-300)] hover:text-[var(--color-brand-600)]">
@@ -335,17 +331,6 @@ export default function TppForm({ modo, tppId, inicial, renovarId }: Props) {
       <p className="text-xs text-[var(--color-ink-500)]">
         Validade padrão de {VALIDADE_DIAS} dias após a emissão (preenchida automaticamente se o campo de validade estiver vazio).
       </p>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium text-[var(--color-ink-700)]">Veículos (placa — tipo)</label>
-        <textarea
-          value={form.veiculos}
-          onChange={(e) => setField("veiculos", e.target.value)}
-          rows={4}
-          placeholder={"ATF2117 — Caminhão\nAXK6H52 — Caminhão"}
-          className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] placeholder:text-[var(--color-ink-500)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]"
-        />
-      </div>
 
       <div>
         <label className="mb-1 block text-sm font-medium text-[var(--color-ink-700)]">Classes de risco</label>
