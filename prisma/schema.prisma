@@ -101,6 +101,7 @@ model Cliente {
   propostas                                 Proposta[]
   residuosAnuais                            ResiduoAnual[]
   residuos                                  ResiduoItem[]
+  autorizacoesTpp                           AutorizacaoTpp[]
 }
 
 model Empreendimento {
@@ -137,6 +138,7 @@ acessos       Acesso[]
     processos     Processo[]
     propostas     Proposta[]
     sinirConexoes SinirConexao[]
+    autorizacoesTpp AutorizacaoTpp[]
   }
 
 model Orgao {
@@ -629,4 +631,26 @@ model PropostaModelo {
   ativo          Boolean  @default(true)
   criadoEm       DateTime @default(now())
   atualizadoEm   DateTime @updatedAt
+}
+
+model AutorizacaoTpp {
+  id               Int            @id @default(autoincrement())
+  numero           String
+  clienteId        Int
+  empreendimentoId Int?
+  dataEmissao      DateTime
+  dataValidade     DateTime
+  veiculos         String?
+  classesRisco     String?
+  observacoes      String?
+  arquivo          Bytes?
+  arquivoNome      String?
+  ativo            Boolean        @default(true)
+  criadoEm         DateTime       @default(now())
+  atualizadoEm     DateTime       @updatedAt
+  cliente          Cliente        @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  empreendimento   Empreendimento? @relation(fields: [empreendimentoId], references: [id], onDelete: SetNull)
+
+  @@index([empreendimentoId])
+  @@index([dataValidade])
 }

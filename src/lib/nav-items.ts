@@ -40,6 +40,7 @@ export const NAV_ITEMS: NavItem[] = [
       { label: "Licenças", href: "/processos" },
       { label: "Exigências", href: "/exigencias" },
       { label: "Prazos", href: "/prazos" },
+      { label: "TPP", href: "/tpp" },
       { label: "Modelos", href: "/modelos" },
     ],
   },

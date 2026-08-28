@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "seed": "tsx prisma/seed.ts",
-    "test": "tsx --test tests/dmr-parser.test.ts tests/extract-license.test.ts tests/lib.test.ts tests/prazos.test.ts tests/pgrcc-iat.test.ts tests/cliente-cnpj.test.ts tests/transferir-empreendimento.test.ts tests/endereco.test.ts",
+    "test": "tsx --test tests/dmr-parser.test.ts tests/extract-license.test.ts tests/lib.test.ts tests/prazos.test.ts tests/pgrcc-iat.test.ts tests/cliente-cnpj.test.ts tests/transferir-empreendimento.test.ts tests/endereco.test.ts tests/extract-tpp.test.ts",
     "postinstall": "prisma generate",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",

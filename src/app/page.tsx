@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Building2, CalendarClock, Plus, Inbox, ArrowUpRight, FileCheck2, FileSpreadsheet, LayoutDashboard, AlertTriangle } from "lucide-react";
+import { Building2, CalendarClock, Plus, Inbox, ArrowUpRight, FileCheck2, FileSpreadsheet, LayoutDashboard, AlertTriangle, Truck } from "lucide-react";
 import { Topbar } from "@/components/Topbar";
 import { StatCard } from "@/components/StatCard";
 import { prisma } from "@/lib/prisma";
@@ -37,6 +37,7 @@ export default async function DashboardPage() {
     processosRecentes,
     processosComValidade,
     exigenciasComPrazo,
+    tppsComValidade,
   ] = await Promise.all([
     prisma.processo.count(),
     prisma.cliente.count(),
@@ -57,6 +58,14 @@ export default async function DashboardPage() {
       where: { cumprida: false },
       include: { processo: { select: { numProtocolo: true, empreendimento: { select: { apelido: true } } } } },
       orderBy: { prazo: "asc" },
+    }),
+    prisma.autorizacaoTpp.findMany({
+      where: { ativo: true },
+      include: {
+        cliente: { select: { apelido: true } },
+        empreendimento: { select: { apelido: true } },
+      },
+      orderBy: { dataValidade: "asc" },
     }),
   ]);
 
@@ -187,6 +196,56 @@ export default async function DashboardPage() {
               <Link href="/dmr" className={`focus-ring transition-brand rounded-lg px-4 py-2 text-sm font-medium text-white ${isUrgent ? "bg-red-600 hover:bg-red-700" : "bg-amber-600 hover:bg-amber-700"}`}>
                 Ver controle
               </Link>
+            </div>
+          </div>
+        );
+      })()}
+
+      {(() => {
+        if (tppsComValidade.length === 0) return null;
+        const hojePainel = new Date();
+        const alertas = tppsComValidade.filter((t) => differenceInDays(t.dataValidade, hojePainel) <= 15);
+        const vencidas = tppsComValidade.filter((t) => differenceInDays(t.dataValidade, hojePainel) < 0).length;
+        const aVencer = alertas.length - vencidas;
+        const precisaAtencao = alertas.length > 0;
+        return (
+          <div className={`mt-6 rounded-[var(--radius-card)] border p-4 ${precisaAtencao ? "border-red-200 bg-red-50" : "border-[var(--color-paper-200)] bg-white"}`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`rounded-full p-2 ${precisaAtencao ? "bg-red-100" : "bg-[var(--color-brand-50)]"}`}>
+                  <Truck size={18} className={precisaAtencao ? "text-red-700" : "text-[var(--color-brand-600)]"} />
+                </div>
+                <div>
+                  <p className={`text-sm font-medium ${precisaAtencao ? "text-red-900" : "text-[var(--color-ink-900)]"}`}>
+                    TPP — Produtos Perigosos ({tppsComValidade.length})
+                  </p>
+                  <p className={`text-xs ${precisaAtencao ? "text-red-700" : "text-[var(--color-ink-500)]"}`}>
+                    {precisaAtencao
+                      ? `${vencidas} vencida(s) · ${aVencer} a vencer em 15 dias — providencie a renovação`
+                      : "Todas as autorizações vigentes"}
+                  </p>
+                </div>
+              </div>
+              <Link href="/tpp" className={`focus-ring transition-brand rounded-lg px-4 py-2 text-sm font-medium text-white ${precisaAtencao ? "bg-red-600 hover:bg-red-700" : "bg-[var(--color-river-700)] hover:bg-[var(--color-river-500)]"}`}>
+                Ver TPPs
+              </Link>
+            </div>
+            <div className="mt-3 grid gap-2 md:grid-cols-2">
+              {tppsComValidade.map((t) => {
+                const diff = differenceInDays(t.dataValidade, hojePainel);
+                return (
+                  <Link key={t.id} href={`/tpp/${t.id}`} className="focus-ring transition-brand flex items-center justify-between rounded-lg border bg-white p-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-[var(--color-ink-900)]">{t.cliente.apelido}</p>
+                      <p className="truncate text-xs text-[var(--color-ink-500)]">TPP {t.numero} · {t.empreendimento?.apelido || "—"}</p>
+                    </div>
+                    <div className={`shrink-0 text-right text-xs font-semibold ${diff < 0 ? "text-red-700" : diff <= 15 ? "text-amber-700" : "text-[var(--color-brand-600)]"}`}>
+                      {format(t.dataValidade, "dd/MM/yyyy", { locale: ptBR })}
+                      <div>{diff < 0 ? `Vencida há ${Math.abs(diff)}d` : diff <= 15 ? `Vence em ${diff}d` : `Faltam ${diff}d`}</div>
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           </div>
         );
