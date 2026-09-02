@@ -50,7 +50,7 @@ export default async function DashboardPage() {
       include: { empreendimento: { select: { apelido: true } }, orgao: { select: { sigla: true } } },
     }),
     prisma.processo.findMany({
-      where: { validade: { not: null }, ativo: true },
+      where: { validade: { not: null }, ativo: true, renovacaoPendente: false },
       include: { empreendimento: { select: { apelido: true } }, orgao: { select: { sigla: true } } },
       orderBy: { validade: "asc" },
     }),

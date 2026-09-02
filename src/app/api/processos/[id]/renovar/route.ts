@@ -47,6 +47,11 @@ export async function POST(
         },
       });
 
+      await tx.processo.update({
+        where: { id: original.id },
+        data: { renovacaoPendente: true },
+      });
+
       await tx.timelineProcesso.create({
         data: {
           status: original.status,

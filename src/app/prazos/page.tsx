@@ -27,7 +27,7 @@ export default async function PrazosPage() {
       orderBy: { prazo: "asc" },
     }),
     prisma.processo.findMany({
-      where: { validade: { not: null } },
+      where: { validade: { not: null }, renovacaoPendente: false },
       select: {
         id: true,
         numProtocolo: true,

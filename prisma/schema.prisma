@@ -185,6 +185,7 @@ model Processo {
   dataContato      DateTime?
   alertaDias       Int                @default(30)
   ativo            Boolean            @default(true)
+  renovacaoPendente Boolean           @default(false)
   autorizacaoCorte AutorizacaoCorte?
   documentos       Documento[]
   exigencias       Exigencia[]
