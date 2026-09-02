@@ -137,7 +137,8 @@ acessos       Acesso[]
     historicos    Historico[]
     processos     Processo[]
     propostas     Proposta[]
-    sinirConexoes SinirConexao[]
+    sinirConexoes   SinirConexao[]
+    mtrImaConexoes  MtrImaConexao[]
     autorizacoesTpp AutorizacaoTpp[]
   }
 
@@ -450,6 +451,44 @@ model SinirConexao {
     manifestos     SinirManifesto[]
     modelos        SinirModelo[]
   }
+
+model MtrImaConexao {
+  id               Int               @id @default(autoincrement())
+  nome             String
+  cnpj             String
+  cpf              String
+  senha            String
+  unidade          Int?
+  empreendimentoId Int?
+  ativo            Boolean           @default(true)
+  ultimoUsoEm      DateTime?
+  criadoEm         DateTime          @default(now())
+  atualizadoEm     DateTime          @updatedAt
+  empreendimento   Empreendimento?   @relation(fields: [empreendimentoId], references: [id])
+  manifestos       MtrImaManifesto[]
+}
+
+model MtrImaManifesto {
+  id               Int             @id @default(autoincrement())
+  conexaoId        Int
+  numero           String
+  status           String          @default("EMITIDO")
+  clienteNome      String?
+  empreendNome     String?
+  transportadorNome String?
+  destinadorNome   String?
+  resumo           String?
+  quantidade       Float?
+  unidade          String?
+  dataExpedicao    DateTime?
+  dataRecebimento  DateTime?
+  classeRisco      String?
+  classeNome       String?
+  criadoEm         DateTime        @default(now())
+  conexao          MtrImaConexao   @relation(fields: [conexaoId], references: [id])
+
+  @@unique([conexaoId, numero])
+}
 
 model Contato {
   id               Int      @id @default(autoincrement())

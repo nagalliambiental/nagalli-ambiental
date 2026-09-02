@@ -49,6 +49,7 @@ export const NAV_ITEMS: NavItem[] = [
     children: [
       { label: "DMR", href: "/dmr" },
       { label: "SINIR MTR", href: "/sinir" },
+      { label: "MTR IMA/SC", href: "/mtr-ima" },
     ],
   },
   { label: "Tarefas", href: "/tarefas", icon: ListTodo },
