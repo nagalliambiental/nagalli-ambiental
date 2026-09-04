@@ -85,7 +85,15 @@ export async function PUT(
   if (body.dataProtocolo !== undefined) data.dataProtocolo = body.dataProtocolo ? new Date(body.dataProtocolo) : null;
   if (body.dataContato !== undefined) data.dataContato = body.dataContato ? new Date(body.dataContato) : null;
   if (body.alertaDias !== undefined) data.alertaDias = Number(body.alertaDias);
-  if (body.status !== undefined) data.status = body.status;
+  if (body.status !== undefined) {
+    data.status = body.status;
+    if (body.status === "encerrado") {
+      data.renovacaoPendente = true;
+    } else if (body.renovacaoPendente === undefined) {
+      data.renovacaoPendente = false;
+    }
+  }
+  if (body.renovacaoPendente !== undefined) data.renovacaoPendente = Boolean(body.renovacaoPendente);
   if (body.empreendimentoId !== undefined) data.empreendimentoId = Number(body.empreendimentoId);
   if (body.responsavelId !== undefined) data.responsavelId = body.responsavelId ? Number(body.responsavelId) : null;
   if (body.observacoes !== undefined) data.observacoes = body.observacoes || null;

@@ -27,6 +27,7 @@ const statusLabels: Record<string, string> = {
   indeferido: "Indeferido",
   arquivado: "Arquivado",
   vencido: "Vencido",
+  encerrado: "Encerrado",
 };
 
 const statusColors: Record<string, string> = {
@@ -37,6 +38,7 @@ const statusColors: Record<string, string> = {
   indeferido: "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]",
   arquivado: "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]",
   vencido: "bg-red-50 text-red-700",
+  encerrado: "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]",
 };
 
 function statusExibicao(
@@ -44,7 +46,7 @@ function statusExibicao(
   validade: Date | null,
   renovacaoPendente: boolean
 ): { label: string; color: string } {
-  if (renovacaoPendente) {
+  if (renovacaoPendente || status === "encerrado") {
     return { label: "Encerrado", color: "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]" };
   }
   if (validade) {

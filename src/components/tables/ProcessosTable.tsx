@@ -20,7 +20,7 @@ interface ProcessoData {
 
 const statusLabels: Record<string, string> = {
   protocolado: "Protocolado", em_andamento: "Em Andamento", exigencia_recebida: "Exigência Recebida",
-  deferido: "Deferido", indeferido: "Indeferido", arquivado: "Arquivado", vencido: "Vencido",
+  deferido: "Deferido", indeferido: "Indeferido", arquivado: "Arquivado", vencido: "Vencido", encerrado: "Encerrado",
 };
 const statusColors: Record<string, string> = {
   protocolado: "bg-[var(--color-brand-50)] text-[var(--color-brand-600)]",
@@ -29,10 +29,11 @@ const statusColors: Record<string, string> = {
   indeferido: "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]",
   arquivado: "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]",
   vencido: "bg-red-50 text-red-700",
+  encerrado: "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]",
 };
 
 function statusExibicao(p: ProcessoData): { label: string; color: string } {
-  if (p.renovacaoPendente) {
+  if (p.renovacaoPendente || p.status === "encerrado") {
     return { label: "Encerrado", color: "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]" };
   }
   if (p.validade) {

@@ -25,11 +25,14 @@ export default async function ProcessosPage({
   const where: Prisma.ProcessoWhereInput = {};
   if (tab === "vencidos") {
     where.status = "vencido";
+  } else if (tab === "encerradas") {
+    where.OR = [{ status: "encerrado" }, { renovacaoPendente: true }];
   } else {
     if (status) {
       where.status = status;
     } else {
-      where.status = { not: "vencido" };
+      where.status = { notIn: ["vencido", "encerrado"] };
+      where.renovacaoPendente = false;
     }
   }
 
@@ -43,6 +46,9 @@ export default async function ProcessosPage({
   });
 
   const totalVencidos = await prisma.processo.count({ where: { status: "vencido", ativo: true } });
+  const totalEncerradas = await prisma.processo.count({
+    where: { OR: [{ status: "encerrado" }, { renovacaoPendente: true }], ativo: true },
+  });
   const [protocolados, emAndamento] = await Promise.all([
     prisma.processo.count({ where: { status: "protocolado", ativo: true } }),
     prisma.processo.count({ where: { status: "em_andamento", ativo: true } }),
@@ -89,7 +95,7 @@ export default async function ProcessosPage({
         <Link
           href="/processos"
           className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
-            tab !== "vencidos"
+            tab !== "vencidos" && tab !== "encerradas"
               ? "border-[var(--color-brand-500)] text-[var(--color-brand-600)]"
               : "border-transparent text-[var(--color-ink-500)] hover:text-[var(--color-ink-700)]"
           }`}
@@ -109,6 +115,22 @@ export default async function ProcessosPage({
           {totalVencidos > 0 && (
             <span className={`ml-1 rounded px-1.5 py-0.5 text-xs ${tab === "vencidos" ? "bg-[var(--color-brand-50)] text-[var(--color-brand-600)]" : "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]"}`}>
               {totalVencidos}
+            </span>
+          )}
+        </Link>
+        <Link
+          href="/processos?tab=encerradas"
+          className={`flex items-center gap-1.5 pb-3 text-sm font-medium border-b-2 transition-colors ${
+            tab === "encerradas"
+              ? "border-[var(--color-brand-500)] text-[var(--color-brand-600)]"
+              : "border-transparent text-[var(--color-ink-500)] hover:text-[var(--color-ink-700)]"
+          }`}
+        >
+          <FolderKanban size={14} />
+          Encerradas
+          {totalEncerradas > 0 && (
+            <span className={`ml-1 rounded px-1.5 py-0.5 text-xs ${tab === "encerradas" ? "bg-[var(--color-brand-50)] text-[var(--color-brand-600)]" : "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]"}`}>
+              {totalEncerradas}
             </span>
           )}
         </Link>
