@@ -42,6 +42,7 @@ export const NAV_ITEMS: NavItem[] = [
       { label: "Prazos", href: "/prazos" },
       { label: "TPP", href: "/tpp" },
       { label: "Modelos", href: "/modelos" },
+      { label: "Docs. Gerados", href: "/documentos-gerados" },
     ],
   },
   {

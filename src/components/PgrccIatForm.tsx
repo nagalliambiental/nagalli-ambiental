@@ -26,6 +26,8 @@ interface Props {
   clienteApelido: string;
   cliente: ClienteSer;
   configuracoes: ConfigSer | null;
+  initialData?: Partial<PgrccIatFormData>;
+  docId?: number;
 }
 
 function numero(v?: string | null): number {
@@ -110,13 +112,17 @@ function NumCell({
   );
 }
 
-export function PgrccIatForm({ clienteId, clienteApelido, cliente, configuracoes }: Props) {
+export function PgrccIatForm({ clienteId, clienteApelido, cliente, configuracoes, initialData, docId }: Props) {
   const router = useRouter();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [buscaAberta, setBuscaAberta] = useState<{ tipo: "transporte" | "destinacao"; id: string } | null>(null);
   const [form, setForm] = useState<PgrccIatFormData>(() => {
+    if (initialData && Object.keys(initialData).length > 2) {
+      const base = emptyPgrccIatFormData();
+      return { ...base, ...initialData } as PgrccIatFormData;
+    }
     const base = emptyPgrccIatFormData();
     const c = String;
     base.clienteRazaoSocial = c(cliente.razaoSocial ?? "");
@@ -304,10 +310,15 @@ export function PgrccIatForm({ clienteId, clienteApelido, cliente, configuracoes
     e.preventDefault();
     setSaving(true);
     try {
-      const res = await fetch("/api/documentos/gerar", {
-        method: "POST",
+      const url = docId ? `/api/documentos-gerados/${docId}` : "/api/documentos/gerar";
+      const method = docId ? "PUT" : "POST";
+      const body = docId
+        ? { formData: form }
+        : { clienteId, templateSlug: "pgrcc-iat", formData: form };
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clienteId, templateSlug: "pgrcc-iat", formData: form }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -318,16 +329,16 @@ export function PgrccIatForm({ clienteId, clienteApelido, cliente, configuracoes
       const disposition = res.headers.get("Content-Disposition") || "";
       const match = disposition.match(/filename="([^"]+)"/);
       const filename = match ? match[1] : "PGRCC_IAT.docx";
-      const url = URL.createObjectURL(blob);
+      const urlBlob = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = url;
+      a.href = urlBlob;
       a.download = filename;
       document.body.appendChild(a);
       a.click();
       a.remove();
-      URL.revokeObjectURL(url);
+      URL.revokeObjectURL(urlBlob);
       setDirty(false);
-      toast("PGRCC IAT gerado com sucesso", "success");
+      toast(docId ? "Documento atualizado com sucesso" : "PGRCC IAT gerado com sucesso", "success");
       router.refresh();
     } catch {
       toast("Erro ao gerar o documento", "error");
@@ -340,8 +351,8 @@ export function PgrccIatForm({ clienteId, clienteApelido, cliente, configuracoes
     <div>
       <Topbar
         icon={FileText}
-        title={`PGRCC IAT — ${clienteApelido}`}
-        subtitle="Preencha os dados do Projeto Simplificado de Gerenciamento de Resíduos da Construção Civil (PGRCC)"
+        title={docId ? `Editar PGRCC IAT — ${clienteApelido}` : `PGRCC IAT — ${clienteApelido}`}
+        subtitle={docId ? "Edite os dados e gere o documento atualizado" : "Preencha os dados do Projeto Simplificado de Gerenciamento de Resíduos da Construção Civil (PGRCC)"}
         actions={
           <button
             type="button"
@@ -681,7 +692,7 @@ export function PgrccIatForm({ clienteId, clienteApelido, cliente, configuracoes
             className="focus-ring transition-brand inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
           >
             {saving ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-            {saving ? "Gerando..." : "Gerar documento"}
+            {saving ? "Gerando..." : docId ? "Salvar e gerar" : "Gerar documento"}
           </button>
         </div>
       </form>

@@ -141,6 +141,7 @@ acessos       Acesso[]
     sinirConexoes   SinirConexao[]
     mtrImaConexoes  MtrImaConexao[]
     autorizacoesTpp AutorizacaoTpp[]
+    documentoGerados DocumentoGerado[]
   }
 
 model Orgao {
@@ -577,14 +578,16 @@ model SinirManifesto {
 }
 
 model DocumentoGerado {
-  id            Int      @id @default(autoincrement())
-  clienteId     Int
-  templateSlug  String
-  dadosSnapshot Json
-  caminho       String?
-  conteudo      Bytes?
-  createdAt     DateTime @default(now())
-  cliente       Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  id              Int              @id @default(autoincrement())
+  clienteId       Int
+  empreendimentoId Int?
+  templateSlug    String
+  dadosSnapshot   Json
+  caminho         String?
+  conteudo        Bytes?
+  createdAt       DateTime         @default(now())
+  cliente         Cliente          @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  empreendimento  Empreendimento?  @relation(fields: [empreendimentoId], references: [id], onDelete: SetNull)
 }
 
 model Configuracao {

@@ -165,9 +165,11 @@ interface Props {
   clienteApelido: string;
   cliente: ClienteSer;
   templateSlug: "pgrs-pinhais" | "pgrs-curitiba";
+  initialData?: Partial<PgrsPinhaisFormData | PgrsCuritibaFormData>;
+  docId?: number;
 }
 
-export function PgrsForm({ clienteId, clienteApelido, cliente, templateSlug }: Props) {
+export function PgrsForm({ clienteId, clienteApelido, cliente, templateSlug, initialData, docId }: Props) {
   const isCuritiba = templateSlug === "pgrs-curitiba";
   const router = useRouter();
   const { toast } = useToast();
@@ -175,6 +177,10 @@ export function PgrsForm({ clienteId, clienteApelido, cliente, templateSlug }: P
   const [dirty, setDirty] = useState(false);
 
   const [form, setForm] = useState<PgrsPinhaisFormData | PgrsCuritibaFormData>(() => {
+    if (initialData && Object.keys(initialData).length > 2) {
+      const base = isCuritiba ? emptyPgrsCuritibaFormData() : emptyPgrsFormData();
+      return { ...base, ...initialData } as PgrsPinhaisFormData | PgrsCuritibaFormData;
+    }
     const perigosos = porCategoria(cliente, "PERIGOSO");
     const naoReciclaveis = porCategoria(cliente, "NAO_RECICLAVEL");
     const reciclaveis = porCategoria(cliente, "RECICLAVEL");
@@ -227,10 +233,15 @@ export function PgrsForm({ clienteId, clienteApelido, cliente, templateSlug }: P
     e.preventDefault();
     setSaving(true);
     try {
-      const res = await fetch("/api/documentos/gerar", {
-        method: "POST",
+      const url = docId ? `/api/documentos-gerados/${docId}` : "/api/documentos/gerar";
+      const method = docId ? "PUT" : "POST";
+      const body = docId
+        ? { formData: form }
+        : { clienteId, templateSlug, formData: form, dadosEstabelecimento: dadosEstab };
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clienteId, templateSlug, formData: form, dadosEstabelecimento: dadosEstab }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -241,16 +252,16 @@ export function PgrsForm({ clienteId, clienteApelido, cliente, templateSlug }: P
       const disposition = res.headers.get("Content-Disposition") || "";
       const match = disposition.match(/filename="([^"]+)"/);
       const filename = match ? match[1] : `${isCuritiba ? "PGRS_Curitiba" : "PGRS_Pinhais"}.docx`;
-      const url = URL.createObjectURL(blob);
+      const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = url;
+      a.href = blobUrl;
       a.download = filename;
       document.body.appendChild(a);
       a.click();
       a.remove();
-      URL.revokeObjectURL(url);
+      URL.revokeObjectURL(blobUrl);
       setDirty(false);
-      toast(isCuritiba ? "PGRS Curitiba gerado com sucesso" : "PGRS Pinhais gerado com sucesso", "success");
+      toast(docId ? "Documento atualizado com sucesso" : (isCuritiba ? "PGRS Curitiba gerado com sucesso" : "PGRS Pinhais gerado com sucesso"), "success");
       router.refresh();
     } catch {
       toast("Erro ao gerar o documento", "error");
@@ -260,15 +271,17 @@ export function PgrsForm({ clienteId, clienteApelido, cliente, templateSlug }: P
   }
 
   const titulo = isCuritiba ? "PGRS Simplificado — Curitiba" : "PGRS Simplificado — Pinhais";
-  const subtitulo = isCuritiba
-    ? "Plano de Gerenciamento de Resíduos Sólidos Simplificado da Secretaria Municipal do Meio Ambiente de Curitiba/PR"
-    : "Termo de Referência do Plano de Gerenciamento de Resíduos Sólidos Simplificado do município de Pinhais/PR";
+  const subtitulo = docId
+    ? "Edite os dados e gere o documento atualizado"
+    : isCuritiba
+      ? "Plano de Gerenciamento de Resíduos Sólidos Simplificado da Secretaria Municipal do Meio Ambiente de Curitiba/PR"
+      : "Termo de Referência do Plano de Gerenciamento de Resíduos Sólidos Simplificado do município de Pinhais/PR";
 
   return (
     <div>
       <Topbar
         icon={FileText}
-        title={`${titulo} — ${clienteApelido}`}
+        title={docId ? `Editar ${titulo} — ${clienteApelido}` : `${titulo} — ${clienteApelido}`}
         subtitle={subtitulo}
         actions={
           <button
@@ -378,7 +391,7 @@ export function PgrsForm({ clienteId, clienteApelido, cliente, templateSlug }: P
             className="focus-ring transition-brand inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
           >
             {saving ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-            {saving ? "Gerando..." : "Gerar documento (.docx)"}
+            {saving ? "Gerando..." : docId ? "Salvar e gerar" : "Gerar documento (.docx)"}
           </button>
         </div>
       </form>

@@ -89,6 +89,85 @@ export async function GET(_req: Request, { params }: Params) {
   });
 }
 
+export async function PUT(req: Request, { params }: Params) {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  }
+
+  const { id } = await params;
+  const doc = await prisma.documentoGerado.findUnique({ where: { id: Number(id) } });
+  if (!doc) {
+    return NextResponse.json({ error: "Documento não encontrado" }, { status: 404 });
+  }
+
+  const body = await req.json();
+  const { formData, empreendimentoId } = body;
+
+  if (!formData || typeof formData !== "object") {
+    return NextResponse.json({ error: "Dados do formulario invalidos" }, { status: 400 });
+  }
+
+  const cliente = await prisma.cliente.findUnique({ where: { id: doc.clienteId } });
+  if (!cliente) {
+    return NextResponse.json({ error: "Cliente nao encontrado" }, { status: 404 });
+  }
+
+  const configuracao = await prisma.configuracao.findFirst();
+
+  let buffer: Buffer;
+  let filename: string;
+  let caminhoRelativo: string | null = doc.caminho;
+
+  try {
+    const resultado = gerarDocumentoBuffer(doc.templateSlug, cliente, formData, configuracao);
+    buffer = resultado.buffer;
+    filename = resultado.filename;
+
+    try {
+      if (doc.caminho) {
+        await unlink(path.join(process.cwd(), "public", doc.caminho)).catch(() => {});
+      }
+      const uploadDir = path.join(process.cwd(), "public", "uploads", "documentos-gerados");
+      await mkdir(uploadDir, { recursive: true });
+      const safeName = `${Date.now()}-${filename}`;
+      caminhoRelativo = `/uploads/documentos-gerados/${safeName}`;
+      await writeFile(path.join(uploadDir, safeName), buffer);
+    } catch {
+      // ambiente sem escrita em disco
+    }
+  } catch (err) {
+    console.error("Erro ao regenerar o documento:", err);
+    return NextResponse.json({ error: "Erro ao gerar o documento" }, { status: 500 });
+  }
+
+  await prisma.documentoGerado.update({
+    where: { id: doc.id },
+    data: {
+      dadosSnapshot: formData,
+      caminho: caminhoRelativo,
+      conteudo: new Uint8Array(buffer),
+      empreendimentoId: empreendimentoId ? Number(empreendimentoId) : null,
+    },
+  });
+
+  await logAuditoria(
+    "ATUALIZAR",
+    "DocumentoGerado",
+    doc.id,
+    { templateSlug: doc.templateSlug },
+    session.user?.id ? Number(session.user.id) : undefined
+  );
+
+  return new NextResponse(new Uint8Array(buffer), {
+    status: 200,
+    headers: {
+      "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "Content-Disposition": `attachment; filename="${filename}"`,
+    },
+  });
+}
+
 export async function DELETE(_req: Request, { params }: Params) {
   const session = await auth();
   if (!session?.user) {
