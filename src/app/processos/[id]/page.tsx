@@ -182,6 +182,29 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
                   </div>
                 </div>
 
+                <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
+                  <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-3 flex items-center gap-2">
+                    <Clock size={16} />
+                    Prazos e Vencimentos
+                  </h2>
+                  <div className="space-y-3 text-sm">
+                    {processo.validade && (
+                      <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
+                        <Calendar size={14} />
+                        <span>Validade: <strong className="font-medium text-[var(--color-ink-900)]">{format(processo.validade, "dd/MM/yyyy", { locale: ptBR })}</strong></span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
+                      <AlertTriangle size={14} />
+                      <span>Alerta: <strong className="font-medium text-[var(--color-ink-900)]">{processo.alertaDias}</strong> dias antes do vencimento</span>
+                    </div>
+                    <div className="flex items-center justify-between border-t border-[var(--color-paper-200)] pt-3 text-[var(--color-ink-500)]">
+                      <span>Criado em</span>
+                      <span className="text-[var(--color-ink-900)]">{format(processo.criadoEm, "dd/MM/yyyy", { locale: ptBR })}</span>
+                    </div>
+                  </div>
+                </div>
+
                 {processo.observacoes && (
                   <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
                     <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-2 flex items-center gap-2">
@@ -191,28 +214,6 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
                     <p className="text-sm text-[var(--color-ink-700)] whitespace-pre-wrap">{processo.observacoes}</p>
                   </div>
                 )}
-              </div>
-            ),
-          },
-          {
-            key: "prazos",
-            label: "Prazos",
-            content: (
-              <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
-                <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-3">Prazos</h2>
-                <div className="space-y-3 text-sm">
-                  {processo.validade && (
-                    <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
-                      <Clock size={14} />
-                      <span>Validade: {format(processo.validade, "dd/MM/yyyy", { locale: ptBR })}</span>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
-                    <AlertTriangle size={14} />
-                    <span>Alerta: {processo.alertaDias} dias antes do vencimento</span>
-                  </div>
-                  <div className="flex justify-between"><span className="text-[var(--color-ink-500)]">Criado em</span><span>{format(processo.criadoEm, "dd/MM/yyyy", { locale: ptBR })}</span></div>
-                </div>
               </div>
             ),
           },
