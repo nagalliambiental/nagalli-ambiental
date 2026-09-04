@@ -82,6 +82,40 @@ export default async function DashboardPage() {
     }),
   ]);
 
+  const hoje = new Date();
+
+  const alertasProcessos = processosComValidade
+    .filter((p) => p.validade && differenceInDays(p.validade, hoje) <= p.alertaDias)
+    .map((p) => ({
+      id: p.id,
+      tipo: p.tipo,
+      numProtocolo: p.numProtocolo,
+      apelido: p.empreendimento.apelido,
+      orgao: p.orgao.sigla,
+      validade: p.validade!,
+      diasRestantes: differenceInDays(p.validade!, hoje),
+    }));
+
+  const alertasExigencias = exigenciasComPrazo
+    .filter((e) => differenceInDays(e.prazo, hoje) <= 7)
+    .map((e) => ({
+      id: e.id,
+      descricao: e.descricao,
+      processo: e.processo.numProtocolo,
+      apelido: e.processo.empreendimento.apelido,
+      prazo: e.prazo,
+      diasRestantes: differenceInDays(e.prazo, hoje),
+    }));
+
+  const totalAlertas = alertasProcessos.length + alertasExigencias.length;
+  const diasDMR = getDiasFimTrimestre();
+  const trimestre = getTrimestreAtual();
+  const dmrUrgente = diasDMR <= 20;
+  const tppAlertas = tppsComValidade.filter((t) => differenceInDays(t.dataValidade, hoje) <= 15);
+  const tppVencidas = tppAlertas.filter((t) => differenceInDays(t.dataValidade, hoje) < 0).length;
+  const tppAVencer = tppAlertas.length - tppVencidas;
+  const tppPrecisaAtencao = tppAlertas.length > 0;
+
   return (
     <>
       <Breadcrumbs items={[{ label: "Dashboard" }]} />
@@ -113,231 +147,189 @@ export default async function DashboardPage() {
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:order-2">
-      {(() => {
-        const hoje = new Date();
-        const alertasProcessos = processosComValidade
-          .filter((p) => p.validade && differenceInDays(p.validade, hoje) <= p.alertaDias)
-          .map((p) => ({
-            id: p.id,
-            tipo: p.tipo,
-            numProtocolo: p.numProtocolo,
-            apelido: p.empreendimento.apelido,
-            orgao: p.orgao.sigla,
-            validade: p.validade!,
-            diasRestantes: differenceInDays(p.validade!, hoje),
-          }));
-        const alertasExigencias = exigenciasComPrazo
-          .filter((e) => differenceInDays(e.prazo, hoje) <= 7)
-          .map((e) => ({
-            id: e.id,
-            descricao: e.descricao,
-            processo: e.processo.numProtocolo,
-            apelido: e.processo.empreendimento.apelido,
-            prazo: e.prazo,
-            diasRestantes: differenceInDays(e.prazo, hoje),
-          }));
-        const totalAlertas = alertasProcessos.length + alertasExigencias.length;
-        if (totalAlertas === 0) return null;
-        return (
-          <div className="rounded-[var(--radius-card)] border border-red-200 bg-red-50 p-5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="rounded-full bg-red-100 p-2">
-                  <AlertTriangle size={18} className="text-red-700" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-red-900">Alertas de prazos a vencer ({totalAlertas})</p>
-                  <p className="text-xs text-red-700">Licenças e exigências com vencimento próximo ou vencido</p>
-                </div>
-              </div>
-              <Link href="/prazos" className="focus-ring transition-brand rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">
-                Ver todos
-              </Link>
+        <div className="space-y-6 lg:col-span-2">
+          <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">
+            <div className="flex items-center justify-between px-5 pt-5 pb-3">
+              <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Últimas Licenças</h2>
+              <Link href="/processos" className="text-sm font-medium text-[var(--color-brand-600)] hover:underline">Ver todos</Link>
             </div>
-            <div className="mt-4 grid gap-3 md:grid-cols-2">
-              {alertasProcessos.slice(0, 4).map((a) => (
-                <Link key={`p-${a.id}`} href={`/processos/${a.id}`} className={`focus-ring transition-brand flex items-center justify-between rounded-lg border bg-white p-3 ${a.diasRestantes < 0 ? "border-red-300" : "border-amber-200"}`}>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-[var(--color-ink-900)]">{a.tipo} — {a.apelido}</p>
-                    <p className="text-xs text-[var(--color-ink-500)]">{a.numProtocolo} · {a.orgao}</p>
-                  </div>
-                  <div className={`shrink-0 text-right text-xs font-semibold ${a.diasRestantes < 0 ? "text-red-700" : "text-amber-700"}`}>
-                    {format(a.validade, "dd/MM/yyyy", { locale: ptBR })}
-                    <div>{a.diasRestantes < 0 ? `Vencido há ${Math.abs(a.diasRestantes)} dia(s)` : `${a.diasRestantes} dia(s)`}</div>
-                  </div>
-                </Link>
-              ))}
-              {alertasExigencias.slice(0, 4).map((a) => (
-                <Link key={`e-${a.id}`} href={`/exigencias/${a.id}`} className={`focus-ring transition-brand flex items-center justify-between rounded-lg border bg-white p-3 ${a.diasRestantes < 0 ? "border-red-300" : "border-amber-200"}`}>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-[var(--color-ink-900)]">{a.descricao}</p>
-                    <p className="text-xs text-[var(--color-ink-500)]">{a.processo} · {a.apelido}</p>
-                  </div>
-                  <div className={`shrink-0 text-right text-xs font-semibold ${a.diasRestantes < 0 ? "text-red-700" : "text-amber-700"}`}>
-                    {format(a.prazo, "dd/MM/yyyy", { locale: ptBR })}
-                    <div>{a.diasRestantes < 0 ? `Vencido há ${Math.abs(a.diasRestantes)} dia(s)` : `${a.diasRestantes} dia(s)`}</div>
-                  </div>
-                </Link>
-              ))}
+            {processosRecentes.length > 0 ? (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-y border-[var(--color-paper-200)] text-[var(--color-ink-500)]">
+                    <th className="text-left px-5 py-2 font-medium">Tipo</th>
+                    <th className="text-left px-5 py-2 font-medium">Empreendimento</th>
+                    <th className="text-left px-5 py-2 font-medium">Status</th>
+                    <th className="text-left px-5 py-2 font-medium">Vencimento</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {processosRecentes.map((p) => (
+                    <tr key={p.id} className="border-b border-[var(--color-paper-50)] hover:bg-[var(--color-paper-50)]">
+                      <td className="px-5 py-3">
+                        <Link href={`/processos/${p.id}`} className="font-medium text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)]">{p.tipo}</Link>
+                      </td>
+                      <td className="px-5 py-3 text-[var(--color-ink-700)]">{p.empreendimento.apelido}</td>
+                      <td className="px-5 py-3">
+                        <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${statusExibicaoDashboard(p.status, p.validade, p.renovacaoPendente).color}`}>{statusExibicaoDashboard(p.status, p.validade, p.renovacaoPendente).label}</span>
+                      </td>
+                      <td className="px-5 py-3 text-[var(--color-ink-500)]">{p.validade ? format(p.validade, "dd/MM/yyyy", { locale: ptBR }) : "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div className="flex flex-col items-center gap-3 px-6 py-14 text-center">
+                <div className="rounded-full bg-[var(--color-paper-100)] p-3"><FileCheck2 size={22} className="text-[var(--color-ink-500)]" /></div>
+                <p className="text-sm text-[var(--color-ink-500)]">Nenhum processo cadastrado</p>
+              </div>
+            )}
+          </div>
+
+          <div>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Clientes recentes</h2>
+              {totalClientes > 5 && <Link href="/clientes" className="text-sm font-medium text-[var(--color-brand-600)] hover:underline">Ver todos</Link>}
+            </div>
+            <div className="shadow-card overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">
+              {clientesRecentes.length === 0 ? (
+                <div className="flex flex-col items-center gap-3 px-6 py-14 text-center">
+                  <div className="rounded-full bg-[var(--color-paper-100)] p-3"><Inbox size={22} className="text-[var(--color-ink-500)]" /></div>
+                  <p className="text-sm font-medium text-[var(--color-ink-900)]">Nenhum cliente cadastrado ainda</p>
+                  <Link href="/clientes/novo" className="focus-ring transition-brand mt-2 flex items-center gap-2 rounded-[var(--radius-card)] bg-[var(--color-brand-500)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)]">
+                    <Plus size={16} strokeWidth={2.5} />Novo cliente
+                  </Link>
+                </div>
+              ) : (
+                <div className="divide-y divide-[var(--color-paper-100)]">
+                  {clientesRecentes.map((c) => (
+                    <Link key={c.id} href={`/clientes/${c.id}`} className="focus-ring transition-brand flex items-center justify-between px-6 py-4 hover:bg-[var(--color-paper-50)]">
+                      <div>
+                        <p className="text-sm font-medium text-[var(--color-ink-900)]">{c.apelido}</p>
+                        <p className="text-xs text-[var(--color-ink-500)]">{c.razaoSocial} · {c.cnpj}</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-[var(--color-ink-500)]">{c._count.empreendimentos} empreendimento(s)</span>
+                        <ArrowUpRight size={14} className="text-[var(--color-ink-300)]" />
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
-        );
-      })()}
+        </div>
 
-      {(() => {
-        const dias = getDiasFimTrimestre();
-        const tri = getTrimestreAtual();
-        const isUrgent = dias <= 20;
-        return (
-          <div className={`rounded-[var(--radius-card)] border p-4 ${isUrgent ? "border-red-200 bg-red-50" : "border-amber-200 bg-amber-50"}`}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className={`rounded-full p-2 ${isUrgent ? "bg-red-100" : "bg-amber-100"}`}>
-                  <FileSpreadsheet size={18} className={isUrgent ? "text-red-700" : "text-amber-700"} />
+        <div className="space-y-6">
+          {totalAlertas > 0 && (
+            <div className="rounded-[var(--radius-card)] border border-red-200 bg-red-50 p-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-full bg-red-100 p-2">
+                    <AlertTriangle size={18} className="text-red-700" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-red-900">Alertas de prazos ({totalAlertas})</p>
+                    <p className="text-xs text-red-700">Licenças e exigências com vencimento próximo ou vencido</p>
+                  </div>
                 </div>
-                <div>
-                  <p className={`text-sm font-medium ${isUrgent ? "text-red-900" : "text-amber-900"}`}>
-                    DMR — {tri.label} ({tri.inicio} a {tri.fim})
-                  </p>
-                  <p className={`text-xs ${isUrgent ? "text-red-700" : "text-amber-700"}`}>
-                    {dias <= 0
-                      ? "O trimestre encerrou! Regularize as pendências."
-                      : `Faltam ${dias} dia(s) para o fim do trimestre.${dias <= 20 ? " Acompanhe os empreendimentos pendentes." : ""}`
-                    }
-                  </p>
-                </div>
+                <Link href="/prazos" className="focus-ring transition-brand rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700">
+                  Ver todos
+                </Link>
               </div>
-              <Link href="/dmr" className={`focus-ring transition-brand rounded-lg px-4 py-2 text-sm font-medium text-white ${isUrgent ? "bg-red-600 hover:bg-red-700" : "bg-amber-600 hover:bg-amber-700"}`}>
-                Ver controle
-              </Link>
-            </div>
-          </div>
-        );
-      })()}
-
-      {(() => {
-        if (tppsComValidade.length === 0) return null;
-        const hojePainel = new Date();
-        const alertas = tppsComValidade.filter((t) => differenceInDays(t.dataValidade, hojePainel) <= 15);
-        const vencidas = tppsComValidade.filter((t) => differenceInDays(t.dataValidade, hojePainel) < 0).length;
-        const aVencer = alertas.length - vencidas;
-        const precisaAtencao = alertas.length > 0;
-        return (
-          <div className={`rounded-[var(--radius-card)] border p-4 ${precisaAtencao ? "border-red-200 bg-red-50" : "border-[var(--color-paper-200)] bg-white"}`}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className={`rounded-full p-2 ${precisaAtencao ? "bg-red-100" : "bg-[var(--color-brand-50)]"}`}>
-                  <Truck size={18} className={precisaAtencao ? "text-red-700" : "text-[var(--color-brand-600)]"} />
-                </div>
-                <div>
-                  <p className={`text-sm font-medium ${precisaAtencao ? "text-red-900" : "text-[var(--color-ink-900)]"}`}>
-                    TPP — Produtos Perigosos ({tppsComValidade.length})
-                  </p>
-                  <p className={`text-xs ${precisaAtencao ? "text-red-700" : "text-[var(--color-ink-500)]"}`}>
-                    {precisaAtencao
-                      ? `${vencidas} vencida(s) · ${aVencer} a vencer em 15 dias — providencie a renovação`
-                      : "Todas as autorizações vigentes"}
-                  </p>
-                </div>
-              </div>
-              <Link href="/tpp" className={`focus-ring transition-brand rounded-lg px-4 py-2 text-sm font-medium text-white ${precisaAtencao ? "bg-red-600 hover:bg-red-700" : "bg-[var(--color-river-700)] hover:bg-[var(--color-river-500)]"}`}>
-                Ver TPPs
-              </Link>
-            </div>
-            <div className="mt-3 grid gap-2 md:grid-cols-2">
-              {tppsComValidade.map((t) => {
-                const diff = differenceInDays(t.dataValidade, hojePainel);
-                return (
-                  <Link key={t.id} href={`/tpp/${t.id}`} className="focus-ring transition-brand flex items-center justify-between rounded-lg border bg-white p-3">
+              <div className="mt-4 space-y-2">
+                {alertasProcessos.slice(0, 4).map((a) => (
+                  <Link key={`p-${a.id}`} href={`/processos/${a.id}`} className={`focus-ring transition-brand flex items-center justify-between rounded-lg border bg-white p-3 ${a.diasRestantes < 0 ? "border-red-300" : "border-amber-200"}`}>
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-[var(--color-ink-900)]">{t.cliente.apelido}</p>
-                      <p className="truncate text-xs text-[var(--color-ink-500)]">TPP {t.numero} · {t.empreendimento?.apelido || "—"}</p>
+                      <p className="truncate text-sm font-medium text-[var(--color-ink-900)]">{a.tipo} — {a.apelido}</p>
+                      <p className="text-xs text-[var(--color-ink-500)]">{a.numProtocolo} · {a.orgao}</p>
                     </div>
-                    <div className={`shrink-0 text-right text-xs font-semibold ${diff < 0 ? "text-red-700" : diff <= 15 ? "text-amber-700" : "text-[var(--color-brand-600)]"}`}>
-                      {format(t.dataValidade, "dd/MM/yyyy", { locale: ptBR })}
-                      <div>{diff < 0 ? `Vencida há ${Math.abs(diff)}d` : diff <= 15 ? `Vence em ${diff}d` : `Faltam ${diff}d`}</div>
+                    <div className={`shrink-0 text-right text-xs font-semibold ${a.diasRestantes < 0 ? "text-red-700" : "text-amber-700"}`}>
+                      {format(a.validade, "dd/MM", { locale: ptBR })}
+                      <div>{a.diasRestantes < 0 ? `${Math.abs(a.diasRestantes)}d atraso` : `${a.diasRestantes}d`}</div>
                     </div>
                   </Link>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })()}
-        </div>
-
-        <div className="lg:order-1 lg:col-span-2">
-      <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">
-          <div className="flex items-center justify-between px-5 pt-5 pb-3">
-            <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Últimas Licenças</h2>
-            <Link href="/processos" className="text-sm font-medium text-[var(--color-brand-600)] hover:underline">Ver todos</Link>
-          </div>
-          {processosRecentes.length > 0 ? (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-y border-[var(--color-paper-200)] text-[var(--color-ink-500)]">
-                  <th className="text-left px-5 py-2 font-medium">Tipo</th>
-                  <th className="text-left px-5 py-2 font-medium">Empreendimento</th>
-                  <th className="text-left px-5 py-2 font-medium">Status</th>
-                  <th className="text-left px-5 py-2 font-medium">Vencimento</th>
-                </tr>
-              </thead>
-              <tbody>
-                {processosRecentes.map((p) => (
-                  <tr key={p.id} className="border-b border-[var(--color-paper-50)] hover:bg-[var(--color-paper-50)]">
-                    <td className="px-5 py-3">
-                      <Link href={`/processos/${p.id}`} className="font-medium text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)]">{p.tipo}</Link>
-                    </td>
-                    <td className="px-5 py-3 text-[var(--color-ink-700)]">{p.empreendimento.apelido}</td>
-                    <td className="px-5 py-3">
-                      <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${statusExibicaoDashboard(p.status, p.validade, p.renovacaoPendente).color}`}>{statusExibicaoDashboard(p.status, p.validade, p.renovacaoPendente).label}</span>
-                    </td>
-                    <td className="px-5 py-3 text-[var(--color-ink-500)]">{p.validade ? format(p.validade, "dd/MM/yyyy", { locale: ptBR }) : "—"}</td>
-                  </tr>
                 ))}
-              </tbody>
-            </table>
-          ) : (
-            <div className="flex flex-col items-center gap-3 px-6 py-14 text-center">
-              <div className="rounded-full bg-[var(--color-paper-100)] p-3"><FileCheck2 size={22} className="text-[var(--color-ink-500)]" /></div>
-              <p className="text-sm text-[var(--color-ink-500)]">Nenhum processo cadastrado</p>
+                {alertasExigencias.slice(0, 4).map((a) => (
+                  <Link key={`e-${a.id}`} href={`/exigencias/${a.id}`} className={`focus-ring transition-brand flex items-center justify-between rounded-lg border bg-white p-3 ${a.diasRestantes < 0 ? "border-red-300" : "border-amber-200"}`}>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-[var(--color-ink-900)]">{a.descricao}</p>
+                      <p className="text-xs text-[var(--color-ink-500)]">{a.processo} · {a.apelido}</p>
+                    </div>
+                    <div className={`shrink-0 text-right text-xs font-semibold ${a.diasRestantes < 0 ? "text-red-700" : "text-amber-700"}`}>
+                      {format(a.prazo, "dd/MM", { locale: ptBR })}
+                      <div>{a.diasRestantes < 0 ? `${Math.abs(a.diasRestantes)}d atraso` : `${a.diasRestantes}d`}</div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
             </div>
           )}
-        </div>
 
-      <div className="mt-6 mb-6">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Clientes recentes</h2>
-          {totalClientes > 5 && <Link href="/clientes" className="text-sm font-medium text-[var(--color-brand-600)] hover:underline">Ver todos</Link>}
-        </div>
-        <div className="shadow-card overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">
-          {clientesRecentes.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 px-6 py-14 text-center">
-              <div className="rounded-full bg-[var(--color-paper-100)] p-3"><Inbox size={22} className="text-[var(--color-ink-500)]" /></div>
-              <p className="text-sm font-medium text-[var(--color-ink-900)]">Nenhum cliente cadastrado ainda</p>
-              <Link href="/clientes/novo" className="focus-ring transition-brand mt-2 flex items-center gap-2 rounded-[var(--radius-card)] bg-[var(--color-brand-500)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)]">
-                <Plus size={16} strokeWidth={2.5} />Novo cliente
+          <div className={`rounded-[var(--radius-card)] border p-4 ${dmrUrgente ? "border-red-200 bg-red-50" : "border-amber-200 bg-amber-50"}`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`rounded-full p-2 ${dmrUrgente ? "bg-red-100" : "bg-amber-100"}`}>
+                  <FileSpreadsheet size={18} className={dmrUrgente ? "text-red-700" : "text-amber-700"} />
+                </div>
+                <div>
+                  <p className={`text-sm font-medium ${dmrUrgente ? "text-red-900" : "text-amber-900"}`}>
+                    DMR — {trimestre.label}
+                  </p>
+                  <p className={`text-xs ${dmrUrgente ? "text-red-700" : "text-amber-700"}`}>
+                    {diasDMR <= 0
+                      ? "Trimestre encerrado! Regularize as pendências."
+                      : `Faltam ${diasDMR} dia(s) para o fim do trimestre.`}
+                  </p>
+                </div>
+              </div>
+              <Link href="/dmr" className={`focus-ring transition-brand rounded-lg px-3 py-1.5 text-xs font-medium text-white ${dmrUrgente ? "bg-red-600 hover:bg-red-700" : "bg-amber-600 hover:bg-amber-700"}`}>
+                Ver
               </Link>
             </div>
-          ) : (
-            <div className="divide-y divide-[var(--color-paper-100)]">
-              {clientesRecentes.map((c) => (
-                <Link key={c.id} href={`/clientes/${c.id}`} className="focus-ring transition-brand flex items-center justify-between px-6 py-4 hover:bg-[var(--color-paper-50)]">
+          </div>
+
+          {tppsComValidade.length > 0 && (
+            <div className={`rounded-[var(--radius-card)] border p-4 ${tppPrecisaAtencao ? "border-red-200 bg-red-50" : "border-[var(--color-paper-200)] bg-white"}`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`rounded-full p-2 ${tppPrecisaAtencao ? "bg-red-100" : "bg-[var(--color-brand-50)]"}`}>
+                    <Truck size={18} className={tppPrecisaAtencao ? "text-red-700" : "text-[var(--color-brand-600)]"} />
+                  </div>
                   <div>
-                    <p className="text-sm font-medium text-[var(--color-ink-900)]">{c.apelido}</p>
-                    <p className="text-xs text-[var(--color-ink-500)]">{c.razaoSocial} · {c.cnpj}</p>
+                    <p className={`text-sm font-medium ${tppPrecisaAtencao ? "text-red-900" : "text-[var(--color-ink-900)]"}`}>
+                      TPP — Produtos Perigosos ({tppsComValidade.length})
+                    </p>
+                    <p className={`text-xs ${tppPrecisaAtencao ? "text-red-700" : "text-[var(--color-ink-500)]"}`}>
+                      {tppPrecisaAtencao
+                        ? `${tppVencidas} vencida(s) · ${tppAVencer} a vencer em 15 dias`
+                        : "Todas as autorizações vigentes"}
+                    </p>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-[var(--color-ink-500)]">{c._count.empreendimentos} empreendimento(s)</span>
-                    <ArrowUpRight size={14} className="text-[var(--color-ink-300)]" />
-                  </div>
+                </div>
+                <Link href="/tpp" className={`focus-ring transition-brand rounded-lg px-3 py-1.5 text-xs font-medium text-white ${tppPrecisaAtencao ? "bg-red-600 hover:bg-red-700" : "bg-[var(--color-river-700)] hover:bg-[var(--color-river-500)]"}`}>
+                  Ver
                 </Link>
-              ))}
+              </div>
+              <div className="mt-3 space-y-2">
+                {tppsComValidade.slice(0, 4).map((t) => {
+                  const diff = differenceInDays(t.dataValidade, hoje);
+                  return (
+                    <Link key={t.id} href={`/tpp/${t.id}`} className="focus-ring transition-brand flex items-center justify-between rounded-lg border bg-white p-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-[var(--color-ink-900)]">{t.cliente.apelido}</p>
+                        <p className="truncate text-xs text-[var(--color-ink-500)]">TPP {t.numero} · {t.empreendimento?.apelido || "—"}</p>
+                      </div>
+                      <div className={`shrink-0 text-right text-xs font-semibold ${diff < 0 ? "text-red-700" : diff <= 15 ? "text-amber-700" : "text-[var(--color-brand-600)]"}`}>
+                        {format(t.dataValidade, "dd/MM", { locale: ptBR })}
+                        <div>{diff < 0 ? `${Math.abs(diff)}d atraso` : diff <= 15 ? `${diff}d` : `OK`}</div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
           )}
-        </div>
-      </div>
         </div>
       </div>
     </>
