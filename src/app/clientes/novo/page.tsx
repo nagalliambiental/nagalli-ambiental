@@ -354,25 +354,27 @@ export default function NovoClientePage() {
           <div className="md:col-span-2 lg:col-span-3 border-b border-[var(--color-paper-200)] pb-2 pt-1">
             <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--color-brand-600)]">
               <Mail size={15} />
-              Contato da Empresa
+              Dados da Empresa
             </h3>
           </div>
-          <div>
-            <label className={labelCls}>Telefone</label>
-            <input
-              value={form.telefone}
-              onChange={(e) => setForm((f) => ({ ...f, telefone: e.target.value }))}
-              className={inputCls}
-            />
-          </div>
-          <div>
-            <label className={labelCls}>Email</label>
-            <input
-              value={form.email}
-              onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-              className={inputCls}
-              type="email"
-            />
+          <div className="md:col-span-2 lg:col-span-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 rounded-lg border border-[var(--color-paper-200)] bg-[var(--color-paper-50)] p-4">
+            <div>
+              <label className={labelCls}>Telefone</label>
+              <input
+                value={form.telefone}
+                onChange={(e) => setForm((f) => ({ ...f, telefone: e.target.value }))}
+                className={inputCls}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>Email</label>
+              <input
+                value={form.email}
+                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                className={inputCls}
+                type="email"
+              />
+            </div>
           </div>
 
           <div className="md:col-span-2 lg:col-span-3 border-b border-[var(--color-paper-200)] pb-2 pt-1">
