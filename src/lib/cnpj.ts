@@ -178,6 +178,12 @@ export async function consultarCnpj(cnpj: string): Promise<DadosEmpresa | null> 
   combinado.logradouro = combinado.enderecoRua;
   combinado.numero = combinado.enderecoNumero;
   combinado.complemento = combinado.enderecoComplemento;
+  if (combinado.cep) {
+    combinado.cep = combinado.cep.replace(/\D/g, "");
+    if (combinado.cep.length === 8) {
+      combinado.cep = `${combinado.cep.slice(0, 5)}-${combinado.cep.slice(5)}`;
+    }
+  }
 
   return combinado;
 }

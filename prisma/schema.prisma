@@ -102,6 +102,7 @@ model Cliente {
   residuosAnuais                            ResiduoAnual[]
   residuos                                  ResiduoItem[]
   autorizacoesTpp                           AutorizacaoTpp[]
+  contatos                                  Contato[]
 }
 
 model Empreendimento {
@@ -218,6 +219,7 @@ model Condicionante {
 model AutorizacaoCorte {
   id                   Int       @id @default(autoincrement())
   processoId           Int       @unique
+  formaCompensacao     String?   @default("individuos")
   quantidadeIndividuos Int?
   compensacaoExigida   Boolean   @default(false)
   tipoCompensacao      String?
@@ -228,7 +230,7 @@ model AutorizacaoCorte {
   comprovante          String?
   exigenciaId          Int?
   criadoEm             DateTime  @default(now())
-  atualizadoEm         DateTime  @updatedAt
+  atualizadoEm         DateTime @updatedAt
   processo             Processo  @relation(fields: [processoId], references: [id], onDelete: Cascade)
 }
 
@@ -497,12 +499,15 @@ model Contato {
   cargo            String?
   telefone         String?
   empreendimentoId Int?
+  clienteId        Int?
   empreendimento   Empreendimento? @relation(fields: [empreendimentoId], references: [id], onDelete: SetNull)
+  cliente          Cliente?        @relation(fields: [clienteId], references: [id], onDelete: SetNull)
   ativo            Boolean  @default(true)
   criadoEm         DateTime @default(now())
   atualizadoEm     DateTime @updatedAt
 
   @@index([empreendimentoId])
+  @@index([clienteId])
 }
 
 model SinirModelo {

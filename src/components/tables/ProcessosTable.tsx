@@ -1,6 +1,6 @@
 "use client";
 
-import { format } from "date-fns";
+import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import Link from "next/link";
 import { FilterableDataTable, type Column } from "@/components/FilterableDataTable";
@@ -13,6 +13,7 @@ interface ProcessoData {
   tipo: string;
   status: string;
   validade: Date | null;
+  renovacaoPendente: boolean;
   orgao: { sigla: string };
   empreendimento: { id: number; apelido: string };
 }
@@ -30,6 +31,19 @@ const statusColors: Record<string, string> = {
   vencido: "bg-red-50 text-red-700",
 };
 
+function statusExibicao(p: ProcessoData): { label: string; color: string } {
+  if (p.renovacaoPendente) {
+    return { label: "Encerrado", color: "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]" };
+  }
+  if (p.validade) {
+    const dias = differenceInDays(new Date(p.validade), new Date());
+    if (dias <= 180) {
+      return { label: "Próximo do Vencimento", color: "bg-amber-50 text-amber-800" };
+    }
+  }
+  return { label: statusLabels[p.status] || p.status, color: statusColors[p.status] || "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]" };
+}
+
 export function ProcessosTable({ data }: { data: ProcessoData[] }) {
   const columns: Column<ProcessoData>[] = [
     { header: "Nº Licença", sortable: true, sortKey: "numLicenca", render: (p) => <Link href={`/processos/${p.id}`} className="font-mono text-sm text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)] hover:underline"><span className="block max-w-[220px] truncate" title={p.numLicenca || p.numProtocolo}>{p.numLicenca || p.numProtocolo}</span></Link> },
@@ -40,8 +54,8 @@ export function ProcessosTable({ data }: { data: ProcessoData[] }) {
       header: "Status",
       sortable: true, sortKey: "status",
       render: (p) => (
-        <span className={`inline-block rounded px-2 py-1 text-xs font-medium ${statusColors[p.status] || "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]"}`}>
-          {statusLabels[p.status] || p.status}
+        <span className={`inline-block rounded px-2 py-1 text-xs font-medium ${statusExibicao(p).color}`}>
+          {statusExibicao(p).label}
         </span>
       ),
     },

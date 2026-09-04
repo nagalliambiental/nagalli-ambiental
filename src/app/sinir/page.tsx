@@ -951,12 +951,17 @@ function MeusMtrsTab(props: {
       toast("Nenhum MTR na situação Salvo — consulte o SINIR primeiro", "info");
       return;
     }
+    const clienteId = empreendimentoAtual?.cliente?.id;
+    if (!clienteId) {
+      toast("O empreendimento não possui cliente vinculado", "warning");
+      return;
+    }
     setCarregandoContatos(true);
     setSelecionados([]);
     setContatosNotif([]);
     setModalNotificar(true);
     try {
-      const res = await fetch(`/api/contatos?empreendimentoId=${conexaoAtual.empreendimentoId}`);
+      const res = await fetch(`/api/contatos?clienteId=${clienteId}`);
       if (res.ok) {
         const data: ContatoEmpreendimento[] = await res.json();
         setContatosNotif(data.filter((c) => c.ativo));
@@ -1101,7 +1106,7 @@ function MeusMtrsTab(props: {
           <button
             onClick={abrirModalNotificar}
             disabled={salvosParaNotificar.length === 0 || conexoes.length === 0}
-            title="Enviar por e-mail aos contatos do empreendimento a relação de MTRs na situação Salvo, agrupados por destinador"
+            title="Enviar por e-mail aos contatos do cliente a relação de MTRs na situação Salvo, agrupados por destinador"
             className="focus-ring transition-brand flex items-center gap-2 rounded-lg border border-[var(--color-ink-900)] bg-[var(--color-ink-900)] px-3.5 py-2 text-sm font-medium text-white hover:bg-black disabled:opacity-50"
           >
             <Mail size={15} />
@@ -1421,7 +1426,7 @@ function MeusMtrsTab(props: {
                 <p className="py-4 text-center text-sm text-[var(--color-ink-500)]"><Loader2 size={15} className="mr-2 inline animate-spin" /> Carregando contatos...</p>
               ) : contatosNotif.length === 0 ? (
                 <p className="py-4 text-center text-sm text-[var(--color-ink-500)]">
-                  Nenhum contato cadastrado para este empreendimento — cadastre na aba <b>Contatos</b>.
+                  Nenhum contato cadastrado para este cliente — cadastre na aba <b>Contatos</b>.
                 </p>
               ) : (
                 <div className="max-h-64 space-y-1 overflow-y-auto">

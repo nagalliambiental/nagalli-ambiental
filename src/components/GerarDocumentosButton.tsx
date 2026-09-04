@@ -86,13 +86,18 @@ export function GerarDocumentosButton({ empreendimentoMode = false }: Props) {
     : "";
 
   const filteredOptions = options.filter((o) => {
-    const q = search.toLowerCase();
+    const q = search.toLowerCase().trim();
+    const tokens = q ? q.split(/\s+/) : [];
+    const busca = (s: string) => {
+      const h = s.toLowerCase();
+      return tokens.every((t) => h.includes(t));
+    };
     if (empreendimentoMode) {
       const e = o as EmpreendimentoOption;
-      return e.apelido.toLowerCase().includes(q) || e.cliente.apelido.toLowerCase().includes(q);
+      return busca(`${e.apelido} ${e.cliente.apelido}`);
     }
     const c = o as ClienteOption;
-    return c.apelido.toLowerCase().includes(q) || c.razaoSocial.toLowerCase().includes(q);
+    return busca(`${c.apelido} ${c.razaoSocial}`);
   });
 
   return (

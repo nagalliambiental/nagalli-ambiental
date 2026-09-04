@@ -35,7 +35,11 @@ export function FilterableDataTable<T extends { id: number }>({
 
   const filtered = useMemo(() => {
     if (!q) return data;
-    return data.filter((item) => searchFields.some((fn) => fn(item).toLowerCase().includes(q)));
+    const tokens = q.split(/\s+/).filter(Boolean);
+    return data.filter((item) => {
+      const haystack = searchFields.map((fn) => fn(item).toLowerCase()).join(" ");
+      return tokens.every((token) => haystack.includes(token));
+    });
   }, [data, q, searchFields]);
 
   return (

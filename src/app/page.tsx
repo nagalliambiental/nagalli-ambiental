@@ -27,6 +27,19 @@ const statusColors: Record<string, string> = {
   vencido: "bg-red-100 text-red-700",
 };
 
+function statusExibicaoDashboard(status: string, validade: Date | null, renovacaoPendente: boolean): { label: string; color: string } {
+  if (renovacaoPendente) {
+    return { label: "Encerrado", color: "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]" };
+  }
+  if (validade) {
+    const dias = differenceInDays(validade, new Date());
+    if (dias <= 180) {
+      return { label: "Próximo do Vencimento", color: "bg-amber-50 text-amber-800" };
+    }
+  }
+  return { label: statusLabels[status] || status, color: statusColors[status] || "" };
+}
+
 export default async function DashboardPage() {
   const [
     totalProcessos,
@@ -55,7 +68,7 @@ export default async function DashboardPage() {
       orderBy: { validade: "asc" },
     }),
     prisma.exigencia.findMany({
-      where: { cumprida: false },
+      where: { cumprida: false, processo: { renovacaoPendente: false } },
       include: { processo: { select: { numProtocolo: true, empreendimento: { select: { apelido: true } } } } },
       orderBy: { prazo: "asc" },
     }),
@@ -99,6 +112,8 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
+      <div className="mt-6 grid gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:order-2">
       {(() => {
         const hoje = new Date();
         const alertasProcessos = processosComValidade
@@ -125,7 +140,7 @@ export default async function DashboardPage() {
         const totalAlertas = alertasProcessos.length + alertasExigencias.length;
         if (totalAlertas === 0) return null;
         return (
-          <div className="mt-6 rounded-[var(--radius-card)] border border-red-200 bg-red-50 p-5">
+          <div className="rounded-[var(--radius-card)] border border-red-200 bg-red-50 p-5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="rounded-full bg-red-100 p-2">
@@ -175,7 +190,7 @@ export default async function DashboardPage() {
         const tri = getTrimestreAtual();
         const isUrgent = dias <= 20;
         return (
-          <div className={`mt-6 rounded-[var(--radius-card)] border p-4 ${isUrgent ? "border-red-200 bg-red-50" : "border-amber-200 bg-amber-50"}`}>
+          <div className={`rounded-[var(--radius-card)] border p-4 ${isUrgent ? "border-red-200 bg-red-50" : "border-amber-200 bg-amber-50"}`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className={`rounded-full p-2 ${isUrgent ? "bg-red-100" : "bg-amber-100"}`}>
@@ -209,7 +224,7 @@ export default async function DashboardPage() {
         const aVencer = alertas.length - vencidas;
         const precisaAtencao = alertas.length > 0;
         return (
-          <div className={`mt-6 rounded-[var(--radius-card)] border p-4 ${precisaAtencao ? "border-red-200 bg-red-50" : "border-[var(--color-paper-200)] bg-white"}`}>
+          <div className={`rounded-[var(--radius-card)] border p-4 ${precisaAtencao ? "border-red-200 bg-red-50" : "border-[var(--color-paper-200)] bg-white"}`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className={`rounded-full p-2 ${precisaAtencao ? "bg-red-100" : "bg-[var(--color-brand-50)]"}`}>
@@ -250,9 +265,10 @@ export default async function DashboardPage() {
           </div>
         );
       })()}
+        </div>
 
-      <div className="mt-6">
-        <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">
+        <div className="lg:order-1 lg:col-span-2">
+      <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">
           <div className="flex items-center justify-between px-5 pt-5 pb-3">
             <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Últimas Licenças</h2>
             <Link href="/processos" className="text-sm font-medium text-[var(--color-brand-600)] hover:underline">Ver todos</Link>
@@ -275,7 +291,7 @@ export default async function DashboardPage() {
                     </td>
                     <td className="px-5 py-3 text-[var(--color-ink-700)]">{p.empreendimento.apelido}</td>
                     <td className="px-5 py-3">
-                      <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${statusColors[p.status] || ""}`}>{statusLabels[p.status] || p.status}</span>
+                      <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${statusExibicaoDashboard(p.status, p.validade, p.renovacaoPendente).color}`}>{statusExibicaoDashboard(p.status, p.validade, p.renovacaoPendente).label}</span>
                     </td>
                     <td className="px-5 py-3 text-[var(--color-ink-500)]">{p.validade ? format(p.validade, "dd/MM/yyyy", { locale: ptBR }) : "—"}</td>
                   </tr>
@@ -289,9 +305,8 @@ export default async function DashboardPage() {
             </div>
           )}
         </div>
-      </div>
 
-      <div className="mt-8">
+      <div className="mt-6 mb-6">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Clientes recentes</h2>
           {totalClientes > 5 && <Link href="/clientes" className="text-sm font-medium text-[var(--color-brand-600)] hover:underline">Ver todos</Link>}
@@ -321,6 +336,8 @@ export default async function DashboardPage() {
               ))}
             </div>
           )}
+        </div>
+      </div>
         </div>
       </div>
     </>

@@ -43,6 +43,7 @@ export async function PUT(
   try {
     const form = await request.formData();
 
+    const formaCompensacao = form.get("formaCompensacao") as string | null;
     const quantidadeIndividuos = form.get("quantidadeIndividuos");
     const compensacaoExigida = form.get("compensacaoExigida") === "true";
     const tipoCompensacao = form.get("tipoCompensacao");
@@ -67,6 +68,7 @@ export async function PUT(
     }
 
     const data = {
+      formaCompensacao: (formaCompensacao as string) || "individuos",
       quantidadeIndividuos: quantidadeIndividuos ? Number(quantidadeIndividuos) : null,
       compensacaoExigida,
       tipoCompensacao: (tipoCompensacao as string) || null,
@@ -84,7 +86,8 @@ export async function PUT(
     });
 
     if (data.compensacaoExigida && data.prazoCompensacao && data.statusCompensacao !== "cumprida") {
-      const descricao = `Cumprir compensação ambiental (${data.tipoCompensacao || "reposição florestal"})`;
+      const forma = data.formaCompensacao === "area" ? "por área" : "por indivíduos";
+      const descricao = `Cumprir compensação ambiental ${forma} (${data.tipoCompensacao || "reposição florestal"})`;
       if (registro.exigenciaId) {
         await prisma.exigencia.update({
           where: { id: registro.exigenciaId },

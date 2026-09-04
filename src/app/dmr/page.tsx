@@ -160,12 +160,12 @@ export default function DmrPage() {
     setRegistros((prev) => prev.filter((r) => r.id !== id));
   }
 
+  const tokens = busca.trim().toLowerCase().split(/\s+/).filter(Boolean);
   const filtrados = busca
-    ? disponiveisFiltrados.filter(
-        (e) =>
-          e.apelido.toLowerCase().includes(busca.toLowerCase()) ||
-          e.cliente.apelido.toLowerCase().includes(busca.toLowerCase())
-      )
+    ? disponiveisFiltrados.filter((e) => {
+        const h = `${e.apelido} ${e.cliente.apelido}`.toLowerCase();
+        return tokens.every((t) => h.includes(t));
+      })
     : disponiveisFiltrados;
 
   const trimestres = [

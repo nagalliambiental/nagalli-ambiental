@@ -7,12 +7,11 @@ import { auth } from "@/lib/auth";
 import { logAuditoria } from "@/lib/audit";
 import { Topbar } from "@/components/Topbar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
-import { format } from "date-fns";
+import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { FileText, Building2, Map, Calendar, Users, ClipboardList, FileCheck2, Clock, AlertTriangle, Edit3, ArrowLeft, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import DeleteButton from "@/components/DeleteButton";
-import RenovarButton from "@/components/RenovarButton";
 import { Tabs } from "@/components/Tabs";
 import { UltimaModificacao } from "@/components/UltimaModificacao";
 import CompensacaoCorteCard from "@/components/CompensacaoCorteCard";
@@ -38,6 +37,23 @@ const statusColors: Record<string, string> = {
   arquivado: "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]",
   vencido: "bg-red-50 text-red-700",
 };
+
+function statusExibicao(
+  status: string,
+  validade: Date | null,
+  renovacaoPendente: boolean
+): { label: string; color: string } {
+  if (renovacaoPendente) {
+    return { label: "Encerrado", color: "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]" };
+  }
+  if (validade) {
+    const dias = differenceInDays(validade, new Date());
+    if (dias <= 180) {
+      return { label: "Próximo do Vencimento", color: "bg-amber-50 text-amber-800" };
+    }
+  }
+  return { label: statusLabels[status] || status, color: statusColors[status] || "" };
+}
 
 export async function generateMetadata(props: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await props.params;
@@ -94,7 +110,6 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
               Editar
             </Link>
             <DeleteButton entity="Licença" endpoint={`/api/processos/${processo.id}`} redirectTo="/processos" />
-            <RenovarButton processoId={processo.id} numProtocolo={processo.numProtocolo} />
             {!/outorga/i.test(processo.tipo || "") && (
               <a
                 href={`/api/processos/${processo.id}/relatorio-condicionantes`}
@@ -144,7 +159,7 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
                     </div>
                     <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
                       <FileCheck2 size={16} />
-                      <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${statusColors[processo.status] || ""}`}>{statusLabels[processo.status] || processo.status}</span>
+                      <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${statusExibicao(processo.status, processo.validade, processo.renovacaoPendente).color}`}>{statusExibicao(processo.status, processo.validade, processo.renovacaoPendente).label}</span>
                     </div>
                     {processo.numLicenca && (
                       <div className="flex items-center gap-2 text-[var(--color-ink-500)]">

@@ -5,6 +5,7 @@ import { useToast } from "@/components/Toast";
 import { Leaf, Paperclip, Save } from "lucide-react";
 
 interface AutorizacaoCorte {
+  formaCompensacao: string | null;
   quantidadeIndividuos: number | null;
   compensacaoExigida: boolean;
   tipoCompensacao: string | null;
@@ -29,6 +30,7 @@ const STATUS_OPTIONS = [
 ];
 
 const empty: AutorizacaoCorte = {
+  formaCompensacao: "individuos",
   quantidadeIndividuos: null,
   compensacaoExigida: false,
   tipoCompensacao: null,
@@ -67,6 +69,7 @@ export default function CompensacaoCorteCard({ processoId }: { processoId: numbe
     setSaving(true);
     try {
       const form = new FormData();
+      form.set("formaCompensacao", data.formaCompensacao ?? "individuos");
       form.set("quantidadeIndividuos", data.quantidadeIndividuos?.toString() ?? "");
       form.set("compensacaoExigida", String(data.compensacaoExigida));
       form.set("tipoCompensacao", data.tipoCompensacao ?? "");
@@ -115,7 +118,7 @@ export default function CompensacaoCorteCard({ processoId }: { processoId: numbe
 
       <div>
         <label className="mb-1 block text-sm font-medium text-[var(--color-ink-700)]">
-          Quantidade de indivíduos
+          Quantidade de indivíduos autorizados para corte
         </label>
         <input
           type="number"
@@ -139,6 +142,30 @@ export default function CompensacaoCorteCard({ processoId }: { processoId: numbe
         <div className="space-y-4 border-l-2 border-[var(--color-brand-100)] pl-4">
           <div>
             <label className="mb-1 block text-sm font-medium text-[var(--color-ink-700)]">
+              Forma de compensação
+            </label>
+            <div className="flex gap-4">
+              {[
+                { value: "individuos", label: "Por indivíduos (mudas)" },
+                { value: "area", label: "Por área (m²)" },
+              ].map((opt) => (
+                <label key={opt.value} className="flex items-center gap-2 text-sm text-[var(--color-ink-700)]">
+                  <input
+                    type="radio"
+                    name="formaCompensacao"
+                    value={opt.value}
+                    checked={data.formaCompensacao === opt.value}
+                    onChange={(e) => set("formaCompensacao", e.target.value)}
+                    className="accent-[var(--color-brand-600)]"
+                  />
+                  {opt.label}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-[var(--color-ink-700)]">
               Tipo de compensação
             </label>
             <select
@@ -155,7 +182,7 @@ export default function CompensacaoCorteCard({ processoId }: { processoId: numbe
             </select>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          {data.formaCompensacao === "individuos" ? (
             <div>
               <label className="mb-1 block text-sm font-medium text-[var(--color-ink-700)]">
                 Quantidade de mudas
@@ -168,6 +195,7 @@ export default function CompensacaoCorteCard({ processoId }: { processoId: numbe
                 onChange={(e) => set("quantidadeMudas", e.target.value ? Number(e.target.value) : null)}
               />
             </div>
+          ) : (
             <div>
               <label className="mb-1 block text-sm font-medium text-[var(--color-ink-700)]">
                 Área de compensação (m²)
@@ -181,7 +209,7 @@ export default function CompensacaoCorteCard({ processoId }: { processoId: numbe
                 onChange={(e) => set("areaCompensacaoM2", e.target.value ? Number(e.target.value) : null)}
               />
             </div>
-          </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div>

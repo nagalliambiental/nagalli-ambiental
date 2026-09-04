@@ -30,6 +30,14 @@ export async function PUT(req: NextRequest, { params }: Params) {
   if (typeof body.cargo === "string") data.cargo = body.cargo.trim() || null;
   if (typeof body.telefone === "string") data.telefone = body.telefone.trim() || null;
   if (body.ativo != null) data.ativo = Boolean(body.ativo);
+  if (body.clienteId !== undefined) {
+    const clienteId = Number(body.clienteId);
+    data.clienteId = Number.isFinite(clienteId) && clienteId > 0 ? clienteId : null;
+  }
+  if (body.empreendimentoId !== undefined) {
+    const empreendimentoId = Number(body.empreendimentoId);
+    data.empreendimentoId = Number.isFinite(empreendimentoId) && empreendimentoId > 0 ? empreendimentoId : null;
+  }
 
   if (Object.keys(data).length === 0) {
     return NextResponse.json({ error: "Nada para atualizar" }, { status: 400 });

@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Topbar } from "@/components/Topbar";
 import { AlertTriangle, Plus, ListChecks, CheckCircle2, Clock } from "lucide-react";
-import { ExigenciasTable } from "@/components/tables/ExigenciasTable";
+import { ExigenciasCards } from "@/components/ExigenciasCards";
 import { StatCard } from "@/components/StatCard";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 
@@ -57,8 +57,8 @@ export default async function ExigenciasPage() {
         <StatCard label="Vencidas" value={vencidas} icon={AlertTriangle} accent="danger" />
       </div>
 
-      <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">
-        <ExigenciasTable data={exigencias} />
+      <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-4">
+        <ExigenciasCards data={exigencias} />
       </div>
     </div>
   );

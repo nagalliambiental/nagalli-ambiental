@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Building2, Mail, Loader2, X, ChevronLeft, Search } from "lucide-react";
+import { Plus, Building2, Mail, Loader2, X, ChevronLeft, Search, Users, MapPin, Settings2 } from "lucide-react";
 import { useToast } from "@/components/Toast";
 
 interface ClienteFormData {
@@ -44,6 +44,8 @@ interface ContatoEmpreendimento {
   cargo: string | null;
   telefone: string | null;
   empreendimentoId: number | null;
+  clienteId: number | null;
+  empreendimento?: { id: number; apelido: string } | null;
   ativo: boolean;
   criadoEm: string;
 }
@@ -128,6 +130,7 @@ export default function NovoClientePage() {
         for (const [apiKey, formKey] of Object.entries(CNPJ_MAP)) {
           if (d[apiKey]) (next as Record<string, unknown>)[formKey] = d[apiKey];
         }
+        if (typeof d.cep === "string") (next as ClienteFormData).cep = d.cep.replace(/\D/g, "");
         return next;
       });
       toast("Dados do CNPJ preenchidos automaticamente", "success");
@@ -231,13 +234,13 @@ export default function NovoClientePage() {
   }
 
   async function carregarContatos() {
-    if (!empreendimentoIdContato) {
+    if (!clienteId) {
       setContatos([]);
       return;
     }
     setCarregandoContatos(true);
     try {
-      const res = await fetch(`/api/contatos?empreendimentoId=${empreendimentoIdContato}`);
+      const res = await fetch(`/api/contatos?clienteId=${clienteId}`);
       if (res.ok) setContatos(await res.json());
       else toast("Falha ao carregar os contatos", "error");
     } catch {
@@ -259,6 +262,7 @@ export default function NovoClientePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formContato,
+          clienteId: clienteId ? Number(clienteId) : undefined,
           empreendimentoId: empreendimentoIdContato ? Number(empreendimentoIdContato) : undefined,
         }),
       });
@@ -341,6 +345,12 @@ export default function NovoClientePage() {
           <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-6">
             <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-4">Dados do Cliente</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="md:col-span-2 lg:col-span-3 border-b border-[var(--color-paper-200)] pb-2 pt-1">
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--color-brand-600)]">
+                  <Building2 size={15} />
+                  Dados da Empresa
+                </h3>
+              </div>
               <div className="md:col-span-2">
                 <label className={labelCls}>Apelido *</label>
                 <input
@@ -398,6 +408,12 @@ export default function NovoClientePage() {
                   <p className="mt-1 block text-xs text-red-600">Este CNPJ já está cadastrado para outro cliente.</p>
                 )}
               </div>
+              <div className="md:col-span-2 lg:col-span-3 border-b border-[var(--color-paper-200)] pb-2 pt-1">
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--color-brand-600)]">
+                  <Mail size={15} />
+                  Contato
+                </h3>
+              </div>
               <div>
                 <label className={labelCls}>Telefone *</label>
                 <input
@@ -416,6 +432,12 @@ export default function NovoClientePage() {
                   type="email"
                   required
                 />
+              </div>
+              <div className="md:col-span-2 lg:col-span-3 border-b border-[var(--color-paper-200)] pb-2 pt-1">
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--color-brand-600)]">
+                  <MapPin size={15} />
+                  Endereço
+                </h3>
               </div>
               <div>
                 <label className={labelCls}>CEP</label>
@@ -488,6 +510,12 @@ export default function NovoClientePage() {
                   maxLength={2}
                 />
               </div>
+              <div className="md:col-span-2 lg:col-span-3 border-b border-[var(--color-paper-200)] pb-2 pt-1">
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--color-brand-600)]">
+                  <Users size={15} />
+                  Responsáveis
+                </h3>
+              </div>
               <div>
                 <label className={labelCls}>Resp. Legal *</label>
                 <input
@@ -538,6 +566,12 @@ export default function NovoClientePage() {
                   onChange={(e) => setForm((f) => ({ ...f, responsavelPgrsCargo: e.target.value }))}
                   className={inputCls}
                 />
+              </div>
+              <div className="md:col-span-2 lg:col-span-3 border-b border-[var(--color-paper-200)] pb-2 pt-1">
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--color-brand-600)]">
+                  <Settings2 size={15} />
+                  Complemento e Configuração
+                </h3>
               </div>
               <div>
                 <label className={labelCls}>Ramo de atividade</label>
@@ -604,21 +638,57 @@ export default function NovoClientePage() {
               <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
                 <div className="flex items-center gap-2 text-[var(--color-brand-600)] mb-2">
                   <Building2 size={20} />
-                  <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Contatos por empreendimento</h2>
+                  <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Contatos do cliente</h2>
                 </div>
                 <p className="mt-1 text-sm text-[var(--color-ink-500)]">
-                  Cadastre pessoas específicas de cada empreendimento para receber notificações de MTRs pendentes.
+                  Cadastre os contatos deste cliente. Eles serão usados nos MTRs dos empreendimentos do cliente.
                 </p>
 
-                <div className="mt-4 flex flex-wrap items-end gap-3">
-                  <div className="flex-1 min-w-[200px]">
-                    <label className="mb-1 block text-xs font-medium text-[var(--color-ink-500)]">Empreendimento</label>
+                <div className="mt-4 grid gap-2 sm:grid-cols-5">
+                  <input
+                    placeholder="Nome *"
+                    value={formContato.nome}
+                    onChange={(e) => setFormContato((f) => ({ ...f, nome: e.target.value }))}
+                    className="rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm"
+                  />
+                  <input
+                    placeholder="E-mail *"
+                    type="email"
+                    value={formContato.email}
+                    onChange={(e) => setFormContato((f) => ({ ...f, email: e.target.value }))}
+                    className="rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm"
+                  />
+                  <input
+                    placeholder="Cargo"
+                    value={formContato.cargo}
+                    onChange={(e) => setFormContato((f) => ({ ...f, cargo: e.target.value }))}
+                    className="rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm"
+                  />
+                  <input
+                    placeholder="Telefone"
+                    value={formContato.telefone}
+                    onChange={(e) => setFormContato((f) => ({ ...f, telefone: e.target.value }))}
+                    className="rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm"
+                  />
+                  <button
+                    onClick={adicionarContato}
+                    disabled={salvandoContato}
+                    className="focus-ring transition-brand flex items-center justify-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
+                  >
+                    {salvandoContato ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />}
+                    Adicionar
+                  </button>
+                </div>
+
+                {empreendimentos.length > 0 && (
+                  <div className="mt-3 max-w-xs">
+                    <label className="mb-1 block text-xs font-medium text-[var(--color-ink-500)]">Vincular a um empreendimento (opcional)</label>
                     <select
                       value={empreendimentoIdContato}
                       onChange={(e) => setEmpreendimentoIdContato(e.target.value)}
                       className="w-full rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm"
                     >
-                      <option value="">Selecione um empreendimento...</option>
+                      <option value="">Sem vínculo específico...</option>
                       {empreendimentos.map((e) => (
                         <option key={e.id} value={e.id}>
                           {e.apelido}{e.unidadeSinir ? ` · unid. ${e.unidadeSinir}` : ""}
@@ -626,95 +696,64 @@ export default function NovoClientePage() {
                       ))}
                     </select>
                   </div>
-                </div>
-
-                {empreendimentoIdContato && (
-                  <div className="mt-4 grid gap-2 sm:grid-cols-5">
-                    <input
-                      placeholder="Nome *"
-                      value={formContato.nome}
-                      onChange={(e) => setFormContato((f) => ({ ...f, nome: e.target.value }))}
-                      className="rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm"
-                    />
-                    <input
-                      placeholder="E-mail *"
-                      type="email"
-                      value={formContato.email}
-                      onChange={(e) => setFormContato((f) => ({ ...f, email: e.target.value }))}
-                      className="rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm"
-                    />
-                    <input
-                      placeholder="Cargo"
-                      value={formContato.cargo}
-                      onChange={(e) => setFormContato((f) => ({ ...f, cargo: e.target.value }))}
-                      className="rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm"
-                    />
-                    <input
-                      placeholder="Telefone"
-                      value={formContato.telefone}
-                      onChange={(e) => setFormContato((f) => ({ ...f, telefone: e.target.value }))}
-                      className="rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm"
-                    />
-                    <button
-                      onClick={adicionarContato}
-                      disabled={salvandoContato}
-                      className="focus-ring transition-brand flex items-center justify-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
-                    >
-                      {salvandoContato ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />}
-                      Adicionar
-                    </button>
-                  </div>
                 )}
               </div>
 
-              {empreendimentoIdContato && (
-                <div className="shadow-card overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">
-                  <table className="w-full text-sm">
-                    <thead className="bg-[var(--color-paper-50)]">
+              <div className="shadow-card overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">
+                <table className="w-full text-sm">
+                  <thead className="bg-[var(--color-paper-50)]">
+                    <tr>
+                      <th className="px-4 py-2.5 text-left font-medium text-[var(--color-ink-500)]">Nome</th>
+                      <th className="px-4 py-2.5 text-left font-medium text-[var(--color-ink-500)]">Cargo</th>
+                      <th className="px-4 py-2.5 text-left font-medium text-[var(--color-ink-500)]">E-mail</th>
+                      <th className="px-4 py-2.5 text-left font-medium text-[var(--color-ink-500)]">Telefone</th>
+                      <th className="px-4 py-2.5 text-left font-medium text-[var(--color-ink-500)]">Empreendimento</th>
+                      <th className="px-4 py-2.5 text-right font-medium text-[var(--color-ink-500)]">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {carregandoContatos ? (
                       <tr>
-                        <th className="px-4 py-2.5 text-left font-medium text-[var(--color-ink-500)]">Nome</th>
-                        <th className="px-4 py-2.5 text-left font-medium text-[var(--color-ink-500)]">Cargo</th>
-                        <th className="px-4 py-2.5 text-left font-medium text-[var(--color-ink-500)]">E-mail</th>
-                        <th className="px-4 py-2.5 text-left font-medium text-[var(--color-ink-500)]">Telefone</th>
-                        <th className="px-4 py-2.5 text-right font-medium text-[var(--color-ink-500)]">Ações</th>
+                        <td colSpan={6} className="px-4 py-6 text-center text-[var(--color-ink-500)]">
+                          <Loader2 size={16} className="mr-2 inline animate-spin" /> Carregando...
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {carregandoContatos ? (
-                        <tr>
-                          <td colSpan={5} className="px-4 py-6 text-center text-[var(--color-ink-500)]">
-                            <Loader2 size={16} className="mr-2 inline animate-spin" /> Carregando...
+                    ) : contatos.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="px-4 py-6 text-center text-[var(--color-ink-500)]">
+                          Nenhum contato cadastrado para este cliente.
+                        </td>
+                      </tr>
+                    ) : (
+                      contatos.map((c) => (
+                        <tr key={c.id} className="border-t border-[var(--color-paper-100)]">
+                          <td className="px-4 py-2.5 font-medium text-[var(--color-ink-900)]">{c.nome}</td>
+                          <td className="px-4 py-2.5 text-[var(--color-ink-700)]">{c.cargo || "—"}</td>
+                          <td className="px-4 py-2.5 text-[var(--color-ink-700)]">{c.email}</td>
+                          <td className="px-4 py-2.5 text-[var(--color-ink-700)]">{c.telefone || "—"}</td>
+                          <td className="px-4 py-2.5 text-[var(--color-ink-700)]">
+                            {c.empreendimento ? (
+                              <span className="inline-flex items-center gap-1">
+                                <Building2 size={12} />
+                                {c.empreendimento.apelido}
+                              </span>
+                            ) : "—"}
+                          </td>
+                          <td className="px-4 py-2.5 text-right">
+                            <button
+                              onClick={() => excluirContato(c)}
+                              title="Remover contato"
+                              className="rounded-md p-1.5 text-[var(--color-ink-600)] hover:bg-red-50 hover:text-red-700"
+                            >
+                              <X size={15} />
+                            </button>
                           </td>
                         </tr>
-                      ) : contatos.length === 0 ? (
-                        <tr>
-                          <td colSpan={5} className="px-4 py-6 text-center text-[var(--color-ink-500)]">
-                            Nenhum contato cadastrado para este empreendimento.
-                          </td>
-                        </tr>
-                      ) : (
-                        contatos.map((c) => (
-                          <tr key={c.id} className="border-t border-[var(--color-paper-100)]">
-                            <td className="px-4 py-2.5 font-medium text-[var(--color-ink-900)]">{c.nome}</td>
-                            <td className="px-4 py-2.5 text-[var(--color-ink-700)]">{c.cargo || "—"}</td>
-                            <td className="px-4 py-2.5 text-[var(--color-ink-700)]">{c.email}</td>
-                            <td className="px-4 py-2.5 text-[var(--color-ink-700)]">{c.telefone || "—"}</td>
-                            <td className="px-4 py-2.5 text-right">
-                              <button
-                                onClick={() => excluirContato(c)}
-                                title="Remover contato"
-                                className="rounded-md p-1.5 text-[var(--color-ink-600)] hover:bg-red-50 hover:text-red-700"
-                              >
-                                <X size={15} />
-                              </button>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </>
           )}
         </div>

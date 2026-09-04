@@ -30,10 +30,12 @@ export default function PropostasServicoList({ propostas, modeloNomes }: Props) 
 
   const filtradas = useMemo(() => {
     if (!q) return propostas;
+    const tokens = q.split(/\s+/);
     return propostas.filter((p) => {
       const ident = `${p.numero} ${p.ano} REV ${String(p.revisao).padStart(2, "0")}`;
       const modelo = modeloNomes[p.modeloSlug] ?? p.modeloSlug;
-      return ident.toLowerCase().includes(q) || modelo.toLowerCase().includes(q);
+      const h = `${ident} ${modelo}`.toLowerCase();
+      return tokens.every((t) => h.includes(t));
     });
   }, [propostas, modeloNomes, q]);
 
