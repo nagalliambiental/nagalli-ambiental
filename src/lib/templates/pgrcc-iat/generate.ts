@@ -154,6 +154,16 @@ export function buildDocxData(form: PgrccIatFormData): Record<string, string> {
   put("transp_quant_b", q.b || fmt(volumeClasse.b));
   put("transp_quant_c", q.c || fmt(volumeClasse.c));
   put("transp_quant_d", q.d || fmt(volumeClasse.d));
+  for (const k of [
+    "transp_quant_solo_2",
+    "transp_quant_solo_3",
+    "transp_quant_exceto_solo_2",
+    "transp_quant_b_2",
+    "transp_quant_b_3",
+    "transp_quant_c_2",
+    "transp_quant_d_2",
+  ])
+    put(k, "");
   for (const row of form.destinacao) {
     put(`dest_${row.id}_empresa`, row.empresa);
     put(`dest_${row.id}_licenca`, row.licenca);
