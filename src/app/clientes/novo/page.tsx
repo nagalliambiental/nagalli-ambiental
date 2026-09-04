@@ -181,8 +181,37 @@ export default function NovoClientePage() {
         toast(data?.erro || data?.error || "Falha ao salvar cliente", "error");
         return;
       }
-      toast("Cliente cadastrado com sucesso", "success");
-      setClienteId(data.id);
+      const novoId = data.id as number;
+
+      const contatosPendentes = contatos.filter((c) => c.nome.trim());
+      if (contatosPendentes.length > 0) {
+        const resultados = await Promise.allSettled(
+          contatosPendentes.map((c) =>
+            fetch("/api/contatos", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                nome: c.nome.trim(),
+                assunto: c.assunto.trim() || null,
+                email: c.email.trim() || null,
+                telefone: c.telefone.trim() || null,
+                clienteId: novoId,
+              }),
+            }).then((r) => r.json())
+          )
+        );
+        const erros = resultados.filter((r) => r.status === "rejected" || (r.status === "fulfilled" && r.value?.error));
+        if (erros.length > 0) {
+          toast(`Cliente salvo, mas ${erros.length} contato(s) falharam ao salvar.`, "warning");
+        } else if (contatosPendentes.length > 0) {
+          toast(`${contatosPendentes.length} contato(s) salvo(s) com sucesso`, "success");
+        }
+      } else {
+        toast("Cliente cadastrado com sucesso", "success");
+      }
+
+      setClienteId(novoId);
+      setContatos([]);
     } catch {
       toast("Falha ao salvar cliente", "error");
     } finally {
@@ -209,7 +238,8 @@ export default function NovoClientePage() {
       return;
     }
     if (!clienteId) {
-      toast("Salve o cliente antes de adicionar contatos", "error");
+      const contatosAtuais = [...contatos];
+      toast("Contato sera salvo junto com o cliente", "info");
       return;
     }
     setSalvandoContatoIdx(idx);
@@ -513,38 +543,20 @@ export default function NovoClientePage() {
             <label htmlFor="ativo" className="text-sm text-[var(--color-ink-700)] cursor-pointer">Ativo</label>
           </div>
         </div>
-        <div className="mt-6 flex justify-end gap-3">
-          <button
-            onClick={() => router.back()}
-            className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg border border-[var(--color-paper-200)] px-4 py-2 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]"
-          >
-            <X size={16} />
-            Cancelar
-          </button>
-          <button
-            onClick={salvarCliente}
-            disabled={carregandoCliente}
-            className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg bg-[var(--color-brand-500)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
-          >
-            {carregandoCliente ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
-            {carregandoCliente ? "Salvando..." : "Salvar Cliente"}
-          </button>
-        </div>
-      </div>
 
-      {clienteId && (
-        <div className="mt-6 shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] flex items-center gap-2">
-                <Users size={16} />
-                Contatos
-              </h2>
-              <p className="text-xs text-[var(--color-ink-500)] mt-1">
-                Cadastre os contatos deste cliente. Eles serao usados nos MTRs dos empreendimentos.
-              </p>
-            </div>
+        <div className="md:col-span-2 lg:col-span-3 border-b border-[var(--color-paper-200)] pb-2 pt-6 mt-2">
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--color-brand-600)]">
+            <Users size={15} />
+            Contatos
+          </h3>
+          <p className="text-xs text-[var(--color-ink-500)] mt-1">
+            Cadastre os contatos deste cliente. Eles serao usados nos MTRs dos empreendimentos.
+          </p>
+        </div>
+        <div className="md:col-span-2 lg:col-span-3">
+          <div className="flex items-center justify-end mb-3">
             <button
+              type="button"
               onClick={adicionarContatoLinha}
               className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg bg-[var(--color-brand-500)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)]"
             >
@@ -554,8 +566,8 @@ export default function NovoClientePage() {
           </div>
 
           {contatos.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 py-8 text-[var(--color-ink-400)]">
-              <Users size={28} />
+            <div className="flex flex-col items-center gap-2 py-6 text-[var(--color-ink-400)]">
+              <Users size={24} />
               <p className="text-sm">Nenhum contato adicionado.</p>
               <p className="text-xs">Clique em &quot;Adicionar contato&quot; para comecar.</p>
             </div>
@@ -573,7 +585,7 @@ export default function NovoClientePage() {
                     />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <label className={labelCls}>Assunto *</label>
+                    <label className={labelCls}>Assunto</label>
                     <input
                       placeholder="Assunto / Setor"
                       value={c.assunto}
@@ -600,16 +612,9 @@ export default function NovoClientePage() {
                       className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-2.5 py-2 text-sm"
                     />
                   </div>
-                  <div className="flex gap-1 shrink-0">
+                  <div className="flex gap-1 shrink-0 pb-0.5">
                     <button
-                      onClick={() => salvarContato(idx)}
-                      disabled={salvandoContatoIdx === idx || !c.nome.trim()}
-                      title="Salvar contato"
-                      className="focus-ring transition-brand rounded-lg bg-[var(--color-brand-500)] p-2 text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
-                    >
-                      {salvandoContatoIdx === idx ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />}
-                    </button>
-                    <button
+                      type="button"
                       onClick={() => removerContatoLinha(c.key)}
                       title="Remover linha"
                       className="rounded-lg p-2 text-[var(--color-ink-500)] hover:bg-red-50 hover:text-red-600"
@@ -622,14 +627,24 @@ export default function NovoClientePage() {
             </div>
           )}
         </div>
-      )}
-
-      {!clienteId && (
-        <div className="mt-6 shadow-card rounded-[var(--radius-card)] border border-dashed border-[var(--color-paper-300)] bg-[var(--color-paper-50)] p-6 text-center">
-          <Users size={28} className="mx-auto text-[var(--color-ink-400)]" />
-          <p className="mt-2 text-sm text-[var(--color-ink-500)]">Salve o cliente primeiro para adicionar contatos.</p>
+        <div className="mt-6 flex justify-end gap-3">
+          <button
+            onClick={() => router.back()}
+            className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg border border-[var(--color-paper-200)] px-4 py-2 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]"
+          >
+            <X size={16} />
+            Cancelar
+          </button>
+          <button
+            onClick={salvarCliente}
+            disabled={carregandoCliente}
+            className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg bg-[var(--color-brand-500)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
+          >
+            {carregandoCliente ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+            {carregandoCliente ? "Salvando..." : "Salvar Cliente"}
+          </button>
         </div>
-      )}
+      </div>
     </div>
   );
 }
