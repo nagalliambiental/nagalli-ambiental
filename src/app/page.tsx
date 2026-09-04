@@ -149,7 +149,7 @@ export default async function DashboardPage() {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-red-900">Alertas de prazos ({totalAlertas})</p>
-                    <p className="text-xs text-red-700">Licencas e exigencias com vencimento proximo ou vencido</p>
+                    <p className="text-xs text-red-700">Licencas e exigencias com vencimento proximo</p>
                   </div>
                 </div>
                 <Link href="/prazos" className="focus-ring transition-brand rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700">

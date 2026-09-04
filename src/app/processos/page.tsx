@@ -4,10 +4,9 @@ import Link from "next/link";
 import { Topbar } from "@/components/Topbar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { StatCard } from "@/components/StatCard";
-import { FolderKanban, Plus, Clock3, AlertTriangle, FileText } from "lucide-react";
+import { FolderKanban, Plus, Clock3, FileText, Archive } from "lucide-react";
 import { FilterSelect } from "@/components/FilterSelect";
 import { ProcessosTable } from "@/components/tables/ProcessosTable";
-import { atualizarProcessosVencidos } from "@/lib/vencidos";
 
 export const dynamic = "force-dynamic";
 
@@ -20,18 +19,14 @@ export default async function ProcessosPage({
 }) {
   const { status, tab } = await searchParams;
 
-  await atualizarProcessosVencidos();
-
   const where: Prisma.ProcessoWhereInput = {};
-  if (tab === "vencidos") {
-    where.status = "vencido";
-  } else if (tab === "encerradas") {
+  if (tab === "encerradas") {
     where.OR = [{ status: "encerrado" }, { renovacaoPendente: true }];
   } else {
     if (status) {
       where.status = status;
     } else {
-      where.status = { notIn: ["vencido", "encerrado"] };
+      where.status = { not: "encerrado" };
       where.renovacaoPendente = false;
     }
   }
@@ -45,7 +40,6 @@ export default async function ProcessosPage({
     orderBy: { criadoEm: "desc" },
   });
 
-  const totalVencidos = await prisma.processo.count({ where: { status: "vencido", ativo: true } });
   const totalEncerradas = await prisma.processo.count({
     where: { OR: [{ status: "encerrado" }, { renovacaoPendente: true }], ativo: true },
   });
@@ -89,34 +83,18 @@ export default async function ProcessosPage({
         <StatCard label="Licenças na lista" value={processos.length} icon={FolderKanban} />
         <StatCard label="Em andamento" value={emAndamento} icon={Clock3} accent="river" />
         <StatCard label="Protocolados" value={protocolados} icon={FileText} />
-        <StatCard label="Vencidos" value={totalVencidos} icon={AlertTriangle} accent={totalVencidos > 0 ? "danger" : "success"} />
+        <StatCard label="Encerradas" value={totalEncerradas} icon={Archive} accent="success" />
       </div>
       <div className="mb-4 flex gap-2 border-b border-[var(--color-paper-200)]">
         <Link
           href="/processos"
           className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
-            tab !== "vencidos" && tab !== "encerradas"
+            tab !== "encerradas"
               ? "border-[var(--color-brand-500)] text-[var(--color-brand-600)]"
               : "border-transparent text-[var(--color-ink-500)] hover:text-[var(--color-ink-700)]"
           }`}
         >
           Ativos
-        </Link>
-        <Link
-          href="/processos?tab=vencidos"
-          className={`flex items-center gap-1.5 pb-3 text-sm font-medium border-b-2 transition-colors ${
-            tab === "vencidos"
-              ? "border-[var(--color-brand-500)] text-[var(--color-brand-600)]"
-              : "border-transparent text-[var(--color-ink-500)] hover:text-[var(--color-ink-700)]"
-          }`}
-        >
-          <Clock3 size={14} />
-          Vencidos
-          {totalVencidos > 0 && (
-            <span className={`ml-1 rounded px-1.5 py-0.5 text-xs ${tab === "vencidos" ? "bg-[var(--color-brand-50)] text-[var(--color-brand-600)]" : "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]"}`}>
-              {totalVencidos}
-            </span>
-          )}
         </Link>
         <Link
           href="/processos?tab=encerradas"
@@ -126,7 +104,7 @@ export default async function ProcessosPage({
               : "border-transparent text-[var(--color-ink-500)] hover:text-[var(--color-ink-700)]"
           }`}
         >
-          <FolderKanban size={14} />
+          <Archive size={14} />
           Encerradas
           {totalEncerradas > 0 && (
             <span className={`ml-1 rounded px-1.5 py-0.5 text-xs ${tab === "encerradas" ? "bg-[var(--color-brand-50)] text-[var(--color-brand-600)]" : "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]"}`}>

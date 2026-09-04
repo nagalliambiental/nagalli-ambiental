@@ -126,7 +126,7 @@ export default function RelatoriosPage() {
               <option value="deferido">Deferido</option>
               <option value="indeferido">Indeferido</option>
               <option value="arquivado">Arquivado</option>
-              <option value="vencido">Vencido</option>
+              <option value="encerrado">Encerrado</option>
             </select>
           </div>
           <DownloadButtons url={`/api/relatorios/processos?status=${procStatus}`} hook={processos} />

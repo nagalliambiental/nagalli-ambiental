@@ -30,7 +30,6 @@ const STATUSES = [
   { value: "deferido", label: "Deferido" },
   { value: "indeferido", label: "Indeferido" },
   { value: "arquivado", label: "Arquivado" },
-  { value: "vencido", label: "Vencido" },
 ];
 
 const TIPOS_COMPENSACAO = [
@@ -239,12 +238,6 @@ export default function NovoProcessoPage() {
     return TIPOS.find((t) => n.includes(normalizar(t)) || normalizar(t).includes(n)) || "";
   }
 
-  function validadeVencida(validade: string): boolean {
-    const iso = toDateInput(validade);
-    if (!iso) return false;
-    return new Date(`${iso}T12:00:00`) < new Date();
-  }
-
   function aplicarImportacao(d: {
     origem: string;
     orgaoSigla: string;
@@ -301,7 +294,7 @@ export default function NovoProcessoPage() {
       atividade: d.atividade || prev.atividade,
       municipio: municipio || prev.municipio,
       condicionantes: d.condicionantes || prev.condicionantes,
-      status: validadeVencida(d.validade) ? "vencido" : "deferido",
+      status: "deferido",
         observacoes: d.razaoSocial && !prev.observacoes.includes(d.razaoSocial)
           ? [prev.observacoes, `${d.origem}: ${d.modalidade || "licença"} — ${d.razaoSocial}`].filter(Boolean).join("\n")
           : prev.observacoes,
