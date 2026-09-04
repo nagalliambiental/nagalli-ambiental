@@ -15,6 +15,7 @@ import DeleteButton from "@/components/DeleteButton";
 import { Tabs } from "@/components/Tabs";
 import { UltimaModificacao } from "@/components/UltimaModificacao";
 import CompensacaoCorteCard from "@/components/CompensacaoCorteCard";
+import ProcessoStatusSelector from "@/components/ProcessoStatusSelector";
 
 export const dynamic = "force-dynamic";
 
@@ -159,7 +160,14 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
                     </div>
                     <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
                       <FileCheck2 size={16} />
-                      <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${statusExibicao(processo.status, processo.validade, processo.renovacaoPendente).color}`}>{statusExibicao(processo.status, processo.validade, processo.renovacaoPendente).label}</span>
+                      <ProcessoStatusSelector
+                        processoId={processo.id}
+                        status={processo.status}
+                        statusLabel={statusExibicao(processo.status, processo.validade, processo.renovacaoPendente).label}
+                        statusColor={statusExibicao(processo.status, processo.validade, processo.renovacaoPendente).color}
+                        labels={statusLabels}
+                        colors={statusColors}
+                      />
                     </div>
                     {processo.numLicenca && (
                       <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
