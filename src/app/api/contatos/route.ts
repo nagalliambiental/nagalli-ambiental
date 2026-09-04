@@ -36,47 +36,40 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json().catch(() => ({}));
   const nome = typeof body.nome === "string" ? body.nome.trim() : "";
-  const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+  const assunto = typeof body.assunto === "string" && body.assunto.trim() ? body.assunto.trim() : null;
+  const email = typeof body.email === "string" && body.email.trim() ? body.email.trim().toLowerCase() : null;
   const cargo = typeof body.cargo === "string" && body.cargo.trim() ? body.cargo.trim() : null;
   const telefone = typeof body.telefone === "string" && body.telefone.trim() ? body.telefone.trim() : null;
   const empreendimentoId = Number(body.empreendimentoId);
   const clienteId = Number(body.clienteId);
 
-  if (!nome || !email) {
-    return NextResponse.json({ error: "Nome e e-mail são obrigatórios" }, { status: 400 });
+  if (!nome) {
+    return NextResponse.json({ error: "Nome e obrigatorio" }, { status: 400 });
   }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return NextResponse.json({ error: "E-mail inválido" }, { status: 400 });
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return NextResponse.json({ error: "E-mail invalido" }, { status: 400 });
   }
 
   const temEmpreendimento = Number.isFinite(empreendimentoId) && empreendimentoId > 0;
   const temCliente = Number.isFinite(clienteId) && clienteId > 0;
 
-  // Vínculo é opcional - clienteId OU empreendimentoId. Sem vínculo, contato genérico.
   if (temEmpreendimento) {
     const empreendimento = await prisma.empreendimento.findUnique({ where: { id: empreendimentoId } });
     if (!empreendimento) {
-      return NextResponse.json({ error: "Empreendimento não encontrado" }, { status: 404 });
-    }
-    const existente = await prisma.contato.findFirst({ where: { email, empreendimentoId } });
-    if (existente) {
-      return NextResponse.json({ error: "Já existe um contato com este e-mail neste empreendimento" }, { status: 409 });
+      return NextResponse.json({ error: "Empreendimento nao encontrado" }, { status: 404 });
     }
   }
   if (temCliente) {
     const cliente = await prisma.cliente.findUnique({ where: { id: clienteId } });
     if (!cliente) {
-      return NextResponse.json({ error: "Cliente não encontrado" }, { status: 404 });
-    }
-    const existente = await prisma.contato.findFirst({ where: { email, clienteId } });
-    if (existente) {
-      return NextResponse.json({ error: "Já existe um contato com este e-mail para este cliente" }, { status: 409 });
+      return NextResponse.json({ error: "Cliente nao encontrado" }, { status: 404 });
     }
   }
 
   const contato = await prisma.contato.create({
     data: {
       nome,
+      assunto,
       email,
       cargo,
       telefone,
@@ -89,7 +82,7 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  await logAuditoria("CRIAR", "Contato", contato.id, { nome, email, empreendimentoId: contato.empreendimentoId, clienteId: contato.clienteId },
+  await logAuditoria("CRIAR", "Contato", contato.id, { nome, email, assunto, empreendimentoId: contato.empreendimentoId, clienteId: contato.clienteId },
     session.user?.id ? Number(session.user.id) : undefined);
 
   return NextResponse.json(contato, { status: 201 });

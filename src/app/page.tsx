@@ -115,52 +115,7 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {totalAlertas > 0 && (
-          <div className="rounded-[var(--radius-card)] border border-red-200 bg-red-50 p-5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="rounded-full bg-red-100 p-2">
-                  <AlertTriangle size={18} className="text-red-700" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-red-900">Alertas de prazos ({totalAlertas})</p>
-                  <p className="text-xs text-red-700">Licencas e exigencias com vencimento proximo ou vencido</p>
-                </div>
-              </div>
-              <Link href="/prazos" className="focus-ring transition-brand rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700">
-                Ver todos
-              </Link>
-            </div>
-            <div className="mt-4 space-y-2">
-              {alertasProcessos.slice(0, 4).map((a) => (
-                <Link key={`p-${a.id}`} href={`/processos/${a.id}`} className={`focus-ring transition-brand flex items-center justify-between rounded-lg border bg-white p-3 ${a.diasRestantes < 0 ? "border-red-300" : "border-amber-200"}`}>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-[var(--color-ink-900)]">{a.tipo} -- {a.apelido}</p>
-                    <p className="text-xs text-[var(--color-ink-500)]">{a.numProtocolo} · {a.orgao}</p>
-                  </div>
-                  <div className={`shrink-0 text-right text-xs font-semibold ${a.diasRestantes < 0 ? "text-red-700" : "text-amber-700"}`}>
-                    {format(a.validade, "dd/MM", { locale: ptBR })}
-                    <div>{a.diasRestantes < 0 ? `${Math.abs(a.diasRestantes)}d atraso` : `${a.diasRestantes}d`}</div>
-                  </div>
-                </Link>
-              ))}
-              {alertasExigencias.slice(0, 4).map((a) => (
-                <Link key={`e-${a.id}`} href={`/exigencias/${a.id}`} className={`focus-ring transition-brand flex items-center justify-between rounded-lg border bg-white p-3 ${a.diasRestantes < 0 ? "border-red-300" : "border-amber-200"}`}>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-[var(--color-ink-900)]">{a.descricao}</p>
-                    <p className="text-xs text-[var(--color-ink-500)]">{a.processo} · {a.apelido}</p>
-                  </div>
-                  <div className={`shrink-0 text-right text-xs font-semibold ${a.diasRestantes < 0 ? "text-red-700" : "text-amber-700"}`}>
-                    {format(a.prazo, "dd/MM", { locale: ptBR })}
-                    <div>{a.diasRestantes < 0 ? `${Math.abs(a.diasRestantes)}d atraso` : `${a.diasRestantes}d`}</div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
-
+      <div className="mt-6 space-y-4">
         <div className={`rounded-[var(--radius-card)] border p-5 ${dmrUrgente ? "border-red-200 bg-red-50" : "border-amber-200 bg-amber-50"}`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -184,47 +139,94 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {tppsComValidade.length > 0 && (
-          <div className={`rounded-[var(--radius-card)] border p-5 ${tppPrecisaAtencao ? "border-red-200 bg-red-50" : "border-[var(--color-paper-200)] bg-white"}`}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className={`rounded-full p-2 ${tppPrecisaAtencao ? "bg-red-100" : "bg-[var(--color-brand-50)]"}`}>
-                  <Truck size={18} className={tppPrecisaAtencao ? "text-red-700" : "text-[var(--color-brand-600)]"} />
+        <div className="grid gap-4 sm:grid-cols-2">
+          {totalAlertas > 0 && (
+            <div className="rounded-[var(--radius-card)] border border-red-200 bg-red-50 p-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-full bg-red-100 p-2">
+                    <AlertTriangle size={18} className="text-red-700" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-red-900">Alertas de prazos ({totalAlertas})</p>
+                    <p className="text-xs text-red-700">Licencas e exigencias com vencimento proximo ou vencido</p>
+                  </div>
                 </div>
-                <div>
-                  <p className={`text-sm font-medium ${tppPrecisaAtencao ? "text-red-900" : "text-[var(--color-ink-900)]"}`}>
-                    TPP — Produtos Perigosos ({tppsComValidade.length})
-                  </p>
-                  <p className={`text-xs ${tppPrecisaAtencao ? "text-red-700" : "text-[var(--color-ink-500)]"}`}>
-                    {tppPrecisaAtencao
-                      ? `${tppVencidas} vencida(s) · ${tppAVencer} a vencer em 15 dias`
-                      : "Todas as autorizacoes vigentes"}
-                  </p>
-                </div>
+                <Link href="/prazos" className="focus-ring transition-brand rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700">
+                  Ver todos
+                </Link>
               </div>
-              <Link href="/tpp" className={`focus-ring transition-brand rounded-lg px-3 py-1.5 text-xs font-medium text-white ${tppPrecisaAtencao ? "bg-red-600 hover:bg-red-700" : "bg-[var(--color-river-700)] hover:bg-[var(--color-river-500)]"}`}>
-                Ver
-              </Link>
-            </div>
-            <div className="mt-3 space-y-2">
-              {tppsComValidade.slice(0, 4).map((t) => {
-                const diff = differenceInDays(t.dataValidade, hoje);
-                return (
-                  <Link key={t.id} href={`/tpp/${t.id}`} className="focus-ring transition-brand flex items-center justify-between rounded-lg border bg-white p-3">
+              <div className="mt-4 space-y-2">
+                {alertasProcessos.slice(0, 4).map((a) => (
+                  <Link key={`p-${a.id}`} href={`/processos/${a.id}`} className={`focus-ring transition-brand flex items-center justify-between rounded-lg border bg-white p-3 ${a.diasRestantes < 0 ? "border-red-300" : "border-amber-200"}`}>
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-[var(--color-ink-900)]">{t.cliente.apelido}</p>
-                      <p className="truncate text-xs text-[var(--color-ink-500)]">TPP {t.numero} · {t.empreendimento?.apelido || "—"}</p>
+                      <p className="truncate text-sm font-medium text-[var(--color-ink-900)]">{a.tipo} -- {a.apelido}</p>
+                      <p className="text-xs text-[var(--color-ink-500)]">{a.numProtocolo} · {a.orgao}</p>
                     </div>
-                    <div className={`shrink-0 text-right text-xs font-semibold ${diff < 0 ? "text-red-700" : diff <= 15 ? "text-amber-700" : "text-[var(--color-brand-600)]"}`}>
-                      {format(t.dataValidade, "dd/MM", { locale: ptBR })}
-                      <div>{diff < 0 ? `${Math.abs(diff)}d atraso` : diff <= 15 ? `${diff}d` : "OK"}</div>
+                    <div className={`shrink-0 text-right text-xs font-semibold ${a.diasRestantes < 0 ? "text-red-700" : "text-amber-700"}`}>
+                      {format(a.validade, "dd/MM", { locale: ptBR })}
+                      <div>{a.diasRestantes < 0 ? `${Math.abs(a.diasRestantes)}d atraso` : `${a.diasRestantes}d`}</div>
                     </div>
                   </Link>
-                );
-              })}
+                ))}
+                {alertasExigencias.slice(0, 4).map((a) => (
+                  <Link key={`e-${a.id}`} href={`/exigencias/${a.id}`} className={`focus-ring transition-brand flex items-center justify-between rounded-lg border bg-white p-3 ${a.diasRestantes < 0 ? "border-red-300" : "border-amber-200"}`}>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-[var(--color-ink-900)]">{a.descricao}</p>
+                      <p className="text-xs text-[var(--color-ink-500)]">{a.processo} · {a.apelido}</p>
+                    </div>
+                    <div className={`shrink-0 text-right text-xs font-semibold ${a.diasRestantes < 0 ? "text-red-700" : "text-amber-700"}`}>
+                      {format(a.prazo, "dd/MM", { locale: ptBR })}
+                      <div>{a.diasRestantes < 0 ? `${Math.abs(a.diasRestantes)}d atraso` : `${a.diasRestantes}d`}</div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+
+          {tppsComValidade.length > 0 && (
+            <div className={`rounded-[var(--radius-card)] border p-5 ${tppPrecisaAtencao ? "border-red-200 bg-red-50" : "border-[var(--color-paper-200)] bg-white"}`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`rounded-full p-2 ${tppPrecisaAtencao ? "bg-red-100" : "bg-[var(--color-brand-50)]"}`}>
+                    <Truck size={18} className={tppPrecisaAtencao ? "text-red-700" : "text-[var(--color-brand-600)]"} />
+                  </div>
+                  <div>
+                    <p className={`text-sm font-medium ${tppPrecisaAtencao ? "text-red-900" : "text-[var(--color-ink-900)]"}`}>
+                      TPP — Produtos Perigosos ({tppsComValidade.length})
+                    </p>
+                    <p className={`text-xs ${tppPrecisaAtencao ? "text-red-700" : "text-[var(--color-ink-500)]"}`}>
+                      {tppPrecisaAtencao
+                        ? `${tppVencidas} vencida(s) · ${tppAVencer} a vencer em 15 dias`
+                        : "Todas as autorizacoes vigentes"}
+                    </p>
+                  </div>
+                </div>
+                <Link href="/tpp" className={`focus-ring transition-brand rounded-lg px-3 py-1.5 text-xs font-medium text-white ${tppPrecisaAtencao ? "bg-red-600 hover:bg-red-700" : "bg-[var(--color-river-700)] hover:bg-[var(--color-river-500)]"}`}>
+                  Ver
+                </Link>
+              </div>
+              <div className="mt-3 space-y-2">
+                {tppsComValidade.slice(0, 4).map((t) => {
+                  const diff = differenceInDays(t.dataValidade, hoje);
+                  return (
+                    <Link key={t.id} href={`/tpp/${t.id}`} className="focus-ring transition-brand flex items-center justify-between rounded-lg border bg-white p-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-[var(--color-ink-900)]">{t.cliente.apelido}</p>
+                        <p className="truncate text-xs text-[var(--color-ink-500)]">TPP {t.numero} · {t.empreendimento?.apelido || "—"}</p>
+                      </div>
+                      <div className={`shrink-0 text-right text-xs font-semibold ${diff < 0 ? "text-red-700" : diff <= 15 ? "text-amber-700" : "text-[var(--color-brand-600)]"}`}>
+                        {format(t.dataValidade, "dd/MM", { locale: ptBR })}
+                        <div>{diff < 0 ? `${Math.abs(diff)}d atraso` : diff <= 15 ? `${diff}d` : "OK"}</div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </>
   );

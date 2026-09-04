@@ -493,18 +493,19 @@ model MtrImaManifesto {
 }
 
 model Contato {
-  id               Int      @id @default(autoincrement())
+  id               Int       @id @default(autoincrement())
   nome             String
-  email            String
+  assunto          String?
+  email            String?
   cargo            String?
   telefone         String?
   empreendimentoId Int?
   clienteId        Int?
   empreendimento   Empreendimento? @relation(fields: [empreendimentoId], references: [id], onDelete: SetNull)
   cliente          Cliente?        @relation(fields: [clienteId], references: [id], onDelete: SetNull)
-  ativo            Boolean  @default(true)
-  criadoEm         DateTime @default(now())
-  atualizadoEm     DateTime @updatedAt
+  ativo            Boolean   @default(true)
+  criadoEm         DateTime  @default(now())
+  atualizadoEm     DateTime  @updatedAt
 
   @@index([empreendimentoId])
   @@index([clienteId])

@@ -120,7 +120,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const resultado = await enviarEmail({
-      to: contatos.map((c) => c.email),
+      to: contatos.filter((c) => c.email).map((c) => c.email!),
       subject: `[Nagalli Ambiental] MTRs aguardando recebimento no SINIR — ${rotulo} — ${empreendimentoNome}`,
       html,
       anexos: [{ filename: pdf.nomeArquivo, content: Buffer.from(pdf.buffer) }],

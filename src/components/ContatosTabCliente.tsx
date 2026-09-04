@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Trash2, Loader2, Building2, Mail } from "lucide-react";
+import { Plus, Trash2, Loader2, Users } from "lucide-react";
 import { useToast } from "@/components/Toast";
 
 interface EmpreendimentoOpcao {
@@ -14,7 +14,8 @@ interface EmpreendimentoOpcao {
 interface ContatoData {
   id: number;
   nome: string;
-  email: string;
+  assunto: string | null;
+  email: string | null;
   cargo: string | null;
   telefone: string | null;
   empreendimentoId: number | null;
@@ -29,13 +30,12 @@ interface ContatosTabClienteProps {
   clienteId: string;
 }
 
-export function ContatosTabCliente({ empreendimentos, clienteId }: ContatosTabClienteProps) {
+export function ContatosTabCliente({ clienteId }: ContatosTabClienteProps) {
   const { toast } = useToast();
   const [contatos, setContatos] = useState<ContatoData[]>([]);
   const [carregando, setCarregando] = useState(false);
   const [salvando, setSalvando] = useState(false);
-  const [empreendimentoId, setEmpreendimentoId] = useState("");
-  const [form, setForm] = useState({ nome: "", email: "", cargo: "", telefone: "" });
+  const [form, setForm] = useState({ nome: "", assunto: "", email: "", telefone: "" });
 
   const carregarContatos = useCallback(async (mounted = true) => {
     setCarregando(true);
@@ -61,8 +61,8 @@ export function ContatosTabCliente({ empreendimentos, clienteId }: ContatosTabCl
   }, [carregarContatos]);
 
   async function adicionar() {
-    if (!form.nome.trim() || !form.email.trim()) {
-      toast("Informe nome e e-mail do contato", "error");
+    if (!form.nome.trim()) {
+      toast("Nome do contato e obrigatorio", "error");
       return;
     }
     setSalvando(true);
@@ -71,9 +71,11 @@ export function ContatosTabCliente({ empreendimentos, clienteId }: ContatosTabCl
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...form,
+          nome: form.nome.trim(),
+          assunto: form.assunto.trim() || null,
+          email: form.email.trim() || null,
+          telefone: form.telefone.trim() || null,
           clienteId: clienteId ? Number(clienteId) : undefined,
-          empreendimentoId: empreendimentoId ? Number(empreendimentoId) : undefined,
         }),
       });
       const data = await res.json().catch(() => null);
@@ -82,8 +84,7 @@ export function ContatosTabCliente({ empreendimentos, clienteId }: ContatosTabCl
         return;
       }
       toast("Contato cadastrado", "success");
-      setForm({ nome: "", email: "", cargo: "", telefone: "" });
-      setEmpreendimentoId("");
+      setForm({ nome: "", assunto: "", email: "", telefone: "" });
       carregarContatos();
     } catch {
       toast("Falha ao salvar o contato", "error");
@@ -93,7 +94,7 @@ export function ContatosTabCliente({ empreendimentos, clienteId }: ContatosTabCl
   }
 
   async function excluir(c: ContatoData) {
-    if (!confirm(`Remover o contato ${c.nome} (${c.email})?`)) return;
+    if (!confirm(`Remover o contato ${c.nome}?`)) return;
     try {
       const res = await fetch(`/api/contatos/${c.id}`, { method: "DELETE" });
       if (!res.ok) {
@@ -114,14 +115,14 @@ export function ContatosTabCliente({ empreendimentos, clienteId }: ContatosTabCl
     <div className="space-y-4">
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
         <div className="flex items-center gap-2 text-[var(--color-brand-600)] mb-2">
-          <Mail size={20} />
+          <Users size={20} />
           <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Contatos do cliente</h2>
         </div>
         <p className="mt-1 text-sm text-[var(--color-ink-500)]">
-          Cadastre os contatos deste cliente. Eles serão usados nos MTRs dos empreendimentos do cliente.
+          Cadastre os contatos deste cliente. Eles serao usados nos MTRs dos empreendimentos do cliente.
         </p>
 
-        <div className="mt-4 grid gap-2 sm:grid-cols-5">
+        <div className="mt-4 grid gap-2 sm:grid-cols-4">
           <input
             placeholder="Nome *"
             value={form.nome}
@@ -129,22 +130,16 @@ export function ContatosTabCliente({ empreendimentos, clienteId }: ContatosTabCl
             className={inputCls}
           />
           <input
-            placeholder="E-mail *"
+            placeholder="Assunto / Setor"
+            value={form.assunto}
+            onChange={(e) => setForm((f) => ({ ...f, assunto: e.target.value }))}
+            className={inputCls}
+          />
+          <input
+            placeholder="Email"
             type="email"
             value={form.email}
             onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-            className={inputCls}
-          />
-          <input
-            placeholder="Cargo"
-            value={form.cargo}
-            onChange={(e) => setForm((f) => ({ ...f, cargo: e.target.value }))}
-            className={inputCls}
-          />
-          <input
-            placeholder="Telefone"
-            value={form.telefone}
-            onChange={(e) => setForm((f) => ({ ...f, telefone: e.target.value }))}
             className={inputCls}
           />
           <button
@@ -156,24 +151,6 @@ export function ContatosTabCliente({ empreendimentos, clienteId }: ContatosTabCl
             Adicionar
           </button>
         </div>
-
-        {empreendimentos.length > 0 && (
-          <div className="mt-3 max-w-xs">
-            <label className="mb-1 block text-xs font-medium text-[var(--color-ink-500)]">Vincular a um empreendimento (opcional)</label>
-            <select
-              value={empreendimentoId}
-              onChange={(e) => setEmpreendimentoId(e.target.value)}
-              className="w-full rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm"
-            >
-              <option value="">Sem vínculo específico...</option>
-              {empreendimentos.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.apelido}{e.unidadeSinir ? ` · unid. ${e.unidadeSinir}` : ""}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
       </div>
 
       <div className="shadow-card overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">
@@ -181,23 +158,22 @@ export function ContatosTabCliente({ empreendimentos, clienteId }: ContatosTabCl
           <thead className="bg-[var(--color-paper-50)]">
             <tr>
               <th className="px-4 py-2.5 text-left font-medium text-[var(--color-ink-500)]">Nome</th>
-              <th className="px-4 py-2.5 text-left font-medium text-[var(--color-ink-500)]">Cargo</th>
-              <th className="px-4 py-2.5 text-left font-medium text-[var(--color-ink-500)]">E-mail</th>
+              <th className="px-4 py-2.5 text-left font-medium text-[var(--color-ink-500)]">Assunto</th>
+              <th className="px-4 py-2.5 text-left font-medium text-[var(--color-ink-500)]">Email</th>
               <th className="px-4 py-2.5 text-left font-medium text-[var(--color-ink-500)]">Telefone</th>
-              <th className="px-4 py-2.5 text-left font-medium text-[var(--color-ink-500)]">Empreendimento</th>
-              <th className="px-4 py-2.5 text-right font-medium text-[var(--color-ink-500)]">Ações</th>
+              <th className="px-4 py-2.5 text-right font-medium text-[var(--color-ink-500)]">Acoes</th>
             </tr>
           </thead>
           <tbody>
             {carregando ? (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-[var(--color-ink-500)]">
+                <td colSpan={5} className="px-4 py-6 text-center text-[var(--color-ink-500)]">
                   <Loader2 size={16} className="mr-2 inline animate-spin" /> Carregando...
                 </td>
               </tr>
             ) : contatos.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-[var(--color-ink-500)]">
+                <td colSpan={5} className="px-4 py-6 text-center text-[var(--color-ink-500)]">
                   Nenhum contato cadastrado para este cliente.
                 </td>
               </tr>
@@ -205,19 +181,9 @@ export function ContatosTabCliente({ empreendimentos, clienteId }: ContatosTabCl
               contatos.map((c) => (
                 <tr key={c.id} className="border-t border-[var(--color-paper-100)]">
                   <td className="px-4 py-2.5 font-medium text-[var(--color-ink-900)]">{c.nome}</td>
-                  <td className="px-4 py-2.5 text-[var(--color-ink-700)]">{c.cargo || "—"}</td>
-                  <td className="px-4 py-2.5 text-[var(--color-ink-700)]">{c.email}</td>
-                  <td className="px-4 py-2.5 text-[var(--color-ink-700)]">{c.telefone || "—"}</td>
-                  <td className="px-4 py-2.5 text-[var(--color-ink-700)]">
-                    {c.empreendimento ? (
-                      <span className="inline-flex items-center gap-1">
-                        <Building2 size={12} />
-                        {c.empreendimento.apelido}
-                      </span>
-                    ) : (
-                      "—"
-                    )}
-                  </td>
+                  <td className="px-4 py-2.5 text-[var(--color-ink-700)]">{c.assunto || "\u2014"}</td>
+                  <td className="px-4 py-2.5 text-[var(--color-ink-700)]">{c.email || "\u2014"}</td>
+                  <td className="px-4 py-2.5 text-[var(--color-ink-700)]">{c.telefone || "\u2014"}</td>
                   <td className="px-4 py-2.5 text-right">
                     <button
                       onClick={() => excluir(c)}

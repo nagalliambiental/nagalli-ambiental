@@ -30,38 +30,25 @@ interface ClienteFormData {
   ativo: boolean;
 }
 
-interface EmpreendimentoOpcao {
-  id: number;
-  apelido: string;
-  unidadeSinir?: string | null;
-  cliente?: { apelido: string } | null;
+interface ContatoTemp {
+  key: number;
+  nome: string;
+  assunto: string;
+  email: string;
+  telefone: string;
 }
 
-interface ContatoEmpreendimento {
-  id: number;
-  nome: string;
-  email: string;
-  cargo: string | null;
-  telefone: string | null;
-  empreendimentoId: number | null;
-  clienteId: number | null;
-  empreendimento?: { id: number; apelido: string } | null;
-  ativo: boolean;
-  criadoEm: string;
-}
+let contatoKeySeq = 0;
 
 export default function NovoClientePage() {
   const router = useRouter();
   const { toast } = useToast();
-  const [aba, setAba] = useState<"cliente" | "contatos">("cliente");
   const [carregandoCliente, setCarregandoCliente] = useState(false);
   const [clienteId, setClienteId] = useState<number | null>(null);
-  const [empreendimentos, setEmpreendimentos] = useState<EmpreendimentoOpcao[]>([]);
   const [buscandoCnpj, setBuscandoCnpj] = useState(false);
   const [buscandoCep, setBuscandoCep] = useState(false);
   const [cnpjDuplicado, setCnpjDuplicado] = useState(false);
 
-  // Cliente form state
   const [form, setForm] = useState<ClienteFormData>({
     apelido: "",
     razaoSocial: "",
@@ -87,12 +74,8 @@ export default function NovoClientePage() {
     ativo: true,
   });
 
-  // Contatos state
-  const [empreendimentoIdContato, setEmpreendimentoIdContato] = useState("");
-  const [contatos, setContatos] = useState<ContatoEmpreendimento[]>([]);
-  const [carregandoContatos, setCarregandoContatos] = useState(false);
-  const [salvandoContato, setSalvandoContato] = useState(false);
-  const [formContato, setFormContato] = useState({ nome: "", email: "", cargo: "", telefone: "" });
+  const [contatos, setContatos] = useState<ContatoTemp[]>([]);
+  const [salvandoContatoIdx, setSalvandoContatoIdx] = useState<number | null>(null);
 
   const CNPJ_MAP: Record<string, keyof ClienteFormData> = {
     razaoSocial: "razaoSocial",
@@ -119,11 +102,11 @@ export default function NovoClientePage() {
 
   async function buscarCNPJ() {
     const cnpj = form.cnpj.replace(/\D/g, "");
-    if (cnpj.length !== 14) return toast("Informe um CNPJ válido (14 dígitos)", "warning");
+    if (cnpj.length !== 14) return toast("Informe um CNPJ valido (14 digitos)", "warning");
     setBuscandoCnpj(true);
     try {
       const res = await fetch(`/api/cnpj/${cnpj}`);
-      if (!res.ok) return toast("CNPJ não encontrado", "error");
+      if (!res.ok) return toast("CNPJ nao encontrado", "error");
       const d = await res.json();
       setForm((prev) => {
         const next = { ...prev };
@@ -143,11 +126,11 @@ export default function NovoClientePage() {
 
   async function buscarCEP() {
     const cep = form.cep.replace(/\D/g, "");
-    if (cep.length !== 8) return toast("Informe um CEP válido (8 dígitos)", "warning");
+    if (cep.length !== 8) return toast("Informe um CEP valido (8 digitos)", "warning");
     setBuscandoCep(true);
     try {
       const res = await fetch(`/api/cep/${cep}`);
-      if (!res.ok) return toast("CEP não encontrado", "error");
+      if (!res.ok) return toast("CEP nao encontrado", "error");
       const d = await res.json();
       setForm((prev) => {
         const next = { ...prev };
@@ -156,7 +139,7 @@ export default function NovoClientePage() {
         }
         return next;
       });
-      toast("Endereço preenchido pelo CEP", "success");
+      toast("Endereco preenchido pelo CEP", "success");
     } catch {
       toast("Erro ao consultar CEP", "error");
     } finally {
@@ -183,7 +166,7 @@ export default function NovoClientePage() {
 
   async function salvarCliente() {
     if (cnpjDuplicado) {
-      toast("Este CNPJ já está cadastrado para outro cliente.", "error");
+      toast("Este CNPJ ja esta cadastrado para outro cliente.", "error");
       return;
     }
     setCarregandoCliente(true);
@@ -200,8 +183,6 @@ export default function NovoClientePage() {
       }
       toast("Cliente cadastrado com sucesso", "success");
       setClienteId(data.id);
-      setAba("contatos");
-      await carregarEmpreendimentos();
     } catch {
       toast("Falha ao salvar cliente", "error");
     } finally {
@@ -209,91 +190,52 @@ export default function NovoClientePage() {
     }
   }
 
-  interface EmpreendimentoApi {
-    id: number;
-    apelido: string;
-    unidadeSinir?: string | null;
+  function adicionarContatoLinha() {
+    setContatos((prev) => [...prev, { key: ++contatoKeySeq, nome: "", assunto: "", email: "", telefone: "" }]);
   }
 
-  async function carregarEmpreendimentos() {
-    if (!clienteId) return;
-    try {
-      const res = await fetch(`/api/empreendimentos?clienteId=${clienteId}`);
-      if (res.ok) {
-        const data: EmpreendimentoApi[] = await res.json();
-        setEmpreendimentos(data.map((e) => ({
-          id: e.id,
-          apelido: e.apelido,
-          unidadeSinir: e.unidadeSinir,
-          cliente: { apelido: "" },
-        })));
-      }
-    } catch {
-      // silencioso
+  function removerContatoLinha(key: number) {
+    setContatos((prev) => prev.filter((c) => c.key !== key));
+  }
+
+  function atualizarContatoLinha(key: number, campo: keyof ContatoTemp, valor: string) {
+    setContatos((prev) => prev.map((c) => (c.key === key ? { ...c, [campo]: valor } : c)));
+  }
+
+  async function salvarContato(idx: number) {
+    const c = contatos[idx];
+    if (!c.nome.trim()) {
+      toast("Nome do contato e obrigatorio", "error");
+      return;
     }
-  }
-
-  async function carregarContatos() {
     if (!clienteId) {
-      setContatos([]);
+      toast("Salve o cliente antes de adicionar contatos", "error");
       return;
     }
-    setCarregandoContatos(true);
-    try {
-      const res = await fetch(`/api/contatos?clienteId=${clienteId}`);
-      if (res.ok) setContatos(await res.json());
-      else toast("Falha ao carregar os contatos", "error");
-    } catch {
-      toast("Falha ao carregar os contatos", "error");
-    } finally {
-      setCarregandoContatos(false);
-    }
-  }
-
-  async function adicionarContato() {
-    if (!formContato.nome.trim() || !formContato.email.trim()) {
-      toast("Informe nome e e-mail do contato", "error");
-      return;
-    }
-    setSalvandoContato(true);
+    setSalvandoContatoIdx(idx);
     try {
       const res = await fetch("/api/contatos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...formContato,
-          clienteId: clienteId ? Number(clienteId) : undefined,
-          empreendimentoId: empreendimentoIdContato ? Number(empreendimentoIdContato) : undefined,
+          nome: c.nome.trim(),
+          assunto: c.assunto.trim() || null,
+          email: c.email.trim() || null,
+          telefone: c.telefone.trim() || null,
+          clienteId,
         }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) {
-        toast(data?.error || "Falha ao salvar o contato", "error");
+        toast(data?.error || "Falha ao salvar contato", "error");
         return;
       }
-      toast("Contato cadastrado", "success");
-      setFormContato({ nome: "", email: "", cargo: "", telefone: "" });
-      carregarContatos();
+      toast("Contato salvo", "success");
+      setContatos((prev) => prev.filter((_, i) => i !== idx));
     } catch {
-      toast("Falha ao salvar o contato", "error");
+      toast("Falha ao salvar contato", "error");
     } finally {
-      setSalvandoContato(false);
-    }
-  }
-
-  async function excluirContato(c: ContatoEmpreendimento) {
-    if (!confirm(`Remover o contato ${c.nome} (${c.email})?`)) return;
-    try {
-      const res = await fetch(`/api/contatos/${c.id}`, { method: "DELETE" });
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        toast(data?.error || "Falha ao remover o contato", "error");
-        return;
-      }
-      toast("Contato removido", "success");
-      carregarContatos();
-    } catch {
-      toast("Falha ao remover o contato", "error");
+      setSalvandoContatoIdx(null);
     }
   }
 
@@ -312,450 +254,380 @@ export default function NovoClientePage() {
         </button>
       </div>
 
-      <div className="border-b border-[var(--color-paper-200)] mb-6">
-        <nav className="flex gap-1" aria-label="Abas de cadastro">
-          <button
-            onClick={() => setAba("cliente")}
-            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-t-[var(--radius-card)] transition-colors ${
-              aba === "cliente"
-                ? "bg-[var(--color-brand-500)] text-white"
-                : "text-[var(--color-ink-600)] hover:bg-[var(--color-paper-100)]"
-            }`}
-          >
-            <Building2 size={16} />
-            Dados do Cliente
-          </button>
-          <button
-            onClick={() => setAba("contatos")}
-            disabled={!clienteId}
-            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-t-[var(--radius-card)] transition-colors ${
-              aba === "contatos"
-                ? "bg-[var(--color-brand-500)] text-white"
-                : "text-[var(--color-ink-600)] hover:bg-[var(--color-paper-100)]"
-            } opacity-${clienteId ? "100" : "50"}`}
-          >
-            <Mail size={16} />
-            Contatos
-          </button>
-        </nav>
-      </div>
-
-      {aba === "cliente" && (
-        <div className="space-y-6">
-          <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-6">
-            <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-4">Dados do Cliente</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div className="md:col-span-2 lg:col-span-3 border-b border-[var(--color-paper-200)] pb-2 pt-1">
-                <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--color-brand-600)]">
-                  <Building2 size={15} />
-                  Dados da Empresa
-                </h3>
-              </div>
-              <div className="md:col-span-2">
-                <label className={labelCls}>Apelido *</label>
-                <input
-                  value={form.apelido}
-                  onChange={(e) => setForm((f) => ({ ...f, apelido: e.target.value }))}
-                  className={inputCls}
-                  required
-                />
-              </div>
-              <div className="md:col-span-2">
-                <label className={labelCls}>Razão Social *</label>
-                <input
-                  value={form.razaoSocial}
-                  onChange={(e) => setForm((f) => ({ ...f, razaoSocial: e.target.value }))}
-                  className={inputCls}
-                  required
-                />
-              </div>
-              <div>
-                <label className={labelCls}>Nome Fantasia</label>
-                <input
-                  value={form.nomeFantasia}
-                  onChange={(e) => setForm((f) => ({ ...f, nomeFantasia: e.target.value }))}
-                  className={inputCls}
-                />
-              </div>
-              <div>
-                <label className={labelCls}>CNPJ *</label>
-                <div className="flex gap-2">
-                  <input
-                    value={form.cnpj}
-                    onChange={(e) => {
-                      const valor = e.target.value.replace(/\D/g, "");
-                      setForm((f) => ({ ...f, cnpj: valor }));
-                      setCnpjDuplicado(false);
-                      if (valor.length === 14) void verificarCnpjDuplicado();
-                    }}
-                    className={inputCls}
-                    placeholder="00000000000000"
-                    maxLength={14}
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={buscarCNPJ}
-                    disabled={buscandoCnpj}
-                    className="focus-ring transition-brand flex shrink-0 items-center gap-1.5 rounded-lg bg-[var(--color-brand-500)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
-                    title="Buscar dados pelo CNPJ (Receita Federal)"
-                  >
-                    {buscandoCnpj ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
-                    Buscar
-                  </button>
-                </div>
-                {cnpjDuplicado && (
-                  <p className="mt-1 block text-xs text-red-600">Este CNPJ já está cadastrado para outro cliente.</p>
-                )}
-              </div>
-              <div className="md:col-span-2 lg:col-span-3 border-b border-[var(--color-paper-200)] pb-2 pt-1">
-                <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--color-brand-600)]">
-                  <Mail size={15} />
-                  Contato
-                </h3>
-              </div>
-              <div>
-                <label className={labelCls}>Telefone *</label>
-                <input
-                  value={form.telefone}
-                  onChange={(e) => setForm((f) => ({ ...f, telefone: e.target.value }))}
-                  className={inputCls}
-                  required
-                />
-              </div>
-              <div>
-                <label className={labelCls}>Email *</label>
-                <input
-                  value={form.email}
-                  onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                  className={inputCls}
-                  type="email"
-                  required
-                />
-              </div>
-              <div className="md:col-span-2 lg:col-span-3 border-b border-[var(--color-paper-200)] pb-2 pt-1">
-                <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--color-brand-600)]">
-                  <MapPin size={15} />
-                  Endereço
-                </h3>
-              </div>
-              <div>
-                <label className={labelCls}>CEP</label>
-                <div className="flex gap-2">
-                  <input
-                    value={form.cep}
-                    onChange={(e) => setForm((f) => ({ ...f, cep: e.target.value.replace(/\D/g, "") }))}
-                    className={inputCls}
-                    placeholder="00000-000"
-                    maxLength={8}
-                  />
-                  <button
-                    type="button"
-                    onClick={buscarCEP}
-                    disabled={buscandoCep}
-                    className="focus-ring transition-brand flex shrink-0 items-center gap-1.5 rounded-lg bg-[var(--color-brand-500)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
-                    title="Buscar endereço pelo CEP (ViaCEP)"
-                  >
-                    {buscandoCep ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
-                    Buscar
-                  </button>
-                </div>
-              </div>
-              <div>
-                <label className={labelCls}>Rua</label>
-                <input
-                  value={form.rua}
-                  onChange={(e) => setForm((f) => ({ ...f, rua: e.target.value }))}
-                  className={inputCls}
-                />
-              </div>
-              <div>
-                <label className={labelCls}>Número</label>
-                <input
-                  value={form.numero}
-                  onChange={(e) => setForm((f) => ({ ...f, numero: e.target.value }))}
-                  className={inputCls}
-                />
-              </div>
-              <div>
-                <label className={labelCls}>Bairro</label>
-                <input
-                  value={form.bairro}
-                  onChange={(e) => setForm((f) => ({ ...f, bairro: e.target.value }))}
-                  className={inputCls}
-                />
-              </div>
-              <div>
-                <label className={labelCls}>Complemento</label>
-                <input
-                  value={form.complemento}
-                  onChange={(e) => setForm((f) => ({ ...f, complemento: e.target.value }))}
-                  className={inputCls}
-                />
-              </div>
-              <div>
-                <label className={labelCls}>Município</label>
-                <input
-                  value={form.municipio}
-                  onChange={(e) => setForm((f) => ({ ...f, municipio: e.target.value }))}
-                  className={inputCls}
-                />
-              </div>
-              <div>
-                <label className={labelCls}>UF</label>
-                <input
-                  value={form.uf}
-                  onChange={(e) => setForm((f) => ({ ...f, uf: e.target.value.toUpperCase() }))}
-                  className={inputCls}
-                  maxLength={2}
-                />
-              </div>
-              <div className="md:col-span-2 lg:col-span-3 border-b border-[var(--color-paper-200)] pb-2 pt-1">
-                <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--color-brand-600)]">
-                  <Users size={15} />
-                  Responsáveis
-                </h3>
-              </div>
-              <div>
-                <label className={labelCls}>Resp. Legal *</label>
-                <input
-                  value={form.respLegal}
-                  onChange={(e) => setForm((f) => ({ ...f, respLegal: e.target.value }))}
-                  className={inputCls}
-                  required
-                />
-              </div>
-              <div>
-                <label className={labelCls}>Resp. Técnico</label>
-                <input
-                  value={form.responsavelTecnicoNome}
-                  onChange={(e) => setForm((f) => ({ ...f, responsavelTecnicoNome: e.target.value }))}
-                  className={inputCls}
-                />
-              </div>
-              <div>
-                <label className={labelCls}>Conselho do Resp. Técnico</label>
-                <input
-                  value={form.responsavelTecnicoConselho}
-                  onChange={(e) => setForm((f) => ({ ...f, responsavelTecnicoConselho: e.target.value }))}
-                  className={inputCls}
-                />
-              </div>
-              <div>
-                <label className={labelCls}>CPF do Resp. Técnico</label>
-                <input
-                  value={form.responsavelTecnicoCpf}
-                  onChange={(e) => setForm((f) => ({ ...f, responsavelTecnicoCpf: e.target.value.replace(/\D/g, "") }))}
-                  className={inputCls}
-                  placeholder="000.000.000-00"
-                  maxLength={11}
-                />
-              </div>
-              <div>
-                <label className={labelCls}>Resp. implantação PGRS</label>
-                <input
-                  value={form.responsavelPgrsNome}
-                  onChange={(e) => setForm((f) => ({ ...f, responsavelPgrsNome: e.target.value }))}
-                  className={inputCls}
-                />
-              </div>
-              <div>
-                <label className={labelCls}>Cargo resp. PGRS</label>
-                <input
-                  value={form.responsavelPgrsCargo}
-                  onChange={(e) => setForm((f) => ({ ...f, responsavelPgrsCargo: e.target.value }))}
-                  className={inputCls}
-                />
-              </div>
-              <div className="md:col-span-2 lg:col-span-3 border-b border-[var(--color-paper-200)] pb-2 pt-1">
-                <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--color-brand-600)]">
-                  <Settings2 size={15} />
-                  Complemento e Configuração
-                </h3>
-              </div>
-              <div>
-                <label className={labelCls}>Ramo de atividade</label>
-                <input
-                  value={form.ramoAtividade}
-                  onChange={(e) => setForm((f) => ({ ...f, ramoAtividade: e.target.value }))}
-                  className={inputCls}
-                />
-              </div>
-              <div>
-                <label className={labelCls}>Visibilidade</label>
-                <select value={form.visibilidade} onChange={(e) => setForm((f) => ({ ...f, visibilidade: e.target.value }))} className={inputCls}>
-                  <option value="publico">Público</option>
-                  <option value="privado">Privado</option>
-                </select>
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="ativo"
-                  checked={form.ativo}
-                  onChange={(e) => setForm((f) => ({ ...f, ativo: e.target.checked }))}
-                  className="rounded border-[var(--color-paper-200)] text-[var(--color-brand-500)] focus:ring-[var(--color-brand-500)]"
-                />
-                <label htmlFor="ativo" className="text-sm text-[var(--color-ink-700)] cursor-pointer">Ativo</label>
-              </div>
-            </div>
-            <div className="mt-6 flex justify-end gap-3">
+      <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-6">
+        <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-4">Dados do Cliente</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="md:col-span-2 lg:col-span-3 border-b border-[var(--color-paper-200)] pb-2 pt-1">
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--color-brand-600)]">
+              <Building2 size={15} />
+              Dados da Empresa
+            </h3>
+          </div>
+          <div className="md:col-span-2">
+            <label className={labelCls}>Apelido *</label>
+            <input
+              value={form.apelido}
+              onChange={(e) => setForm((f) => ({ ...f, apelido: e.target.value }))}
+              className={inputCls}
+              required
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label className={labelCls}>Razao Social *</label>
+            <input
+              value={form.razaoSocial}
+              onChange={(e) => setForm((f) => ({ ...f, razaoSocial: e.target.value }))}
+              className={inputCls}
+              required
+            />
+          </div>
+          <div>
+            <label className={labelCls}>Nome Fantasia</label>
+            <input
+              value={form.nomeFantasia}
+              onChange={(e) => setForm((f) => ({ ...f, nomeFantasia: e.target.value }))}
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label className={labelCls}>CNPJ *</label>
+            <div className="flex gap-2">
+              <input
+                value={form.cnpj}
+                onChange={(e) => {
+                  const valor = e.target.value.replace(/\D/g, "");
+                  setForm((f) => ({ ...f, cnpj: valor }));
+                  setCnpjDuplicado(false);
+                  if (valor.length === 14) void verificarCnpjDuplicado();
+                }}
+                className={inputCls}
+                placeholder="00000000000000"
+                maxLength={14}
+                required
+              />
               <button
-                onClick={() => router.back()}
-                className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg border border-[var(--color-paper-200)] px-4 py-2 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]"
+                type="button"
+                onClick={buscarCNPJ}
+                disabled={buscandoCnpj}
+                className="focus-ring transition-brand flex shrink-0 items-center gap-1.5 rounded-lg bg-[var(--color-brand-500)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
+                title="Buscar dados pelo CNPJ (Receita Federal)"
               >
-                <X size={16} />
-                Cancelar
+                {buscandoCnpj ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+                Buscar
               </button>
+            </div>
+            {cnpjDuplicado && (
+              <p className="mt-1 block text-xs text-red-600">Este CNPJ ja esta cadastrado para outro cliente.</p>
+            )}
+          </div>
+
+          <div className="md:col-span-2 lg:col-span-3 border-b border-[var(--color-paper-200)] pb-2 pt-1">
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--color-brand-600)]">
+              <Mail size={15} />
+              Contato da Empresa
+            </h3>
+          </div>
+          <div>
+            <label className={labelCls}>Telefone</label>
+            <input
+              value={form.telefone}
+              onChange={(e) => setForm((f) => ({ ...f, telefone: e.target.value }))}
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label className={labelCls}>Email</label>
+            <input
+              value={form.email}
+              onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+              className={inputCls}
+              type="email"
+            />
+          </div>
+
+          <div className="md:col-span-2 lg:col-span-3 border-b border-[var(--color-paper-200)] pb-2 pt-1">
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--color-brand-600)]">
+              <MapPin size={15} />
+              Endereco
+            </h3>
+          </div>
+          <div>
+            <label className={labelCls}>CEP</label>
+            <div className="flex gap-2">
+              <input
+                value={form.cep}
+                onChange={(e) => setForm((f) => ({ ...f, cep: e.target.value.replace(/\D/g, "") }))}
+                className={inputCls}
+                placeholder="00000-000"
+                maxLength={8}
+              />
               <button
-                onClick={salvarCliente}
-                disabled={carregandoCliente}
-                className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg bg-[var(--color-brand-500)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
+                type="button"
+                onClick={buscarCEP}
+                disabled={buscandoCep}
+                className="focus-ring transition-brand flex shrink-0 items-center gap-1.5 rounded-lg bg-[var(--color-brand-500)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
+                title="Buscar endereco pelo CEP (ViaCEP)"
               >
-                {carregandoCliente ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
-                {carregandoCliente ? "Salvando..." : "Salvar Cliente"}
+                {buscandoCep ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+                Buscar
               </button>
             </div>
           </div>
+          <div>
+            <label className={labelCls}>Rua</label>
+            <input
+              value={form.rua}
+              onChange={(e) => setForm((f) => ({ ...f, rua: e.target.value }))}
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label className={labelCls}>Numero</label>
+            <input
+              value={form.numero}
+              onChange={(e) => setForm((f) => ({ ...f, numero: e.target.value }))}
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label className={labelCls}>Bairro</label>
+            <input
+              value={form.bairro}
+              onChange={(e) => setForm((f) => ({ ...f, bairro: e.target.value }))}
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label className={labelCls}>Complemento</label>
+            <input
+              value={form.complemento}
+              onChange={(e) => setForm((f) => ({ ...f, complemento: e.target.value }))}
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label className={labelCls}>Municipio</label>
+            <input
+              value={form.municipio}
+              onChange={(e) => setForm((f) => ({ ...f, municipio: e.target.value }))}
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label className={labelCls}>UF</label>
+            <input
+              value={form.uf}
+              onChange={(e) => setForm((f) => ({ ...f, uf: e.target.value.toUpperCase() }))}
+              className={inputCls}
+              maxLength={2}
+            />
+          </div>
+
+          <div className="md:col-span-2 lg:col-span-3 border-b border-[var(--color-paper-200)] pb-2 pt-1">
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--color-brand-600)]">
+              <Users size={15} />
+              Responsaveis
+            </h3>
+          </div>
+          <div>
+            <label className={labelCls}>Resp. Legal *</label>
+            <input
+              value={form.respLegal}
+              onChange={(e) => setForm((f) => ({ ...f, respLegal: e.target.value }))}
+              className={inputCls}
+              required
+            />
+          </div>
+          <div>
+            <label className={labelCls}>Resp. Tecnico</label>
+            <input
+              value={form.responsavelTecnicoNome}
+              onChange={(e) => setForm((f) => ({ ...f, responsavelTecnicoNome: e.target.value }))}
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label className={labelCls}>Conselho do Resp. Tecnico</label>
+            <input
+              value={form.responsavelTecnicoConselho}
+              onChange={(e) => setForm((f) => ({ ...f, responsavelTecnicoConselho: e.target.value }))}
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label className={labelCls}>CPF do Resp. Tecnico</label>
+            <input
+              value={form.responsavelTecnicoCpf}
+              onChange={(e) => setForm((f) => ({ ...f, responsavelTecnicoCpf: e.target.value.replace(/\D/g, "") }))}
+              className={inputCls}
+              placeholder="000.000.000-00"
+              maxLength={11}
+            />
+          </div>
+          <div>
+            <label className={labelCls}>Resp. implantacao PGRS</label>
+            <input
+              value={form.responsavelPgrsNome}
+              onChange={(e) => setForm((f) => ({ ...f, responsavelPgrsNome: e.target.value }))}
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label className={labelCls}>Cargo resp. PGRS</label>
+            <input
+              value={form.responsavelPgrsCargo}
+              onChange={(e) => setForm((f) => ({ ...f, responsavelPgrsCargo: e.target.value }))}
+              className={inputCls}
+            />
+          </div>
+
+          <div className="md:col-span-2 lg:col-span-3 border-b border-[var(--color-paper-200)] pb-2 pt-1">
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--color-brand-600)]">
+              <Settings2 size={15} />
+              Complemento e Configuracao
+            </h3>
+          </div>
+          <div>
+            <label className={labelCls}>Ramo de atividade</label>
+            <input
+              value={form.ramoAtividade}
+              onChange={(e) => setForm((f) => ({ ...f, ramoAtividade: e.target.value }))}
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label className={labelCls}>Visibilidade</label>
+            <select value={form.visibilidade} onChange={(e) => setForm((f) => ({ ...f, visibilidade: e.target.value }))} className={inputCls}>
+              <option value="publico">Publico</option>
+              <option value="privado">Privado</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="ativo"
+              checked={form.ativo}
+              onChange={(e) => setForm((f) => ({ ...f, ativo: e.target.checked }))}
+              className="rounded border-[var(--color-paper-200)] text-[var(--color-brand-500)] focus:ring-[var(--color-brand-500)]"
+            />
+            <label htmlFor="ativo" className="text-sm text-[var(--color-ink-700)] cursor-pointer">Ativo</label>
+          </div>
+        </div>
+        <div className="mt-6 flex justify-end gap-3">
+          <button
+            onClick={() => router.back()}
+            className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg border border-[var(--color-paper-200)] px-4 py-2 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]"
+          >
+            <X size={16} />
+            Cancelar
+          </button>
+          <button
+            onClick={salvarCliente}
+            disabled={carregandoCliente}
+            className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg bg-[var(--color-brand-500)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
+          >
+            {carregandoCliente ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+            {carregandoCliente ? "Salvando..." : "Salvar Cliente"}
+          </button>
+        </div>
+      </div>
+
+      {clienteId && (
+        <div className="mt-6 shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] flex items-center gap-2">
+                <Users size={16} />
+                Contatos
+              </h2>
+              <p className="text-xs text-[var(--color-ink-500)] mt-1">
+                Cadastre os contatos deste cliente. Eles serao usados nos MTRs dos empreendimentos.
+              </p>
+            </div>
+            <button
+              onClick={adicionarContatoLinha}
+              className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg bg-[var(--color-brand-500)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)]"
+            >
+              <Plus size={15} />
+              Adicionar contato
+            </button>
+          </div>
+
+          {contatos.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 py-8 text-[var(--color-ink-400)]">
+              <Users size={28} />
+              <p className="text-sm">Nenhum contato adicionado.</p>
+              <p className="text-xs">Clique em &quot;Adicionar contato&quot; para comecar.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {contatos.map((c, idx) => (
+                <div key={c.key} className="flex items-end gap-2 rounded-lg border border-[var(--color-paper-200)] bg-[var(--color-paper-50)] p-3">
+                  <div className="flex-1 min-w-0">
+                    <label className={labelCls}>Nome *</label>
+                    <input
+                      placeholder="Nome do contato"
+                      value={c.nome}
+                      onChange={(e) => atualizarContatoLinha(c.key, "nome", e.target.value)}
+                      className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-2.5 py-2 text-sm"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <label className={labelCls}>Assunto *</label>
+                    <input
+                      placeholder="Assunto / Setor"
+                      value={c.assunto}
+                      onChange={(e) => atualizarContatoLinha(c.key, "assunto", e.target.value)}
+                      className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-2.5 py-2 text-sm"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <label className={labelCls}>Email</label>
+                    <input
+                      placeholder="email@exemplo.com"
+                      type="email"
+                      value={c.email}
+                      onChange={(e) => atualizarContatoLinha(c.key, "email", e.target.value)}
+                      className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-2.5 py-2 text-sm"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <label className={labelCls}>Telefone</label>
+                    <input
+                      placeholder="(00) 00000-0000"
+                      value={c.telefone}
+                      onChange={(e) => atualizarContatoLinha(c.key, "telefone", e.target.value)}
+                      className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-2.5 py-2 text-sm"
+                    />
+                  </div>
+                  <div className="flex gap-1 shrink-0">
+                    <button
+                      onClick={() => salvarContato(idx)}
+                      disabled={salvandoContatoIdx === idx || !c.nome.trim()}
+                      title="Salvar contato"
+                      className="focus-ring transition-brand rounded-lg bg-[var(--color-brand-500)] p-2 text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
+                    >
+                      {salvandoContatoIdx === idx ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />}
+                    </button>
+                    <button
+                      onClick={() => removerContatoLinha(c.key)}
+                      title="Remover linha"
+                      className="rounded-lg p-2 text-[var(--color-ink-500)] hover:bg-red-50 hover:text-red-600"
+                    >
+                      <X size={15} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
-      {aba === "contatos" && (
-        <div className="space-y-4">
-          {!clienteId ? (
-            <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-6 text-center">
-              <Building2 size={32} className="mx-auto text-[var(--color-ink-400)]" />
-              <p className="mt-2 text-[var(--color-ink-500)]">Salve o cliente primeiro para adicionar contatos.</p>
-            </div>
-          ) : empreendimentos.length === 0 ? (
-            <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-6 text-center">
-              <Building2 size={32} className="mx-auto text-[var(--color-ink-400)]" />
-              <p className="mt-2 text-[var(--color-ink-500)]">Nenhum empreendimento cadastrado para este cliente.</p>
-              <p className="mt-1 text-xs text-[var(--color-ink-400)]">Adicione um empreendimento para começar a cadastrar contatos.</p>
-            </div>
-          ) : (
-            <>
-              <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
-                <div className="flex items-center gap-2 text-[var(--color-brand-600)] mb-2">
-                  <Building2 size={20} />
-                  <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Contatos do cliente</h2>
-                </div>
-                <p className="mt-1 text-sm text-[var(--color-ink-500)]">
-                  Cadastre os contatos deste cliente. Eles serão usados nos MTRs dos empreendimentos do cliente.
-                </p>
-
-                <div className="mt-4 grid gap-2 sm:grid-cols-5">
-                  <input
-                    placeholder="Nome *"
-                    value={formContato.nome}
-                    onChange={(e) => setFormContato((f) => ({ ...f, nome: e.target.value }))}
-                    className="rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm"
-                  />
-                  <input
-                    placeholder="E-mail *"
-                    type="email"
-                    value={formContato.email}
-                    onChange={(e) => setFormContato((f) => ({ ...f, email: e.target.value }))}
-                    className="rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm"
-                  />
-                  <input
-                    placeholder="Cargo"
-                    value={formContato.cargo}
-                    onChange={(e) => setFormContato((f) => ({ ...f, cargo: e.target.value }))}
-                    className="rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm"
-                  />
-                  <input
-                    placeholder="Telefone"
-                    value={formContato.telefone}
-                    onChange={(e) => setFormContato((f) => ({ ...f, telefone: e.target.value }))}
-                    className="rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm"
-                  />
-                  <button
-                    onClick={adicionarContato}
-                    disabled={salvandoContato}
-                    className="focus-ring transition-brand flex items-center justify-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
-                  >
-                    {salvandoContato ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />}
-                    Adicionar
-                  </button>
-                </div>
-
-                {empreendimentos.length > 0 && (
-                  <div className="mt-3 max-w-xs">
-                    <label className="mb-1 block text-xs font-medium text-[var(--color-ink-500)]">Vincular a um empreendimento (opcional)</label>
-                    <select
-                      value={empreendimentoIdContato}
-                      onChange={(e) => setEmpreendimentoIdContato(e.target.value)}
-                      className="w-full rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm"
-                    >
-                      <option value="">Sem vínculo específico...</option>
-                      {empreendimentos.map((e) => (
-                        <option key={e.id} value={e.id}>
-                          {e.apelido}{e.unidadeSinir ? ` · unid. ${e.unidadeSinir}` : ""}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
-
-              <div className="shadow-card overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">
-                <table className="w-full text-sm">
-                  <thead className="bg-[var(--color-paper-50)]">
-                    <tr>
-                      <th className="px-4 py-2.5 text-left font-medium text-[var(--color-ink-500)]">Nome</th>
-                      <th className="px-4 py-2.5 text-left font-medium text-[var(--color-ink-500)]">Cargo</th>
-                      <th className="px-4 py-2.5 text-left font-medium text-[var(--color-ink-500)]">E-mail</th>
-                      <th className="px-4 py-2.5 text-left font-medium text-[var(--color-ink-500)]">Telefone</th>
-                      <th className="px-4 py-2.5 text-left font-medium text-[var(--color-ink-500)]">Empreendimento</th>
-                      <th className="px-4 py-2.5 text-right font-medium text-[var(--color-ink-500)]">Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {carregandoContatos ? (
-                      <tr>
-                        <td colSpan={6} className="px-4 py-6 text-center text-[var(--color-ink-500)]">
-                          <Loader2 size={16} className="mr-2 inline animate-spin" /> Carregando...
-                        </td>
-                      </tr>
-                    ) : contatos.length === 0 ? (
-                      <tr>
-                        <td colSpan={6} className="px-4 py-6 text-center text-[var(--color-ink-500)]">
-                          Nenhum contato cadastrado para este cliente.
-                        </td>
-                      </tr>
-                    ) : (
-                      contatos.map((c) => (
-                        <tr key={c.id} className="border-t border-[var(--color-paper-100)]">
-                          <td className="px-4 py-2.5 font-medium text-[var(--color-ink-900)]">{c.nome}</td>
-                          <td className="px-4 py-2.5 text-[var(--color-ink-700)]">{c.cargo || "—"}</td>
-                          <td className="px-4 py-2.5 text-[var(--color-ink-700)]">{c.email}</td>
-                          <td className="px-4 py-2.5 text-[var(--color-ink-700)]">{c.telefone || "—"}</td>
-                          <td className="px-4 py-2.5 text-[var(--color-ink-700)]">
-                            {c.empreendimento ? (
-                              <span className="inline-flex items-center gap-1">
-                                <Building2 size={12} />
-                                {c.empreendimento.apelido}
-                              </span>
-                            ) : "—"}
-                          </td>
-                          <td className="px-4 py-2.5 text-right">
-                            <button
-                              onClick={() => excluirContato(c)}
-                              title="Remover contato"
-                              className="rounded-md p-1.5 text-[var(--color-ink-600)] hover:bg-red-50 hover:text-red-700"
-                            >
-                              <X size={15} />
-                            </button>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
+      {!clienteId && (
+        <div className="mt-6 shadow-card rounded-[var(--radius-card)] border border-dashed border-[var(--color-paper-300)] bg-[var(--color-paper-50)] p-6 text-center">
+          <Users size={28} className="mx-auto text-[var(--color-ink-400)]" />
+          <p className="mt-2 text-sm text-[var(--color-ink-500)]">Salve o cliente primeiro para adicionar contatos.</p>
         </div>
       )}
     </div>

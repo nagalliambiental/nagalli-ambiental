@@ -20,12 +20,13 @@ export async function PUT(req: NextRequest, { params }: Params) {
   const body = await req.json().catch(() => ({}));
   const data: Record<string, unknown> = {};
   if (typeof body.nome === "string" && body.nome.trim()) data.nome = body.nome.trim();
+  if (typeof body.assunto === "string") data.assunto = body.assunto.trim() || null;
   if (typeof body.email === "string") {
-    const email = body.email.trim().toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return NextResponse.json({ error: "E-mail inválido" }, { status: 400 });
+    const email = body.email.trim();
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return NextResponse.json({ error: "E-mail invalido" }, { status: 400 });
     }
-    data.email = email;
+    data.email = email || null;
   }
   if (typeof body.cargo === "string") data.cargo = body.cargo.trim() || null;
   if (typeof body.telefone === "string") data.telefone = body.telefone.trim() || null;
@@ -67,7 +68,7 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
 
   try {
     const contato = await prisma.contato.delete({ where: { id: contatoId } });
-    await logAuditoria("EXCLUIR", "Contato", contato.id, { nome: contato.nome, email: contato.email },
+    await logAuditoria("EXCLUIR", "Contato", contato.id, { nome: contato.nome, email: contato.email, assunto: contato.assunto },
       session.user?.id ? Number(session.user.id) : undefined);
     return NextResponse.json({ ok: true });
   } catch {
