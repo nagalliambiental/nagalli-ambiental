@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Building2, Loader2, X, ChevronLeft, Search, Users, MapPin, Settings2 } from "lucide-react";
+import { Plus, Building2, Loader2, X, ChevronLeft, Search, Users, MapPin, Settings2, User } from "lucide-react";
 import { useToast } from "@/components/Toast";
 
 interface ClienteFormData {
@@ -48,6 +48,8 @@ export default function NovoClientePage() {
   const [buscandoCnpj, setBuscandoCnpj] = useState(false);
   const [buscandoCep, setBuscandoCep] = useState(false);
   const [cnpjDuplicado, setCnpjDuplicado] = useState(false);
+  const [tipoPessoa, setTipoPessoa] = useState<"fisica" | "juridica">("juridica");
+  const ehFisica = tipoPessoa === "fisica";
 
   const [form, setForm] = useState<ClienteFormData>({
     apelido: "",
@@ -287,10 +289,39 @@ export default function NovoClientePage() {
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-6">
         <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-4">Dados do Cliente</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="md:col-span-2 lg:col-span-3">
+            <label className={labelCls}>Tipo de Pessoa</label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setTipoPessoa("juridica")}
+                className={`focus-ring transition-brand flex items-center gap-1.5 rounded-lg border px-4 py-2 text-sm font-medium ${
+                  tipoPessoa === "juridica"
+                    ? "border-[var(--color-brand-500)] bg-[var(--color-brand-50)] text-[var(--color-brand-600)]"
+                    : "border-[var(--color-paper-200)] bg-white text-[var(--color-ink-500)] hover:bg-[var(--color-paper-100)]"
+                }`}
+              >
+                <Building2 size={15} />
+                Pessoa Jurídica
+              </button>
+              <button
+                type="button"
+                onClick={() => setTipoPessoa("fisica")}
+                className={`focus-ring transition-brand flex items-center gap-1.5 rounded-lg border px-4 py-2 text-sm font-medium ${
+                  tipoPessoa === "fisica"
+                    ? "border-[var(--color-brand-500)] bg-[var(--color-brand-50)] text-[var(--color-brand-600)]"
+                    : "border-[var(--color-paper-200)] bg-white text-[var(--color-ink-500)] hover:bg-[var(--color-paper-100)]"
+                }`}
+              >
+                <User size={15} />
+                Pessoa Física
+              </button>
+            </div>
+          </div>
           <div className="md:col-span-2 lg:col-span-3 border-b border-[var(--color-paper-200)] pb-2 pt-1">
             <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--color-brand-600)]">
-              <Building2 size={15} />
-              Dados da Empresa
+              {ehFisica ? <User size={15} /> : <Building2 size={15} />}
+              {ehFisica ? "Dados Pessoais" : "Dados da Empresa"}
             </h3>
           </div>
           <div className="md:col-span-2">
@@ -303,7 +334,7 @@ export default function NovoClientePage() {
             />
           </div>
           <div className="md:col-span-2">
-            <label className={labelCls}>Razao Social *</label>
+            <label className={labelCls}>{ehFisica ? "Nome Completo *" : "Razão Social *"}</label>
             <input
               value={form.razaoSocial}
               onChange={(e) => setForm((f) => ({ ...f, razaoSocial: e.target.value }))}
@@ -311,41 +342,58 @@ export default function NovoClientePage() {
               required
             />
           </div>
+          {!ehFisica && (
+            <div>
+              <label className={labelCls}>Nome Fantasia</label>
+              <input
+                value={form.nomeFantasia}
+                onChange={(e) => setForm((f) => ({ ...f, nomeFantasia: e.target.value }))}
+                className={inputCls}
+              />
+            </div>
+          )}
           <div>
-            <label className={labelCls}>Nome Fantasia</label>
-            <input
-              value={form.nomeFantasia}
-              onChange={(e) => setForm((f) => ({ ...f, nomeFantasia: e.target.value }))}
-              className={inputCls}
-            />
-          </div>
-          <div>
-            <label className={labelCls}>CNPJ *</label>
-            <div className="flex gap-2">
+            <label className={labelCls}>{ehFisica ? "CPF *" : "CNPJ *"}</label>
+            {ehFisica ? (
               <input
                 value={form.cnpj}
                 onChange={(e) => {
                   const valor = e.target.value.replace(/\D/g, "");
                   setForm((f) => ({ ...f, cnpj: valor }));
                   setCnpjDuplicado(false);
-                  if (valor.length === 14) void verificarCnpjDuplicado();
                 }}
                 className={inputCls}
-                placeholder="00000000000000"
-                maxLength={14}
+                placeholder="000.000.000-00"
+                maxLength={11}
                 required
               />
-              <button
-                type="button"
-                onClick={buscarCNPJ}
-                disabled={buscandoCnpj}
-                className="focus-ring transition-brand flex shrink-0 items-center gap-1.5 rounded-lg bg-[var(--color-brand-500)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
-                title="Buscar dados pelo CNPJ (Receita Federal)"
-              >
-                {buscandoCnpj ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
-                Buscar
-              </button>
-            </div>
+            ) : (
+              <div className="flex gap-2">
+                <input
+                  value={form.cnpj}
+                  onChange={(e) => {
+                    const valor = e.target.value.replace(/\D/g, "");
+                    setForm((f) => ({ ...f, cnpj: valor }));
+                    setCnpjDuplicado(false);
+                    if (valor.length === 14) void verificarCnpjDuplicado();
+                  }}
+                  className={inputCls}
+                  placeholder="00000000000000"
+                  maxLength={14}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={buscarCNPJ}
+                  disabled={buscandoCnpj}
+                  className="focus-ring transition-brand flex shrink-0 items-center gap-1.5 rounded-lg bg-[var(--color-brand-500)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
+                  title="Buscar dados pelo CNPJ (Receita Federal)"
+                >
+                  {buscandoCnpj ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+                  Buscar
+                </button>
+              </div>
+            )}
             {cnpjDuplicado && (
               <p className="mt-1 block text-xs text-red-600">Este CNPJ ja esta cadastrado para outro cliente.</p>
             )}
