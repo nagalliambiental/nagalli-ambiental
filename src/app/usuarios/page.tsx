@@ -77,7 +77,7 @@ export default async function UsuariosPage() {
                     )}
                   </td>
                   <td className="px-3 py-3">
-                    <RowActions detailUrl={`/usuarios/${u.id}`} editUrl={`/usuarios/${u.id}`} entity="usuario" entityName="Usuário" endpoint={`/api/usuarios/${u.id}`} />
+                    <RowActions detailUrl={`/usuarios/${u.id}`} editUrl={`/usuarios/${u.id}/editar`} entity="usuario" entityName="Usuário" endpoint={`/api/usuarios/${u.id}`} />
                   </td>
                 </tr>
               ))}

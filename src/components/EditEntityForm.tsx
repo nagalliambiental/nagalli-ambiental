@@ -13,7 +13,7 @@ import { ehPrivilegiado } from "@/lib/perfil";
 interface FieldConfig {
   name: string;
   label: string;
-  type: "text" | "select" | "textarea" | "date" | "number" | "checkbox";
+  type: "text" | "select" | "textarea" | "date" | "number" | "checkbox" | "password";
   required?: boolean;
   adminOnly?: boolean;
   options?: { value: string; label: string }[];
@@ -389,7 +389,7 @@ export default function EditEntityForm({
                   ) : (
                     <div className="flex gap-2">
                       <input
-                        type={f.type === "date" ? "date" : f.type === "number" ? "number" : "text"}
+                        type={f.type === "password" ? "password" : f.type === "date" ? "date" : f.type === "number" ? "number" : "text"}
                         step={f.step}
                         value={form[f.name] as string || ""}
                         onChange={(e) => setField(f.name, e.target.value)}
