@@ -14,7 +14,7 @@ interface DocData {
   caminho: string;
   tamanho: number;
   criadoEm: Date;
-  processo: { numProtocolo: string } | null;
+  processo: { numProtocolo: string; numLicenca: string | null } | null;
 }
 
 const tipoColors: Record<string, string> = {
@@ -55,7 +55,7 @@ export function DocumentosTable({ data }: { data: DocData[] }) {
         </span>
       ),
     },
-    { header: "Processo", hideBelow: "lg", render: (d) => <span className="font-mono text-sm">{d.processo?.numProtocolo || "—"}</span> },
+    { header: "Processo", hideBelow: "lg", render: (d) => <span className="font-mono text-sm">{d.processo ? (d.processo.numLicenca || d.processo.numProtocolo) : "—"}</span> },
     { header: "Tamanho", hideBelow: "lg", render: (d) => formatBytes(d.tamanho) },
     { header: "Data", sortable: true, sortKey: "criadoEm", hideBelow: "xl", render: (d) => format(new Date(d.criadoEm), "dd/MM/yyyy", { locale: ptBR }) },
     {

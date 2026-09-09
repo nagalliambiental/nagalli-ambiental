@@ -27,7 +27,7 @@ export default async function DocumentosPage({
   const documentos = await prisma.documento.findMany({
     where,
     include: {
-      processo: { select: { numProtocolo: true } },
+      processo: { select: { numProtocolo: true, numLicenca: true } },
       exigencia: { select: { id: true, descricao: true } },
     },
     orderBy: { criadoEm: "desc" },

@@ -32,7 +32,7 @@ export default async function DashboardPage() {
     }),
     prisma.exigencia.findMany({
       where: { cumprida: false, processo: { renovacaoPendente: false } },
-      include: { processo: { select: { numProtocolo: true, empreendimento: { select: { apelido: true } } } } },
+      include: { processo: { select: { id: true, numProtocolo: true, numLicenca: true, empreendimento: { select: { apelido: true } } } } },
       orderBy: { prazo: "asc" },
     }),
     prisma.autorizacaoTpp.findMany({
@@ -53,6 +53,7 @@ export default async function DashboardPage() {
       id: p.id,
       tipo: p.tipo,
       numProtocolo: p.numProtocolo,
+      numLicenca: p.numLicenca,
       apelido: p.empreendimento.apelido,
       orgao: p.orgao.sigla,
       validade: p.validade!,
@@ -64,7 +65,8 @@ export default async function DashboardPage() {
     .map((e) => ({
       id: e.id,
       descricao: e.descricao,
-      processo: e.processo.numProtocolo,
+      processoId: e.processo.id,
+      licenca: e.processo.numLicenca || e.processo.numProtocolo,
       apelido: e.processo.empreendimento.apelido,
       prazo: e.prazo,
       diasRestantes: differenceInDays(e.prazo, hoje),
@@ -110,7 +112,7 @@ export default async function DashboardPage() {
         <Link href="/empreendimentos" className="block h-full">
           <StatCard label="Empreendimentos" value={totalEmpreendimentos} icon={Building2} accent="brand" />
         </Link>
-        <Link href="/exigencias" className="block h-full">
+        <Link href="/prazos" className="block h-full">
           <StatCard label="Exigencias Pendentes" value={exigenciasPendentes} icon={CalendarClock} accent={exigenciasPendentes > 0 ? "river" : "brand"} />
         </Link>
       </div>
@@ -161,7 +163,7 @@ export default async function DashboardPage() {
                   <Link key={`p-${a.id}`} href={`/processos/${a.id}`} className={`focus-ring transition-brand flex items-center justify-between rounded-lg border bg-white p-3 ${a.diasRestantes < 0 ? "border-red-300" : "border-amber-200"}`}>
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium text-[var(--color-ink-900)]">{a.tipo} -- {a.apelido}</p>
-                      <p className="text-xs text-[var(--color-ink-500)]">{a.numProtocolo} · {a.orgao}</p>
+                      <p className="text-xs text-[var(--color-ink-500)]">{a.numLicenca ? `${a.numLicenca}` : a.numProtocolo} · {a.orgao}</p>
                     </div>
                     <div className={`shrink-0 text-right text-xs font-semibold ${a.diasRestantes < 0 ? "text-red-700" : "text-amber-700"}`}>
                       {format(a.validade, "dd/MM", { locale: ptBR })}
@@ -170,10 +172,10 @@ export default async function DashboardPage() {
                   </Link>
                 ))}
                 {alertasExigencias.slice(0, 4).map((a) => (
-                  <Link key={`e-${a.id}`} href={`/exigencias/${a.id}`} className={`focus-ring transition-brand flex items-center justify-between rounded-lg border bg-white p-3 ${a.diasRestantes < 0 ? "border-red-300" : "border-amber-200"}`}>
+                  <Link key={`e-${a.id}`} href={`/processos/${a.processoId}`} className={`focus-ring transition-brand flex items-center justify-between rounded-lg border bg-white p-3 ${a.diasRestantes < 0 ? "border-red-300" : "border-amber-200"}`}>
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium text-[var(--color-ink-900)]">{a.descricao}</p>
-                      <p className="text-xs text-[var(--color-ink-500)]">{a.processo} · {a.apelido}</p>
+                      <p className="text-xs text-[var(--color-ink-500)]">{a.licenca} · {a.apelido}</p>
                     </div>
                     <div className={`shrink-0 text-right text-xs font-semibold ${a.diasRestantes < 0 ? "text-red-700" : "text-amber-700"}`}>
                       {format(a.prazo, "dd/MM", { locale: ptBR })}

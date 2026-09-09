@@ -27,7 +27,7 @@ export async function GET(request: Request) {
   });
 
   const cols = [
-    { header: "Protocolo", weight: 1.3 },
+    { header: "Nº Licença", weight: 1.3 },
     { header: "Cliente", weight: 1.8 },
     { header: "Tipo", weight: 1.7 },
     { header: "Empreendimento", weight: 2.2 },
@@ -37,7 +37,7 @@ export async function GET(request: Request) {
   ];
 
   const rows: NagalliCell[][] = processos.map((p) => [
-    { text: p.numProtocolo || "—", bold: true },
+    { text: p.numLicenca || p.numProtocolo || "—", bold: true },
     p.empreendimento.cliente.apelido || "—",
     p.tipo || "—",
     p.empreendimento.apelido || "—",

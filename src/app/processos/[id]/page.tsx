@@ -17,6 +17,7 @@ import { UltimaModificacao } from "@/components/UltimaModificacao";
 import CompensacaoCorteCard from "@/components/CompensacaoCorteCard";
 import ProcessoStatusSelector from "@/components/ProcessoStatusSelector";
 import LicencaPdfCard from "@/components/LicencaPdfCard";
+import ExigenciasTab from "@/components/ExigenciasTab";
 
 export const dynamic = "force-dynamic";
 
@@ -60,7 +61,8 @@ function statusExibicao(
 export async function generateMetadata(props: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await props.params;
   const processo = await prisma.processo.findUnique({ where: { id: Number(id) } });
-  return { title: `Licença - ${processo?.numProtocolo || "Não encontrado"}` };
+  const identificador = processo?.numLicenca || processo?.numProtocolo || "Não encontrado";
+  return { title: `Licença - ${identificador}` };
 }
 
 export default async function ProcessoDetailPage(props: { params: Promise<{ id: string }> }) {
@@ -94,7 +96,7 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
 
   return (
     <div>
-      <Breadcrumbs items={[{ label: "Licenças", href: "/processos" }, { label: processo.numProtocolo }]} />
+      <Breadcrumbs items={[{ label: "Licenças", href: "/processos" }, { label: processo.numLicenca || processo.numProtocolo }]} />
 
       <div className="mb-4">
         <Link href="/processos" className="focus-ring transition-brand inline-flex items-center gap-1.5 text-sm font-medium text-[var(--color-ink-600)] hover:text-[var(--color-brand-600)]">
@@ -105,7 +107,7 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
 
       <Topbar
         icon={ClipboardList}
-        title={`Licença ${processo.numProtocolo}`}
+        title={`Licença ${processo.numLicenca || processo.numProtocolo}`}
         subtitle={processo.tipo}
         actions={
           <div className="flex flex-wrap items-center gap-2">
@@ -146,7 +148,7 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
                       <FileText size={16} />
-                      <span className="font-mono text-[var(--color-ink-900)]">{processo.numProtocolo}</span>
+                      <span className="font-mono text-[var(--color-ink-900)]">{processo.numLicenca || processo.numProtocolo}</span>
                     </div>
                     <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
                       <Building2 size={16} />
@@ -175,12 +177,6 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
                         colors={statusColors}
                       />
                     </div>
-                    {processo.numLicenca && (
-                      <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
-                        <FileText size={16} />
-                        <span>Licença: {processo.numLicenca}</span>
-                      </div>
-                    )}
                     {processo.dataProtocolo && (
                       <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
                         <Calendar size={16} />
@@ -248,6 +244,12 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
               </div>
             ),
           },
+          {
+            key: "exigencias",
+            label: "Exigências",
+            count: processo._count.exigencias,
+            content: <ExigenciasTab processoId={processo.id} />,
+          },
           ...(processo.tipo === "Autorização Ambiental para Corte"
             ? [
                 {
@@ -260,15 +262,11 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
           {
             key: "vinculados",
             label: "Itens vinculados",
-            count: processo._count.exigencias + processo._count.documentos,
+            count: processo._count.documentos,
             content: (
               <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
                 <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-3">Itens vinculados</h2>
                 <div className="space-y-2 text-sm">
-                  <Link href={`/exigencias?processoId=${processo.id}`} className="flex items-center justify-between rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-[var(--color-brand-600)] hover:bg-[var(--color-paper-100)]">
-                    <span>{processo._count.exigencias} exigência(s)</span>
-                    <span>→</span>
-                  </Link>
                   <Link href={`/documentos?processoId=${processo.id}`} className="flex items-center justify-between rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-[var(--color-brand-600)] hover:bg-[var(--color-paper-100)]">
                     <span>{processo._count.documentos} documento(s)</span>
                     <span>→</span>

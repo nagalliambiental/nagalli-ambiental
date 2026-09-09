@@ -16,6 +16,7 @@ export default async function PrazosPage() {
           select: {
             id: true,
             numProtocolo: true,
+            numLicenca: true,
             tipo: true,
             orgao: { select: { sigla: true } },
             empreendimento: {
@@ -31,6 +32,7 @@ export default async function PrazosPage() {
       select: {
         id: true,
         numProtocolo: true,
+        numLicenca: true,
         tipo: true,
         validade: true,
         alertaDias: true,
@@ -49,6 +51,7 @@ export default async function PrazosPage() {
         processos={processosComValidade.map((p) => ({
           id: p.id,
           numProtocolo: p.numProtocolo,
+          numLicenca: p.numLicenca,
           tipo: p.tipo,
           validade: p.validade!.toISOString(),
           alertaDias: p.alertaDias,
@@ -62,6 +65,7 @@ export default async function PrazosPage() {
           processo: {
             id: e.processo.id,
             numProtocolo: e.processo.numProtocolo,
+            numLicenca: e.processo.numLicenca,
             tipo: e.processo.tipo,
             orgao: e.processo.orgao,
             empreendimento: e.processo.empreendimento,

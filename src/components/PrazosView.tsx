@@ -9,18 +9,19 @@ import Link from "next/link";
 interface ProcessoPrazo {
   id: number;
   numProtocolo: string;
+  numLicenca?: string | null;
   tipo: string;
   validade: string;
   alertaDias: number;
   orgao: { sigla: string };
-  empreendimento: { apelido: string };
+  empreendimento: { apelido: string; cliente?: { apelido: string } };
 }
 
 interface ExigenciaPrazo {
   id: number;
   descricao: string;
   prazo: string;
-  processo: { id: number; numProtocolo: string; tipo: string; orgao: { sigla: string }; empreendimento: { apelido: string; cliente: { apelido: string } } };
+  processo: { id: number; numProtocolo: string; numLicenca?: string | null; tipo: string; orgao: { sigla: string }; empreendimento: { apelido: string; cliente: { apelido: string } } };
 }
 
 export function PrazosView({ processos, exigencias }: { processos: ProcessoPrazo[]; exigencias: ExigenciaPrazo[] }) {
@@ -75,7 +76,7 @@ function ListView({ processos, exigencias }: { processos: ProcessoPrazo[]; exige
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <Link href={`/processos/${p.id}`} className="font-mono text-sm font-semibold text-[var(--color-brand-600)] hover:underline">{p.numProtocolo}</Link>
+                        <Link href={`/processos/${p.id}`} className="font-mono text-sm font-semibold text-[var(--color-brand-600)] hover:underline">{p.numLicenca || p.numProtocolo}</Link>
                         {isVencido && <span className="inline-flex items-center gap-1 rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">Vencido</span>}
                         {isAlert && !isVencido && <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">Alerta</span>}
                       </div>
@@ -122,7 +123,7 @@ function ListView({ processos, exigencias }: { processos: ProcessoPrazo[]; exige
                         {isUrgente && !isVencido && <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">Urgente</span>}
                       </div>
                       <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-sm text-[var(--color-ink-500)]">
-                        <span>Processo: <span className="font-mono text-[var(--color-ink-700)]">{e.processo.numProtocolo}</span></span>
+                        <span>Processo: <span className="font-mono text-[var(--color-ink-700)]">{e.processo.numLicenca || e.processo.numProtocolo}</span></span>
                         <span>Tipo: <span className="text-[var(--color-ink-700)]">{e.processo.tipo}</span></span>
                         <span>Órgão: <span className="text-[var(--color-ink-700)]">{e.processo.orgao.sigla}</span></span>
                         <span>Empreendimento: <span className="text-[var(--color-ink-700)]">{e.processo.empreendimento.apelido}</span></span>
@@ -134,8 +135,8 @@ function ListView({ processos, exigencias }: { processos: ProcessoPrazo[]; exige
                         <p className="font-display text-lg font-semibold">{format(prazo, "dd/MM/yyyy", { locale: ptBR })}</p>
                         <p className="text-xs">{isVencido ? `Vencido há ${Math.abs(diasRestantes)} dias` : `${diasRestantes} dias restantes`}</p>
                       </div>
-                      <Link href={`/exigencias/${e.id}`} className="focus-ring transition-brand inline-flex items-center gap-1 rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]">
-                        Ver Exigência
+                      <Link href={`/processos/${e.processo.id}`} className="focus-ring transition-brand inline-flex items-center gap-1 rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]">
+                        Ver Licença
                       </Link>
                     </div>
                   </div>
@@ -163,8 +164,8 @@ function CalendarView({ processos, exigencias }: { processos: ProcessoPrazo[]; e
   const isMesAtual = isSameMonth(mesAtual, now);
 
   const allEvents: { date: Date; label: string; href: string; type: "processo" | "exigencia"; vencido: boolean }[] = [
-    ...processos.map((p) => ({ date: new Date(p.validade), label: `Proc: ${p.numProtocolo}`, href: `/processos/${p.id}`, type: "processo" as const, vencido: differenceInDays(new Date(p.validade), now) < 0 })),
-    ...exigencias.map((e) => ({ date: new Date(e.prazo), label: `Exig: ${e.descricao.substring(0, 30)}`, href: `/exigencias/${e.id}`, type: "exigencia" as const, vencido: differenceInDays(new Date(e.prazo), now) < 0 })),
+    ...processos.map((p) => ({ date: new Date(p.validade), label: `Lic: ${p.numLicenca || p.numProtocolo}`, href: `/processos/${p.id}`, type: "processo" as const, vencido: differenceInDays(new Date(p.validade), now) < 0 })),
+    ...exigencias.map((e) => ({ date: new Date(e.prazo), label: `Exig: ${e.descricao.substring(0, 30)}`, href: `/processos/${e.processo.id}`, type: "exigencia" as const, vencido: differenceInDays(new Date(e.prazo), now) < 0 })),
   ];
 
   const getEventsForDay = (day: Date) => allEvents.filter((ev) => isSameDay(ev.date, day));

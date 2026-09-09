@@ -38,8 +38,8 @@ export default async function DocumentoDetailPage(props: { params: Promise<{ id:
   const doc = await prisma.documento.findUnique({
     where: { id: Number(id) },
     include: {
-      processo: { select: { numProtocolo: true, id: true } },
-      exigencia: { select: { id: true, descricao: true } },
+      processo: { select: { numProtocolo: true, numLicenca: true, id: true } },
+      exigencia: { select: { id: true, descricao: true, processoId: true } },
     },
   });
   if (!doc) notFound();
@@ -114,11 +114,11 @@ export default async function DocumentoDetailPage(props: { params: Promise<{ id:
                     <div className="space-y-2 text-sm">
                       {doc.processo && (
                         <Link href={`/processos/${doc.processo.id}`} className="block text-[var(--color-brand-600)] hover:underline">
-                          Processo: {doc.processo.numProtocolo}
+                          Processo: {doc.processo.numLicenca || doc.processo.numProtocolo}
                         </Link>
                       )}
-                      {doc.exigencia && (
-                        <Link href={`/exigencias/${doc.exigencia.id}`} className="block text-[var(--color-brand-600)] hover:underline">
+                      {doc.exigencia?.processoId && (
+                        <Link href={`/processos/${doc.exigencia.processoId}`} className="block text-[var(--color-brand-600)] hover:underline">
                           Exigência: {doc.exigencia.descricao.slice(0, 60)}...
                         </Link>
                       )}

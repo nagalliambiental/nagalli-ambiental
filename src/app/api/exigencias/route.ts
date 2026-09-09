@@ -3,15 +3,29 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAuditoria } from "@/lib/audit";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
 
+  const processoId = req.nextUrl.searchParams.get("processoId");
+
   const exigencias = await prisma.exigencia.findMany({
-    include: { processo: true },
-    orderBy: { criadoEm: "desc" },
+    where: processoId ? { processoId: Number(processoId) } : undefined,
+    include: {
+      processo: {
+        select: {
+          id: true,
+          numProtocolo: true,
+          numLicenca: true,
+          tipo: true,
+          orgao: { select: { sigla: true } },
+          empreendimento: { select: { apelido: true } },
+        },
+      },
+    },
+    orderBy: [{ cumprida: "asc" }, { prazo: "asc" }],
   });
 
   return NextResponse.json(exigencias);
@@ -25,7 +39,16 @@ export async function POST(request: Request) {
 
   try {
     const data = await request.json();
-    const exigencia = await prisma.exigencia.create({ data });
+    const exigencia = await prisma.exigencia.create({
+      data: {
+        descricao: data.descricao,
+        prazo: data.prazo ? new Date(data.prazo) : new Date(),
+        antecedenciaDias: data.antecedenciaDias !== undefined && data.antecedenciaDias !== "" ? Number(data.antecedenciaDias) : 7,
+        cumprida: data.cumprida === true || data.cumprida === "true",
+        processoId: Number(data.processoId),
+        ativo: data.ativo !== undefined ? Boolean(data.ativo) : true,
+      },
+    });
 
     await logAuditoria(
       "criar",

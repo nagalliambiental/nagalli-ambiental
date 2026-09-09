@@ -66,7 +66,7 @@ export default async function EmpreendimentoDetailPage(props: { params: Promise<
   const [processos, documentos] = await Promise.all([
     prisma.processo.findMany({
       where: { empreendimentoId: emp.id },
-      select: { id: true, numProtocolo: true, tipo: true, status: true, orgao: { select: { sigla: true } } },
+      select: { id: true, numProtocolo: true, numLicenca: true, tipo: true, status: true, orgao: { select: { sigla: true } } },
       orderBy: { criadoEm: "desc" },
     }),
     prisma.documento.findMany({
@@ -205,7 +205,7 @@ export default async function EmpreendimentoDetailPage(props: { params: Promise<
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-[var(--color-paper-200)] text-[var(--color-ink-500)]">
-                          <th className="text-left p-4 font-medium">Protocolo</th>
+                          <th className="text-left p-4 font-medium">Nº da Licença</th>
                           <th className="text-left p-4 font-medium">Tipo</th>
                           <th className="text-left p-4 font-medium">Órgão</th>
                           <th className="text-left p-4 font-medium">Status</th>
@@ -215,7 +215,7 @@ export default async function EmpreendimentoDetailPage(props: { params: Promise<
                         {processos.map((p) => (
                           <tr key={p.id} className="border-t border-[var(--color-paper-200)] text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]">
                             <td className="p-4">
-                              <Link href={`/processos/${p.id}`} className="font-mono text-[var(--color-brand-600)] hover:underline">{p.numProtocolo}</Link>
+                              <Link href={`/processos/${p.id}`} className="font-mono text-[var(--color-brand-600)] hover:underline">{p.numLicenca || p.numProtocolo}</Link>
                             </td>
                             <td className="p-4">{p.tipo}</td>
                             <td className="p-4">{p.orgao.sigla}</td>
