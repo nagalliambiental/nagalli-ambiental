@@ -10,7 +10,11 @@ export async function GET() {
   }
 
   const tarefas = await prisma.tarefa.findMany({
-    include: { responsavel: true, usuario: true },
+    include: {
+      responsavel: { select: { id: true, nome: true } },
+      usuario: { select: { id: true, nome: true } },
+      empreendimento: { select: { id: true, apelido: true } },
+    },
     orderBy: { criadoEm: "desc" },
   });
 
@@ -25,7 +29,23 @@ export async function POST(request: Request) {
 
   try {
     const data = await request.json();
-    const tarefa = await prisma.tarefa.create({ data });
+    const tarefa = await prisma.tarefa.create({
+      data: {
+        titulo: data.titulo,
+        descricao: data.descricao ?? null,
+        status: data.status ?? "pendente",
+        prioridade: data.prioridade ?? "media",
+        prazoFinal: data.prazoFinal ? new Date(data.prazoFinal) : null,
+        alertaPrazoFinal: Number(data.alertaPrazoFinal ?? 30),
+        dataLimite: data.dataLimite ? new Date(data.dataLimite) : null,
+        alertaDataLimite: Number(data.alertaDataLimite ?? 30),
+        responsavelId: Number(data.responsavelId),
+        empreendimentoId: data.empreendimentoId ? Number(data.empreendimentoId) : null,
+        usuarioId: data.usuarioId
+          ? Number(data.usuarioId)
+          : Number((session.user as { id: string }).id),
+      },
+    });
 
     await logAuditoria(
       "criar",

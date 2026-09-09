@@ -6,7 +6,7 @@ import { auth } from "@/lib/auth";
 import { Topbar } from "@/components/Topbar";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ClipboardList, User, Users, Calendar, Clock, AlertTriangle, MessageSquare, Edit3, ArrowLeft } from "lucide-react";
+import { ClipboardList, User, Users, Building2, Calendar, Clock, BellRing, AlertTriangle, MessageSquare, Edit3, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import DeleteButton from "@/components/DeleteButton";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
@@ -17,16 +17,14 @@ export const dynamic = "force-dynamic";
 
 const statusLabels: Record<string, string> = {
   pendente: "Pendente",
-  andamento: "Em Andamento",
-  aguardando: "Aguardando",
-  concluido: "Concluído",
+  iniciada: "Iniciada",
+  concluida: "Concluída",
 };
 
 const statusColors: Record<string, string> = {
   pendente: "bg-[var(--color-river-100)] text-[var(--color-river-700)]",
-  andamento: "bg-blue-50 text-blue-600",
-  aguardando: "bg-amber-50 text-amber-700",
-  concluido: "bg-green-50 text-green-700",
+  iniciada: "bg-blue-50 text-blue-600",
+  concluida: "bg-green-50 text-green-700",
 };
 
 const prioridadeLabels: Record<string, string> = {
@@ -52,6 +50,7 @@ export default async function TarefaDetailPage(props: { params: Promise<{ id: st
     include: {
       responsavel: { select: { nome: true } },
       usuario: { select: { nome: true } },
+      empreendimento: { select: { apelido: true } },
     },
   });
   if (!tarefa) notFound();
@@ -109,6 +108,10 @@ export default async function TarefaDetailPage(props: { params: Promise<{ id: st
                     <span>Resp.: {tarefa.responsavel.nome}</span>
                   </div>
                   <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
+                    <Building2 size={16} />
+                    <span>Empreendimento: {tarefa.empreendimento?.apelido ?? "—"}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
                     <Users size={16} />
                     <span>Criador: {tarefa.usuario.nome}</span>
                   </div>
@@ -154,10 +157,28 @@ export default async function TarefaDetailPage(props: { params: Promise<{ id: st
                     <Calendar size={14} />
                     <span>Criado em {format(tarefa.criadoEm, "dd/MM/yyyy", { locale: ptBR })}</span>
                   </div>
-                  {tarefa.dataVencimento && (
+                  {tarefa.prazoFinal && (
                     <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
                       <Clock size={14} />
-                      <span>Vence em {format(tarefa.dataVencimento, "dd/MM/yyyy", { locale: ptBR })}</span>
+                      <span>Prazo final em {format(tarefa.prazoFinal, "dd/MM/yyyy", { locale: ptBR })}</span>
+                    </div>
+                  )}
+                  {tarefa.prazoFinal && (
+                    <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
+                      <BellRing size={14} />
+                      <span>Alerta {tarefa.alertaPrazoFinal} dias antes do prazo</span>
+                    </div>
+                  )}
+                  {tarefa.dataLimite && (
+                    <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
+                      <Clock size={14} />
+                      <span>Data limite {format(tarefa.dataLimite, "dd/MM/yyyy", { locale: ptBR })}</span>
+                    </div>
+                  )}
+                  {tarefa.dataLimite && (
+                    <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
+                      <BellRing size={14} />
+                      <span>Alerta {tarefa.alertaDataLimite} dias antes do limite</span>
                     </div>
                   )}
                 </div>

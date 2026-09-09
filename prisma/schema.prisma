@@ -142,6 +142,7 @@ acessos       Acesso[]
     mtrImaConexoes  MtrImaConexao[]
     autorizacoesTpp AutorizacaoTpp[]
     documentoGerados DocumentoGerado[]
+    tarefas         Tarefa[]
   }
 
 model Orgao {
@@ -293,20 +294,25 @@ model Responsavel {
 }
 
 model Tarefa {
-  id             Int         @id @default(autoincrement())
-  titulo         String
-  descricao      String?
-  status         String      @default("pendente")
-  prioridade     String      @default("media")
-  dataVencimento DateTime?
-  responsavelId  Int
-  usuarioId      Int
-  criadoEm       DateTime    @default(now())
-  atualizadoEm   DateTime    @updatedAt
-  ativo          Boolean     @default(true)
-  statusObs      String?
-  responsavel    Responsavel @relation(fields: [responsavelId], references: [id])
-  usuario        Usuario     @relation(fields: [usuarioId], references: [id])
+  id               Int             @id @default(autoincrement())
+  titulo           String
+  descricao        String?
+  status           String          @default("pendente")
+  prioridade       String          @default("media")
+  prazoFinal       DateTime?
+  alertaPrazoFinal Int             @default(30)
+  dataLimite       DateTime?
+  alertaDataLimite Int             @default(30)
+  responsavelId    Int
+  empreendimentoId Int?
+  usuarioId        Int
+  criadoEm         DateTime        @default(now())
+  atualizadoEm     DateTime        @updatedAt
+  ativo            Boolean         @default(true)
+  statusObs        String?
+  responsavel      Responsavel     @relation(fields: [responsavelId], references: [id])
+  empreendimento   Empreendimento? @relation(fields: [empreendimentoId], references: [id])
+  usuario          Usuario         @relation(fields: [usuarioId], references: [id])
 }
 
 model Financeiro {

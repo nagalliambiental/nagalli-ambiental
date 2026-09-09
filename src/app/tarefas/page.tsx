@@ -28,19 +28,20 @@ export default async function TarefasPage({
     include: {
       responsavel: { select: { nome: true } },
       usuario: { select: { nome: true } },
+      empreendimento: { select: { apelido: true } },
     },
     orderBy: [
       { status: "asc" },
       { prioridade: "desc" },
-      { dataVencimento: "asc" },
+      { prazoFinal: "asc" },
     ],
   });
 
   const agora = new Date();
   const pendentes = tarefas.filter((t) => t.status === "pendente").length;
-  const concluidas = tarefas.filter((t) => t.status === "concluido").length;
+  const concluidas = tarefas.filter((t) => t.status === "concluida").length;
   const atrasadas = tarefas.filter(
-    (t) => t.dataVencimento !== null && t.dataVencimento < agora && t.status !== "concluido",
+    (t) => t.prazoFinal !== null && t.prazoFinal < agora && t.status !== "concluida",
   ).length;
 
   return (
@@ -55,9 +56,8 @@ export default async function TarefasPage({
               paramName="status"
               options={[
                 { value: "pendente", label: "Pendente" },
-                { value: "andamento", label: "Em Andamento" },
-                { value: "aguardando", label: "Aguardando" },
-                { value: "concluido", label: "Concluído" },
+                { value: "iniciada", label: "Iniciada" },
+                { value: "concluida", label: "Concluída" },
               ]}
             />
             <Link

@@ -12,17 +12,17 @@ interface TarefaData {
   descricao?: string | null;
   prioridade: string;
   status: string;
-  dataVencimento: Date | null;
+  prazoFinal: Date | null;
   responsavel: { nome: string };
   usuario: { nome: string };
+  empreendimento?: { apelido: string } | null;
 }
 
-const statusLabels: Record<string, string> = { pendente: "Pendente", andamento: "Em Andamento", aguardando: "Aguardando", concluido: "Concluído" };
+const statusLabels: Record<string, string> = { pendente: "Pendente", iniciada: "Iniciada", concluida: "Concluída" };
 const statusColors: Record<string, string> = {
   pendente: "bg-[var(--color-river-100)] text-[var(--color-river-700)]",
-  andamento: "bg-blue-50 text-blue-600",
-  aguardando: "bg-amber-50 text-amber-700",
-  concluido: "bg-green-50 text-green-700",
+  iniciada: "bg-blue-50 text-blue-600",
+  concluida: "bg-green-50 text-green-700",
 };
 const prioridadeLabels: Record<string, string> = { baixa: "Baixa", media: "Média", alta: "Alta", urgente: "Urgente" };
 const prioridadeColors: Record<string, string> = {
@@ -39,6 +39,7 @@ export function TarefasTable({ data }: { data: TarefaData[] }) {
       render: (t) => <span className={`text-sm font-medium ${prioridadeColors[t.prioridade] || "text-[var(--color-ink-700)]"}`}>{prioridadeLabels[t.prioridade] || t.prioridade}</span>,
     },
     { header: "Responsável", hideBelow: "md", render: (t) => t.responsavel.nome },
+    { header: "Empreendimento", hideBelow: "lg", render: (t) => t.empreendimento?.apelido ?? "—" },
     { header: "Criador", hideBelow: "lg", render: (t) => t.usuario.nome },
     {
       header: "Status",
@@ -46,9 +47,9 @@ export function TarefasTable({ data }: { data: TarefaData[] }) {
       render: (t) => <span className={`inline-block rounded px-2 py-1 text-xs font-medium ${statusColors[t.status] || ""}`}>{statusLabels[t.status] || t.status}</span>,
     },
     {
-      header: "Vencimento",
+      header: "Prazo",
       hideBelow: "md",
-      render: (t) => (t.dataVencimento ? format(new Date(t.dataVencimento), "dd/MM/yyyy", { locale: ptBR }) : "—"),
+      render: (t) => (t.prazoFinal ? format(new Date(t.prazoFinal), "dd/MM/yyyy", { locale: ptBR }) : "—"),
     },
     { header: "Ações", render: (t) => <RowActions detailUrl={`/tarefas/${t.id}`} editUrl={`/tarefas/${t.id}/editar`} entity="tarefa" entityName="Tarefa" endpoint={`/api/tarefas/${t.id}`} /> },
   ];

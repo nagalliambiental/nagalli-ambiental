@@ -11,10 +11,14 @@ export async function GET(
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
 
-  const { id } = await params;
+const { id } = await params;
   const tarefa = await prisma.tarefa.findUnique({
     where: { id: Number(id) },
-    include: { responsavel: true, usuario: true },
+    include: {
+      responsavel: { select: { id: true, nome: true, email: true, telefone: true } },
+      usuario: { select: { id: true, nome: true } },
+      empreendimento: { select: { id: true, apelido: true } },
+    },
   });
   if (!tarefa) return NextResponse.json({ error: "Tarefa não encontrada" }, { status: 404 });
 
@@ -41,8 +45,12 @@ const { id } = await params;
       descricao: body.descricao !== undefined ? body.descricao ?? null : atual.descricao,
       status: body.status ?? atual.status,
       prioridade: body.prioridade ?? atual.prioridade,
-      dataVencimento: body.dataVencimento !== undefined ? (body.dataVencimento ? new Date(body.dataVencimento) : null) : atual.dataVencimento,
+      prazoFinal: body.prazoFinal !== undefined ? (body.prazoFinal ? new Date(body.prazoFinal) : null) : atual.prazoFinal,
+      alertaPrazoFinal: body.alertaPrazoFinal !== undefined ? Number(body.alertaPrazoFinal) : atual.alertaPrazoFinal,
+      dataLimite: body.dataLimite !== undefined ? (body.dataLimite ? new Date(body.dataLimite) : null) : atual.dataLimite,
+      alertaDataLimite: body.alertaDataLimite !== undefined ? Number(body.alertaDataLimite) : atual.alertaDataLimite,
       responsavelId: body.responsavelId !== undefined && body.responsavelId !== null && body.responsavelId !== "" ? Number(body.responsavelId) : atual.responsavelId,
+      empreendimentoId: body.empreendimentoId !== undefined ? (body.empreendimentoId ? Number(body.empreendimentoId) : null) : atual.empreendimentoId,
       statusObs: body.statusObs !== undefined ? body.statusObs ?? null : atual.statusObs,
       ativo: body.ativo !== undefined ? Boolean(body.ativo) : atual.ativo,
     },
