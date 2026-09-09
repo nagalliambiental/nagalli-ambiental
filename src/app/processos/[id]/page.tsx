@@ -16,6 +16,7 @@ import { Tabs } from "@/components/Tabs";
 import { UltimaModificacao } from "@/components/UltimaModificacao";
 import CompensacaoCorteCard from "@/components/CompensacaoCorteCard";
 import ProcessoStatusSelector from "@/components/ProcessoStatusSelector";
+import LicencaPdfCard from "@/components/LicencaPdfCard";
 
 export const dynamic = "force-dynamic";
 
@@ -72,11 +73,16 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
     include: {
       orgao: true,
       empreendimento: { select: { apelido: true, id: true, cliente: { select: { apelido: true } } } },
-      responsavel: { select: { nome: true, email: true, telefone: true } },
       _count: { select: { exigencias: true, documentos: true } },
     },
   });
   if (!processo) notFound();
+
+  const licencaPdf = await prisma.documento.findFirst({
+    where: { processoId: processo.id, tipo: "licenca" },
+    orderBy: { criadoEm: "desc" },
+    select: { id: true, nome: true, tamanho: true, criadoEm: true },
+  });
 
   await logAuditoria(
     "VISUALIZAR",
@@ -222,28 +228,8 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
                     <p className="text-sm text-[var(--color-ink-700)] whitespace-pre-wrap">{processo.observacoes}</p>
                   </div>
                 )}
-              </div>
-            ),
-          },
-          {
-            key: "responsavel",
-            label: "Responsável",
-            content: processo.responsavel ? (
-              <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
-                <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-3">Responsável</h2>
-                <div className="space-y-2 text-sm">
-                  <p className="font-medium text-[var(--color-ink-900)]">{processo.responsavel.nome}</p>
-                  {processo.responsavel.email && (
-                    <p className="text-[var(--color-ink-500)]">Email: {processo.responsavel.email}</p>
-                  )}
-                  {processo.responsavel.telefone && (
-                    <p className="text-[var(--color-ink-500)]">Telefone: {processo.responsavel.telefone}</p>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
-                <p className="text-sm text-[var(--color-ink-500)]">Nenhum responsável vinculado.</p>
+
+                <LicencaPdfCard processoId={processo.id} documento={licencaPdf} />
               </div>
             ),
           },
