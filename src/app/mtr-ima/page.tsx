@@ -159,6 +159,27 @@ function pesoIMA(quantidade: string, densidade: string, codigoUnidade: string): 
   return null;
 }
 
+const PESO_MAX_TONELADAS = 45;
+
+function limiteQtdIMA(codigoUnidade: string): number | null {
+  if (codigoUnidade === "1" || codigoUnidade === "4") return 45;
+  if (codigoUnidade === "2" || codigoUnidade === "3") return 45000;
+  return null;
+}
+
+function erroLimiteIMA(r: ResiduoForm): string | null {
+  const limite = limiteQtdIMA(r.codigoUnidade);
+  const qtd = Number(String(r.quantidade).replace(",", "."));
+  if (limite != null && qtd > limite) {
+    return `A quantidade do resíduo ${r.residuo || ""} está acima dos limites permitidos para o transporte rodoviário. Verifique e corrija esta quantidade. (LIMITE MÁXIMO: ${limite.toLocaleString("pt-BR")})`;
+  }
+  const peso = pesoIMA(r.quantidade, r.tipoDensidadeValor, r.codigoUnidade);
+  if (peso != null && peso > PESO_MAX_TONELADAS) {
+    return `O peso do resíduo ${r.residuo || ""} (≈ ${peso.toLocaleString("pt-BR", { maximumFractionDigits: 3 })} t) está acima do limite de ${PESO_MAX_TONELADAS} t por carga`;
+  }
+  return null;
+}
+
 const STATUS_BADGE: Record<string, string> = {
   EMITIDO: "bg-blue-50 text-blue-700",
   RECEBIDO: "bg-green-50 text-green-700",
@@ -822,6 +843,11 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
       toast("Informe a densidade — ela converte o volume em toneladas na emissão", "error");
       return;
     }
+    const erroLim = erroLimiteIMA(completo);
+    if (erroLim) {
+      toast(erroLim, "error");
+      return;
+    }
     if (editandoResiduo != null) {
       setResiduos((rs) => rs.map((r, i) => (i === editandoResiduo ? completo : r)));
       setEditandoResiduo(null);
@@ -853,6 +879,15 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
     const semCodigo = residuos.findIndex((r) => !r.residuo.replace(/\D/g, ""));
     if (semCodigo >= 0) {
       toast(`Resíduo "${residuos[semCodigo].residuo || `#${semCodigo + 1}`}" sem código IBAMA válido — corrija antes de emitir`, "error");
+      return;
+    }
+    let msgLimite: string | null = null;
+    for (const r of residuos) {
+      msgLimite = erroLimiteIMA(r);
+      if (msgLimite) break;
+    }
+    if (msgLimite) {
+      toast(msgLimite, "error");
       return;
     }
     const semDens = residuos.findIndex(
