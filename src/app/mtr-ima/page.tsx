@@ -245,7 +245,7 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn; onChanged: ()
   const pag = Math.min(pagina, totalPaginas - 1);
   const visiveis = visiveisToggle.slice(pag * POR_PAGINA, pag * POR_PAGINA + POR_PAGINA);
 
-  async function consultar(forcarId?: string) {
+  async function consultar(forcarId?: string, tudo = false) {
     const id = forcarId ?? conexaoEfetiva;
     if (!id) {
       toast("Selecione a conexão", "error");
@@ -256,7 +256,7 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn; onChanged: ()
       const sync = await fetch("/api/mtr-ima/sincronizar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conexaoId: Number(id), dataInicial, dataFinal }),
+        body: JSON.stringify(tudo ? { conexaoId: Number(id) } : { conexaoId: Number(id), dataInicial, dataFinal }),
       });
       const syncData = await sync.json();
       if (!sync.ok) {
@@ -276,7 +276,12 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn; onChanged: ()
       const mtrs = (await res.json()) as Manifesto[];
       setLista(mtrs);
       setPagina(0);
-      toast(`Portal IMA consultado: ${mtrs.length} MTR(s) de ${fmtIso(dataInicial)} a ${fmtIso(dataFinal)}`, "success");
+      toast(
+        tudo
+          ? `Portal IMA consultado: ${mtrs.length} MTR(s) (todos)`
+          : `Portal IMA consultado: ${mtrs.length} MTR(s) de ${fmtIso(dataInicial)} a ${fmtIso(dataFinal)}`,
+        "success",
+      );
       onChanged();
     } catch {
       toast("Erro ao consultar", "error");
@@ -387,7 +392,7 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn; onChanged: ()
         <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Meus MTRs</h2>
-            <p className="mt-1 max-w-2xl text-sm text-[var(--color-ink-500)]">Busca no portal IMA/SC todos os MTRs do período da conexão selecionada e atualiza a lista local.</p>
+            <p className="mt-1 max-w-2xl text-sm text-[var(--color-ink-500)]">Ao selecionar a conexão, busca todos os MTRs do portal IMA/SC. Use o período + Consultar para um intervalo específico.</p>
           </div>
           <button onClick={() => consultar()} disabled={carregando} className="focus-ring transition-brand hidden items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50 md:flex">
             {carregando ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
@@ -397,7 +402,7 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn; onChanged: ()
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium text-[var(--color-ink-500)]">Conexão</label>
-            <select value={conexaoEfetiva} onChange={(e) => { setConexaoId(e.target.value); setLista([]); consultar(e.target.value); }} className="w-full rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm min-w-[220px] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]">
+            <select value={conexaoEfetiva} onChange={(e) => { setConexaoId(e.target.value); setLista([]); consultar(e.target.value, true); }} className="w-full rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm min-w-[220px] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]">
               <option value="">Selecione...</option>
               {conexoes.map((c) => (
                 <option key={c.id} value={c.id}>{c.unidade ? `${c.nome} — unid. ${c.unidade}` : c.nome}</option>
