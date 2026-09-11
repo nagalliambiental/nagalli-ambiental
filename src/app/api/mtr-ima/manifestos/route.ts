@@ -25,3 +25,25 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
+
+export async function DELETE(req: Request) {
+  const session = await auth();
+  if (!session?.user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+    const conexaoId = searchParams.get("conexaoId");
+    if (id) {
+      await prisma.mtrImaManifesto.deleteMany({ where: { id: Number(id) } });
+      return NextResponse.json({ ok: true });
+    }
+    if (conexaoId) {
+      const r = await prisma.mtrImaManifesto.deleteMany({ where: { conexaoId: Number(conexaoId) } });
+      return NextResponse.json({ ok: true, removidos: r.count });
+    }
+    return NextResponse.json({ error: "Informe id ou conexaoId" }, { status: 400 });
+  } catch (e) {
+    const msg = e instanceof MtrImaError ? e.message : "Erro ao excluir manifestos";
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
+}

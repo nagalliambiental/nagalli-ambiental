@@ -107,6 +107,21 @@ function fmtData(v?: string | null) {
   return d.toLocaleDateString("pt-BR");
 }
 
+function fmtQtd(v: number | null, u?: string | null) {
+  if (v == null) return "—";
+  return `${v.toLocaleString("pt-BR")} ${u || ""}`.trim();
+}
+
+function isoHoje(d: Date) {
+  return d.toISOString().slice(0, 10);
+}
+
+function haDias(dias: number) {
+  const d = new Date();
+  d.setDate(d.getDate() - dias);
+  return isoHoje(d);
+}
+
 export default function MtrImaPage() {
   const { toast } = useToast();
   const { data: session } = useSession();
@@ -215,7 +230,7 @@ export default function MtrImaPage() {
       )}
 
       {tab === "meusMtrs" && (
-        <MeusMtrsTab conexoes={conexoes} toast={toast} />
+        <MeusMtrsTab conexoes={conexoes} toast={toast} onChanged={() => { carregarManifestos(); carregarConexoes(); }} />
       )}
 
       {tab === "emitir" && (
@@ -252,9 +267,24 @@ function PainelTab(props: {
   const [consultando, setConsultando] = useState(false);
   const [resultado, setResultado] = useState<Manifesto | null>(null);
   const [paginaManifestos, setPaginaManifestos] = useState(0);
-  const totalPaginasM = Math.max(1, Math.ceil(manifestos.length / POR_PAGINA));
+  const [filtro, setFiltro] = useState("todos");
+  const filtrados = manifestos.filter((m) =>
+    filtro === "todos"
+      ? true
+      : filtro === "emitidos"
+        ? m.status === "EMITIDO" || m.status === "PENDENTE"
+        : filtro === "recebidos"
+          ? m.status === "RECEBIDO"
+          : m.status === "CANCELADO",
+  );
+  const totalPaginasM = Math.max(1, Math.ceil(filtrados.length / POR_PAGINA));
   const paginaM = Math.min(paginaManifestos, totalPaginasM - 1);
-  const visiveisM = manifestos.slice(paginaM * POR_PAGINA, paginaM * POR_PAGINA + POR_PAGINA);
+  const visiveisM = filtrados.slice(paginaM * POR_PAGINA, paginaM * POR_PAGINA + POR_PAGINA);
+  const [conexaoSync, setConexaoSync] = useState("");
+  const [dataInicial, setDataInicial] = useState(() => haDias(30));
+  const [dataFinal, setDataFinal] = useState(() => isoHoje(new Date()));
+  const [sincronizando, setSincronizando] = useState(false);
+  const [resumoSync, setResumoSync] = useState<{ total: number; importados: number; atualizados: number } | null>(null);
   const [modalCancel, setModalCancel] = useState<Manifesto | null>(null);
   const [justificativaCancel, setJustificativaCancel] = useState("");
   const [cancelando, setCancelando] = useState(false);
@@ -264,6 +294,50 @@ function PainelTab(props: {
   const [recebendo, setRecebendo] = useState(false);
 
   const conexaoEfetiva = conexoes.some((c) => c.id === Number(conexaoId)) ? conexaoId : conexoes.length ? String(conexoes[0].id) : "";
+  const conexaoSyncEfetiva = conexoes.some((c) => c.id === Number(conexaoSync)) ? conexaoSync : conexoes.length ? String(conexoes[0].id) : "";
+
+  async function sincronizar() {
+    if (!conexaoSyncEfetiva) {
+      toast("Selecione a conexão", "error");
+      return;
+    }
+    setSincronizando(true);
+    try {
+      const res = await fetch("/api/mtr-ima/sincronizar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conexaoId: Number(conexaoSyncEfetiva), dataInicial, dataFinal }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast(data.error || "Falha ao sincronizar", "error");
+        return;
+      }
+      const r = data.resultados?.[0];
+      setResumoSync(r ? { total: r.total, importados: r.importados, atualizados: r.atualizados } : { total: 0, importados: 0, atualizados: 0 });
+      toast(`Portal IMA sincronizado: ${r?.total ?? 0} MTR(s) no período`, "success");
+      onVerificar();
+    } catch {
+      toast("Erro ao sincronizar", "error");
+    } finally {
+      setSincronizando(false);
+    }
+  }
+
+  async function excluir(id: number) {
+    if (!confirm("Excluir este manifesto da lista local? (não altera o portal IMA)")) return;
+    try {
+      const res = await fetch(`/api/mtr-ima/manifestos?id=${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        toast("Falha ao excluir", "error");
+        return;
+      }
+      toast("Manifesto excluído", "success");
+      onVerificar();
+    } catch {
+      toast("Erro ao excluir", "error");
+    }
+  }
 
   async function consultar() {
     if (!conexaoEfetiva || !numero.trim()) {
@@ -389,6 +463,47 @@ function PainelTab(props: {
       </div>
 
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
+        <h2 className="font-display mb-3 text-base font-semibold text-[var(--color-ink-900)]">Sincronizar MTRs do portal</h2>
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-[var(--color-ink-500)]">Conexão</label>
+            <select value={conexaoSyncEfetiva} onChange={(e) => setConexaoSync(e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm min-w-[220px] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]">
+              <option value="">Selecione...</option>
+              {conexoes.map((c) => (
+                <option key={c.id} value={c.id}>{c.nome}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-[var(--color-ink-500)]">De</label>
+            <input type="date" value={dataInicial} onChange={(e) => setDataInicial(e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-[var(--color-ink-500)]">Até</label>
+            <input type="date" value={dataFinal} onChange={(e) => setDataFinal(e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+          </div>
+          <button onClick={sincronizar} disabled={sincronizando} className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">
+            {sincronizando ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+            {sincronizando ? "Sincronizando..." : "Sincronizar"}
+          </button>
+        </div>
+        {resumoSync && (
+          <div className="mt-4 grid grid-cols-3 gap-3">
+            {[
+              { label: "Total no período", valor: resumoSync.total },
+              { label: "Importados", valor: resumoSync.importados },
+              { label: "Atualizados", valor: resumoSync.atualizados },
+            ].map((c) => (
+              <div key={c.label} className="rounded-lg border border-[var(--color-paper-200)] bg-[var(--color-paper-50)] p-3">
+                <div className="text-xs font-medium text-[var(--color-ink-500)]">{c.label}</div>
+                <p className="font-display text-xl font-semibold text-[var(--color-ink-900)]">{c.valor}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
         <h2 className="font-display mb-3 text-base font-semibold text-[var(--color-ink-900)]">Consultar MTR</h2>
         <div className="flex flex-wrap items-end gap-3">
           <div className="flex flex-col gap-1">
@@ -423,27 +538,45 @@ function PainelTab(props: {
       </div>
 
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Manifestos</h2>
-          <button onClick={onVerificar} className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg bg-[var(--color-paper-100)] px-3 py-2 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-200)]">
-            <RefreshCw size={15} /> Atualizar
-          </button>
+          <div className="flex items-center gap-2">
+            <div className="flex gap-1 text-xs">
+              {[
+                { key: "todos", label: `Todos (${manifestos.length})` },
+                { key: "emitidos", label: `Emitidos (${emitidos})` },
+                { key: "recebidos", label: `Recebidos (${recebidos})` },
+                { key: "cancelados", label: `Cancelados (${cancelados})` },
+              ].map((p) => (
+                <button
+                  key={p.key}
+                  onClick={() => { setFiltro(p.key); setPaginaManifestos(0); }}
+                  className={`rounded-full px-3 py-1 font-medium ${filtro === p.key ? "bg-[var(--color-brand-500)] text-white" : "bg-[var(--color-paper-100)] text-[var(--color-ink-600)] hover:bg-[var(--color-paper-200)]"}`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            <button onClick={onVerificar} className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg bg-[var(--color-paper-100)] px-3 py-2 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-200)]">
+              <RefreshCw size={15} /> Atualizar
+            </button>
+          </div>
         </div>
         {loading ? (
           <p className="py-4 text-center text-sm text-[var(--color-ink-500)]"><Loader2 size={16} className="mr-2 inline animate-spin" />Carregando...</p>
         ) : visiveisM.length === 0 ? (
-          <p className="py-4 text-center text-sm text-[var(--color-ink-500)]">Nenhum manifesto cadastrado ainda.</p>
+          <p className="py-4 text-center text-sm text-[var(--color-ink-500)]">Nenhum manifesto ainda. Use a sincronização acima para listar os MTRs do período.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--color-paper-200)] text-left">
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">N.º</th>
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Conexão</th>
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Destinador</th>
+                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Número</th>
+                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Cliente</th>
+                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Empreendimento</th>
+                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Quantidade</th>
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Expedição</th>
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Qtd</th>
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Status</th>
+                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Situação</th>
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Ações</th>
                 </tr>
               </thead>
@@ -451,22 +584,23 @@ function PainelTab(props: {
                 {visiveisM.map((m) => (
                   <tr key={m.id} className="border-b border-[var(--color-paper-100)] hover:bg-[var(--color-paper-50)]">
                     <td className="py-2 px-2 font-medium text-[var(--color-ink-800)]">{m.numero}</td>
-                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.conexao.nome}</td>
-                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.destinadorNome || "—"}</td>
+                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.clienteNome || "—"}</td>
+                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.empreendNome || "—"}</td>
+                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{fmtQtd(m.quantidade, m.unidade)}</td>
                     <td className="py-2 px-2 text-[var(--color-ink-600)] whitespace-nowrap">{fmtData(m.dataExpedicao)}</td>
-                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.quantidade != null ? m.quantidade : "—"}</td>
                     <td className="py-2 px-2">
                       <span className={`inline-flex rounded-lg px-2 py-0.5 text-xs font-medium ${STATUS_BADGE[m.status] || "bg-[var(--color-paper-100)] text-[var(--color-ink-600)]"}`}>{m.status}</span>
                     </td>
                     <td className="py-2 px-2">
                       <div className="flex gap-1">
-                        <button onClick={() => baixarPdf(m)} className="rounded p-1 text-[var(--color-ink-400)] hover:bg-[var(--color-paper-100)] hover:text-[var(--color-ink-700)]" title="Baixar PDF"><FileDown size={14} /></button>
+                        <button onClick={() => baixarPdf(m)} className="rounded p-1 text-[var(--color-ink-400)] hover:bg-[var(--color-paper-100)] hover:text-[var(--color-ink-700)]" title="Baixar PDF do MTR"><FileDown size={14} /></button>
                         {(m.status === "EMITIDO" || m.status === "PENDENTE") && (
                           <button onClick={() => setModalReceber(m)} className="rounded p-1 text-[var(--color-ink-400)] hover:bg-green-50 hover:text-green-600" title="Receber"><PackageCheck size={14} /></button>
                         )}
                         {m.status !== "CANCELADO" && (
-                          <button onClick={() => setModalCancel(m)} className="rounded p-1 text-[var(--color-ink-400)] hover:bg-red-50 hover:text-red-600" title="Cancelar"><Ban size={14} /></button>
+                          <button onClick={() => setModalCancel(m)} className="rounded p-1 text-[var(--color-ink-400)] hover:bg-red-50 hover:text-red-600" title="Cancelar MTR"><Ban size={14} /></button>
                         )}
+                        <button onClick={() => excluir(m.id)} className="rounded p-1 text-[var(--color-ink-400)] hover:bg-[var(--color-paper-100)] hover:text-[var(--color-ink-700)]" title="Excluir"><Trash2 size={14} /></button>
                       </div>
                     </td>
                   </tr>
@@ -474,7 +608,7 @@ function PainelTab(props: {
               </tbody>
             </table>
             <div className="mt-3 flex items-center justify-between text-xs text-[var(--color-ink-500)]">
-              <span>{manifestos.length} registro(s) — Página {paginaM + 1} de {totalPaginasM}</span>
+              <span>{filtrados.length} registro(s) — Página {paginaM + 1} de {totalPaginasM}</span>
               <div className="flex gap-2">
                 <button disabled={paginaM === 0} onClick={() => setPaginaManifestos((p) => p - 1)} className="rounded px-2 py-1 disabled:opacity-40">Anterior</button>
                 <button disabled={paginaM === totalPaginasM - 1} onClick={() => setPaginaManifestos((p) => p + 1)} className="rounded px-2 py-1 disabled:opacity-40">Próxima</button>
@@ -512,11 +646,13 @@ function PainelTab(props: {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setModalCancel(null)}>
           <div className="shadow-card w-full max-w-md rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5" onClick={(e) => e.stopPropagation()}>
             <h3 className="font-display mb-3 font-semibold text-[var(--color-ink-900)]">Cancelar MTR {modalCancel.numero}</h3>
-            <textarea value={justificativaCancel} onChange={(e) => setJustificativaCancel(e.target.value)} rows={4} placeholder="Justificativa do cancelamento..." className="w-full rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+            <p className="mb-3 text-sm text-[var(--color-ink-600)]">O cancelamento será enviado ao IMA/SC. Esta ação não pode ser desfeita.</p>
+            <textarea value={justificativaCancel} onChange={(e) => setJustificativaCancel(e.target.value)} rows={4} maxLength={500} placeholder="Ex.: emissão com dados incorretos..." className="w-full rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+            <p className="mt-1 text-right text-xs text-[var(--color-ink-400)]">{justificativaCancel.length}/500</p>
             <div className="mt-4 flex justify-end gap-2">
               <button onClick={() => setModalCancel(null)} className="rounded-lg bg-[var(--color-paper-100)] px-4 py-2 text-sm text-[var(--color-ink-700)]">Voltar</button>
               <button onClick={cancelar} disabled={cancelando} className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
-                {cancelando ? <Loader2 size={16} className="animate-spin" /> : <Ban size={16} />} Cancelar
+                {cancelando ? <Loader2 size={16} className="animate-spin" /> : <Ban size={16} />} Confirmar cancelamento
               </button>
             </div>
           </div>
@@ -528,57 +664,63 @@ function PainelTab(props: {
 
 /* ════════════════ MEUS MTRs ════════════════ */
 
-function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn }) {
-  const { conexoes, toast } = props;
+function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn; onChanged: () => void }) {
+  const { conexoes, toast, onChanged } = props;
   const [conexaoId, setConexaoId] = useState("");
-  const [numero, setNumero] = useState("");
-  const [manifestos, setManifestos] = useState<Manifesto[]>([]);
+  const [dataInicial, setDataInicial] = useState(() => haDias(30));
+  const [dataFinal, setDataFinal] = useState(() => isoHoje(new Date()));
+  const [lista, setLista] = useState<Manifesto[]>([]);
   const [carregando, setCarregando] = useState(false);
-  const [sincronizando, setSincronizando] = useState(false);
+  const [toggle, setToggle] = useState("todos");
+  const [pagina, setPagina] = useState(0);
 
   const conexaoEfetiva = conexoes.some((c) => c.id === Number(conexaoId)) ? conexaoId : conexoes.length ? String(conexoes[0].id) : "";
 
-  async function sincronizar() {
-    setSincronizando(true);
-    try {
-      const res = await fetch("/api/mtr-ima/sincronizar", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conexaoId: conexaoEfetiva ? Number(conexaoEfetiva) : undefined }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast(data.error || "Falha ao sincronizar com o portal", "error");
-        return;
-      }
-      const resumo = data.resultados?.[0];
-      const totalResumo =
-        resumo != null
-          ? `${resumo.importados} importado(s), ${resumo.atualizados} atualizado(s) do portal IMA`
-          : "Nada sincronizado";
-      toast(`Sincronização concluída — ${totalResumo}`, "success");
-      await consultar();
-    } catch {
-      toast("Erro ao sincronizar com o portal IMA", "error");
-    } finally {
-      setSincronizando(false);
-    }
+  const semRecebimento = lista.filter((m) => m.status === "EMITIDO" || m.status === "PENDENTE");
+  const recebidos = lista.filter((m) => m.status === "RECEBIDO").length;
+  const cancelados = lista.filter((m) => m.status === "CANCELADO").length;
+  const visiveisToggle = toggle === "todos" ? lista : semRecebimento;
+  const totalPaginas = Math.max(1, Math.ceil(visiveisToggle.length / POR_PAGINA));
+  const pag = Math.min(pagina, totalPaginas - 1);
+  const visiveis = visiveisToggle.slice(pag * POR_PAGINA, pag * POR_PAGINA + POR_PAGINA);
+
+  function fmtIso(v: string) {
+    return v.split("-").reverse().join("/");
   }
 
-  async function consultar() {
+  async function consultar(forcarId?: string) {
+    const id = forcarId ?? conexaoEfetiva;
+    if (!id) {
+      toast("Selecione a conexão", "error");
+      return;
+    }
     setCarregando(true);
     try {
+      const sync = await fetch("/api/mtr-ima/sincronizar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conexaoId: Number(id), dataInicial, dataFinal }),
+      });
+      const syncData = await sync.json();
+      if (!sync.ok) {
+        toast(syncData.error || "Falha ao consultar o portal", "error");
+        return;
+      }
       const res = await fetch("/api/mtr-ima/meus-mtrs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conexaoId: conexaoEfetiva ? Number(conexaoEfetiva) : undefined, numero: numero.trim() || undefined }),
+        body: JSON.stringify({ conexaoId: Number(id) }),
       });
       if (!res.ok) {
         const data = await res.json();
         toast(data.error || "Falha ao consultar", "error");
         return;
       }
-      setManifestos(await res.json());
+      const mtrs = (await res.json()) as Manifesto[];
+      setLista(mtrs);
+      setPagina(0);
+      toast(`Portal IMA consultado: ${mtrs.length} MTR(s) de ${fmtIso(dataInicial)} a ${fmtIso(dataFinal)}`, "success");
+      onChanged();
     } catch {
       toast("Erro ao consultar", "error");
     } finally {
@@ -611,77 +753,142 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn }) {
   return (
     <div className="space-y-4">
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
-        <h2 className="font-display mb-3 text-base font-semibold text-[var(--color-ink-900)]">Consultar MTRs</h2>
-        <div className="flex flex-wrap items-end gap-3">
+        <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Meus MTRs</h2>
+            <p className="mt-1 max-w-2xl text-sm text-[var(--color-ink-500)]">Busca no portal IMA/SC todos os MTRs do período da conexão selecionada e atualiza a lista local.</p>
+          </div>
+          <button onClick={() => consultar()} disabled={carregando} className="focus-ring transition-brand hidden items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50 md:flex">
+            {carregando ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+            {carregando ? "Consultando..." : "Consultar portal"}
+          </button>
+        </div>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium text-[var(--color-ink-500)]">Conexão</label>
-            <select value={conexaoEfetiva} onChange={(e) => setConexaoId(e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm min-w-[220px] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]">
-              <option value="">Todas</option>
+            <select value={conexaoEfetiva} onChange={(e) => { setConexaoId(e.target.value); setLista([]); consultar(e.target.value); }} className="w-full rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm min-w-[220px] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]">
+              <option value="">Selecione...</option>
               {conexoes.map((c) => (
                 <option key={c.id} value={c.id}>{c.nome}</option>
               ))}
             </select>
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-[var(--color-ink-500)]">N.º (opcional)</label>
-            <input value={numero} onChange={(e) => setNumero(e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" placeholder="Filtrar por n.º" />
+            <label className="text-xs font-medium text-[var(--color-ink-500)]">Período da consulta — De</label>
+            <input type="date" value={dataInicial} onChange={(e) => setDataInicial(e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
           </div>
-          <button onClick={consultar} disabled={carregando} className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">
-            {carregando ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
-            {carregando ? "Consultando..." : "Consultar"}
-          </button>
-          <button onClick={sincronizar} disabled={sincronizando || carregando} className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-[var(--color-paper-100)] px-4 py-2.5 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-200)] disabled:opacity-50" title="Busca os MTRs do portal IMA/SC e atualiza a lista">
-            {sincronizando ? <Loader2 size={16} className="animate-spin" /> : <Link2 size={16} />}
-            {sincronizando ? "Sincronizando..." : "Sincronizar com o portal"}
-          </button>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-[var(--color-ink-500)]">Período da consulta — Até</label>
+            <input type="date" value={dataFinal} onChange={(e) => setDataFinal(e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+          </div>
         </div>
+        <button onClick={() => consultar()} disabled={carregando} className="focus-ring transition-brand mt-3 flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50 md:hidden">
+          {carregando ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+          {carregando ? "Consultando..." : "Consultar"}
+        </button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        {[
+          { label: "Total de MTRs", valor: lista.length, cor: "text-[var(--color-ink-700)] bg-[var(--color-paper-100)]" },
+          { label: "Recebidos", valor: recebidos, cor: "text-green-700 bg-green-50" },
+          { label: "Sem recebimento", valor: semRecebimento.length, cor: "text-amber-700 bg-amber-50" },
+          { label: "Cancelados", valor: cancelados, cor: "text-red-700 bg-red-50" },
+        ].map((c) => (
+          <div key={c.label} className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
+            <div className={`mb-2 inline-flex rounded-lg px-2 py-1 text-xs font-semibold ${c.cor}`}>{c.label}</div>
+            <p className="font-display text-2xl font-semibold text-[var(--color-ink-900)]">{c.valor}</p>
+          </div>
+        ))}
       </div>
 
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
-        <h2 className="font-display mb-3 text-base font-semibold text-[var(--color-ink-900)]">Resultado</h2>
-        {manifestos.length === 0 ? (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">MTRs encontrados ({visiveisToggle.length})</h2>
+          <div className="flex gap-1 text-xs">
+            {[
+              { key: "todos", label: `Todos (${lista.length})` },
+              { key: "pendentes", label: `Sem recebimento (${semRecebimento.length})` },
+            ].map((t) => (
+              <button
+                key={t.key}
+                onClick={() => { setToggle(t.key); setPagina(0); }}
+                className={`rounded-full px-3 py-1 font-medium ${toggle === t.key ? "bg-[var(--color-brand-500)] text-white" : "bg-[var(--color-paper-100)] text-[var(--color-ink-600)] hover:bg-[var(--color-paper-200)]"}`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        {visiveis.length === 0 ? (
           <p className="py-4 text-center text-sm text-[var(--color-ink-500)]">
             {carregando
               ? "Carregando..."
-              : "Nenhum manifesto encontrado. Use \"Sincronizar com o portal\" para buscar os MTRs do IMA/SC."}
+              : "Nenhum MTR encontrado. Selecione a conexão e o período e clique em Consultar portal."}
           </p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-[var(--color-paper-200)] text-left">
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">N.º</th>
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Conexão</th>
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Transportador</th>
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Destinador</th>
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Expedição</th>
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Recebimento</th>
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Qtd</th>
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Status</th>
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">PDF</th>
-                </tr>
-              </thead>
-              <tbody>
-                {manifestos.map((m) => (
-                  <tr key={m.id} className="border-b border-[var(--color-paper-100)] hover:bg-[var(--color-paper-50)]">
-                    <td className="py-2 px-2 font-medium text-[var(--color-ink-800)]">{m.numero}</td>
-                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.conexao.nome}</td>
-                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.transportadorNome || "—"}</td>
-                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.destinadorNome || "—"}</td>
-                    <td className="py-2 px-2 text-[var(--color-ink-600)] whitespace-nowrap">{fmtData(m.dataExpedicao)}</td>
-                    <td className="py-2 px-2 text-[var(--color-ink-600)] whitespace-nowrap">{fmtData(m.dataRecebimento)}</td>
-                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.quantidade != null ? m.quantidade : "—"}</td>
-                    <td className="py-2 px-2">
-                      <span className={`inline-flex rounded-lg px-2 py-0.5 text-xs font-medium ${STATUS_BADGE[m.status] || "bg-[var(--color-paper-100)] text-[var(--color-ink-600)]"}`}>{m.status}</span>
-                    </td>
-                    <td className="py-2 px-2">
-                      <button onClick={() => baixarPdf(m)} className="rounded p-1 text-[var(--color-ink-400)] hover:bg-[var(--color-paper-100)] hover:text-[var(--color-ink-700)]" title="Baixar PDF"><FileDown size={14} /></button>
-                    </td>
+          <>
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[var(--color-paper-200)] text-left">
+                    <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Número</th>
+                    <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Gerador</th>
+                    <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Destinador</th>
+                    <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Transportador</th>
+                    <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Expedição</th>
+                    <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Situação</th>
+                    <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">PDF</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {visiveis.map((m) => (
+                    <tr key={m.id} className={`border-b border-[var(--color-paper-100)] hover:bg-[var(--color-paper-50)] ${(m.status === "EMITIDO" || m.status === "PENDENTE") ? "bg-amber-50/40" : ""}`}>
+                      <td className="py-2 px-2 font-medium text-[var(--color-ink-800)]">{m.numero}</td>
+                      <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.clienteNome || m.conexao.nome}</td>
+                      <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.destinadorNome || "—"}</td>
+                      <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.transportadorNome || "—"}</td>
+                      <td className="py-2 px-2 text-[var(--color-ink-600)] whitespace-nowrap">{fmtData(m.dataExpedicao)}</td>
+                      <td className="py-2 px-2">
+                        {m.status === "RECEBIDO" ? (
+                          <span className="text-xs font-medium text-green-700">Recebido</span>
+                        ) : m.status === "CANCELADO" ? (
+                          <span className={`inline-flex rounded-lg px-2 py-0.5 text-xs font-medium ${STATUS_BADGE[m.status] || "bg-[var(--color-paper-100)] text-[var(--color-ink-600)]"}`}>{m.status}</span>
+                        ) : (
+                          <span className="text-xs font-medium text-amber-700">Sem recebimento</span>
+                        )}
+                      </td>
+                      <td className="py-2 px-2">
+                        <button onClick={() => baixarPdf(m)} className="rounded p-1 text-[var(--color-ink-400)] hover:bg-[var(--color-paper-100)] hover:text-[var(--color-ink-700)]" title="Baixar PDF do MTR"><FileDown size={14} /></button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <ul className="space-y-2 md:hidden">
+              {visiveis.map((m) => (
+                <li key={m.id} className={`rounded-lg border border-[var(--color-paper-200)] p-3 text-sm ${(m.status === "EMITIDO" || m.status === "PENDENTE") ? "bg-amber-50/40" : ""}`}>
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-[var(--color-ink-800)]">MTR {m.numero}</span>
+                    <button onClick={() => baixarPdf(m)} className="rounded p-1 text-[var(--color-ink-400)] hover:bg-[var(--color-paper-100)]" title="Baixar PDF do MTR"><FileDown size={14} /></button>
+                  </div>
+                  <dl className="mt-2 grid grid-cols-2 gap-1 text-xs text-[var(--color-ink-600)]">
+                    <dt className="font-medium">Gerador</dt><dd className="truncate">{m.clienteNome || m.conexao.nome}</dd>
+                    <dt className="font-medium">Transportador</dt><dd className="truncate">{m.transportadorNome || "—"}</dd>
+                    <dt className="font-medium">Expedição</dt><dd>{fmtData(m.dataExpedicao)}</dd>
+                  </dl>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-3 flex items-center justify-between text-xs text-[var(--color-ink-500)]">
+              <span>{visiveisToggle.length} registro(s) — Página {pag + 1} de {totalPaginas}</span>
+              <div className="flex gap-2">
+                <button disabled={pag === 0} onClick={() => setPagina((p) => p - 1)} className="rounded px-2 py-1 disabled:opacity-40">Anterior</button>
+                <button disabled={pag === totalPaginas - 1} onClick={() => setPagina((p) => p + 1)} className="rounded px-2 py-1 disabled:opacity-40">Próxima</button>
+              </div>
+            </div>
+          </>
         )}
       </div>
     </div>
@@ -855,7 +1062,8 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
   return (
     <div className="space-y-4">
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
-        <h2 className="font-display mb-3 text-base font-semibold text-[var(--color-ink-900)]">Dados da emissão</h2>
+        <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Dados do Gerador</h2>
+        <p className="mb-3 text-sm text-[var(--color-ink-500)]">Empresa que gera o resíduo — preenchida pelo empreendimento</p>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <div className="flex flex-col gap-1 md:col-span-2">
             <label className={labelCls}>Conexão MTR-IMA/SC</label>
@@ -895,7 +1103,8 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
       </div>
 
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
-        <h2 className="font-display mb-3 text-base font-semibold text-[var(--color-ink-900)]">Transportador</h2>
+        <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Dados do Transportador</h2>
+        <p className="mb-3 text-sm text-[var(--color-ink-500)]">Transportador do resíduo até o destinador</p>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <div className="flex flex-col gap-1">
             <label className={labelCls}>CNPJ</label>
@@ -925,7 +1134,8 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
       </div>
 
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
-        <h2 className="font-display mb-3 text-base font-semibold text-[var(--color-ink-900)]">Destinador</h2>
+        <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Dados do Destinador</h2>
+        <p className="mb-3 text-sm text-[var(--color-ink-500)]">Destinador responsável pelo tratamento/disposição do resíduo</p>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <div className="flex flex-col gap-1">
             <label className={labelCls}>CNPJ</label>
@@ -942,8 +1152,8 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
         </div>
         <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
           <div className="flex flex-col gap-1">
-            <label className={labelCls}>Observações</label>
-            <textarea value={form.observacoes} onChange={(e) => setForm((f) => ({ ...f, observacoes: e.target.value }))} rows={2} className={inputCls} />
+            <label className={labelCls}>Observações ({form.observacoes.length}/4000)</label>
+            <textarea value={form.observacoes} onChange={(e) => setForm((f) => ({ ...f, observacoes: e.target.value }))} rows={2} maxLength={4000} className={inputCls} />
           </div>
           <div className="flex flex-col gap-1">
             <label className={labelCls}>Código de referência interno</label>
@@ -953,23 +1163,27 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
       </div>
 
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-1 flex items-center justify-between">
           <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Resíduos ({residuos.length})</h2>
           <button onClick={() => { setEditandoResiduo(null); setResiduoForm(emptyResiduo); setModalResiduo(true); }} className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg bg-[var(--color-brand-500)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)]">
             <Plus size={15} /> Adicionar resíduo
           </button>
         </div>
+        <p className="mb-3 text-sm text-[var(--color-ink-500)]">Adicione os resíduos transportados — cada um é uma linha da tabela</p>
         {residuos.length === 0 ? (
-          <p className="py-4 text-center text-sm text-[var(--color-ink-500)]">Nenhum resíduo adicionado.</p>
+          <p className="py-4 text-center text-sm text-[var(--color-ink-500)]">Nenhum resíduo cadastrado. Clique em &quot;Adicionar resíduo&quot;.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--color-paper-200)] text-left">
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">IBAMA</th>
+                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Resíduo</th>
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Quantidade</th>
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Unidade</th>
+                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Estado</th>
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Classe</th>
+                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Acondicionamento</th>
+                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Tratamento</th>
+                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">ONU</th>
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Ações</th>
                 </tr>
               </thead>
@@ -977,13 +1191,16 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
                 {residuos.map((r, i) => (
                   <tr key={i} className="border-b border-[var(--color-paper-100)] hover:bg-[var(--color-paper-50)]">
                     <td className="py-2 px-2 font-medium text-[var(--color-ink-800)]">{r.residuo}</td>
-                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{r.quantidade}</td>
-                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{catalogos?.unidades.find((u) => u.codigo === Number(r.codigoUnidade))?.nome || r.codigoUnidade}</td>
+                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{r.quantidade} {catalogos?.unidades.find((u) => u.codigo === Number(r.codigoUnidade))?.sigla || ""}</td>
+                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{catalogos?.estadosFisicos.find((e) => e.codigo === Number(r.codigoTipoEstado))?.descricao || r.codigoTipoEstado}</td>
                     <td className="py-2 px-2 text-[var(--color-ink-600)]">{catalogos?.classes.find((c) => c.codigo === Number(r.codigoClasse))?.descricao || r.codigoClasse}</td>
+                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{catalogos?.acondicionamentos.find((a) => a.codigo === Number(r.codigoAcondicionamento))?.descricao || r.codigoAcondicionamento}</td>
+                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{catalogos?.tratamentos.find((t) => t.codigo === Number(r.codigoTecnologia))?.descricao || r.codigoTecnologia}</td>
+                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{r.numeroONU || "—"}</td>
                     <td className="py-2 px-2">
                       <div className="flex gap-1">
-                        <button onClick={() => { setEditandoResiduo(i); setResiduoForm(r); setModalResiduo(true); }} className="rounded p-1 text-[var(--color-ink-400)] hover:bg-[var(--color-paper-100)] hover:text-[var(--color-ink-700)]" title="Editar"><X size={14} /></button>
-                        <button onClick={() => setResiduos((rs) => rs.filter((_, j) => j !== i))} className="rounded p-1 text-[var(--color-ink-400)] hover:bg-red-50 hover:text-red-600" title="Remover"><Trash2 size={14} /></button>
+                        <button onClick={() => { setEditandoResiduo(i); setResiduoForm(r); setModalResiduo(true); }} className="rounded p-1 text-[var(--color-ink-400)] hover:bg-[var(--color-paper-100)] hover:text-[var(--color-ink-700)]" title="Editar resíduo"><X size={14} /></button>
+                        <button onClick={() => setResiduos((rs) => rs.filter((_, j) => j !== i))} className="rounded p-1 text-[var(--color-ink-400)] hover:bg-red-50 hover:text-red-600" title="Remover resíduo"><Trash2 size={14} /></button>
                       </div>
                     </td>
                   </tr>

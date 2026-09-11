@@ -10,10 +10,14 @@ export async function POST(req: Request) {
 
   let conexaoId: number | null = null;
   let anos = 10;
+  let dataInicial: string | undefined;
+  let dataFinal: string | undefined;
   try {
     const body = await req.json();
     conexaoId = body?.conexaoId ? Number(body.conexaoId) : null;
     if (body?.anos && Number(body.anos) > 0) anos = Number(body.anos);
+    if (body?.dataInicial) dataInicial = String(body.dataInicial);
+    if (body?.dataFinal) dataFinal = String(body.dataFinal);
   } catch {
     // corpo vazio: sincroniza todas
   }
@@ -30,7 +34,7 @@ export async function POST(req: Request) {
     const erros = [];
     for (const c of conexoes) {
       try {
-        resultados.push(await sincronizarManifestosConexao(c.id, anos));
+        resultados.push(await sincronizarManifestosConexao(c.id, anos, { dataInicial, dataFinal }));
       } catch (e) {
         erros.push({ conexaoId: c.id, mensagem: e instanceof MtrImaError ? e.message : "Erro ao sincronizar" });
       }

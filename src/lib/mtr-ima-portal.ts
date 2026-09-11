@@ -90,6 +90,12 @@ function parsearDataBr(v: string): Date | null {
   return isNaN(d.getTime()) ? null : d;
 }
 
+function isoParaBr(v: string): string | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(v || "").trim());
+  if (!m) return null;
+  return `${m[3]}/${m[2]}/${m[1]}`;
+}
+
 function normalizarStatus(situacao: string): string {
   const s = (situacao || "").toLowerCase();
   if (s.includes("cancelado")) return "CANCELADO";
@@ -209,13 +215,20 @@ async function listarPerfil(sessao: SessaoPortal, def: (typeof PERFIS)[number], 
   return coletados;
 }
 
-export async function sincronizarManifestosConexao(conexaoId: number, anos = ANOS_PADRAO) {
+export async function sincronizarManifestosConexao(
+  conexaoId: number,
+  anos = ANOS_PADRAO,
+  periodo?: { dataInicial?: string; dataFinal?: string },
+) {
   const sessao = await loginPortal(conexaoId);
 
-  const fim = formatarDataBr(new Date());
-  const inicioDerivado = new Date();
-  inicioDerivado.setFullYear(inicioDerivado.getFullYear() - anos);
-  const inicio = formatarDataBr(inicioDerivado);
+  const fim = (periodo?.dataFinal && isoParaBr(periodo.dataFinal)) || formatarDataBr(new Date());
+  let inicio: string | null = periodo?.dataInicial ? isoParaBr(periodo.dataInicial) : null;
+  if (!inicio) {
+    const inicioDerivado = new Date();
+    inicioDerivado.setFullYear(inicioDerivado.getFullYear() - anos);
+    inicio = formatarDataBr(inicioDerivado);
+  }
 
   const mapa = new Map<string, LinhaPortal>();
   for (const def of PERFIS) {
