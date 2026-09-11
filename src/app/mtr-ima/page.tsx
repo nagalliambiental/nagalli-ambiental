@@ -995,8 +995,8 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
             <textarea value={form.observacoes} onChange={(e) => setForm((f) => ({ ...f, observacoes: e.target.value }))} rows={2} maxLength={4000} className={inputCls} />
           </div>
           <div className="flex flex-col gap-1">
-            <label className={labelCls}>Código de referência interno</label>
-            <input value={form.seuCodigoReferencia} onChange={(e) => setForm((f) => ({ ...f, seuCodigoReferencia: e.target.value }))} className={inputCls} />
+            <label className={labelCls}>Código de referência interno (somente números)</label>
+            <input value={form.seuCodigoReferencia} onChange={(e) => setForm((f) => ({ ...f, seuCodigoReferencia: e.target.value.replace(/\D/g, "") }))} className={inputCls} placeholder="Ex.: 123" />
           </div>
         </div>
       </div>

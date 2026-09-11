@@ -255,21 +255,30 @@ export async function emitirManifesto(input: MtrImaManifestoInput): Promise<{ nu
   const auth = buildAuth(conn);
   const { itens, conexaoId, clienteNome, empreendNome, resumo, quantidade, unidade, transportadorNome, destinadorNome, ...manifData } = input;
 
+  const refNum = manifData.seuCodigoReferencia != null && String(manifData.seuCodigoReferencia).trim() !== "" && Number.isFinite(Number(manifData.seuCodigoReferencia))
+    ? Number(manifData.seuCodigoReferencia)
+    : undefined;
+  const manifDataSemRef: Record<string, unknown> = { ...manifData };
+  delete manifDataSemRef.seuCodigoReferencia;
   const body = {
     ...auth,
     manifestoJSONDtos: [
       {
-        ...manifData,
+        ...manifDataSemRef,
+        ...(refNum !== undefined ? { seuCodigoReferencia: refNum } : {}),
+        ...(manifData.manifTransportadorDataExpedicao
+          ? { manifTransportadorDataExpedicao: String(manifData.manifTransportadorDataExpedicao).replace(/\D/g, "") }
+          : {}),
         cnpGerador: manifData.cnpGerador.replace(/\D/g, ""),
         cnpTransportador: manifData.cnpTransportador.replace(/\D/g, ""),
         cnpDestinador: manifData.cnpDestinador.replace(/\D/g, ""),
         ...(manifData.cnpArmazenador ? { cnpArmazenador: manifData.cnpArmazenador.replace(/\D/g, "") } : {}),
+        itemManifestoJSONs: itens.map((item) => ({
+          ...item,
+          residuo: item.residuo.replace(/\D/g, ""),
+        })),
       },
     ],
-    itemManifestoJSONs: itens.map((item) => ({
-      ...item,
-      residuo: item.residuo.replace(/\D/g, ""),
-    })),
   };
 
   const result = await apiFetch<{
