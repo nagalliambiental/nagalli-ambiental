@@ -817,15 +817,16 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
       toast("Informe o código IBAMA e a quantidade do resíduo", "error");
       return;
     }
-    if (precisaDensidadeIMA(residuoForm.codigoUnidade) && !(Number(String(residuoForm.tipoDensidadeValor).replace(",", ".")) > 0)) {
+    const completo = residuoForm;
+    if (precisaDensidadeIMA(completo.codigoUnidade) && !(Number(String(completo.tipoDensidadeValor).replace(",", ".")) > 0)) {
       toast("Informe a densidade — ela converte o volume em toneladas na emissão", "error");
       return;
     }
     if (editandoResiduo != null) {
-      setResiduos((rs) => rs.map((r, i) => (i === editandoResiduo ? residuoForm : r)));
+      setResiduos((rs) => rs.map((r, i) => (i === editandoResiduo ? completo : r)));
       setEditandoResiduo(null);
     } else {
-      setResiduos((rs) => [...rs, residuoForm]);
+      setResiduos((rs) => [...rs, completo]);
     }
     setResiduoForm(emptyResiduo);
     setModalResiduo(false);
