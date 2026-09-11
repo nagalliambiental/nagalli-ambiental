@@ -14,7 +14,7 @@ export async function POST(req: Request) {
 
     const manifestos = await prisma.mtrImaManifesto.findMany({
       where,
-      include: { conexao: { select: { id: true, nome: true, cnpj: true } } },
+      include: { conexao: { select: { id: true, nome: true, cnpj: true, unidade: true } } },
       orderBy: { dataExpedicao: "desc" },
     });
 

@@ -54,7 +54,7 @@ interface Manifesto {
   dataRecebimento: string | null;
   classeRisco: string | null;
   classeNome: string | null;
-  conexao: { id: number; nome: string };
+  conexao: { id: number; nome: string; unidade: number | null };
 }
 
 interface MtrImaCatalogosFront {
@@ -455,7 +455,7 @@ function PainelTab(props: {
             <select value={conexaoSyncEfetiva} onChange={(e) => setConexaoSync(e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm min-w-[220px] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]">
               <option value="">Selecione...</option>
               {conexoes.map((c) => (
-                <option key={c.id} value={c.id}>{c.nome}</option>
+                <option key={c.id} value={c.id}>{c.unidade ? `${c.nome} — unid. ${c.unidade}` : c.nome}</option>
               ))}
             </select>
           </div>
@@ -720,7 +720,7 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn; onChanged: ()
             <select value={conexaoEfetiva} onChange={(e) => { setConexaoId(e.target.value); setLista([]); consultar(e.target.value); }} className="w-full rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm min-w-[220px] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]">
               <option value="">Selecione...</option>
               {conexoes.map((c) => (
-                <option key={c.id} value={c.id}>{c.nome}</option>
+                <option key={c.id} value={c.id}>{c.unidade ? `${c.nome} — unid. ${c.unidade}` : c.nome}</option>
               ))}
             </select>
           </div>
@@ -796,7 +796,7 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn; onChanged: ()
                   {visiveis.map((m) => (
                     <tr key={m.id} className={`border-b border-[var(--color-paper-100)] hover:bg-[var(--color-paper-50)] ${(m.status === "EMITIDO" || m.status === "PENDENTE") ? "bg-amber-50/40" : ""}`}>
                       <td className="py-2 px-2 font-medium text-[var(--color-ink-800)]">{m.numero}</td>
-                      <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.clienteNome || m.conexao.nome}</td>
+                      <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.clienteNome || (m.conexao.unidade ? `${m.conexao.nome} — unid. ${m.conexao.unidade}` : m.conexao.nome)}</td>
                       <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.destinadorNome || "—"}</td>
                       <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.transportadorNome || "—"}</td>
                       <td className="py-2 px-2 text-[var(--color-ink-600)] whitespace-nowrap">{fmtData(m.dataExpedicao)}</td>
@@ -825,7 +825,7 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn; onChanged: ()
                     <button onClick={() => baixarPdf(m)} className="rounded p-1 text-[var(--color-ink-400)] hover:bg-[var(--color-paper-100)]" title="Baixar PDF do MTR"><FileDown size={14} /></button>
                   </div>
                   <dl className="mt-2 grid grid-cols-2 gap-1 text-xs text-[var(--color-ink-600)]">
-                    <dt className="font-medium">Gerador</dt><dd className="truncate">{m.clienteNome || m.conexao.nome}</dd>
+                    <dt className="font-medium">Gerador</dt><dd className="truncate">{m.clienteNome || (m.conexao.unidade ? `${m.conexao.nome} — unid. ${m.conexao.unidade}` : m.conexao.nome)}</dd>
                     <dt className="font-medium">Transportador</dt><dd className="truncate">{m.transportadorNome || "—"}</dd>
                     <dt className="font-medium">Expedição</dt><dd>{fmtData(m.dataExpedicao)}</dd>
                   </dl>
@@ -1021,7 +1021,7 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
             <select value={conexaoEfetiva} onChange={(e) => setForm((f) => ({ ...f, conexaoId: e.target.value }))} className={inputCls}>
               <option value="">Selecione...</option>
               {conexoes.map((c) => (
-                <option key={c.id} value={c.id}>{c.nome}</option>
+                <option key={c.id} value={c.id}>{c.unidade ? `${c.nome} — unid. ${c.unidade}` : c.nome}</option>
               ))}
             </select>
           </div>
