@@ -266,7 +266,9 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn; onChanged: ()
       const res = await fetch("/api/mtr-ima/meus-mtrs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conexaoId: Number(id) }),
+        body: JSON.stringify(
+          tudo ? { conexaoId: Number(id) } : { conexaoId: Number(id), dataInicial, dataFinal },
+        ),
       });
       if (!res.ok) {
         const data = await res.json();
