@@ -121,7 +121,7 @@ interface ResiduoForm {
 const emptyResiduo: ResiduoForm = {
   residuo: "",
   quantidade: "",
-  codigoUnidade: "2",
+  codigoUnidade: "3",
   codigoTipoEstado: "1",
   codigoClasse: "1",
   codigoAcondicionamento: "1",
@@ -1169,10 +1169,27 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtrIma[]; onCha
   const [salvando, setSalvando] = useState(false);
   const [importando, setImportando] = useState(false);
   const [conexaoImport, setConexaoImport] = useState("");
+  const [residuosEdicao, setResiduosEdicao] = useState<ResiduoModelo[]>([]);
+  const [modalResiduo, setModalResiduo] = useState(false);
+  const [editandoResIdx, setEditandoResIdx] = useState<number | null>(null);
+  const [resForm, setResForm] = useState<ResiduoModelo>({ residuo: "", quantidade: "", codigoUnidade: "3", codigoTipoEstado: "1", codigoClasse: "1", codigoAcondicionamento: "1", codigoTecnologia: "1", numeroONU: "", classeDeRisco: "", nomeEmbarque: "", grupoEmbalagem: "" });
+  const [catalogos, setCatalogos] = useState<MtrImaCatalogosFront | null>(null);
 
   const inputCls = "w-full rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]";
   const labelCls = "text-xs font-medium text-[var(--color-ink-500)]";
-  const modeloEdicao = editandoId != null ? modelos.find((m) => m.id === editandoId) : undefined;
+
+  useEffect(() => {
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const res = await fetch("/api/mtr-ima/catalogos", { signal: controller.signal });
+        if (res.ok) setCatalogos(await res.json());
+      } catch {
+        if (!controller.signal.aborted) setCatalogos(null);
+      }
+    })();
+    return () => controller.abort();
+  }, []);
 
   async function importar() {
     setImportando(true);
@@ -1205,8 +1222,7 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtrIma[]; onCha
   }
 
   function editar(m: ModeloMtrIma) {
-    setEditandoId(m.id);
-    setForm({
+    setEditandoId(m.id);    setForm({
       nome: m.nome,
       descricao: m.descricao || "",
       conexaoId: m.conexaoId ? String(m.conexaoId) : "",
@@ -1220,12 +1236,29 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtrIma[]; onCha
       placaVeiculo: m.placaVeiculo || "",
       observacoes: m.observacoes || "",
     });
+    setResiduosEdicao(m.residuos.map((r) => ({ ...r })));
     toast(`Editando modelo "${m.nome}"`, "info");
   }
 
   function novoModelo() {
     setEditandoId(null);
     setForm(emptyModeloForm);
+    setResiduosEdicao([]);
+  }
+
+  function adicionarResiduoModelo() {
+    if (!resForm.residuo.trim()) {
+      toast("Informe o código IBAMA do resíduo", "error");
+      return;
+    }
+    if (editandoResIdx != null) {
+      setResiduosEdicao((rs) => rs.map((r, i) => (i === editandoResIdx ? resForm : r)));
+      setEditandoResIdx(null);
+    } else {
+      setResiduosEdicao((rs) => [...rs, resForm]);
+    }
+    setResForm({ residuo: "", quantidade: "", codigoUnidade: "3", codigoTipoEstado: "1", codigoClasse: "1", codigoAcondicionamento: "1", codigoTecnologia: "1", numeroONU: "", classeDeRisco: "", nomeEmbarque: "", grupoEmbalagem: "" });
+    setModalResiduo(false);
   }
 
   async function salvar() {
@@ -1248,6 +1281,7 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtrIma[]; onCha
         nomeMotorista: form.nomeMotorista || undefined,
         placaVeiculo: form.placaVeiculo || undefined,
         observacoes: form.observacoes || undefined,
+        residuos: residuosEdicao,
       };
       const res = editandoId != null
         ? await fetch(`/api/mtr-ima/modelos/${editandoId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(corpo) })
@@ -1302,7 +1336,7 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtrIma[]; onCha
 
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">{editandoId != null ? `Editando modelo: ${modeloEdicao?.nome || ""}` : "Novo modelo"}</h2>
+          <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">{editandoId != null ? `Editando modelo: ${form.nome || ""}` : "Novo modelo"}</h2>
           {editandoId != null && (
             <button onClick={novoModelo} className="text-sm font-medium text-[var(--color-brand-600)] hover:underline">Novo modelo</button>
           )}
@@ -1363,28 +1397,45 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtrIma[]; onCha
             <input value={form.observacoes} onChange={(e) => setForm((f) => ({ ...f, observacoes: e.target.value }))} className={inputCls} />
           </div>
         </div>
-        {modeloEdicao != null && modeloEdicao.residuos.length > 0 && (
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-[var(--color-paper-200)] text-left">
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Resíduo (IBAMA)</th>
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Unidade</th>
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Classe</th>
-                </tr>
-              </thead>
-              <tbody>
-                {modeloEdicao.residuos.map((r, i) => (
-                  <tr key={i} className="border-b border-[var(--color-paper-100)]">
-                    <td className="py-2 px-2 font-medium text-[var(--color-ink-800)]">{r.residuo || "—"}</td>
-                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{r.codigoUnidade || "—"}</td>
-                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{r.codigoClasse || "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <div className="mt-4">
+          <div className="mb-2 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-[var(--color-ink-900)]">Resíduos do modelo ({residuosEdicao.length})</h3>
+            <button onClick={() => { setEditandoResIdx(null); setResForm({ residuo: "", quantidade: "", codigoUnidade: "3", codigoTipoEstado: "1", codigoClasse: "1", codigoAcondicionamento: "1", codigoTecnologia: "1", numeroONU: "", classeDeRisco: "", nomeEmbarque: "", grupoEmbalagem: "" }); setModalResiduo(true); }} className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg bg-[var(--color-brand-500)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--color-brand-600)]">
+              <Plus size={13} /> Adicionar resíduo
+            </button>
           </div>
-        )}
+          {residuosEdicao.length === 0 ? (
+            <p className="py-3 text-center text-sm text-[var(--color-ink-500)]">Nenhum resíduo no modelo.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[var(--color-paper-200)] text-left">
+                    <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Resíduo (IBAMA)</th>
+                    <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Estado</th>
+                    <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Classe</th>
+                    <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {residuosEdicao.map((r, i) => (
+                    <tr key={i} className="border-b border-[var(--color-paper-100)]">
+                      <td className="py-2 px-2 font-medium text-[var(--color-ink-800)]">{r.residuo || "—"}</td>
+                      <td className="py-2 px-2 text-[var(--color-ink-600)]">{catalogos?.estadosFisicos.find((e) => e.codigo === Number(r.codigoTipoEstado))?.descricao || r.codigoTipoEstado || "—"}</td>
+                      <td className="py-2 px-2 text-[var(--color-ink-600)]">{catalogos?.classes.find((c) => c.codigo === Number(r.codigoClasse))?.descricao || r.codigoClasse || "—"}</td>
+                      <td className="py-2 px-2">
+                        <div className="flex gap-1">
+                          <button onClick={() => { setEditandoResIdx(i); setResForm({ ...r }); setModalResiduo(true); }} className="rounded p-1 text-[var(--color-ink-400)] hover:bg-[var(--color-paper-100)] hover:text-[var(--color-ink-700)]" title="Editar"><Pencil size={14} /></button>
+                          <button onClick={() => setResiduosEdicao((rs) => rs.filter((_, j) => j !== i))} className="rounded p-1 text-[var(--color-ink-400)] hover:bg-red-50 hover:text-red-600" title="Remover"><Trash2 size={14} /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
         <button onClick={salvar} disabled={salvando} className="focus-ring transition-brand mt-4 flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">
           {salvando ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
           {salvando ? "Salvando..." : editandoId != null ? "Atualizar modelo" : "Salvar modelo"}
@@ -1432,6 +1483,86 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtrIma[]; onCha
           </div>
         )}
       </div>
+
+      {modalResiduo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setModalResiduo(false)}>
+          <div className="shadow-card max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-display mb-3 font-semibold text-[var(--color-ink-900)]">{editandoResIdx != null ? "Editar resíduo" : "Novo resíduo"}</h3>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <div className="flex flex-col gap-1">
+                <label className={labelCls}>Código IBAMA do resíduo</label>
+                <input value={resForm.residuo} onChange={(e) => setResForm((r) => ({ ...r, residuo: e.target.value }))} className={inputCls} placeholder="Ex.: 010504" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className={labelCls}>Quantidade</label>
+                <input type="number" value={resForm.quantidade} onChange={(e) => setResForm((r) => ({ ...r, quantidade: e.target.value }))} className={inputCls} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className={labelCls}>Unidade</label>
+                <select value={resForm.codigoUnidade} onChange={(e) => setResForm((r) => ({ ...r, codigoUnidade: e.target.value }))} className={inputCls}>
+                  {catalogos?.unidades.map((u) => (
+                    <option key={u.codigo} value={u.codigo}>{u.nome} ({u.sigla})</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className={labelCls}>Estado físico</label>
+                <select value={resForm.codigoTipoEstado} onChange={(e) => setResForm((r) => ({ ...r, codigoTipoEstado: e.target.value }))} className={inputCls}>
+                  {catalogos?.estadosFisicos.map((e) => (
+                    <option key={e.codigo} value={e.codigo}>{e.descricao}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className={labelCls}>Classe</label>
+                <select value={resForm.codigoClasse} onChange={(e) => setResForm((r) => ({ ...r, codigoClasse: e.target.value }))} className={inputCls}>
+                  {catalogos?.classes.map((c) => (
+                    <option key={c.codigo} value={c.codigo}>{c.descricao}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className={labelCls}>Acondicionamento</label>
+                <select value={resForm.codigoAcondicionamento} onChange={(e) => setResForm((r) => ({ ...r, codigoAcondicionamento: e.target.value }))} className={inputCls}>
+                  {catalogos?.acondicionamentos.map((a) => (
+                    <option key={a.codigo} value={a.codigo}>{a.descricao}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className={labelCls}>Tecnologia de tratamento</label>
+                <select value={resForm.codigoTecnologia} onChange={(e) => setResForm((r) => ({ ...r, codigoTecnologia: e.target.value }))} className={inputCls}>
+                  {catalogos?.tratamentos.map((t) => (
+                    <option key={t.codigo} value={t.codigo}>{t.descricao}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className={labelCls}>N.º ONU (opcional)</label>
+                <input value={resForm.numeroONU} onChange={(e) => setResForm((r) => ({ ...r, numeroONU: e.target.value }))} className={inputCls} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className={labelCls}>Classe de risco (opcional)</label>
+                <input value={resForm.classeDeRisco} onChange={(e) => setResForm((r) => ({ ...r, classeDeRisco: e.target.value }))} className={inputCls} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className={labelCls}>Nome de embarque (opcional)</label>
+                <input value={resForm.nomeEmbarque} onChange={(e) => setResForm((r) => ({ ...r, nomeEmbarque: e.target.value }))} className={inputCls} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className={labelCls}>Grupo de embalagem (opcional)</label>
+                <input value={resForm.grupoEmbalagem} onChange={(e) => setResForm((r) => ({ ...r, grupoEmbalagem: e.target.value }))} className={inputCls} />
+              </div>
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <button onClick={() => setModalResiduo(false)} className="rounded-lg bg-[var(--color-paper-100)] px-4 py-2 text-sm text-[var(--color-ink-700)]">Cancelar</button>
+              <button onClick={adicionarResiduoModelo} className="flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-4 py-2 text-sm font-medium text-white">
+                <PackagePlus size={16} /> {editandoResIdx != null ? "Salvar" : "Adicionar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
