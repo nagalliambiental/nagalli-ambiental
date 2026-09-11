@@ -116,6 +116,10 @@ function isoHoje(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
+function fmtIso(v: string) {
+  return v.split("-").reverse().join("/");
+}
+
 function haDias(dias: number) {
   const d = new Date();
   d.setDate(d.getDate() - dias);
@@ -280,15 +284,23 @@ function PainelTab(props: {
   const { conexoes, manifestos, loading, emitidos, recebidos, cancelados, onVerificar, toast } = props;
   const [paginaManifestos, setPaginaManifestos] = useState(0);
   const [filtro, setFiltro] = useState("todos");
-  const filtrados = manifestos.filter((m) =>
-    filtro === "todos"
-      ? true
-      : filtro === "emitidos"
-        ? m.status === "EMITIDO" || m.status === "PENDENTE"
-        : filtro === "recebidos"
-          ? m.status === "RECEBIDO"
-          : m.status === "CANCELADO",
-  );
+  const [periodoFiltro, setPeriodoFiltro] = useState<{ di: string; df: string } | null>(null);
+  const filtrados = manifestos.filter((m) => {
+    const statusOk =
+      filtro === "todos"
+        ? true
+        : filtro === "emitidos"
+          ? m.status === "EMITIDO" || m.status === "PENDENTE"
+          : filtro === "recebidos"
+            ? m.status === "RECEBIDO"
+            : m.status === "CANCELADO";
+    if (!statusOk) return false;
+    if (periodoFiltro && m.dataExpedicao) {
+      const d = m.dataExpedicao.slice(0, 10);
+      if (d < periodoFiltro.di || d > periodoFiltro.df) return false;
+    }
+    return true;
+  });
   const totalPaginasM = Math.max(1, Math.ceil(filtrados.length / POR_PAGINA));
   const paginaM = Math.min(paginaManifestos, totalPaginasM - 1);
   const visiveisM = filtrados.slice(paginaM * POR_PAGINA, paginaM * POR_PAGINA + POR_PAGINA);
@@ -326,6 +338,8 @@ function PainelTab(props: {
       }
       const r = data.resultados?.[0];
       setResumoSync(r ? { total: r.total, importados: r.importados, atualizados: r.atualizados } : { total: 0, importados: 0, atualizados: 0 });
+      setPeriodoFiltro({ di: dataInicial, df: dataFinal });
+      setPaginaManifestos(0);
       toast(`Portal IMA sincronizado: ${r?.total ?? 0} MTR(s) no período`, "success");
       onVerificar();
     } catch {
@@ -513,10 +527,18 @@ function PainelTab(props: {
             </button>
           </div>
         </div>
+        {periodoFiltro && (
+          <div className="mb-2 flex items-center gap-2 text-xs">
+            <span className="rounded-full bg-[var(--color-paper-100)] px-3 py-1 font-medium text-[var(--color-ink-600)]">
+              Período: {fmtIso(periodoFiltro.di)} a {fmtIso(periodoFiltro.df)}
+            </span>
+            <button onClick={() => setPeriodoFiltro(null)} className="rounded-full px-2 py-1 text-[var(--color-ink-500)] hover:bg-[var(--color-paper-100)]">Limpar</button>
+          </div>
+        )}
         {loading ? (
           <p className="py-4 text-center text-sm text-[var(--color-ink-500)]"><Loader2 size={16} className="mr-2 inline animate-spin" />Carregando...</p>
         ) : visiveisM.length === 0 ? (
-          <p className="py-4 text-center text-sm text-[var(--color-ink-500)]">Nenhum manifesto ainda. Use a sincronização acima para listar os MTRs do período.</p>
+          <p className="py-4 text-center text-sm text-[var(--color-ink-500)]">{periodoFiltro ? "Nenhum manifesto neste período." : "Nenhum manifesto ainda. Use a sincronização acima para listar os MTRs do período."}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -634,10 +656,6 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn; onChanged: ()
   const totalPaginas = Math.max(1, Math.ceil(visiveisToggle.length / POR_PAGINA));
   const pag = Math.min(pagina, totalPaginas - 1);
   const visiveis = visiveisToggle.slice(pag * POR_PAGINA, pag * POR_PAGINA + POR_PAGINA);
-
-  function fmtIso(v: string) {
-    return v.split("-").reverse().join("/");
-  }
 
   async function consultar(forcarId?: string) {
     const id = forcarId ?? conexaoEfetiva;
