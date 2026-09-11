@@ -1,6 +1,7 @@
 import { prisma } from "./prisma";
 import { descriptografar } from "./crypto";
 import { MtrImaError } from "./mtr-ima";
+import type { MtrImaManifestoDados } from "./mtr-ima";
 
 export const MTR_IMA_PORTAL = "https://mtr.ima.sc.gov.br";
 const UA =
@@ -156,7 +157,7 @@ export async function loginPortal(conexaoId: number): Promise<SessaoPortal> {
   return sessao;
 }
 
-async function listarPerfil(sessao: SessaoPortal, def: (typeof PERFIS)[number], di: string, df: string): Promise<LinhaPortal[]> {
+async function listarPerfil(sessao: SessaoPortal, def: (typeof PERFIS)[number], di: string, df: string, numMtr = ""): Promise<LinhaPortal[]> {
   const coletados: LinhaPortal[] = [];
   for (let inicio = 0; ; inicio += LOTE) {
     const q = new URLSearchParams({
@@ -166,7 +167,7 @@ async function listarPerfil(sessao: SessaoPortal, def: (typeof PERFIS)[number], 
       MTRsComCdf: "",
       dataInicial: di,
       dataFinal: df,
-      numMtr: "",
+      numMtr,
       sEcho: "1",
       iColumns: String(def.colunas.length),
       iDisplayStart: String(inicio),
@@ -259,4 +260,141 @@ export async function sincronizarManifestosConexao(conexaoId: number, anos = ANO
     atualizados,
     unidade: conn?.unidade ?? null,
   };
+}
+
+/* ──────────────── Consulta individual por número ──────────────── */
+
+function janelaConsulta(): { di: string; df: string } {
+  const fim = formatarDataBr(new Date());
+  const inicio = new Date();
+  inicio.setFullYear(inicio.getFullYear() - 15);
+  return { di: formatarDataBr(inicio), df: fim };
+}
+
+async function consultarPorNumero(sessao: SessaoPortal, numero: string): Promise<LinhaPortal | null> {
+  const num = String(numero || "").trim();
+  if (!num) return null;
+  const { di, df } = janelaConsulta();
+  for (const def of PERFIS) {
+    const linhas = await listarPerfil(sessao, def, di, df, num);
+    const achada = linhas.find((l) => l.numero === num);
+    if (achada) return achada;
+  }
+  return null;
+}
+
+export async function consultarManifestoPortal(conexaoId: number, numero: string): Promise<MtrImaManifestoDados> {
+  const num = String(numero || "").trim();
+  if (!num) throw new MtrImaError("Número do MTR é obrigatório", 400);
+  const sessao = await loginPortal(conexaoId);
+  const linha = await consultarPorNumero(sessao, num);
+  if (!linha) throw new MtrImaError(`MTR ${num} não encontrado no portal IMA`, 404);
+  const conn = await prisma.mtrImaConexao.findUnique({ where: { id: conexaoId } });
+  return {
+    numero: linha.numero,
+    status: normalizarStatus(linha.situacao),
+    clienteNome: linha.geradorNome || conn?.nome || undefined,
+    transportadorNome: linha.transportadorNome,
+    destinadorNome: linha.destinadorNome,
+    resumo: linha.situacao || undefined,
+    dataExpedicao: linha.dataExpedicao || undefined,
+  };
+}
+
+/* ──────────────── Download do PDF ──────────────── */
+
+export async function baixarManifestoPdfPortal(conexaoId: number, numero: string): Promise<{ buffer: Buffer; filename: string }> {
+  const num = String(numero || "").trim();
+  if (!num) throw new MtrImaError("Número do MTR é obrigatório", 400);
+  const sessao = await loginPortal(conexaoId);
+  const res = await fetchPortal(
+    sessao,
+    `/ControllerServlet?acao=relatorio&nomeRelatorio=manifesto&manifesto=${encodeURIComponent(num)}&condicao=N`,
+  );
+  const tipo = res.headers.get("content-type") || "";
+  const buf = Buffer.from(await res.arrayBuffer());
+  if (!res.ok || !tipo.includes("pdf") || buf.subarray(0, 5).toString() !== "%PDF-") {
+    throw new MtrImaError(`PDF do MTR ${num} não disponível no portal IMA`, 404);
+  }
+  await prisma.mtrImaConexao.update({ where: { id: conexaoId }, data: { ultimoUsoEm: new Date() } }).catch(() => {});
+  return { buffer: buf, filename: `MTR-IMA-${num}.pdf` };
+}
+
+/* ──────────────── Cancelamento / Recebimento ──────────────── */
+
+async function refletirLocal(conexaoId: number, numero: string, linha: LinhaPortal) {
+  const atual = await prisma.mtrImaManifesto.findFirst({ where: { conexaoId, numero } }).catch(() => null);
+  if (!atual) return;
+  const status = normalizarStatus(linha.situacao);
+  await prisma.mtrImaManifesto
+    .update({
+      where: { id: atual.id },
+      data: {
+        status,
+        transportadorNome: linha.transportadorNome || null,
+        destinadorNome: linha.destinadorNome || null,
+        dataExpedicao: linha.dataExpedicao,
+        ...(status === "RECEBIDO" && !atual.dataRecebimento ? { dataRecebimento: new Date() } : {}),
+      },
+    })
+    .catch(() => {});
+}
+
+function mensagemPortal(texto: string): string {
+  try {
+    const j = JSON.parse(texto) as Record<string, unknown>;
+    return String(j.msgOk || j.msg || j.retorno || "");
+  } catch {
+    return "";
+  }
+}
+
+export async function cancelarManifestoPortal(
+  conexaoId: number,
+  numero: string,
+  justificativa: string,
+): Promise<{ ok: boolean; mensagem: string }> {
+  const num = String(numero || "").trim();
+  const just = String(justificativa || "").trim();
+  if (!num) throw new MtrImaError("Número do MTR é obrigatório", 400);
+  if (!just) throw new MtrImaError("Justificativa do cancelamento é obrigatória", 400);
+  const sessao = await loginPortal(conexaoId);
+  const res = await fetchPortal(sessao, "/ControllerServlet?acao=cancelaManifesto", {
+    method: "POST",
+    ctype: "application/x-www-form-urlencoded",
+    body: `codManifesto=${encodeURIComponent(num)}&justificativa=${encodeURIComponent(just)}`,
+  });
+  const msgPortal = mensagemPortal(await res.text().catch(() => ""));
+  const linha = await consultarPorNumero(sessao, num);
+  if (linha && normalizarStatus(linha.situacao) === "CANCELADO") {
+    await refletirLocal(conexaoId, num, linha);
+    return { ok: true, mensagem: msgPortal || `MTR ${num} cancelado no portal IMA` };
+  }
+  throw new MtrImaError(msgPortal || `O portal IMA não confirmou o cancelamento do MTR ${num}`, 400);
+}
+
+export async function receberManifestoPortal(
+  conexaoId: number,
+  numero: string,
+  responsavel: string,
+  cargo: string,
+): Promise<{ ok: boolean; mensagem: string }> {
+  const num = String(numero || "").trim();
+  const resp = String(responsavel || "").trim();
+  const cg = String(cargo || "").trim();
+  if (!num) throw new MtrImaError("Número do MTR é obrigatório", 400);
+  if (!resp || !cg) throw new MtrImaError("Responsável e cargo do recebimento são obrigatórios", 400);
+  const sessao = await loginPortal(conexaoId);
+  const res = await fetchPortal(sessao, "/ControllerServlet", {
+    method: "POST",
+    ctype: "application/x-www-form-urlencoded",
+    body: `acao=recebeManifesto&respRecebimento=${encodeURIComponent(resp)}&codManifesto=${encodeURIComponent(num)}&respCargo=${encodeURIComponent(cg)}`,
+  });
+  const msgPortal = mensagemPortal(await res.text().catch(() => ""));
+  const linha = await consultarPorNumero(sessao, num);
+  if (linha && normalizarStatus(linha.situacao) === "RECEBIDO") {
+    await refletirLocal(conexaoId, num, linha);
+    return { ok: true, mensagem: msgPortal || `MTR ${num} recebido no portal IMA` };
+  }
+  throw new MtrImaError(msgPortal || `O portal IMA não confirmou o recebimento do MTR ${num}`, 400);
 }

@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { Topbar } from "@/components/Topbar";
-import { Truck, RefreshCw, Send, Link2, Loader2, CheckCircle2, FileDown, Trash2, Ban, Plus, X, PackagePlus, FileText } from "lucide-react";
+import { Truck, RefreshCw, Send, Link2, Loader2, CheckCircle2, FileDown, Trash2, Ban, Plus, X, PackagePlus, PackageCheck, FileText } from "lucide-react";
 import { useToast } from "@/components/Toast";
 
 type ToastFn = (message: string, type?: "success" | "error" | "info" | "warning") => void;
@@ -258,6 +258,10 @@ function PainelTab(props: {
   const [modalCancel, setModalCancel] = useState<Manifesto | null>(null);
   const [justificativaCancel, setJustificativaCancel] = useState("");
   const [cancelando, setCancelando] = useState(false);
+  const [modalReceber, setModalReceber] = useState<Manifesto | null>(null);
+  const [respNome, setRespNome] = useState("");
+  const [respCargo, setRespCargo] = useState("");
+  const [recebendo, setRecebendo] = useState(false);
 
   const conexaoEfetiva = conexoes.some((c) => c.id === Number(conexaoId)) ? conexaoId : conexoes.length ? String(conexoes[0].id) : "";
 
@@ -313,6 +317,36 @@ function PainelTab(props: {
       toast("Erro ao cancelar", "error");
     } finally {
       setCancelando(false);
+    }
+  }
+
+  async function receber() {
+    if (!modalReceber) return;
+    if (!respNome.trim() || !respCargo.trim()) {
+      toast("Informe o responsável e o cargo do recebimento", "error");
+      return;
+    }
+    setRecebendo(true);
+    try {
+      const res = await fetch("/api/mtr-ima/receber", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conexaoId: modalReceber.conexao.id, numero: modalReceber.numero, responsavel: respNome, cargo: respCargo }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast(data.error || "Falha ao receber", "error");
+        return;
+      }
+      toast(data.mensagem || "MTR recebido", "success");
+      setModalReceber(null);
+      setRespNome("");
+      setRespCargo("");
+      onVerificar();
+    } catch {
+      toast("Erro ao receber", "error");
+    } finally {
+      setRecebendo(false);
     }
   }
 
@@ -427,6 +461,9 @@ function PainelTab(props: {
                     <td className="py-2 px-2">
                       <div className="flex gap-1">
                         <button onClick={() => baixarPdf(m)} className="rounded p-1 text-[var(--color-ink-400)] hover:bg-[var(--color-paper-100)] hover:text-[var(--color-ink-700)]" title="Baixar PDF"><FileDown size={14} /></button>
+                        {(m.status === "EMITIDO" || m.status === "PENDENTE") && (
+                          <button onClick={() => setModalReceber(m)} className="rounded p-1 text-[var(--color-ink-400)] hover:bg-green-50 hover:text-green-600" title="Receber"><PackageCheck size={14} /></button>
+                        )}
                         {m.status !== "CANCELADO" && (
                           <button onClick={() => setModalCancel(m)} className="rounded p-1 text-[var(--color-ink-400)] hover:bg-red-50 hover:text-red-600" title="Cancelar"><Ban size={14} /></button>
                         )}
@@ -446,6 +483,30 @@ function PainelTab(props: {
           </div>
         )}
       </div>
+
+      {modalReceber && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setModalReceber(null)}>
+          <div className="shadow-card w-full max-w-md rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-display mb-3 font-semibold text-[var(--color-ink-900)]">Receber MTR {modalReceber.numero}</h3>
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Responsável pelo recebimento</label>
+                <input value={respNome} onChange={(e) => setRespNome(e.target.value)} placeholder="Nome do responsável..." className="w-full rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Cargo</label>
+                <input value={respCargo} onChange={(e) => setRespCargo(e.target.value)} placeholder="Cargo do responsável..." className="w-full rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+              </div>
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <button onClick={() => setModalReceber(null)} className="rounded-lg bg-[var(--color-paper-100)] px-4 py-2 text-sm text-[var(--color-ink-700)]">Voltar</button>
+              <button onClick={receber} disabled={recebendo} className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
+                {recebendo ? <Loader2 size={16} className="animate-spin" /> : <PackageCheck size={16} />} Receber
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {modalCancel && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setModalCancel(null)}>

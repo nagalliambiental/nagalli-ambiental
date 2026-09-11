@@ -199,46 +199,6 @@ export function catalogos(): MtrImaCatalogos {
   };
 }
 
-/* ──────────────── Consulta de MTRs ──────────────── */
-
-export async function consultarManifesto(conexaoId: number, numero: string): Promise<MtrImaManifestoDados> {
-  const conn = await carregarConexao(conexaoId);
-  const auth = buildAuth(conn);
-  const body = { ...auth, manifestoJSON: { manifestoCodigo: numero } };
-
-  const result = await apiFetch<{
-    retornoCodigo: number;
-    retorno: string;
-    manifestoJSON?: Record<string, unknown>;
-    manifestoItensJSON?: Array<Record<string, unknown>>;
-  }>("retornaManifestoPdf", body);
-
-  if (result.retornoCodigo !== 0) {
-    throw new MtrImaError(`Consulta MTR falhou: ${result.retorno}`, 400);
-  }
-
-  await atualizarUso(conexaoId);
-
-  const m = result.manifestoJSON || {};
-  const itens = result.manifestoItensJSON || [];
-  const quantidade = itens.reduce((sum: number, i: Record<string, unknown>) => sum + Number(i.quantidade || 0), 0);
-
-  return {
-    numero: String(m.manifestoCodigo || numero),
-    status: String(m.situacao || "EMITIDO"),
-    clienteNome: String(m.geradorRazaoSocial || m.cnpGerador || "") || undefined,
-    transportadorNome: String(m.transportadorRazaoSocial || m.cnpTransportador || "") || undefined,
-    destinadorNome: String(m.destinadorRazaoSocial || m.cnpDestinador || "") || undefined,
-    resumo: (m.manifObservacao as string) || undefined,
-    quantidade,
-    unidade: itens.length > 0 ? String(itens[0].descricaoUnidade || "") || undefined : undefined,
-    dataExpedicao: m.manifTransportadorDataExpedicao ? new Date(String(m.manifTransportadorDataExpedicao)) : undefined,
-    dataRecebimento: m.dataRecebimento ? new Date(String(m.dataRecebimento)) : undefined,
-    classeRisco: undefined,
-    classeNome: undefined,
-  };
-}
-
 /* ──────────────── Emissão de MTR ──────────────── */
 
 export interface MtrImaResiduoInput {
@@ -340,71 +300,4 @@ export async function emitirManifesto(input: MtrImaManifestoInput): Promise<{ nu
   await atualizarUso(conexaoId);
 
   return { numero, codigoBarra: result.codigoBarra };
-}
-
-/* ──────────────── Download PDF ──────────────── */
-
-export async function baixarManifestoPdf(conexaoId: number, numero: string): Promise<{ buffer: Buffer; filename: string }> {
-  const conn = await carregarConexao(conexaoId);
-  const auth = buildAuth(conn);
-  const body = { ...auth, manifestoJSON: { manifestoCodigo: numero } };
-
-  const res = await fetch(`${MTR_IMA_API_BASE}/retornaManifestoPdf`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "User-Agent": UA },
-    body: JSON.stringify(body),
-    cache: "no-store",
-  });
-
-  if (!res.ok) {
-    throw new MtrImaError(`Download PDF falhou: HTTP ${res.status}`, res.status);
-  }
-
-  const contentType = res.headers.get("content-type") || "";
-  if (contentType.includes("application/json")) {
-    const json = (await res.json()) as { retornoCodigo?: number; retorno?: string };
-    if (json.retornoCodigo !== 0) {
-      throw new MtrImaError(`PDF não disponível: ${json.retorno || "desconhecido"}`, 404);
-    }
-    throw new MtrImaError("Resposta inesperada ao baixar PDF", 502);
-  }
-
-  const arrayBuf = await res.arrayBuffer();
-  await atualizarUso(conexaoId);
-
-  return { buffer: Buffer.from(arrayBuf), filename: `MTR-IMA-${numero}.pdf` };
-}
-
-/* ──────────────── Cancelamento ──────────────── */
-
-export async function cancelarManifesto(conexaoId: number, numero: string, justificativa: string): Promise<{ ok: boolean; mensagem: string }> {
-  const conn = await carregarConexao(conexaoId);
-  const auth = buildAuth(conn);
-  const body = { ...auth, manifestoJSON: { manifestoCodigo: numero, justificativa } };
-
-  const result = await apiFetch<{ retornoCodigo: number; retorno: string }>("cancelaManifesto", body);
-
-  if (result.retornoCodigo === 0) {
-    await prisma.mtrImaManifesto.updateMany({ where: { conexaoId, numero }, data: { status: "CANCELADO" } }).catch(() => {});
-  }
-
-  await atualizarUso(conexaoId);
-  return { ok: result.retornoCodigo === 0, mensagem: result.retorno };
-}
-
-/* ──────────────── Recebimento ──────────────── */
-
-export async function receberManifesto(conexaoId: number, numero: string): Promise<{ ok: boolean; mensagem: string }> {
-  const conn = await carregarConexao(conexaoId);
-  const auth = buildAuth(conn);
-  const body = { ...auth, manifestoJSON: { manifestoCodigo: numero } };
-
-  const result = await apiFetch<{ retornoCodigo: number; retorno: string }>("recebimentoManifesto", body);
-
-  if (result.retornoCodigo === 0) {
-    await prisma.mtrImaManifesto.updateMany({ where: { conexaoId, numero }, data: { status: "RECEBIDO", dataRecebimento: new Date() } }).catch(() => {});
-  }
-
-  await atualizarUso(conexaoId);
-  return { ok: result.retornoCodigo === 0, mensagem: result.retorno };
 }

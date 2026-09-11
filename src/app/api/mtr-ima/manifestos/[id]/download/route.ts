@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { baixarManifestoPdf, MtrImaError } from "@/lib/mtr-ima";
+import { MtrImaError } from "@/lib/mtr-ima";
+import { baixarManifestoPdfPortal as baixarManifestoPdf } from "@/lib/mtr-ima-portal";
 import { logAuditoria } from "@/lib/audit";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {

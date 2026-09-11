@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { consultarManifesto, MtrImaError } from "@/lib/mtr-ima";
+import { MtrImaError } from "@/lib/mtr-ima";
+import { consultarManifestoPortal as consultarManifesto } from "@/lib/mtr-ima-portal";
 
 export async function POST(req: Request) {
   const session = await auth();
