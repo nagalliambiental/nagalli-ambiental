@@ -265,7 +265,7 @@ function PainelTab(props: {
   const [conexaoId, setConexaoId] = useState("");
   const [numero, setNumero] = useState("");
   const [consultando, setConsultando] = useState(false);
-  const [resultado, setResultado] = useState<Manifesto | null>(null);
+  const [resultado, setResultado] = useState<Manifesto | Manifesto[] | null>(null);
   const [paginaManifestos, setPaginaManifestos] = useState(0);
   const [filtro, setFiltro] = useState("todos");
   const filtrados = manifestos.filter((m) =>
@@ -340,8 +340,20 @@ function PainelTab(props: {
   }
 
   async function consultar() {
-    if (!conexaoEfetiva || !numero.trim()) {
-      toast("Selecione a conexão e informe o n.º do MTR", "error");
+    if (!conexaoEfetiva) {
+      toast("Selecione a conexão", "error");
+      return;
+    }
+    const num = numero.trim();
+    if (!num) {
+      const emitidos = manifestos.filter(
+        (m) => m.conexao.id === Number(conexaoEfetiva) && (m.status === "EMITIDO" || m.status === "PENDENTE"),
+      );
+      setResultado(emitidos);
+      toast(
+        emitidos.length ? `${emitidos.length} MTR(s) emitido(s) encontrado(s)` : "Nenhum MTR emitido para esta conexão",
+        emitidos.length ? "success" : "info",
+      );
       return;
     }
     setConsultando(true);
@@ -349,7 +361,7 @@ function PainelTab(props: {
       const res = await fetch("/api/mtr-ima/consultar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conexaoId: Number(conexaoEfetiva), numero: numero.trim() }),
+        body: JSON.stringify({ conexaoId: Number(conexaoEfetiva), numero: num }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -516,8 +528,8 @@ function PainelTab(props: {
             </select>
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-[var(--color-ink-500)]">N.º do MTR</label>
-            <input value={numero} onChange={(e) => setNumero(e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" placeholder="Ex.: 1711000811" />
+            <label className="text-xs font-medium text-[var(--color-ink-500)]">N.º do MTR (opcional)</label>
+            <input value={numero} onChange={(e) => setNumero(e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" placeholder="Vazio lista todos os emitidos" />
           </div>
           <button onClick={consultar} disabled={consultando} className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">
             {consultando ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
@@ -526,13 +538,31 @@ function PainelTab(props: {
         </div>
         {resultado && (
           <div className="mt-4 rounded-lg border border-[var(--color-paper-200)] bg-[var(--color-paper-50)] p-4 text-sm">
-            <p className="font-semibold text-[var(--color-ink-900)]">MTR {resultado.numero}</p>
-            <p className="mt-1 text-[var(--color-ink-600)]">Status: {resultado.status}</p>
-            {resultado.clienteNome && <p className="text-[var(--color-ink-600)]">Gerador: {resultado.clienteNome}</p>}
-            {resultado.transportadorNome && <p className="text-[var(--color-ink-600)]">Transportador: {resultado.transportadorNome}</p>}
-            {resultado.destinadorNome && <p className="text-[var(--color-ink-600)]">Destinador: {resultado.destinadorNome}</p>}
-            {resultado.quantidade != null && <p className="text-[var(--color-ink-600)]">Quantidade: {resultado.quantidade}</p>}
-            {resultado.resumo && <p className="text-[var(--color-ink-600)]">Obs.: {resultado.resumo}</p>}
+            {Array.isArray(resultado) ? (
+              resultado.length === 0 ? (
+                <p className="text-[var(--color-ink-600)]">Nenhum MTR emitido para esta conexão.</p>
+              ) : (
+                <ul className="divide-y divide-[var(--color-paper-200)]">
+                  {resultado.map((m) => (
+                    <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                      <span className="font-semibold text-[var(--color-ink-900)]">MTR {m.numero}</span>
+                      <span className="text-[var(--color-ink-600)]">Expedição: {fmtData(m.dataExpedicao)}</span>
+                      <span className={`inline-flex rounded-lg px-2 py-0.5 text-xs font-medium ${STATUS_BADGE[m.status] || "bg-[var(--color-paper-100)] text-[var(--color-ink-600)]"}`}>{m.status}</span>
+                    </li>
+                  ))}
+                </ul>
+              )
+            ) : (
+              <>
+                <p className="font-semibold text-[var(--color-ink-900)]">MTR {resultado.numero}</p>
+                <p className="mt-1 text-[var(--color-ink-600)]">Status: {resultado.status}</p>
+                {resultado.clienteNome && <p className="text-[var(--color-ink-600)]">Gerador: {resultado.clienteNome}</p>}
+                {resultado.transportadorNome && <p className="text-[var(--color-ink-600)]">Transportador: {resultado.transportadorNome}</p>}
+                {resultado.destinadorNome && <p className="text-[var(--color-ink-600)]">Destinador: {resultado.destinadorNome}</p>}
+                {resultado.quantidade != null && <p className="text-[var(--color-ink-600)]">Quantidade: {resultado.quantidade}</p>}
+                {resultado.resumo && <p className="text-[var(--color-ink-600)]">Obs.: {resultado.resumo}</p>}
+              </>
+            )}
           </div>
         )}
       </div>
