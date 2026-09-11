@@ -1,0 +1,262 @@
+import { prisma } from "./prisma";
+import { descriptografar } from "./crypto";
+import { MtrImaError } from "./mtr-ima";
+
+export const MTR_IMA_PORTAL = "https://mtr.ima.sc.gov.br";
+const UA =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
+
+const PERFIS: { perfil: string; origem: string; colunas: string[] }[] = [
+  { perfil: "1", origem: "gerador", colunas: ["manifCodigo", "manifDataExpedicao", "manifTransportadorCnpj", "manifDestinadorCnpj", "situacaoManifestoDescricao", "acoes"] },
+  { perfil: "4", origem: "destinador", colunas: ["manifCodigo", "manifDataExpedicao", "manifGeradorCnpj", "manifTransportadorCnpj", "situacaoManifestoDescricao", "acoes"] },
+  { perfil: "2", origem: "transportador", colunas: ["manifCodigo", "manifDataExpedicao", "manifGeradorCnpj", "manifDestinadorCnpj", "situacaoManifestoDescricao", "acoes"] },
+  { perfil: "0", origem: "armazenador", colunas: ["manifCodigo", "manifDataExpedicao", "manifGeradorCnpj", "manifTransportadorCnpj", "manifDestinadorCnpj", "situacaoManifestoDescricao", "acoes"] },
+];
+
+const LOTE = 200;
+const ANOS_PADRAO = 10;
+
+interface SessaoPortal {
+  cookies: Map<string, string>;
+}
+
+interface LinhaPortal {
+  numero: string;
+  dataExpedicao: Date | null;
+  transportadorNome?: string;
+  destinadorNome?: string;
+  geradorNome?: string;
+  situacao: string;
+  origem: string;
+}
+
+function setarCookie(jar: Map<string, string>, setCookie: string[] | null) {
+  if (!setCookie) return;
+  for (const c of setCookie) {
+    const par = c.split(";")[0];
+    const idx = par.indexOf("=");
+    if (idx < 0) continue;
+    jar.set(par.slice(0, idx).trim(), par.slice(idx + 1).trim());
+  }
+}
+
+function cookiesHeader(jar: Map<string, string>): string {
+  return [...jar.entries()].map(([k, v]) => `${k}=${v}`).join("; ");
+}
+
+async function fetchPortal(sessao: SessaoPortal, path: string, opts: { method?: string; body?: string; ctype?: string } = {}): Promise<Response> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 30000);
+  try {
+    const headers: Record<string, string> = {
+      "User-Agent": UA,
+      Cookie: cookiesHeader(sessao.cookies),
+      Referer: `${MTR_IMA_PORTAL}/ControllerServlet?acao=acompanhamentoManifesto`,
+    };
+    if (opts.ctype) headers["Content-Type"] = `${opts.ctype}; charset=UTF-8`;
+    if (opts.body) headers["X-Requested-With"] = "XMLHttpRequest";
+    const res = await fetch(`${MTR_IMA_PORTAL}${path}`, {
+      method: opts.method || (opts.body ? "POST" : "GET"),
+      redirect: "manual",
+      headers,
+      ...(opts.body ? { body: opts.body } : {}),
+      signal: ctrl.signal,
+    });
+    let sc: string[] | null = res.headers.getSetCookie ? res.headers.getSetCookie() : null;
+    if (!sc || sc.length === 0) {
+      const bruto = res.headers.get("set-cookie");
+      if (bruto) sc = [bruto];
+    }
+    setarCookie(sessao.cookies, sc);
+    return res;
+  } catch (e) {
+    if (e instanceof Error && e.name === "AbortError") throw new MtrImaError("Tempo esgotado ao acessar o portal MTR-IMA", 504);
+    throw new MtrImaError("Falha de conexão com o portal MTR-IMA", 502);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function formatarDataBr(d: Date): string {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`;
+}
+
+function parsearDataBr(v: string): Date | null {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(v || "").trim());
+  if (!m) return null;
+  const d = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function normalizarStatus(situacao: string): string {
+  const s = (situacao || "").toLowerCase();
+  if (s.includes("cancelado")) return "CANCELADO";
+  if (s.includes("recebido")) return "RECEBIDO";
+  if (s.includes("pendente")) return "PENDENTE";
+  return "EMITIDO";
+}
+
+async function resolverUnidade(sessao: SessaoPortal, cnpj: string): Promise<number> {
+  const res = await fetchPortal(
+    sessao,
+    "/ControllerServlet",
+    { method: "POST", ctype: "application/x-www-form-urlencoded", body: `acao=pesquisaUsuarioUnidades&txtCnpj=${encodeURIComponent(cnpj)}` },
+  );
+  if (!res.ok) {
+    throw new MtrImaError("Não foi possível consultar as unidades do portal MTR-IMA", 502);
+  }
+  const html = await res.text();
+  const m = /unidadeSelecionada\(\s*'?(\d+)'?\s*,\s*/.exec(html);
+  if (!m) {
+    throw new MtrImaError("CNPJ não possui unidade cadastrada no portal MTR-IMA", 404);
+  }
+  return Number(m[1]);
+}
+
+export async function loginPortal(conexaoId: number): Promise<SessaoPortal> {
+  const conn = await prisma.mtrImaConexao.findUnique({ where: { id: conexaoId } });
+  if (!conn) throw new MtrImaError("Conexão MTR-IMA não encontrada", 404);
+  if (!conn.ativo) throw new MtrImaError("Conexão MTR-IMA está inativa", 400);
+
+  const senha = descriptografar(conn.senha);
+  if (!senha) throw new MtrImaError("Senha da conexão não pôde ser descriptografada", 400);
+
+  const sessao: SessaoPortal = { cookies: new Map() };
+  const inicial = await fetchPortal(sessao, "/");
+  if (!inicial.ok) throw new MtrImaError("Falha ao abrir sessão no portal MTR-IMA", 502);
+
+  let unidade = conn.unidade;
+  if (!unidade) {
+    unidade = await resolverUnidade(sessao, conn.cnpj);
+    await prisma.mtrImaConexao.update({ where: { id: conexaoId }, data: { unidade } }).catch(() => {});
+  }
+
+  const cpf = conn.cpf.replace(/\D/g, "");
+  const cnpj = conn.cnpj.replace(/\D/g, "");
+  const body =
+    `acao=autenticaUsuario&estado=SC&txtCnpj=${encodeURIComponent(cnpj)}` +
+    `&txtSenha=${encodeURIComponent(senha)}` +
+    `&txtUnidadeCodigo=${unidade}` +
+    `&txtCpfUsuario=${cpf}&tipoPessoaSociedade=${conn.cnpj.replace(/\D/g, "").length === 14 ? "J" : "F"}`;
+
+  const login = await fetchPortal(sessao, "/ControllerServlet", { method: "POST", ctype: "application/x-www-form-urlencoded", body });
+  const texto = await login.text().catch(() => "");
+  let json: Record<string, unknown>;
+  try {
+    json = JSON.parse(texto);
+  } catch {
+    throw new MtrImaError("Resposta inesperada no login do portal MTR-IMA", 502);
+  }
+  if (json.sucesso !== "s") {
+    throw new MtrImaError(`Falha no login do portal MTR-IMA: ${String(json.msg || "usuário ou senha inválidos")}`, 401);
+  }
+
+  await prisma.mtrImaConexao.update({ where: { id: conexaoId }, data: { ultimoUsoEm: new Date() } }).catch(() => {});
+  return sessao;
+}
+
+async function listarPerfil(sessao: SessaoPortal, def: { perfil: string; colunas: string[] }, di: string, df: string): Promise<LinhaPortal[]> {
+  const coletados: LinhaPortal[] = [];
+  for (let inicio = 0; ; inicio += LOTE) {
+    const q = new URLSearchParams({
+      tabela: "MTR",
+      perfil: def.perfil,
+      MTRsAbertos: "",
+      MTRsComCdf: "",
+      dataInicial: di,
+      dataFinal: df,
+      numMtr: "",
+      sEcho: "1",
+      iColumns: String(def.colunas.length),
+      iDisplayStart: String(inicio),
+      iDisplayLength: String(LOTE),
+      sColumns: def.colunas.join(","),
+      sSearch: "",
+      iSortCol_0: "0",
+      sSortDir_0: "asc",
+    });
+    const res = await fetchPortal(
+      sessao,
+      `/br/com/brdti/mtr/controller/JqueryDatatablePluginDemo.java?${q.toString()}`,
+    );
+    if (!res.ok || !res.headers.get("content-type")?.includes("json")) {
+      throw new MtrImaError("Falha ao listar MTRs no portal MTR-IMA", 502);
+    }
+    const j = (await res.json()) as { iTotalRecords?: number; iTotalDisplayRecords?: number; aaData?: Array<Array<string>> };
+    const total = Number(j.iTotalRecords || 0);
+    const linhas = (j.aaData || []).map((r) => {
+      const obj: Record<string, string> = {};
+      def.colunas.forEach((c, i) => {
+        obj[c] = r[i] ?? "";
+      });
+      return obj;
+    });
+    for (const o of linhas) {
+      coletados.push({
+        numero: String(o.manifCodigo).trim(),
+        dataExpedicao: parsearDataBr(o.manifDataExpedicao),
+        transportadorNome: o.manifTransportadorCnpj ? o.manifTransportadorCnpj.trim() : undefined,
+        destinadorNome: o.manifDestinadorCnpj ? o.manifDestinadorCnpj.trim() : undefined,
+        geradorNome: o.manifGeradorCnpj ? o.manifGeradorCnpj.trim() : undefined,
+        situacao: (o.situacaoManifestoDescricao || "").trim(),
+        origem: def.origem,
+      });
+    }
+    if (coletados.length >= total || linhas.length === 0) break;
+  }
+  return coletados;
+}
+
+export async function sincronizarManifestosConexao(conexaoId: number, anos = ANOS_PADRAO) {
+  const sessao = await loginPortal(conexaoId);
+
+  const fim = formatarDataBr(new Date());
+  const inicioDerivado = new Date();
+  inicioDerivado.setFullYear(inicioDerivado.getFullYear() - anos);
+  const inicio = formatarDataBr(inicioDerivado);
+
+  const mapa = new Map<string, LinhaPortal>();
+  for (const def of PERFIS) {
+    const linhas = await listarPerfil(sessao, def, inicio, fim);
+    for (const l of linhas) {
+      if (l.numero && !mapa.has(l.numero)) mapa.set(l.numero, l);
+    }
+  }
+
+  let importados = 0;
+  let atualizados = 0;
+  for (const linha of mapa.values()) {
+    const existente = await prisma.mtrImaManifesto.findFirst({ where: { conexaoId, numero: linha.numero } });
+    const dados = {
+      status: normalizarStatus(linha.situacao),
+      transportadorNome: linha.transportadorNome || null,
+      destinadorNome: linha.destinadorNome || null,
+      dataExpedicao: linha.dataExpedicao,
+    };
+    if (existente) {
+      const precisaAtualizar =
+        existente.status !== dados.status ||
+        (existente.transportadorNome ?? "") !== (dados.transportadorNome ?? "") ||
+        (existente.destinadorNome ?? "") !== (dados.destinadorNome ?? "") ||
+        existente.dataExpedicao?.getTime() !== dados.dataExpedicao?.getTime();
+      if (precisaAtualizar) {
+        await prisma.mtrImaManifesto.update({ where: { id: existente.id }, data: dados });
+        atualizados++;
+      }
+    } else {
+      await prisma.mtrImaManifesto.create({ data: { conexaoId, numero: linha.numero, ...dados } });
+      importados++;
+    }
+  }
+
+  const conn = await prisma.mtrImaConexao.findUnique({ where: { id: conexaoId } });
+  return {
+    conexaoId,
+    nome: conn?.nome || "",
+    total: mapa.size,
+    importados,
+    atualizados,
+    unidade: conn?.unidade ?? null,
+  };
+}

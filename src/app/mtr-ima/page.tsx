@@ -473,8 +473,36 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn }) {
   const [numero, setNumero] = useState("");
   const [manifestos, setManifestos] = useState<Manifesto[]>([]);
   const [carregando, setCarregando] = useState(false);
+  const [sincronizando, setSincronizando] = useState(false);
 
   const conexaoEfetiva = conexoes.some((c) => c.id === Number(conexaoId)) ? conexaoId : conexoes.length ? String(conexoes[0].id) : "";
+
+  async function sincronizar() {
+    setSincronizando(true);
+    try {
+      const res = await fetch("/api/mtr-ima/sincronizar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conexaoId: conexaoEfetiva ? Number(conexaoEfetiva) : undefined }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast(data.error || "Falha ao sincronizar com o portal", "error");
+        return;
+      }
+      const resumo = data.resultados?.[0];
+      const totalResumo =
+        resumo != null
+          ? `${resumo.importados} importado(s), ${resumo.atualizados} atualizado(s) do portal IMA`
+          : "Nada sincronizado";
+      toast(`Sincronização concluída — ${totalResumo}`, "success");
+      await consultar();
+    } catch {
+      toast("Erro ao sincronizar com o portal IMA", "error");
+    } finally {
+      setSincronizando(false);
+    }
+  }
 
   async function consultar() {
     setCarregando(true);
@@ -541,13 +569,21 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn }) {
             {carregando ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
             {carregando ? "Consultando..." : "Consultar"}
           </button>
+          <button onClick={sincronizar} disabled={sincronizando || carregando} className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-[var(--color-paper-100)] px-4 py-2.5 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-200)] disabled:opacity-50" title="Busca os MTRs do portal IMA/SC e atualiza a lista">
+            {sincronizando ? <Loader2 size={16} className="animate-spin" /> : <Link2 size={16} />}
+            {sincronizando ? "Sincronizando..." : "Sincronizar com o portal"}
+          </button>
         </div>
       </div>
 
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
         <h2 className="font-display mb-3 text-base font-semibold text-[var(--color-ink-900)]">Resultado</h2>
         {manifestos.length === 0 ? (
-          <p className="py-4 text-center text-sm text-[var(--color-ink-500)]">{carregando ? "Carregando..." : "Nenhum manifesto encontrado."}</p>
+          <p className="py-4 text-center text-sm text-[var(--color-ink-500)]">
+            {carregando
+              ? "Carregando..."
+              : "Nenhum manifesto encontrado. Use \"Sincronizar com o portal\" para buscar os MTRs do IMA/SC."}
+          </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
