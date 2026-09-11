@@ -770,7 +770,7 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
       manifTransportadorPlacaVeiculo: modelo.placaVeiculo || f.manifTransportadorPlacaVeiculo,
       observacoes: modelo.observacoes || f.observacoes,
     }));
-    setResiduos(modelo.residuos.map((r) => ({ ...r, tipoDensidadeValor: r.tipoDensidadeValor ?? "", tipoDensidadeUnidade: r.tipoDensidadeUnidade ?? "1" })));
+    setResiduos(modelo.residuos.map((r) => ({ ...r, tipoDensidadeValor: r.tipoDensidadeValor ?? "", tipoDensidadeUnidade: r.tipoDensidadeUnidade ?? (r.codigoUnidade === "2" ? "2" : "1") })));
     toast(`Modelo "${modelo.nome}" aplicado - preencha quantidade (e densidade) de cada resíduo`, "success");
   }
 
@@ -1105,9 +1105,22 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
                       </div>
                     </td>
                     <td className="py-2 px-2 text-[var(--color-ink-600)]">
-                      {r.tipoDensidadeValor
-                        ? `${String(r.tipoDensidadeValor).replace(".", ",")} ${catalogos?.medidasDensidade.find((m) => m.codigo === Number(r.tipoDensidadeUnidade))?.descricao || ""}`.trim()
-                        : "—"}
+                      {precisaDensidadeIMA(r.codigoUnidade) ? (
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={r.tipoDensidadeValor || ""}
+                            onChange={(e) => setResiduos((rs) => rs.map((x, j) => (j === i ? { ...x, tipoDensidadeValor: e.target.value } : x)))}
+                            className="w-20 rounded-lg border border-[var(--color-paper-200)] px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]"
+                            placeholder="0"
+                          />
+                          <span className="text-xs">{catalogos?.medidasDensidade.find((m) => m.codigo === Number(r.tipoDensidadeUnidade))?.descricao || ""}</span>
+                        </div>
+                      ) : (
+                        "—"
+                      )}
                     </td>
                     <td className="py-2 px-2 text-[var(--color-ink-600)]">{catalogos?.estadosFisicos.find((e) => e.codigo === Number(r.codigoTipoEstado))?.descricao || r.codigoTipoEstado}</td>
                     <td className="py-2 px-2 text-[var(--color-ink-600)]">{catalogos?.classes.find((c) => c.codigo === Number(r.codigoClasse))?.descricao || r.codigoClasse}</td>
@@ -1341,7 +1354,7 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtrIma[]; onCha
       placaVeiculo: m.placaVeiculo || "",
       observacoes: m.observacoes || "",
     });
-    setResiduosEdicao(m.residuos.map((r) => ({ ...r, tipoDensidadeValor: r.tipoDensidadeValor ?? "", tipoDensidadeUnidade: r.tipoDensidadeUnidade ?? "1" })));
+    setResiduosEdicao(m.residuos.map((r) => ({ ...r, tipoDensidadeValor: r.tipoDensidadeValor ?? "", tipoDensidadeUnidade: r.tipoDensidadeUnidade ?? (r.codigoUnidade === "2" ? "2" : "1") })));
     toast(`Editando modelo "${m.nome}"`, "info");
   }
 
@@ -1530,7 +1543,7 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtrIma[]; onCha
                       <td className="py-2 px-2 text-[var(--color-ink-600)]">{catalogos?.classes.find((c) => c.codigo === Number(r.codigoClasse))?.descricao || r.codigoClasse || "—"}</td>
                       <td className="py-2 px-2">
                         <div className="flex gap-1">
-                          <button onClick={() => { setEditandoResIdx(i); setResForm({ ...r, tipoDensidadeValor: r.tipoDensidadeValor ?? "", tipoDensidadeUnidade: r.tipoDensidadeUnidade ?? "1" }); setModalResiduo(true); }} className="rounded p-1 text-[var(--color-ink-400)] hover:bg-[var(--color-paper-100)] hover:text-[var(--color-ink-700)]" title="Editar"><Pencil size={14} /></button>
+                          <button onClick={() => { setEditandoResIdx(i); setResForm({ ...r, tipoDensidadeValor: r.tipoDensidadeValor ?? "", tipoDensidadeUnidade: r.tipoDensidadeUnidade ?? (r.codigoUnidade === "2" ? "2" : "1") }); setModalResiduo(true); }} className="rounded p-1 text-[var(--color-ink-400)] hover:bg-[var(--color-paper-100)] hover:text-[var(--color-ink-700)]" title="Editar"><Pencil size={14} /></button>
                           <button onClick={() => setResiduosEdicao((rs) => rs.filter((_, j) => j !== i))} className="rounded p-1 text-[var(--color-ink-400)] hover:bg-red-50 hover:text-red-600" title="Remover"><Trash2 size={14} /></button>
                         </div>
                       </td>
