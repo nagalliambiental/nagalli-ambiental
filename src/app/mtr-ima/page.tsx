@@ -813,6 +813,11 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
       toast("Adicione pelo menos um resíduo", "error");
       return;
     }
+    const semQtd = residuos.findIndex((r) => !(Number(r.quantidade) > 0));
+    if (semQtd >= 0) {
+      toast(`Informe a quantidade do resíduo ${residuos[semQtd].residuo || `#${semQtd + 1}`}`, "error");
+      return;
+    }
     setEnviando(true);
     setResultado(null);
     try {
@@ -1022,10 +1027,22 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
                 </tr>
               </thead>
               <tbody>
-                {residuos.map((r, i) => (
+                  {residuos.map((r, i) => (
                   <tr key={i} className="border-b border-[var(--color-paper-100)] hover:bg-[var(--color-paper-50)]">
                     <td className="py-2 px-2 font-medium text-[var(--color-ink-800)]">{r.residuo}</td>
-                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{r.quantidade} {catalogos?.unidades.find((u) => u.codigo === Number(r.codigoUnidade))?.sigla || ""}</td>
+                    <td className="py-2 px-2 text-[var(--color-ink-600)]">
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          min="0"
+                          value={r.quantidade}
+                          onChange={(e) => setResiduos((rs) => rs.map((x, j) => (j === i ? { ...x, quantidade: e.target.value } : x)))}
+                          className="w-24 rounded-lg border border-[var(--color-paper-200)] px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]"
+                          placeholder="0"
+                        />
+                        <span className="text-xs">{catalogos?.unidades.find((u) => u.codigo === Number(r.codigoUnidade))?.sigla || ""}</span>
+                      </div>
+                    </td>
                     <td className="py-2 px-2 text-[var(--color-ink-600)]">{catalogos?.estadosFisicos.find((e) => e.codigo === Number(r.codigoTipoEstado))?.descricao || r.codigoTipoEstado}</td>
                     <td className="py-2 px-2 text-[var(--color-ink-600)]">{catalogos?.classes.find((c) => c.codigo === Number(r.codigoClasse))?.descricao || r.codigoClasse}</td>
                     <td className="py-2 px-2 text-[var(--color-ink-600)]">{catalogos?.acondicionamentos.find((a) => a.codigo === Number(r.codigoAcondicionamento))?.descricao || r.codigoAcondicionamento}</td>
