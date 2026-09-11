@@ -411,3 +411,167 @@ export async function receberManifestoPortal(
   }
   throw new MtrImaError(msgPortal || `O portal IMA não confirmou o recebimento do MTR ${num}`, 400);
 }
+
+/* ──────────────── Modelos do portal ──────────────── */
+
+export interface ModeloPortalResumo {
+  codigo: string;
+  nome: string;
+  transportador: string;
+  destinador: string;
+}
+
+export interface ModeloPortalResiduo {
+  residuo: string;
+  quantidade: string;
+  codigoUnidade: string;
+  codigoTipoEstado: string;
+  codigoClasse: string;
+  codigoAcondicionamento: string;
+  codigoTecnologia: string;
+  numeroONU: string;
+  classeDeRisco: string;
+  nomeEmbarque: string;
+  grupoEmbalagem: string;
+}
+
+export interface ModeloPortalDetalhe {
+  codigo: string;
+  nome: string;
+  transportadorCnpj: string;
+  transportadorNome: string;
+  transportadorUnidade: number | null;
+  destinadorCnpj: string;
+  destinadorNome: string;
+  destinadorUnidade: number | null;
+  armazenadorCnpj: string | null;
+  armazenadorNome: string | null;
+  residuos: ModeloPortalResiduo[];
+}
+
+function textoCelula(html: string): string {
+  return html
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export async function listarModelosPortal(conexaoId: number): Promise<ModeloPortalResumo[]> {
+  const sessao = await loginPortal(conexaoId);
+  const res = await fetchPortal(sessao, "/ControllerServlet", {
+    method: "POST",
+    ctype: "application/x-www-form-urlencoded",
+    body: "acao=pesquisaTemplate&tela=cadastroModeloMtr",
+  });
+  const html = await res.text();
+  const modelos = new Map<string, ModeloPortalResumo>();
+  for (const m of html.matchAll(/<tr>([\s\S]{0,2000}?)<\/tr>/g)) {
+    const linha = m[1];
+    const sel = /templateSelecionado\('(\d+)','([^']+)'/.exec(linha);
+    if (!sel) continue;
+    const celulas = [...linha.matchAll(/<td[^>]*>([\s\S]{0,300}?)<\/td>/g)].map((c) => textoCelula(c[1]));
+    modelos.set(sel[1], {
+      codigo: sel[1],
+      nome: sel[2].trim(),
+      transportador: (celulas[2] || "").trim(),
+      destinador: (celulas[3] || "").trim(),
+    });
+  }
+  return [...modelos.values()];
+}
+
+export async function detalharModeloPortal(conexaoId: number, codigo: string): Promise<ModeloPortalDetalhe> {
+  const cod = String(codigo || "").trim();
+  if (!cod) throw new MtrImaError("Código do modelo é obrigatório", 400);
+  const sessao = await loginPortal(conexaoId);
+  const res = await fetchPortal(sessao, "/ControllerServlet?acao=buscaTemplate", {
+    method: "POST",
+    ctype: "application/x-www-form-urlencoded",
+    body: `&codTemplate=${encodeURIComponent(cod)}`,
+  });
+  const texto = await res.text();
+  let j: Record<string, unknown>;
+  try {
+    j = JSON.parse(texto);
+  } catch {
+    throw new MtrImaError(`Modelo ${cod} não encontrado no portal IMA`, 404);
+  }
+  if (!j || j.templateCodigo == null) {
+    throw new MtrImaError(`Modelo ${cod} não encontrado no portal IMA`, 404);
+  }
+  let itens: Array<Record<string, unknown>> = [];
+  try {
+    const bruto = String(j.listaItem || "[]");
+    const parsed: unknown = JSON.parse(bruto);
+    if (Array.isArray(parsed)) itens = parsed as Array<Record<string, unknown>>;
+  } catch {
+    itens = [];
+  }
+  const num = (v: unknown) => {
+    const n = Number(v);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  };
+  const str = (v: unknown) => String(v ?? "").trim();
+  return {
+    codigo: String(j.templateCodigo),
+    nome: str(j.nome),
+    transportadorCnpj: str(j.transportadorCNPJ).replace(/\D/g, ""),
+    transportadorNome: str(j.transportadorNome),
+    transportadorUnidade: num(j.transportador),
+    destinadorCnpj: str(j.destinadorCNPJ).replace(/\D/g, ""),
+    destinadorNome: str(j.destinadorNome),
+    destinadorUnidade: num(j.destinador),
+    armazenadorCnpj: str(j.armazenadorCNPJ).replace(/\D/g, "") || null,
+    armazenadorNome: str(j.armazenadorNome) || null,
+    residuos: itens.map((it) => ({
+      residuo: str(it.tipoResiduo3Numero),
+      quantidade: "",
+      codigoUnidade: str(it.tipoUnidadeCodigo),
+      codigoTipoEstado: str(it.tipoEstadoFisicoCodigo),
+      codigoClasse: str(it.tipoClasseCodigo),
+      codigoAcondicionamento: str(it.tipoAcondicionamentoCodigo),
+      codigoTecnologia: str(it.tipoTecnologiaCodigo),
+      numeroONU: str(it.numeroONU),
+      classeDeRisco: str(it.classeDeRisco),
+      nomeEmbarque: str(it.nomeEmbarque),
+      grupoEmbalagem: str(it.grupoEmbalagem),
+    })),
+  };
+}
+
+export async function importarModelosPortal(conexaoId: number) {
+  const conn = await prisma.mtrImaConexao.findUnique({ where: { id: conexaoId } });
+  if (!conn) throw new MtrImaError("Conexão MTR-IMA não encontrada", 404);
+  const resumos = await listarModelosPortal(conexaoId);
+  let importados = 0;
+  let atualizados = 0;
+  for (const r of resumos) {
+    const d = await detalharModeloPortal(conexaoId, r.codigo);
+    const dados = {
+      nome: d.nome || r.nome,
+      transportadorCnpj: d.transportadorCnpj || null,
+      transportadorNome: d.transportadorNome || null,
+      transportadorUnidade: d.transportadorUnidade,
+      destinadorCnpj: d.destinadorCnpj || null,
+      destinadorNome: d.destinadorNome || null,
+      destinadorUnidade: d.destinadorUnidade,
+      armazenadorCnpj: d.armazenadorCnpj,
+      armazenadorNome: d.armazenadorNome,
+      residuos: JSON.parse(JSON.stringify(d.residuos)),
+    };
+    const existente = await prisma.mtrImaModelo.findFirst({
+      where: { conexaoId, codigoPortal: Number(d.codigo) },
+    });
+    if (existente) {
+      await prisma.mtrImaModelo.update({ where: { id: existente.id }, data: dados });
+      atualizados++;
+    } else {
+      await prisma.mtrImaModelo.create({
+        data: { conexaoId, codigoPortal: Number(d.codigo), ...dados },
+      });
+      importados++;
+    }
+  }
+  return { conexaoId, nome: conn.nome, total: resumos.length, importados, atualizados };
+}

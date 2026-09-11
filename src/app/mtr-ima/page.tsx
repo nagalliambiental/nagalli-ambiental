@@ -3,12 +3,12 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { Topbar } from "@/components/Topbar";
-import { Truck, RefreshCw, Send, Link2, Loader2, CheckCircle2, FileDown, Trash2, Ban, Plus, X, PackagePlus, PackageCheck, FileText } from "lucide-react";
+import { Truck, RefreshCw, Send, Link2, Loader2, CheckCircle2, FileDown, Trash2, Ban, Plus, X, PackagePlus, PackageCheck, FileText, Save, Pencil } from "lucide-react";
 import { useToast } from "@/components/Toast";
 
 type ToastFn = (message: string, type?: "success" | "error" | "info" | "warning") => void;
 
-type Tab = "meusMtrs" | "emitir" | "conexoes";
+type Tab = "meusMtrs" | "emitir" | "modelos" | "conexoes";
 const POR_PAGINA = 15;
 
 interface Conexao {
@@ -55,6 +55,45 @@ interface Manifesto {
   classeRisco: string | null;
   classeNome: string | null;
   conexao: { id: number; nome: string; unidade: number | null };
+}
+
+interface ResiduoModelo {
+  residuo: string;
+  quantidade: string;
+  codigoUnidade: string;
+  codigoTipoEstado: string;
+  codigoClasse: string;
+  codigoAcondicionamento: string;
+  codigoTecnologia: string;
+  numeroONU: string;
+  classeDeRisco: string;
+  nomeEmbarque: string;
+  grupoEmbalagem: string;
+}
+
+interface ModeloMtrIma {
+  id: number;
+  conexaoId: number | null;
+  codigoPortal: number | null;
+  nome: string;
+  descricao: string | null;
+  clienteNome: string | null;
+  empreendNome: string | null;
+  nomeResponsavel: string | null;
+  cargoResponsavel: string | null;
+  transportadorCnpj: string | null;
+  transportadorUnidade: number | null;
+  transportadorNome: string | null;
+  destinadorCnpj: string | null;
+  destinadorUnidade: number | null;
+  destinadorNome: string | null;
+  armazenadorCnpj: string | null;
+  armazenadorNome: string | null;
+  nomeMotorista: string | null;
+  placaVeiculo: string | null;
+  observacoes: string | null;
+  residuos: ResiduoModelo[];
+  conexao: { id: number; nome: string; unidade: number | null } | null;
 }
 
 interface MtrImaCatalogosFront {
@@ -130,11 +169,21 @@ export default function MtrImaPage() {
 
   const [conexoes, setConexoes] = useState<Conexao[]>([]);
   const [empreendimentos, setEmpreendimentos] = useState<EmpreendimentoOpcao[]>([]);
+  const [modelos, setModelos] = useState<ModeloMtrIma[]>([]);
 
   const carregarConexoes = useCallback(async () => {
     try {
       const res = await fetch("/api/mtr-ima/conexoes");
       if (res.ok) setConexoes(await res.json());
+    } catch {
+      // silencioso
+    }
+  }, []);
+
+  const carregarModelos = useCallback(async () => {
+    try {
+      const res = await fetch("/api/mtr-ima/modelos");
+      if (res.ok) setModelos(await res.json());
     } catch {
       // silencioso
     }
@@ -148,6 +197,19 @@ export default function MtrImaPage() {
         if (res.ok) setConexoes(await res.json());
       } catch {
         if (!controller.signal.aborted) setConexoes([]);
+      }
+    })();
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const res = await fetch("/api/mtr-ima/modelos", { signal: controller.signal });
+        if (res.ok) setModelos(await res.json());
+      } catch {
+        if (!controller.signal.aborted) setModelos([]);
       }
     })();
     return () => controller.abort();
@@ -179,6 +241,7 @@ export default function MtrImaPage() {
           [
             { key: "meusMtrs", label: "Meus MTRs" },
             { key: "emitir", label: "Emitir MTR" },
+            { key: "modelos", label: "Modelos" },
             ...(ehPrivilegiado ? [{ key: "conexoes" as Tab, label: "Conexões" }] : []),
           ] as { key: Tab; label: string }[]
         ).map((t) => (
@@ -204,9 +267,15 @@ export default function MtrImaPage() {
         <EmitirTab
           conexoes={conexoes}
           empreendimentos={empreendimentos}
+          modelos={modelos}
           onEmitido={() => { carregarConexoes(); }}
+          onModelosChanged={() => { carregarModelos(); }}
           toast={toast}
         />
+      )}
+
+      {tab === "modelos" && (
+        <ModelosTab conexoes={conexoes} modelos={modelos} onChanged={() => { carregarModelos(); }} toast={toast} />
       )}
 
       {tab === "conexoes" && ehPrivilegiado && (
@@ -584,8 +653,8 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn; onChanged: ()
 
 /* ════════════════ EMITIR ════════════════ */
 
-function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: EmpreendimentoOpcao[]; onEmitido: () => void; toast: ToastFn }) {
-  const { conexoes, empreendimentos, onEmitido, toast } = props;
+function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: EmpreendimentoOpcao[]; modelos: ModeloMtrIma[]; onEmitido: () => void; onModelosChanged: () => void; toast: ToastFn }) {
+  const { conexoes, empreendimentos, modelos, onEmitido, onModelosChanged, toast } = props;
   const { data: session } = useSession();
   const nomeUsuario = session?.user?.name || "";
   const [form, setForm] = useState({
@@ -619,6 +688,7 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
   const [modalResiduo, setModalResiduo] = useState(false);
   const [editandoResiduo, setEditandoResiduo] = useState<number | null>(null);
   const [residuoForm, setResiduoForm] = useState<ResiduoForm>(emptyResiduo);
+  const [modeloId, setModeloId] = useState("");
 
   const conexaoEfetiva = conexoes.some((c) => c.id === Number(form.conexaoId)) ? form.conexaoId : conexoes.length ? String(conexoes[0].id) : "";
   const responsavel = form.manifGeradorNomeResponsavel || nomeUsuario;
@@ -652,6 +722,67 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
       resumo: emp.descricao ? `Resíduo — ${emp.descricao}` : f.resumo,
     }));
     toast(`Empreendimento ${emp.apelido} preenchido (CNPJ do gerador)`, "success");
+  }
+
+  function aplicarModelo(id: string) {
+    setModeloId(id);
+    const modelo = modelos.find((m) => m.id === Number(id));
+    if (!modelo) return;
+    setForm((f) => ({
+      ...f,
+      conexaoId: modelo.conexaoId ? String(modelo.conexaoId) : f.conexaoId,
+      clienteNome: modelo.clienteNome || f.clienteNome,
+      empreendNome: modelo.empreendNome || f.empreendNome,
+      cnpTransportador: modelo.transportadorCnpj || "",
+      codUnidadeTransportador: modelo.transportadorUnidade ? String(modelo.transportadorUnidade) : "",
+      transportadorNome: modelo.transportadorNome || "",
+      cnpDestinador: modelo.destinadorCnpj || "",
+      codUnidadeDestinador: modelo.destinadorUnidade ? String(modelo.destinadorUnidade) : "",
+      destinadorNome: modelo.destinadorNome || "",
+      manifTransportadorNomeMotorista: modelo.nomeMotorista || f.manifTransportadorNomeMotorista,
+      manifTransportadorPlacaVeiculo: modelo.placaVeiculo || f.manifTransportadorPlacaVeiculo,
+      observacoes: modelo.observacoes || f.observacoes,
+    }));
+    setResiduos(modelo.residuos.map((r) => ({ ...r })));
+    toast(`Modelo "${modelo.nome}" aplicado (${modelo.residuos.length} resíduo(s))`, "success");
+  }
+
+  async function salvarComoModelo() {
+    const nome = prompt("Nome do modelo:");
+    if (!nome || !nome.trim()) return;
+    try {
+      const res = await fetch("/api/mtr-ima/modelos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nome: nome.trim(),
+          conexaoId: conexaoEfetiva ? Number(conexaoEfetiva) : null,
+          clienteNome: form.clienteNome || undefined,
+          empreendNome: form.empreendNome || undefined,
+          nomeResponsavel: responsavel || undefined,
+          cargoResponsavel: form.manifGeradorCargoResponsavel || undefined,
+          cnpTransportador: form.cnpTransportador || undefined,
+          codUnidadeTransportador: form.codUnidadeTransportador ? Number(form.codUnidadeTransportador) : undefined,
+          transportadorNome: form.transportadorNome || undefined,
+          cnpDestinador: form.cnpDestinador || undefined,
+          codUnidadeDestinador: form.codUnidadeDestinador ? Number(form.codUnidadeDestinador) : undefined,
+          destinadorNome: form.destinadorNome || undefined,
+          nomeMotorista: form.manifTransportadorNomeMotorista || undefined,
+          placaVeiculo: form.manifTransportadorPlacaVeiculo || undefined,
+          observacoes: form.observacoes || undefined,
+          residuos,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast(data.error || "Falha ao salvar modelo", "error");
+        return;
+      }
+      toast(`Modelo "${nome.trim()}" salvo`, "success");
+      onModelosChanged();
+    } catch {
+      toast("Erro ao salvar modelo", "error");
+    }
   }
 
   function adicionarResiduo() {
@@ -751,6 +882,22 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
         <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Dados do Gerador</h2>
         <p className="mb-3 text-sm text-[var(--color-ink-500)]">Empresa que gera o resíduo — preenchida pelo empreendimento</p>
+        <div className="mb-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div className="flex flex-col gap-1">
+            <label className={labelCls}>Modelo pré-cadastrado (opcional)</label>
+            <select value={modeloId} onChange={(e) => aplicarModelo(e.target.value)} className={inputCls}>
+              <option value="">Selecione um modelo...</option>
+              {modelos.map((m) => (
+                <option key={m.id} value={m.id}>{m.nome}{m.conexao ? ` — ${m.conexao.nome}` : ""}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-end">
+            <button onClick={salvarComoModelo} className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg bg-[var(--color-paper-100)] px-3 py-2 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-200)]" title="Salva o preenchimento atual como modelo">
+              <Save size={15} /> Salvar como modelo
+            </button>
+          </div>
+        </div>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <div className="flex flex-col gap-1 md:col-span-2">
             <label className={labelCls}>Conexão MTR-IMA/SC</label>
@@ -994,6 +1141,297 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/* ════════════════ MODELOS ════════════════ */
+
+const emptyModeloForm = {
+  nome: "",
+  descricao: "",
+  conexaoId: "",
+  transportadorCnpj: "",
+  transportadorUnidade: "",
+  transportadorNome: "",
+  destinadorCnpj: "",
+  destinadorUnidade: "",
+  destinadorNome: "",
+  nomeMotorista: "",
+  placaVeiculo: "",
+  observacoes: "",
+};
+
+function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtrIma[]; onChanged: () => void; toast: ToastFn }) {
+  const { conexoes, modelos, onChanged, toast } = props;
+  const [form, setForm] = useState(emptyModeloForm);
+  const [editandoId, setEditandoId] = useState<number | null>(null);
+  const [salvando, setSalvando] = useState(false);
+  const [importando, setImportando] = useState(false);
+  const [conexaoImport, setConexaoImport] = useState("");
+
+  const inputCls = "w-full rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]";
+  const labelCls = "text-xs font-medium text-[var(--color-ink-500)]";
+  const modeloEdicao = editandoId != null ? modelos.find((m) => m.id === editandoId) : undefined;
+
+  async function importar() {
+    setImportando(true);
+    try {
+      const res = await fetch("/api/mtr-ima/modelos/importar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(conexaoImport ? { conexaoId: Number(conexaoImport) } : {}),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast(data.error || "Falha ao importar modelos", "error");
+        return;
+      }
+      const totais = (data.resultados || []).reduce(
+        (acc: { total: number; importados: number; atualizados: number }, r: { total: number; importados: number; atualizados: number }) => ({
+          total: acc.total + r.total,
+          importados: acc.importados + r.importados,
+          atualizados: acc.atualizados + r.atualizados,
+        }),
+        { total: 0, importados: 0, atualizados: 0 },
+      );
+      toast(`Modelos do portal: ${totais.total} encontrado(s), ${totais.importados} importado(s), ${totais.atualizados} atualizado(s)`, "success");
+      onChanged();
+    } catch {
+      toast("Erro ao importar modelos", "error");
+    } finally {
+      setImportando(false);
+    }
+  }
+
+  function editar(m: ModeloMtrIma) {
+    setEditandoId(m.id);
+    setForm({
+      nome: m.nome,
+      descricao: m.descricao || "",
+      conexaoId: m.conexaoId ? String(m.conexaoId) : "",
+      transportadorCnpj: m.transportadorCnpj || "",
+      transportadorUnidade: m.transportadorUnidade ? String(m.transportadorUnidade) : "",
+      transportadorNome: m.transportadorNome || "",
+      destinadorCnpj: m.destinadorCnpj || "",
+      destinadorUnidade: m.destinadorUnidade ? String(m.destinadorUnidade) : "",
+      destinadorNome: m.destinadorNome || "",
+      nomeMotorista: m.nomeMotorista || "",
+      placaVeiculo: m.placaVeiculo || "",
+      observacoes: m.observacoes || "",
+    });
+    toast(`Editando modelo "${m.nome}"`, "info");
+  }
+
+  function novoModelo() {
+    setEditandoId(null);
+    setForm(emptyModeloForm);
+  }
+
+  async function salvar() {
+    if (!form.nome.trim()) {
+      toast("Informe o nome do modelo", "error");
+      return;
+    }
+    setSalvando(true);
+    try {
+      const corpo = {
+        nome: form.nome.trim(),
+        descricao: form.descricao || undefined,
+        conexaoId: form.conexaoId ? Number(form.conexaoId) : null,
+        transportadorCnpj: form.transportadorCnpj || undefined,
+        transportadorUnidade: form.transportadorUnidade ? Number(form.transportadorUnidade) : undefined,
+        transportadorNome: form.transportadorNome || undefined,
+        destinadorCnpj: form.destinadorCnpj || undefined,
+        destinadorUnidade: form.destinadorUnidade ? Number(form.destinadorUnidade) : undefined,
+        destinadorNome: form.destinadorNome || undefined,
+        nomeMotorista: form.nomeMotorista || undefined,
+        placaVeiculo: form.placaVeiculo || undefined,
+        observacoes: form.observacoes || undefined,
+      };
+      const res = editandoId != null
+        ? await fetch(`/api/mtr-ima/modelos/${editandoId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(corpo) })
+        : await fetch("/api/mtr-ima/modelos", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(corpo) });
+      const data = await res.json();
+      if (!res.ok) {
+        toast(data.error || "Falha ao salvar modelo", "error");
+        return;
+      }
+      toast(editandoId != null ? "Modelo atualizado" : "Modelo cadastrado", "success");
+      novoModelo();
+      onChanged();
+    } catch {
+      toast("Erro ao salvar modelo", "error");
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function remover(m: ModeloMtrIma) {
+    if (!confirm(`Remover o modelo "${m.nome}"?`)) return;
+    const res = await fetch(`/api/mtr-ima/modelos/${m.id}`, { method: "DELETE" });
+    if (res.ok) {
+      toast("Modelo removido", "success");
+      if (editandoId === m.id) novoModelo();
+      onChanged();
+    } else {
+      toast("Falha ao remover modelo", "error");
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
+        <h2 className="font-display mb-3 text-base font-semibold text-[var(--color-ink-900)]">Importar do portal IMA/SC</h2>
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="flex flex-col gap-1">
+            <label className={labelCls}>Conexão</label>
+            <select value={conexaoImport} onChange={(e) => setConexaoImport(e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm min-w-[220px] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]">
+              <option value="">Todas</option>
+              {conexoes.map((c) => (
+                <option key={c.id} value={c.id}>{c.unidade ? `${c.nome} — unid. ${c.unidade}` : c.nome}</option>
+              ))}
+            </select>
+          </div>
+          <button onClick={importar} disabled={importando} className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">
+            {importando ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+            {importando ? "Importando..." : "Importar modelos"}
+          </button>
+        </div>
+      </div>
+
+      <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">{editandoId != null ? `Editando modelo: ${modeloEdicao?.nome || ""}` : "Novo modelo"}</h2>
+          {editandoId != null && (
+            <button onClick={novoModelo} className="text-sm font-medium text-[var(--color-brand-600)] hover:underline">Novo modelo</button>
+          )}
+        </div>
+        <p className="mb-3 text-sm text-[var(--color-ink-500)]">Um modelo pré-preenche transportador, destinador e resíduos na emissão. Os resíduos vêm da importação do portal.</p>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div className="flex flex-col gap-1">
+            <label className={labelCls}>Nome do modelo *</label>
+            <input value={form.nome} onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))} className={inputCls} placeholder="Ex.: Madeira CETRIC" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className={labelCls}>Conexão padrão (opcional)</label>
+            <select value={form.conexaoId} onChange={(e) => setForm((f) => ({ ...f, conexaoId: e.target.value }))} className={inputCls}>
+              <option value="">Qualquer conexão</option>
+              {conexoes.map((c) => (
+                <option key={c.id} value={c.id}>{c.unidade ? `${c.nome} — unid. ${c.unidade}` : c.nome}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1 md:col-span-2">
+            <label className={labelCls}>Descrição</label>
+            <input value={form.descricao} onChange={(e) => setForm((f) => ({ ...f, descricao: e.target.value }))} className={inputCls} />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className={labelCls}>CNPJ Transportador</label>
+            <input value={form.transportadorCnpj} onChange={(e) => setForm((f) => ({ ...f, transportadorCnpj: e.target.value.replace(/\D/g, "") }))} className={inputCls} placeholder="00000000000000" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className={labelCls}>Transportador (razão social)</label>
+            <input value={form.transportadorNome} onChange={(e) => setForm((f) => ({ ...f, transportadorNome: e.target.value }))} className={inputCls} />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className={labelCls}>Unidade Transportador (código)</label>
+            <input value={form.transportadorUnidade} onChange={(e) => setForm((f) => ({ ...f, transportadorUnidade: e.target.value }))} className={inputCls} />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className={labelCls}>CNPJ Destinador</label>
+            <input value={form.destinadorCnpj} onChange={(e) => setForm((f) => ({ ...f, destinadorCnpj: e.target.value.replace(/\D/g, "") }))} className={inputCls} placeholder="00000000000000" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className={labelCls}>Destinador (razão social)</label>
+            <input value={form.destinadorNome} onChange={(e) => setForm((f) => ({ ...f, destinadorNome: e.target.value }))} className={inputCls} />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className={labelCls}>Unidade Destinador (código)</label>
+            <input value={form.destinadorUnidade} onChange={(e) => setForm((f) => ({ ...f, destinadorUnidade: e.target.value }))} className={inputCls} />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className={labelCls}>Motorista</label>
+            <input value={form.nomeMotorista} onChange={(e) => setForm((f) => ({ ...f, nomeMotorista: e.target.value }))} className={inputCls} />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className={labelCls}>Placa do veículo</label>
+            <input value={form.placaVeiculo} onChange={(e) => setForm((f) => ({ ...f, placaVeiculo: e.target.value.toUpperCase() }))} className={inputCls} />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className={labelCls}>Observações</label>
+            <input value={form.observacoes} onChange={(e) => setForm((f) => ({ ...f, observacoes: e.target.value }))} className={inputCls} />
+          </div>
+        </div>
+        {modeloEdicao != null && modeloEdicao.residuos.length > 0 && (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-[var(--color-paper-200)] text-left">
+                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Resíduo (IBAMA)</th>
+                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Unidade</th>
+                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Classe</th>
+                </tr>
+              </thead>
+              <tbody>
+                {modeloEdicao.residuos.map((r, i) => (
+                  <tr key={i} className="border-b border-[var(--color-paper-100)]">
+                    <td className="py-2 px-2 font-medium text-[var(--color-ink-800)]">{r.residuo || "—"}</td>
+                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{r.codigoUnidade || "—"}</td>
+                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{r.codigoClasse || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <button onClick={salvar} disabled={salvando} className="focus-ring transition-brand mt-4 flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">
+          {salvando ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+          {salvando ? "Salvando..." : editandoId != null ? "Atualizar modelo" : "Salvar modelo"}
+        </button>
+      </div>
+
+      <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
+        <h2 className="font-display mb-3 text-base font-semibold text-[var(--color-ink-900)]">Modelos cadastrados</h2>
+        {modelos.length === 0 ? (
+          <p className="py-4 text-center text-sm text-[var(--color-ink-500)]">Nenhum modelo cadastrado. Importe do portal IMA/SC acima.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-[var(--color-paper-200)] text-left">
+                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Nome</th>
+                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Transportador</th>
+                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Destinador</th>
+                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Resíduos</th>
+                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Conexão</th>
+                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {modelos.map((m) => (
+                  <tr key={m.id} className="border-b border-[var(--color-paper-100)] hover:bg-[var(--color-paper-50)]">
+                    <td className="py-2 px-2 font-medium text-[var(--color-ink-800)]">
+                      {m.nome}
+                      {m.codigoPortal != null && <span className="ml-2 rounded bg-[var(--color-paper-100)] px-1.5 py-0.5 text-[11px] text-[var(--color-ink-500)]">portal #{m.codigoPortal}</span>}
+                    </td>
+                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.transportadorNome || m.transportadorCnpj || "—"}</td>
+                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.destinadorNome || m.destinadorCnpj || "—"}</td>
+                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.residuos.length} resíduo(s)</td>
+                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.conexao ? (m.conexao.unidade ? `${m.conexao.nome} — unid. ${m.conexao.unidade}` : m.conexao.nome) : "—"}</td>
+                    <td className="py-2 px-2">
+                      <div className="flex gap-1">
+                        <button onClick={() => editar(m)} className="rounded p-1 text-[var(--color-ink-400)] hover:bg-[var(--color-paper-100)] hover:text-[var(--color-ink-700)]" title="Editar"><Pencil size={14} /></button>
+                        <button onClick={() => remover(m)} className="rounded p-1 text-[var(--color-ink-400)] hover:bg-red-50 hover:text-red-600" title="Remover"><Trash2 size={14} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -475,6 +475,7 @@ model MtrImaConexao {
   atualizadoEm     DateTime          @updatedAt
   empreendimento   Empreendimento?   @relation(fields: [empreendimentoId], references: [id])
   manifestos       MtrImaManifesto[]
+  modelos          MtrImaModelo[]
 }
 
 model MtrImaManifesto {
@@ -497,6 +498,35 @@ model MtrImaManifesto {
   conexao          MtrImaConexao   @relation(fields: [conexaoId], references: [id])
 
   @@unique([conexaoId, numero])
+}
+
+model MtrImaModelo {
+  id                      Int            @id @default(autoincrement())
+  conexaoId               Int?
+  codigoPortal            Int?
+  nome                    String
+  descricao               String?
+  clienteNome             String?
+  empreendNome            String?
+  nomeResponsavel         String?
+  cargoResponsavel        String?
+  transportadorCnpj       String?
+  transportadorUnidade    Int?
+  transportadorNome       String?
+  destinadorCnpj          String?
+  destinadorUnidade       Int?
+  destinadorNome          String?
+  armazenadorCnpj         String?
+  armazenadorNome         String?
+  nomeMotorista           String?
+  placaVeiculo            String?
+  observacoes             String?
+  residuos                Json           @default("[]")
+  criadoEm                DateTime       @default(now())
+  atualizadoEm            DateTime       @updatedAt
+  conexao                 MtrImaConexao? @relation(fields: [conexaoId], references: [id], onDelete: SetNull)
+
+  @@index([conexaoId])
 }
 
 model Contato {
