@@ -818,6 +818,11 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
       toast(`Informe a quantidade do resíduo ${residuos[semQtd].residuo || `#${semQtd + 1}`}`, "error");
       return;
     }
+    const semCodigo = residuos.findIndex((r) => !r.residuo.replace(/\D/g, ""));
+    if (semCodigo >= 0) {
+      toast(`Resíduo "${residuos[semCodigo].residuo || `#${semCodigo + 1}`}" sem código IBAMA válido — corrija antes de emitir`, "error");
+      return;
+    }
     setEnviando(true);
     setResultado(null);
     try {
@@ -906,7 +911,12 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <div className="flex flex-col gap-1 md:col-span-2">
             <label className={labelCls}>Conexão MTR-IMA/SC</label>
-            <select value={conexaoEfetiva} onChange={(e) => setForm((f) => ({ ...f, conexaoId: e.target.value }))} className={inputCls}>
+            <select value={conexaoEfetiva} onChange={(e) => {
+              const id = e.target.value;
+              const c = conexoes.find((x) => x.id === Number(id));
+              setForm((f) => ({ ...f, conexaoId: id, cnpGerador: f.cnpGerador || c?.cnpj?.replace(/\D/g, "") || "" }));
+              setModeloId("");
+            }} className={inputCls}>
               <option value="">Selecione...</option>
               {conexoes.map((c) => (
                 <option key={c.id} value={c.id}>{c.unidade ? `${c.nome} — unid. ${c.unidade}` : c.nome}</option>

@@ -281,18 +281,29 @@ export async function emitirManifesto(input: MtrImaManifestoInput): Promise<{ nu
     ],
   };
 
-  const result = await apiFetch<{
-    retornoCodigo: number;
-    retorno: string;
-    manifestoCodigo?: string;
+  const raw = await apiFetch<{
+    retornoCodigo?: number;
+    retorno?: string;
+    manifestoCodigo?: string | number;
     codigoBarra?: string;
+    codigoBarras?: string;
+    manifestoJSONDtos?: Array<{ retornoCodigo?: number; retorno?: string; manifestoCodigo?: string | number }>;
   }>("salvarManifestoLote", body);
 
-  if (result.retornoCodigo !== 0) {
-    throw new MtrImaError(`Emissão MTR falhou: ${result.retorno}`, 400);
+  const result = (Array.isArray(raw) ? raw[0] : raw) || {};
+  const dto = result.manifestoJSONDtos?.[0];
+  const codigo = result.retornoCodigo ?? dto?.retornoCodigo;
+
+  if (codigo !== 0) {
+    const detalhe = dto?.retorno || result.retorno || "falha desconhecida";
+    throw new MtrImaError(`Emissão MTR falhou: ${detalhe}`, 400);
   }
 
-  const numero = result.manifestoCodigo || "";
+  const numero = String(result.manifestoCodigo ?? dto?.manifestoCodigo ?? "");
+  if (!numero) {
+    throw new MtrImaError(`Emissão sem número retornado pelo IMA: ${result.retorno || dto?.retorno || "resposta inesperada"}`, 502);
+  }
+  const codigoBarra = result.codigoBarra || result.codigoBarras;
 
   await prisma.mtrImaManifesto.create({
     data: {
@@ -312,5 +323,5 @@ export async function emitirManifesto(input: MtrImaManifestoInput): Promise<{ nu
 
   await atualizarUso(conexaoId);
 
-  return { numero, codigoBarra: result.codigoBarra };
+  return { numero, codigoBarra };
 }
