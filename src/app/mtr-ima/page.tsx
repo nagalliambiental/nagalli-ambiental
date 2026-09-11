@@ -1072,6 +1072,7 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
                 <tr className="border-b border-[var(--color-paper-200)] text-left">
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Resíduo</th>
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Quantidade</th>
+                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Densidade</th>
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Estado</th>
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Classe</th>
                   <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Acondicionamento</th>
@@ -1102,6 +1103,11 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
                           ) : null;
                         })()}
                       </div>
+                    </td>
+                    <td className="py-2 px-2 text-[var(--color-ink-600)]">
+                      {r.tipoDensidadeValor
+                        ? `${String(r.tipoDensidadeValor).replace(".", ",")} ${catalogos?.medidasDensidade.find((m) => m.codigo === Number(r.tipoDensidadeUnidade))?.descricao || ""}`.trim()
+                        : "—"}
                     </td>
                     <td className="py-2 px-2 text-[var(--color-ink-600)]">{catalogos?.estadosFisicos.find((e) => e.codigo === Number(r.codigoTipoEstado))?.descricao || r.codigoTipoEstado}</td>
                     <td className="py-2 px-2 text-[var(--color-ink-600)]">{catalogos?.classes.find((c) => c.codigo === Number(r.codigoClasse))?.descricao || r.codigoClasse}</td>
