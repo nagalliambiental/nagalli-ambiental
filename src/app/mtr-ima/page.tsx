@@ -65,6 +65,8 @@ interface ResiduoModelo {
   codigoClasse: string;
   codigoAcondicionamento: string;
   codigoTecnologia: string;
+  tipoDensidadeValor: string;
+  tipoDensidadeUnidade: string;
   numeroONU: string;
   classeDeRisco: string;
   nomeEmbarque: string;
@@ -102,6 +104,7 @@ interface MtrImaCatalogosFront {
   classes: { codigo: number; descricao: string }[];
   acondicionamentos: { codigo: number; descricao: string }[];
   tratamentos: { codigo: number; descricao: string }[];
+  medidasDensidade: { codigo: number; descricao: string }[];
 }
 
 interface ResiduoForm {
@@ -112,6 +115,8 @@ interface ResiduoForm {
   codigoClasse: string;
   codigoAcondicionamento: string;
   codigoTecnologia: string;
+  tipoDensidadeValor: string;
+  tipoDensidadeUnidade: string;
   numeroONU: string;
   classeDeRisco: string;
   nomeEmbarque: string;
@@ -126,11 +131,33 @@ const emptyResiduo: ResiduoForm = {
   codigoClasse: "1",
   codigoAcondicionamento: "1",
   codigoTecnologia: "1",
+  tipoDensidadeValor: "",
+  tipoDensidadeUnidade: "1",
   numeroONU: "",
   classeDeRisco: "",
   nomeEmbarque: "",
   grupoEmbalagem: "",
 };
+
+function precisaDensidadeIMA(codigoUnidade: string) {
+  return codigoUnidade === "1" || codigoUnidade === "2";
+}
+
+function rotuloDensidadeIMA(codigoUnidade: string) {
+  return codigoUnidade === "2" ? "Densidade (g/cm³) *" : "Densidade (t/m³) *";
+}
+
+function pesoIMA(quantidade: string, densidade: string, codigoUnidade: string): number | null {
+  const qtd = Number(String(quantidade).replace(",", "."));
+  if (!Number.isFinite(qtd) || qtd <= 0) return null;
+  if (codigoUnidade === "4") return Math.round(qtd * 1000) / 1000;
+  if (codigoUnidade === "3") return Math.round((qtd / 1000) * 1000) / 1000;
+  const dens = Number(String(densidade).replace(",", "."));
+  if (!Number.isFinite(dens) || dens <= 0) return null;
+  if (codigoUnidade === "1") return Math.round(qtd * dens * 1000) / 1000;
+  if (codigoUnidade === "2") return Math.round(((qtd * dens) / 1000) * 1000) / 1000;
+  return null;
+}
 
 const STATUS_BADGE: Record<string, string> = {
   EMITIDO: "bg-blue-50 text-blue-700",
@@ -743,8 +770,8 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
       manifTransportadorPlacaVeiculo: modelo.placaVeiculo || f.manifTransportadorPlacaVeiculo,
       observacoes: modelo.observacoes || f.observacoes,
     }));
-    setResiduos(modelo.residuos.map((r) => ({ ...r })));
-    toast(`Modelo "${modelo.nome}" aplicado (${modelo.residuos.length} resíduo(s))`, "success");
+    setResiduos(modelo.residuos.map((r) => ({ ...r, tipoDensidadeValor: r.tipoDensidadeValor ?? "", tipoDensidadeUnidade: r.tipoDensidadeUnidade ?? "1" })));
+    toast(`Modelo "${modelo.nome}" aplicado - preencha quantidade (e densidade) de cada resíduo`, "success");
   }
 
   async function salvarComoModelo() {
@@ -790,6 +817,10 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
       toast("Informe o código IBAMA e a quantidade do resíduo", "error");
       return;
     }
+    if (precisaDensidadeIMA(residuoForm.codigoUnidade) && !(Number(String(residuoForm.tipoDensidadeValor).replace(",", ".")) > 0)) {
+      toast("Informe a densidade — ela converte o volume em toneladas na emissão", "error");
+      return;
+    }
     if (editandoResiduo != null) {
       setResiduos((rs) => rs.map((r, i) => (i === editandoResiduo ? residuoForm : r)));
       setEditandoResiduo(null);
@@ -823,6 +854,13 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
       toast(`Resíduo "${residuos[semCodigo].residuo || `#${semCodigo + 1}`}" sem código IBAMA válido — corrija antes de emitir`, "error");
       return;
     }
+    const semDens = residuos.findIndex(
+      (r) => precisaDensidadeIMA(r.codigoUnidade) && !(Number(String(r.tipoDensidadeValor).replace(",", ".")) > 0),
+    );
+    if (semDens >= 0) {
+      toast(`Resíduo "${residuos[semDens].residuo || `#${semDens + 1}`}": informe a densidade para converter o volume em toneladas`, "error");
+      return;
+    }
     setEnviando(true);
     setResultado(null);
     try {
@@ -835,6 +873,12 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
         codigoClasse: Number(r.codigoClasse),
         codigoAcondicionamento: Number(r.codigoAcondicionamento),
         codigoTecnologia: Number(r.codigoTecnologia),
+        ...(precisaDensidadeIMA(r.codigoUnidade) && Number(String(r.tipoDensidadeValor).replace(",", ".")) > 0
+          ? {
+              tipoDensidadeValor: Number(String(r.tipoDensidadeValor).replace(",", ".")),
+              tipoDensidadeUnidade: Number(r.tipoDensidadeUnidade) || Number(r.codigoUnidade),
+            }
+          : {}),
         numeroONU: r.numeroONU || undefined,
         classeDeRisco: r.classeDeRisco || undefined,
         nomeEmbarque: r.nomeEmbarque || undefined,
@@ -1051,6 +1095,12 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
                           placeholder="0"
                         />
                         <span className="text-xs">{catalogos?.unidades.find((u) => u.codigo === Number(r.codigoUnidade))?.sigla || ""}</span>
+                        {(() => {
+                          const peso = pesoIMA(r.quantidade, r.tipoDensidadeValor, r.codigoUnidade);
+                          return peso != null && r.codigoUnidade !== "4" ? (
+                            <span className="text-xs text-[var(--color-ink-500)]">≈ {peso.toLocaleString("pt-BR", { maximumFractionDigits: 3 })} t</span>
+                          ) : null;
+                        })()}
                       </div>
                     </td>
                     <td className="py-2 px-2 text-[var(--color-ink-600)]">{catalogos?.estadosFisicos.find((e) => e.codigo === Number(r.codigoTipoEstado))?.descricao || r.codigoTipoEstado}</td>
@@ -1104,12 +1154,28 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
               </div>
               <div className="flex flex-col gap-1">
                 <label className={labelCls}>Unidade</label>
-                <select value={residuoForm.codigoUnidade} onChange={(e) => setResiduoForm((r) => ({ ...r, codigoUnidade: e.target.value }))} className={inputCls}>
+                <select value={residuoForm.codigoUnidade} onChange={(e) => setResiduoForm((r) => ({ ...r, codigoUnidade: e.target.value, tipoDensidadeUnidade: e.target.value }))} className={inputCls}>
                   {catalogos?.unidades.map((u) => (
                     <option key={u.codigo} value={u.codigo}>{u.nome} ({u.sigla})</option>
                   ))}
                 </select>
               </div>
+              {precisaDensidadeIMA(residuoForm.codigoUnidade) && (
+                <>
+                  <div className="flex flex-col gap-1">
+                    <label className={labelCls}>{rotuloDensidadeIMA(residuoForm.codigoUnidade)}</label>
+                    <input type="number" step="0.01" min="0" value={residuoForm.tipoDensidadeValor} onChange={(e) => setResiduoForm((r) => ({ ...r, tipoDensidadeValor: e.target.value }))} className={inputCls} />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className={labelCls}>Medida da densidade</label>
+                    <select value={residuoForm.tipoDensidadeUnidade} onChange={(e) => setResiduoForm((r) => ({ ...r, tipoDensidadeUnidade: e.target.value }))} className={inputCls}>
+                      {catalogos?.medidasDensidade.map((m) => (
+                        <option key={m.codigo} value={m.codigo}>{m.descricao}</option>
+                      ))}
+                    </select>
+                  </div>
+                </>
+              )}
               <div className="flex flex-col gap-1">
                 <label className={labelCls}>Estado físico</label>
                 <select value={residuoForm.codigoTipoEstado} onChange={(e) => setResiduoForm((r) => ({ ...r, codigoTipoEstado: e.target.value }))} className={inputCls}>
@@ -1159,6 +1225,12 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
                 <input value={residuoForm.grupoEmbalagem} onChange={(e) => setResiduoForm((r) => ({ ...r, grupoEmbalagem: e.target.value }))} className={inputCls} placeholder="Ex.: III" />
               </div>
             </div>
+            {(() => {
+              const peso = pesoIMA(residuoForm.quantidade, residuoForm.tipoDensidadeValor, residuoForm.codigoUnidade);
+              return peso != null && residuoForm.codigoUnidade !== "4" ? (
+                <p className="mt-2 text-sm text-[var(--color-ink-600)]">Peso calculado: {peso.toLocaleString("pt-BR", { maximumFractionDigits: 3 })} t</p>
+              ) : null;
+            })()}
             <div className="mt-4 flex justify-end gap-2">
               <button onClick={() => setModalResiduo(false)} className="rounded-lg bg-[var(--color-paper-100)] px-4 py-2 text-sm text-[var(--color-ink-700)]">Cancelar</button>
               <button onClick={adicionarResiduo} className="flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-4 py-2 text-sm font-medium text-white">
@@ -1199,7 +1271,7 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtrIma[]; onCha
   const [residuosEdicao, setResiduosEdicao] = useState<ResiduoModelo[]>([]);
   const [modalResiduo, setModalResiduo] = useState(false);
   const [editandoResIdx, setEditandoResIdx] = useState<number | null>(null);
-  const [resForm, setResForm] = useState<ResiduoModelo>({ residuo: "", quantidade: "", codigoUnidade: "3", codigoTipoEstado: "1", codigoClasse: "1", codigoAcondicionamento: "1", codigoTecnologia: "1", numeroONU: "", classeDeRisco: "", nomeEmbarque: "", grupoEmbalagem: "" });
+  const [resForm, setResForm] = useState<ResiduoModelo>({ residuo: "", quantidade: "", codigoUnidade: "3", codigoTipoEstado: "1", codigoClasse: "1", codigoAcondicionamento: "1", codigoTecnologia: "1", tipoDensidadeValor: "", tipoDensidadeUnidade: "1", numeroONU: "", classeDeRisco: "", nomeEmbarque: "", grupoEmbalagem: "" });
   const [catalogos, setCatalogos] = useState<MtrImaCatalogosFront | null>(null);
 
   const inputCls = "w-full rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]";
@@ -1263,7 +1335,7 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtrIma[]; onCha
       placaVeiculo: m.placaVeiculo || "",
       observacoes: m.observacoes || "",
     });
-    setResiduosEdicao(m.residuos.map((r) => ({ ...r })));
+    setResiduosEdicao(m.residuos.map((r) => ({ ...r, tipoDensidadeValor: r.tipoDensidadeValor ?? "", tipoDensidadeUnidade: r.tipoDensidadeUnidade ?? "1" })));
     toast(`Editando modelo "${m.nome}"`, "info");
   }
 
@@ -1284,7 +1356,7 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtrIma[]; onCha
     } else {
       setResiduosEdicao((rs) => [...rs, resForm]);
     }
-    setResForm({ residuo: "", quantidade: "", codigoUnidade: "3", codigoTipoEstado: "1", codigoClasse: "1", codigoAcondicionamento: "1", codigoTecnologia: "1", numeroONU: "", classeDeRisco: "", nomeEmbarque: "", grupoEmbalagem: "" });
+    setResForm({ residuo: "", quantidade: "", codigoUnidade: "3", codigoTipoEstado: "1", codigoClasse: "1", codigoAcondicionamento: "1", codigoTecnologia: "1", tipoDensidadeValor: "", tipoDensidadeUnidade: "1", numeroONU: "", classeDeRisco: "", nomeEmbarque: "", grupoEmbalagem: "" });
     setModalResiduo(false);
   }
 
@@ -1427,7 +1499,7 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtrIma[]; onCha
         <div className="mt-4">
           <div className="mb-2 flex items-center justify-between">
             <h3 className="text-sm font-semibold text-[var(--color-ink-900)]">Resíduos do modelo ({residuosEdicao.length})</h3>
-            <button onClick={() => { setEditandoResIdx(null); setResForm({ residuo: "", quantidade: "", codigoUnidade: "3", codigoTipoEstado: "1", codigoClasse: "1", codigoAcondicionamento: "1", codigoTecnologia: "1", numeroONU: "", classeDeRisco: "", nomeEmbarque: "", grupoEmbalagem: "" }); setModalResiduo(true); }} className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg bg-[var(--color-brand-500)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--color-brand-600)]">
+            <button onClick={() => { setEditandoResIdx(null); setResForm({ residuo: "", quantidade: "", codigoUnidade: "3", codigoTipoEstado: "1", codigoClasse: "1", codigoAcondicionamento: "1", codigoTecnologia: "1", tipoDensidadeValor: "", tipoDensidadeUnidade: "1", numeroONU: "", classeDeRisco: "", nomeEmbarque: "", grupoEmbalagem: "" }); setModalResiduo(true); }} className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg bg-[var(--color-brand-500)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--color-brand-600)]">
               <Plus size={13} /> Adicionar resíduo
             </button>
           </div>
@@ -1452,7 +1524,7 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtrIma[]; onCha
                       <td className="py-2 px-2 text-[var(--color-ink-600)]">{catalogos?.classes.find((c) => c.codigo === Number(r.codigoClasse))?.descricao || r.codigoClasse || "—"}</td>
                       <td className="py-2 px-2">
                         <div className="flex gap-1">
-                          <button onClick={() => { setEditandoResIdx(i); setResForm({ ...r }); setModalResiduo(true); }} className="rounded p-1 text-[var(--color-ink-400)] hover:bg-[var(--color-paper-100)] hover:text-[var(--color-ink-700)]" title="Editar"><Pencil size={14} /></button>
+                          <button onClick={() => { setEditandoResIdx(i); setResForm({ ...r, tipoDensidadeValor: r.tipoDensidadeValor ?? "", tipoDensidadeUnidade: r.tipoDensidadeUnidade ?? "1" }); setModalResiduo(true); }} className="rounded p-1 text-[var(--color-ink-400)] hover:bg-[var(--color-paper-100)] hover:text-[var(--color-ink-700)]" title="Editar"><Pencil size={14} /></button>
                           <button onClick={() => setResiduosEdicao((rs) => rs.filter((_, j) => j !== i))} className="rounded p-1 text-[var(--color-ink-400)] hover:bg-red-50 hover:text-red-600" title="Remover"><Trash2 size={14} /></button>
                         </div>
                       </td>
@@ -1526,12 +1598,28 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtrIma[]; onCha
               </div>
               <div className="flex flex-col gap-1">
                 <label className={labelCls}>Unidade</label>
-                <select value={resForm.codigoUnidade} onChange={(e) => setResForm((r) => ({ ...r, codigoUnidade: e.target.value }))} className={inputCls}>
+                <select value={resForm.codigoUnidade} onChange={(e) => setResForm((r) => ({ ...r, codigoUnidade: e.target.value, tipoDensidadeUnidade: e.target.value }))} className={inputCls}>
                   {catalogos?.unidades.map((u) => (
                     <option key={u.codigo} value={u.codigo}>{u.nome} ({u.sigla})</option>
                   ))}
                 </select>
               </div>
+              {precisaDensidadeIMA(resForm.codigoUnidade) && (
+                <>
+                  <div className="flex flex-col gap-1">
+                    <label className={labelCls}>{rotuloDensidadeIMA(resForm.codigoUnidade)}</label>
+                    <input type="number" step="0.01" min="0" value={resForm.tipoDensidadeValor} onChange={(e) => setResForm((r) => ({ ...r, tipoDensidadeValor: e.target.value }))} className={inputCls} />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className={labelCls}>Medida da densidade</label>
+                    <select value={resForm.tipoDensidadeUnidade} onChange={(e) => setResForm((r) => ({ ...r, tipoDensidadeUnidade: e.target.value }))} className={inputCls}>
+                      {catalogos?.medidasDensidade.map((m) => (
+                        <option key={m.codigo} value={m.codigo}>{m.descricao}</option>
+                      ))}
+                    </select>
+                  </div>
+                </>
+              )}
               <div className="flex flex-col gap-1">
                 <label className={labelCls}>Estado físico</label>
                 <select value={resForm.codigoTipoEstado} onChange={(e) => setResForm((r) => ({ ...r, codigoTipoEstado: e.target.value }))} className={inputCls}>

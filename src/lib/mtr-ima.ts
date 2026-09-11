@@ -49,6 +49,7 @@ export interface MtrImaCatalogos {
   classes: { codigo: number; descricao: string }[];
   acondicionamentos: { codigo: number; descricao: string }[];
   tratamentos: { codigo: number; descricao: string }[];
+  medidasDensidade: { codigo: number; descricao: string }[];
 }
 
 /* ──────────────── Auth helpers ──────────────── */
@@ -199,6 +200,10 @@ export function catalogos(): MtrImaCatalogos {
       { codigo: 19, descricao: "Biodigestão" },
       { codigo: 20, descricao: "Pirólise" },
       { codigo: 21, descricao: "Uso Alimentação Animal" },
+    ],
+    medidasDensidade: [
+      { codigo: 1, descricao: "t/m³" },
+      { codigo: 2, descricao: "g/cm³" },
     ],
   };
 }

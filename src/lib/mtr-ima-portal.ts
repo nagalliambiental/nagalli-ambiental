@@ -532,6 +532,8 @@ export async function detalharModeloPortal(conexaoId: number, codigo: string): P
       codigoClasse: str(it.tipoClasseCodigo),
       codigoAcondicionamento: str(it.tipoAcondicionamentoCodigo),
       codigoTecnologia: str(it.tipoTecnologiaCodigo),
+      tipoDensidadeValor: "",
+      tipoDensidadeUnidade: str(it.tipoUnidadeCodigo) === "2" ? "2" : "1",
       numeroONU: str(it.numeroONU),
       classeDeRisco: str(it.classeDeRisco),
       nomeEmbarque: str(it.nomeEmbarque),
