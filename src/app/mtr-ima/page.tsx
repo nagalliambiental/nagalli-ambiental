@@ -8,7 +8,7 @@ import { useToast } from "@/components/Toast";
 
 type ToastFn = (message: string, type?: "success" | "error" | "info" | "warning") => void;
 
-type Tab = "painel" | "meusMtrs" | "emitir" | "conexoes";
+type Tab = "meusMtrs" | "emitir" | "conexoes";
 const POR_PAGINA = 15;
 
 interface Conexao {
@@ -107,11 +107,6 @@ function fmtData(v?: string | null) {
   return d.toLocaleDateString("pt-BR");
 }
 
-function fmtQtd(v: number | null, u?: string | null) {
-  if (v == null) return "—";
-  return `${v.toLocaleString("pt-BR")} ${u || ""}`.trim();
-}
-
 function isoHoje(d: Date) {
   return d.toISOString().slice(0, 10);
 }
@@ -131,11 +126,9 @@ export default function MtrImaPage() {
   const { data: session } = useSession();
   const perfil = (session?.user as Record<string, unknown> | undefined)?.perfil as string | undefined;
   const ehPrivilegiado = perfil === "socio" || perfil === "admin";
-  const [tab, setTab] = useState<Tab>("painel");
+  const [tab, setTab] = useState<Tab>("meusMtrs");
 
   const [conexoes, setConexoes] = useState<Conexao[]>([]);
-  const [manifestos, setManifestos] = useState<Manifesto[]>([]);
-  const [manifestosLoading, setManifestosLoading] = useState(false);
   const [empreendimentos, setEmpreendimentos] = useState<EmpreendimentoOpcao[]>([]);
 
   const carregarConexoes = useCallback(async () => {
@@ -144,18 +137,6 @@ export default function MtrImaPage() {
       if (res.ok) setConexoes(await res.json());
     } catch {
       // silencioso
-    }
-  }, []);
-
-  const carregarManifestos = useCallback(async () => {
-    setManifestosLoading(true);
-    try {
-      const res = await fetch("/api/mtr-ima/manifestos");
-      if (res.ok) setManifestos(await res.json());
-    } catch {
-      setManifestos([]);
-    } finally {
-      setManifestosLoading(false);
     }
   }, []);
 
@@ -175,22 +156,6 @@ export default function MtrImaPage() {
   useEffect(() => {
     const controller = new AbortController();
     (async () => {
-      setManifestosLoading(true);
-      try {
-        const res = await fetch("/api/mtr-ima/manifestos", { signal: controller.signal });
-        if (res.ok) setManifestos(await res.json());
-      } catch {
-        if (!controller.signal.aborted) setManifestos([]);
-      } finally {
-        if (!controller.signal.aborted) setManifestosLoading(false);
-      }
-    })();
-    return () => controller.abort();
-  }, []);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    (async () => {
       try {
         const res = await fetch("/api/empreendimentos", { signal: controller.signal });
         if (res.ok) setEmpreendimentos(await res.json());
@@ -200,10 +165,6 @@ export default function MtrImaPage() {
     })();
     return () => controller.abort();
   }, []);
-
-  const emitidos = manifestos.filter((m) => m.status === "EMITIDO").length;
-  const recebidos = manifestos.filter((m) => m.status === "RECEBIDO").length;
-  const cancelados = manifestos.filter((m) => m.status === "CANCELADO").length;
 
   return (
     <div>
@@ -216,7 +177,6 @@ export default function MtrImaPage() {
       <div className="mb-4 flex gap-1 border-b border-[var(--color-paper-200)]">
         {(
           [
-            { key: "painel", label: "Painel" },
             { key: "meusMtrs", label: "Meus MTRs" },
             { key: "emitir", label: "Emitir MTR" },
             ...(ehPrivilegiado ? [{ key: "conexoes" as Tab, label: "Conexões" }] : []),
@@ -236,400 +196,21 @@ export default function MtrImaPage() {
         ))}
       </div>
 
-      {tab === "painel" && (
-        <PainelTab
-          conexoes={conexoes}
-          manifestos={manifestos}
-          loading={manifestosLoading}
-          emitidos={emitidos}
-          recebidos={recebidos}
-          cancelados={cancelados}
-          onVerificar={() => carregarManifestos()}
-          toast={toast}
-        />
-      )}
-
       {tab === "meusMtrs" && (
-        <MeusMtrsTab conexoes={conexoes} toast={toast} onChanged={() => { carregarManifestos(); carregarConexoes(); }} />
+        <MeusMtrsTab conexoes={conexoes} toast={toast} onChanged={() => { carregarConexoes(); }} />
       )}
 
       {tab === "emitir" && (
         <EmitirTab
           conexoes={conexoes}
           empreendimentos={empreendimentos}
-          onEmitido={() => { carregarManifestos(); carregarConexoes(); }}
+          onEmitido={() => { carregarConexoes(); }}
           toast={toast}
         />
       )}
 
       {tab === "conexoes" && ehPrivilegiado && (
         <ConexoesTab conexoes={conexoes} empreendimentos={empreendimentos} onChanged={() => carregarConexoes()} toast={toast} />
-      )}
-    </div>
-  );
-}
-
-/* ════════════════ PAINEL ════════════════ */
-
-function PainelTab(props: {
-  conexoes: Conexao[];
-  manifestos: Manifesto[];
-  loading: boolean;
-  emitidos: number;
-  recebidos: number;
-  cancelados: number;
-  onVerificar: () => void;
-  toast: ToastFn;
-}) {
-  const { conexoes, manifestos, loading, emitidos, recebidos, cancelados, onVerificar, toast } = props;
-  const [paginaManifestos, setPaginaManifestos] = useState(0);
-  const [filtro, setFiltro] = useState("todos");
-  const [periodoFiltro, setPeriodoFiltro] = useState<{ di: string; df: string } | null>(null);
-  const filtrados = manifestos.filter((m) => {
-    const statusOk =
-      filtro === "todos"
-        ? true
-        : filtro === "emitidos"
-          ? m.status === "EMITIDO" || m.status === "PENDENTE"
-          : filtro === "recebidos"
-            ? m.status === "RECEBIDO"
-            : m.status === "CANCELADO";
-    if (!statusOk) return false;
-    if (periodoFiltro && m.dataExpedicao) {
-      const d = m.dataExpedicao.slice(0, 10);
-      if (d < periodoFiltro.di || d > periodoFiltro.df) return false;
-    }
-    return true;
-  });
-  const totalPaginasM = Math.max(1, Math.ceil(filtrados.length / POR_PAGINA));
-  const paginaM = Math.min(paginaManifestos, totalPaginasM - 1);
-  const visiveisM = filtrados.slice(paginaM * POR_PAGINA, paginaM * POR_PAGINA + POR_PAGINA);
-  const [conexaoSync, setConexaoSync] = useState("");
-  const [dataInicial, setDataInicial] = useState(() => haDias(30));
-  const [dataFinal, setDataFinal] = useState(() => isoHoje(new Date()));
-  const [sincronizando, setSincronizando] = useState(false);
-  const [resumoSync, setResumoSync] = useState<{ total: number; importados: number; atualizados: number } | null>(null);
-  const [modalCancel, setModalCancel] = useState<Manifesto | null>(null);
-  const [justificativaCancel, setJustificativaCancel] = useState("");
-  const [cancelando, setCancelando] = useState(false);
-  const [modalReceber, setModalReceber] = useState<Manifesto | null>(null);
-  const [respNome, setRespNome] = useState("");
-  const [respCargo, setRespCargo] = useState("");
-  const [recebendo, setRecebendo] = useState(false);
-
-  const conexaoSyncEfetiva = conexoes.some((c) => c.id === Number(conexaoSync)) ? conexaoSync : conexoes.length ? String(conexoes[0].id) : "";
-
-  async function sincronizar() {
-    if (!conexaoSyncEfetiva) {
-      toast("Selecione a conexão", "error");
-      return;
-    }
-    setSincronizando(true);
-    try {
-      const res = await fetch("/api/mtr-ima/sincronizar", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conexaoId: Number(conexaoSyncEfetiva), dataInicial, dataFinal }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast(data.error || "Falha ao sincronizar", "error");
-        return;
-      }
-      const r = data.resultados?.[0];
-      setResumoSync(r ? { total: r.total, importados: r.importados, atualizados: r.atualizados } : { total: 0, importados: 0, atualizados: 0 });
-      setPeriodoFiltro({ di: dataInicial, df: dataFinal });
-      setPaginaManifestos(0);
-      toast(`Portal IMA sincronizado: ${r?.total ?? 0} MTR(s) no período`, "success");
-      onVerificar();
-    } catch {
-      toast("Erro ao sincronizar", "error");
-    } finally {
-      setSincronizando(false);
-    }
-  }
-
-  async function excluir(id: number) {
-    if (!confirm("Excluir este manifesto da lista local? (não altera o portal IMA)")) return;
-    try {
-      const res = await fetch(`/api/mtr-ima/manifestos?id=${id}`, { method: "DELETE" });
-      if (!res.ok) {
-        toast("Falha ao excluir", "error");
-        return;
-      }
-      toast("Manifesto excluído", "success");
-      onVerificar();
-    } catch {
-      toast("Erro ao excluir", "error");
-    }
-  }
-
-  async function cancelar() {
-    if (!modalCancel) return;
-    if (!justificativaCancel.trim()) {
-      toast("Informe a justificativa do cancelamento", "error");
-      return;
-    }
-    setCancelando(true);
-    try {
-      const res = await fetch("/api/mtr-ima/cancelar", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conexaoId: modalCancel.conexao.id, numero: modalCancel.numero, justificativa: justificativaCancel }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast(data.error || "Falha ao cancelar", "error");
-        return;
-      }
-      toast(data.mensagem || "MTR cancelado", "success");
-      setModalCancel(null);
-      setJustificativaCancel("");
-      onVerificar();
-    } catch {
-      toast("Erro ao cancelar", "error");
-    } finally {
-      setCancelando(false);
-    }
-  }
-
-  async function receber() {
-    if (!modalReceber) return;
-    if (!respNome.trim() || !respCargo.trim()) {
-      toast("Informe o responsável e o cargo do recebimento", "error");
-      return;
-    }
-    setRecebendo(true);
-    try {
-      const res = await fetch("/api/mtr-ima/receber", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conexaoId: modalReceber.conexao.id, numero: modalReceber.numero, responsavel: respNome, cargo: respCargo }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast(data.error || "Falha ao receber", "error");
-        return;
-      }
-      toast(data.mensagem || "MTR recebido", "success");
-      setModalReceber(null);
-      setRespNome("");
-      setRespCargo("");
-      onVerificar();
-    } catch {
-      toast("Erro ao receber", "error");
-    } finally {
-      setRecebendo(false);
-    }
-  }
-
-  async function baixarPdf(m: Manifesto) {
-    try {
-      const res = await fetch(`/api/mtr-ima/manifestos/${m.id}/download`);
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        toast(data?.error || "Falha ao baixar PDF", "error");
-        return;
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `MTR-IMA-${m.numero}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    } catch {
-      toast("Falha ao baixar PDF", "error");
-    }
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        {[
-          { label: "Emitidos", valor: emitidos, cor: "text-blue-700 bg-blue-50" },
-          { label: "Recebidos", valor: recebidos, cor: "text-green-700 bg-green-50" },
-          { label: "Cancelados", valor: cancelados, cor: "text-red-700 bg-red-50" },
-          { label: "Total", valor: manifestos.length, cor: "text-[var(--color-ink-700)] bg-[var(--color-paper-100)]" },
-        ].map((c) => (
-          <div key={c.label} className={`shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5`}>
-            <div className={`mb-2 inline-flex rounded-lg px-2 py-1 text-xs font-semibold ${c.cor}`}>{c.label}</div>
-            <p className="font-display text-2xl font-semibold text-[var(--color-ink-900)]">{c.valor}</p>
-          </div>
-        ))}
-      </div>
-
-      <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
-        <h2 className="font-display mb-3 text-base font-semibold text-[var(--color-ink-900)]">Sincronizar MTRs do portal</h2>
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-[var(--color-ink-500)]">Conexão</label>
-            <select value={conexaoSyncEfetiva} onChange={(e) => setConexaoSync(e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm min-w-[220px] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]">
-              <option value="">Selecione...</option>
-              {conexoes.map((c) => (
-                <option key={c.id} value={c.id}>{c.unidade ? `${c.nome} — unid. ${c.unidade}` : c.nome}</option>
-              ))}
-            </select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-[var(--color-ink-500)]">De</label>
-            <input type="date" value={dataInicial} onChange={(e) => setDataInicial(e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-[var(--color-ink-500)]">Até</label>
-            <input type="date" value={dataFinal} onChange={(e) => setDataFinal(e.target.value)} className="w-full rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
-          </div>
-          <button onClick={sincronizar} disabled={sincronizando} className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">
-            {sincronizando ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
-            {sincronizando ? "Sincronizando..." : "Sincronizar"}
-          </button>
-        </div>
-        {resumoSync && (
-          <div className="mt-4 grid grid-cols-3 gap-3">
-            {[
-              { label: "Total no período", valor: resumoSync.total },
-              { label: "Importados", valor: resumoSync.importados },
-              { label: "Atualizados", valor: resumoSync.atualizados },
-            ].map((c) => (
-              <div key={c.label} className="rounded-lg border border-[var(--color-paper-200)] bg-[var(--color-paper-50)] p-3">
-                <div className="text-xs font-medium text-[var(--color-ink-500)]">{c.label}</div>
-                <p className="font-display text-xl font-semibold text-[var(--color-ink-900)]">{c.valor}</p>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Manifestos</h2>
-          <div className="flex items-center gap-2">
-            <div className="flex gap-1 text-xs">
-              {[
-                { key: "todos", label: `Todos (${manifestos.length})` },
-                { key: "emitidos", label: `Emitidos (${emitidos})` },
-                { key: "recebidos", label: `Recebidos (${recebidos})` },
-                { key: "cancelados", label: `Cancelados (${cancelados})` },
-              ].map((p) => (
-                <button
-                  key={p.key}
-                  onClick={() => { setFiltro(p.key); setPaginaManifestos(0); }}
-                  className={`rounded-full px-3 py-1 font-medium ${filtro === p.key ? "bg-[var(--color-brand-500)] text-white" : "bg-[var(--color-paper-100)] text-[var(--color-ink-600)] hover:bg-[var(--color-paper-200)]"}`}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
-            <button onClick={onVerificar} className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg bg-[var(--color-paper-100)] px-3 py-2 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-200)]">
-              <RefreshCw size={15} /> Atualizar
-            </button>
-          </div>
-        </div>
-        {periodoFiltro && (
-          <div className="mb-2 flex items-center gap-2 text-xs">
-            <span className="rounded-full bg-[var(--color-paper-100)] px-3 py-1 font-medium text-[var(--color-ink-600)]">
-              Período: {fmtIso(periodoFiltro.di)} a {fmtIso(periodoFiltro.df)}
-            </span>
-            <button onClick={() => setPeriodoFiltro(null)} className="rounded-full px-2 py-1 text-[var(--color-ink-500)] hover:bg-[var(--color-paper-100)]">Limpar</button>
-          </div>
-        )}
-        {loading ? (
-          <p className="py-4 text-center text-sm text-[var(--color-ink-500)]"><Loader2 size={16} className="mr-2 inline animate-spin" />Carregando...</p>
-        ) : visiveisM.length === 0 ? (
-          <p className="py-4 text-center text-sm text-[var(--color-ink-500)]">{periodoFiltro ? "Nenhum manifesto neste período." : "Nenhum manifesto ainda. Use a sincronização acima para listar os MTRs do período."}</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-[var(--color-paper-200)] text-left">
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Número</th>
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Cliente</th>
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Empreendimento</th>
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Quantidade</th>
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Expedição</th>
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Situação</th>
-                  <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visiveisM.map((m) => (
-                  <tr key={m.id} className="border-b border-[var(--color-paper-100)] hover:bg-[var(--color-paper-50)]">
-                    <td className="py-2 px-2 font-medium text-[var(--color-ink-800)]">{m.numero}</td>
-                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.clienteNome || "—"}</td>
-                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.empreendNome || "—"}</td>
-                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{fmtQtd(m.quantidade, m.unidade)}</td>
-                    <td className="py-2 px-2 text-[var(--color-ink-600)] whitespace-nowrap">{fmtData(m.dataExpedicao)}</td>
-                    <td className="py-2 px-2">
-                      <span className={`inline-flex rounded-lg px-2 py-0.5 text-xs font-medium ${STATUS_BADGE[m.status] || "bg-[var(--color-paper-100)] text-[var(--color-ink-600)]"}`}>{m.status}</span>
-                    </td>
-                    <td className="py-2 px-2">
-                      <div className="flex gap-1">
-                        <button onClick={() => baixarPdf(m)} className="rounded p-1 text-[var(--color-ink-400)] hover:bg-[var(--color-paper-100)] hover:text-[var(--color-ink-700)]" title="Baixar PDF do MTR"><FileDown size={14} /></button>
-                        {(m.status === "EMITIDO" || m.status === "PENDENTE") && (
-                          <button onClick={() => setModalReceber(m)} className="rounded p-1 text-[var(--color-ink-400)] hover:bg-green-50 hover:text-green-600" title="Receber"><PackageCheck size={14} /></button>
-                        )}
-                        {m.status !== "CANCELADO" && (
-                          <button onClick={() => setModalCancel(m)} className="rounded p-1 text-[var(--color-ink-400)] hover:bg-red-50 hover:text-red-600" title="Cancelar MTR"><Ban size={14} /></button>
-                        )}
-                        <button onClick={() => excluir(m.id)} className="rounded p-1 text-[var(--color-ink-400)] hover:bg-[var(--color-paper-100)] hover:text-[var(--color-ink-700)]" title="Excluir"><Trash2 size={14} /></button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <div className="mt-3 flex items-center justify-between text-xs text-[var(--color-ink-500)]">
-              <span>{filtrados.length} registro(s) — Página {paginaM + 1} de {totalPaginasM}</span>
-              <div className="flex gap-2">
-                <button disabled={paginaM === 0} onClick={() => setPaginaManifestos((p) => p - 1)} className="rounded px-2 py-1 disabled:opacity-40">Anterior</button>
-                <button disabled={paginaM === totalPaginasM - 1} onClick={() => setPaginaManifestos((p) => p + 1)} className="rounded px-2 py-1 disabled:opacity-40">Próxima</button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {modalReceber && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setModalReceber(null)}>
-          <div className="shadow-card w-full max-w-md rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5" onClick={(e) => e.stopPropagation()}>
-            <h3 className="font-display mb-3 font-semibold text-[var(--color-ink-900)]">Receber MTR {modalReceber.numero}</h3>
-            <div className="flex flex-col gap-3">
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-[var(--color-ink-500)]">Responsável pelo recebimento</label>
-                <input value={respNome} onChange={(e) => setRespNome(e.target.value)} placeholder="Nome do responsável..." className="w-full rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-[var(--color-ink-500)]">Cargo</label>
-                <input value={respCargo} onChange={(e) => setRespCargo(e.target.value)} placeholder="Cargo do responsável..." className="w-full rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
-              </div>
-            </div>
-            <div className="mt-4 flex justify-end gap-2">
-              <button onClick={() => setModalReceber(null)} className="rounded-lg bg-[var(--color-paper-100)] px-4 py-2 text-sm text-[var(--color-ink-700)]">Voltar</button>
-              <button onClick={receber} disabled={recebendo} className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
-                {recebendo ? <Loader2 size={16} className="animate-spin" /> : <PackageCheck size={16} />} Receber
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {modalCancel && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setModalCancel(null)}>
-          <div className="shadow-card w-full max-w-md rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5" onClick={(e) => e.stopPropagation()}>
-            <h3 className="font-display mb-3 font-semibold text-[var(--color-ink-900)]">Cancelar MTR {modalCancel.numero}</h3>
-            <p className="mb-3 text-sm text-[var(--color-ink-600)]">O cancelamento será enviado ao IMA/SC. Esta ação não pode ser desfeita.</p>
-            <textarea value={justificativaCancel} onChange={(e) => setJustificativaCancel(e.target.value)} rows={4} maxLength={500} placeholder="Ex.: emissão com dados incorretos..." className="w-full rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
-            <p className="mt-1 text-right text-xs text-[var(--color-ink-400)]">{justificativaCancel.length}/500</p>
-            <div className="mt-4 flex justify-end gap-2">
-              <button onClick={() => setModalCancel(null)} className="rounded-lg bg-[var(--color-paper-100)] px-4 py-2 text-sm text-[var(--color-ink-700)]">Voltar</button>
-              <button onClick={cancelar} disabled={cancelando} className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
-                {cancelando ? <Loader2 size={16} className="animate-spin" /> : <Ban size={16} />} Confirmar cancelamento
-              </button>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );
@@ -646,6 +227,13 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn; onChanged: ()
   const [carregando, setCarregando] = useState(false);
   const [toggle, setToggle] = useState("todos");
   const [pagina, setPagina] = useState(0);
+  const [modalCancel, setModalCancel] = useState<Manifesto | null>(null);
+  const [justificativaCancel, setJustificativaCancel] = useState("");
+  const [cancelando, setCancelando] = useState(false);
+  const [modalReceber, setModalReceber] = useState<Manifesto | null>(null);
+  const [respNome, setRespNome] = useState("");
+  const [respCargo, setRespCargo] = useState("");
+  const [recebendo, setRecebendo] = useState(false);
 
   const conexaoEfetiva = conexoes.some((c) => c.id === Number(conexaoId)) ? conexaoId : conexoes.length ? String(conexoes[0].id) : "";
 
@@ -694,6 +282,80 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn; onChanged: ()
       toast("Erro ao consultar", "error");
     } finally {
       setCarregando(false);
+    }
+  }
+
+  async function recarregarLista(id: string) {
+    try {
+      const res = await fetch("/api/mtr-ima/meus-mtrs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conexaoId: Number(id) }),
+      });
+      if (res.ok) setLista(await res.json());
+    } catch {
+      // silencioso
+    }
+  }
+
+  async function cancelar() {
+    if (!modalCancel) return;
+    if (!justificativaCancel.trim()) {
+      toast("Informe a justificativa do cancelamento", "error");
+      return;
+    }
+    setCancelando(true);
+    try {
+      const res = await fetch("/api/mtr-ima/cancelar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conexaoId: modalCancel.conexao.id, numero: modalCancel.numero, justificativa: justificativaCancel }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast(data.error || "Falha ao cancelar", "error");
+        return;
+      }
+      toast(data.mensagem || "MTR cancelado", "success");
+      setModalCancel(null);
+      setJustificativaCancel("");
+      await recarregarLista(String(modalCancel.conexao.id));
+      onChanged();
+    } catch {
+      toast("Erro ao cancelar", "error");
+    } finally {
+      setCancelando(false);
+    }
+  }
+
+  async function receber() {
+    if (!modalReceber) return;
+    if (!respNome.trim() || !respCargo.trim()) {
+      toast("Informe o responsável e o cargo do recebimento", "error");
+      return;
+    }
+    setRecebendo(true);
+    try {
+      const res = await fetch("/api/mtr-ima/receber", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conexaoId: modalReceber.conexao.id, numero: modalReceber.numero, responsavel: respNome, cargo: respCargo }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast(data.error || "Falha ao receber", "error");
+        return;
+      }
+      toast(data.mensagem || "MTR recebido", "success");
+      setModalReceber(null);
+      setRespNome("");
+      setRespCargo("");
+      await recarregarLista(String(modalReceber.conexao.id));
+      onChanged();
+    } catch {
+      toast("Erro ao receber", "error");
+    } finally {
+      setRecebendo(false);
     }
   }
 
@@ -807,7 +469,7 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn; onChanged: ()
                     <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Transportador</th>
                     <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Expedição</th>
                     <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Situação</th>
-                    <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">PDF</th>
+                    <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -828,7 +490,15 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn; onChanged: ()
                         )}
                       </td>
                       <td className="py-2 px-2">
-                        <button onClick={() => baixarPdf(m)} className="rounded p-1 text-[var(--color-ink-400)] hover:bg-[var(--color-paper-100)] hover:text-[var(--color-ink-700)]" title="Baixar PDF do MTR"><FileDown size={14} /></button>
+                        <div className="flex gap-1">
+                          <button onClick={() => baixarPdf(m)} className="rounded p-1 text-[var(--color-ink-400)] hover:bg-[var(--color-paper-100)] hover:text-[var(--color-ink-700)]" title="Baixar PDF do MTR"><FileDown size={14} /></button>
+                          {(m.status === "EMITIDO" || m.status === "PENDENTE") && (
+                            <button onClick={() => setModalReceber(m)} className="rounded p-1 text-[var(--color-ink-400)] hover:bg-green-50 hover:text-green-600" title="Receber"><PackageCheck size={14} /></button>
+                          )}
+                          {m.status !== "CANCELADO" && (
+                            <button onClick={() => setModalCancel(m)} className="rounded p-1 text-[var(--color-ink-400)] hover:bg-red-50 hover:text-red-600" title="Cancelar MTR"><Ban size={14} /></button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -860,6 +530,47 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn; onChanged: ()
           </>
         )}
       </div>
+
+      {modalReceber && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setModalReceber(null)}>
+          <div className="shadow-card w-full max-w-md rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-display mb-3 font-semibold text-[var(--color-ink-900)]">Receber MTR {modalReceber.numero}</h3>
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Responsável pelo recebimento</label>
+                <input value={respNome} onChange={(e) => setRespNome(e.target.value)} placeholder="Nome do responsável..." className="w-full rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-[var(--color-ink-500)]">Cargo</label>
+                <input value={respCargo} onChange={(e) => setRespCargo(e.target.value)} placeholder="Cargo do responsável..." className="w-full rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+              </div>
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <button onClick={() => setModalReceber(null)} className="rounded-lg bg-[var(--color-paper-100)] px-4 py-2 text-sm text-[var(--color-ink-700)]">Voltar</button>
+              <button onClick={receber} disabled={recebendo} className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
+                {recebendo ? <Loader2 size={16} className="animate-spin" /> : <PackageCheck size={16} />} Receber
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {modalCancel && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setModalCancel(null)}>
+          <div className="shadow-card w-full max-w-md rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-display mb-3 font-semibold text-[var(--color-ink-900)]">Cancelar MTR {modalCancel.numero}</h3>
+            <p className="mb-3 text-sm text-[var(--color-ink-600)]">O cancelamento será enviado ao IMA/SC. Esta ação não pode ser desfeita.</p>
+            <textarea value={justificativaCancel} onChange={(e) => setJustificativaCancel(e.target.value)} rows={4} maxLength={500} placeholder="Ex.: emissão com dados incorretos..." className="w-full rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
+            <p className="mt-1 text-right text-xs text-[var(--color-ink-400)]">{justificativaCancel.length}/500</p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button onClick={() => setModalCancel(null)} className="rounded-lg bg-[var(--color-paper-100)] px-4 py-2 text-sm text-[var(--color-ink-700)]">Voltar</button>
+              <button onClick={cancelar} disabled={cancelando} className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
+                {cancelando ? <Loader2 size={16} className="animate-spin" /> : <Ban size={16} />} Confirmar cancelamento
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
