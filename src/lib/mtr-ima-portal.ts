@@ -156,7 +156,7 @@ export async function loginPortal(conexaoId: number): Promise<SessaoPortal> {
   return sessao;
 }
 
-async function listarPerfil(sessao: SessaoPortal, def: { perfil: string; colunas: string[] }, di: string, df: string): Promise<LinhaPortal[]> {
+async function listarPerfil(sessao: SessaoPortal, def: (typeof PERFIS)[number], di: string, df: string): Promise<LinhaPortal[]> {
   const coletados: LinhaPortal[] = [];
   for (let inicio = 0; ; inicio += LOTE) {
     const q = new URLSearchParams({
