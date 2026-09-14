@@ -202,7 +202,7 @@ export default async function EmpreendimentoDetailPage(props: { params: Promise<
                     </Link>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
+                  <div>
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-[var(--color-paper-200)] text-[var(--color-ink-500)]">

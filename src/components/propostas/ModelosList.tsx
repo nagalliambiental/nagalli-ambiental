@@ -52,7 +52,7 @@ export default function ModelosList({ modelos }: { modelos: ModeloLinha[] }) {
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div>
       <table className="w-full text-sm">
         <thead className="bg-[var(--color-paper-50)]">
           <tr>

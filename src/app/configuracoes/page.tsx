@@ -407,7 +407,7 @@ function LogsTab() {
       ) : logs.length === 0 ? (
         <p className="text-sm text-[var(--color-ink-500)] py-8 text-center">Nenhum log encontrado.</p>
       ) : (
-        <div className="overflow-x-auto">
+        <div>
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[var(--color-paper-200)] bg-[var(--color-paper-50)] text-left text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-500)]">

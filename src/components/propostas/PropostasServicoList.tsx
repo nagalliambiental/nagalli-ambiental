@@ -111,7 +111,7 @@ export default function PropostasServicoList({ propostas, modeloNomes }: Props) 
           </button>
         )}
       </div>
-    <div className="overflow-x-auto rounded-lg border border-[var(--color-paper-200)]">
+    <div className="rounded-lg border border-[var(--color-paper-200)]">
       <table className="w-full text-sm">
         <thead className="bg-[var(--color-paper-50)]">
           <tr>

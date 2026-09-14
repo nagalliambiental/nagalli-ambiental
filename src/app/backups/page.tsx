@@ -41,8 +41,7 @@ export default async function BackupsPage() {
         </div>
       ) : (
         <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--color-paper-200)] bg-[var(--color-paper-50)] text-left text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-500)]">
                   <th className="px-3 py-3 font-medium">Data</th>
@@ -79,7 +78,6 @@ export default async function BackupsPage() {
                 ))}
               </tbody>
             </table>
-          </div>
         </div>
       )}
     </div>

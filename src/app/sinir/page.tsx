@@ -651,7 +651,7 @@ function PainelTab(props: {
             Nenhum manifesto ainda. Use a verificação acima para listar as cargas do período.
           </p>
         ) : (
-          <div className="overflow-x-auto">
+          <div>
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--color-paper-200)] text-left">
@@ -1187,7 +1187,7 @@ function MeusMtrsTab(props: {
           </div>
         ) : (
           <>
-          <div className="hidden overflow-x-auto md:block">
+          <div className="hidden md:block">
             <table className="w-full text-xs xl:text-sm">
               <thead>
                 <tr className="bg-[var(--color-paper-50)] text-left text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-500)]">
@@ -2264,7 +2264,7 @@ function abrirModalResiduo(indice?: number) {
           Nenhum resíduo cadastrado. Clique em &quot;Adicionar Resíduo&quot; para incluir o primeiro.
         </div>
       ) : (
-        <div className="overflow-x-auto">
+        <div>
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[var(--color-paper-200)] text-left">
@@ -2916,7 +2916,7 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtr[]; onChange
 
           <div className="md:col-span-2">
             <h3 className="font-display mb-2 mt-2 text-sm font-semibold text-[var(--color-ink-700)]">Resíduos do modelo</h3>
-            <div className="overflow-x-auto rounded-lg border border-[var(--color-paper-200)]">
+            <div className="rounded-lg border border-[var(--color-paper-200)]">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-[var(--color-paper-200)] bg-[var(--color-paper-50)] text-left">
@@ -2985,7 +2985,7 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtr[]; onChange
         {modelos.length === 0 ? (
           <p className="py-4 text-center text-sm text-[var(--color-ink-500)]">Nenhum modelo cadastrado. Você também pode salvar o formulário da aba &quot;Emitir MTR&quot; como modelo.</p>
         ) : (
-          <div className="overflow-x-auto">
+          <div>
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--color-paper-200)] text-left">
@@ -3276,7 +3276,7 @@ function ConexoesTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimen
         {conexoes.length === 0 ? (
           <p className="py-4 text-center text-sm text-[var(--color-ink-500)]">Nenhuma conexão cadastrada.</p>
         ) : (
-          <div className="overflow-x-auto">
+          <div>
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--color-paper-200)] text-left">

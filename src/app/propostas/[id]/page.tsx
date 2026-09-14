@@ -122,7 +122,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
                 <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-ink-700)] mb-3">
                   Itens da Proposta
                 </h3>
-                <div className="overflow-x-auto">
+                <div>
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-[var(--color-paper-200)] bg-[var(--color-paper-50)]">
@@ -158,7 +158,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
                 <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-ink-700)] mb-3">
                   Resumo do Investimento
                 </h3>
-                <div className="overflow-x-auto">
+                <div>
                   <table className="w-full text-sm">
                     <tbody className="divide-y divide-[var(--color-paper-100)]">
                       {resumo.map((linha, i) => (

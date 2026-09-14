@@ -75,8 +75,7 @@ export default async function TppPage() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--color-paper-200)] text-left text-[var(--color-ink-500)]">
                   <th className="px-5 py-3 font-medium">Cliente</th>
@@ -126,7 +125,6 @@ export default async function TppPage() {
                 })}
               </tbody>
             </table>
-          </div>
         )}
       </div>
     </div>

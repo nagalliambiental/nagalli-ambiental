@@ -584,7 +584,7 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn; onChanged: ()
           </p>
         ) : (
           <>
-            <div className="hidden overflow-x-auto md:block">
+            <div className="hidden md:block">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-[var(--color-paper-200)] text-left">
@@ -1103,7 +1103,7 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
         {residuos.length === 0 ? (
           <p className="py-4 text-center text-sm text-[var(--color-ink-500)]">Nenhum resíduo cadastrado. Clique em &quot;Adicionar resíduo&quot;.</p>
         ) : (
-          <div className="overflow-x-auto">
+          <div>
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--color-paper-200)] text-left">
@@ -1562,7 +1562,7 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtrIma[]; onCha
           {residuosEdicao.length === 0 ? (
             <p className="py-3 text-center text-sm text-[var(--color-ink-500)]">Nenhum resíduo no modelo.</p>
           ) : (
-            <div className="overflow-x-auto">
+            <div>
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-[var(--color-paper-200)] text-left">
@@ -1602,7 +1602,7 @@ function ModelosTab(props: { conexoes: Conexao[]; modelos: ModeloMtrIma[]; onCha
         {modelos.length === 0 ? (
           <p className="py-4 text-center text-sm text-[var(--color-ink-500)]">Nenhum modelo cadastrado. Importe do portal IMA/SC acima.</p>
         ) : (
-          <div className="overflow-x-auto">
+          <div>
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--color-paper-200)] text-left">
@@ -1880,7 +1880,7 @@ function ConexoesTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimen
         {conexoes.length === 0 ? (
           <p className="py-4 text-center text-sm text-[var(--color-ink-500)]">Nenhuma conexão cadastrada.</p>
         ) : (
-          <div className="overflow-x-auto">
+          <div>
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--color-paper-200)] text-left">

@@ -149,7 +149,7 @@ export function DataTable<T extends { id: number }>({
       )}
       {data.length > 0 ? (
         <>
-          <div className={renderMobileCard ? "hidden overflow-x-auto md:block" : "overflow-x-auto"}>
+          <div className={renderMobileCard ? "hidden md:block" : ""}>
             <table className="w-full text-sm">
               <colgroup>
                 <col className="w-[3%]" />

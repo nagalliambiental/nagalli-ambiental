@@ -148,7 +148,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
         </SectionCard>
 
         <SectionCard icon={FileText} title="Campos do modelo" subtitle="A chave (name) deve bater com a marcação {campo} no DOCX">
-          <div className="overflow-x-auto">
+          <div>
             <table className="w-full text-sm">
               <thead className="bg-[var(--color-paper-50)]">
                 <tr>

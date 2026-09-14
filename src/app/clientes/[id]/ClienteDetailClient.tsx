@@ -468,7 +468,7 @@ export function ClienteDetailClient({
               </Link>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div>
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-[var(--color-paper-200)] text-[var(--color-ink-500)]">
@@ -713,7 +713,7 @@ export function ClienteDetailClient({
               <p className="text-sm">Nenhum registro financeiro.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div>
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-[var(--color-paper-200)] text-[var(--color-ink-500)]">

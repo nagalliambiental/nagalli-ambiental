@@ -241,8 +241,7 @@ export default function DmrPage() {
         ) : registros.length === 0 ? (
           <p className="text-sm text-[var(--color-ink-500)]">Nenhum empreendimento cadastrado. Adicione um acima.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] table-fixed text-sm">
+          <table className="w-full table-fixed text-sm">
               <colgroup>
                 <col className="w-[4%]" />
                 <col className="w-[16%]" />
@@ -349,7 +348,6 @@ export default function DmrPage() {
                 ))}
               </tbody>
             </table>
-          </div>
         )}
       </div>
     </div>

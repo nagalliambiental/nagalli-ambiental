@@ -331,7 +331,7 @@ export default function PropostaServicoForm({ modelo, propostaId, revisaoAtual, 
               <p className="text-xs text-[var(--color-ink-500)]">Cálculo automático atualizado em tempo real</p>
             </div>
           </header>
-          <div className="overflow-x-auto">
+          <div>
             <table className="w-full text-sm">
               <tbody className="divide-y divide-[var(--color-paper-100)]">
                 {resumo.map((linha, i) => (
