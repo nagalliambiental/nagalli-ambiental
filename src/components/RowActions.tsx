@@ -44,22 +44,18 @@ export default function RowActions({ detailUrl, entity, entityName, endpoint, ed
   return (
     <>
       <div className="flex items-center gap-1">
-        <Link href={detailUrl} className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-[var(--color-brand-600)] hover:bg-[var(--color-brand-50)] transition-colors" title="Detalhes">
-          <Eye size={14} />
-          <span className="hidden sm:inline">Detalhes</span>
+        <Link href={detailUrl} className="inline-flex items-center rounded p-1.5 text-[var(--color-brand-600)] hover:bg-[var(--color-brand-50)] transition-colors" title="Ver detalhes">
+          <Eye size={15} />
         </Link>
         {editUrl !== undefined ? (
-          <Link href={editUrl} className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-[var(--color-ink-600)] hover:bg-[var(--color-paper-100)] transition-colors" title="Editar">
-            <Edit3 size={14} />
-            <span className="hidden sm:inline">Editar</span>
+          <Link href={editUrl} className="inline-flex items-center rounded p-1.5 text-[var(--color-ink-600)] hover:bg-[var(--color-paper-100)] transition-colors" title="Editar">
+            <Edit3 size={15} />
           </Link>
-        ) : <span className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-[var(--color-ink-300)] pointer-events-none">
-          <Edit3 size={14} />
-          <span className="hidden sm:inline">Editar</span>
+        ) : <span className="inline-flex items-center rounded p-1.5 text-[var(--color-ink-300)] pointer-events-none" title="Editar">
+          <Edit3 size={15} />
         </span>}
-        <button onClick={() => setConfirmDelete(true)} className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors" title="Excluir">
-          <Trash2 size={14} />
-          <span className="hidden sm:inline">Excluir</span>
+        <button onClick={() => setConfirmDelete(true)} className="inline-flex items-center rounded p-1.5 text-red-600 hover:bg-red-50 transition-colors" title="Excluir">
+          <Trash2 size={15} />
         </button>
       </div>
 
