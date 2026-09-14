@@ -322,7 +322,7 @@ export async function emitirManifesto(input: MtrImaManifestoInput): Promise<{ nu
       resumo: resumo || manifData.manifObservacao || null,
       quantidade: quantidade ?? null,
       unidade: unidade ?? null,
-      dataExpedicao: manifData.manifTransportadorDataExpedicao ? new Date(manifData.manifTransportadorDataExpedicao) : null,
+      dataExpedicao: manifData.manifTransportadorDataExpedicao ? new Date(`${String(manifData.manifTransportadorDataExpedicao).replace(/\D/g, "").replace(/(\d{4})(\d{2})(\d{2})/, "$1-$2-$3")}T12:00:00`) : null,
     },
   }).catch(() => {});
 
