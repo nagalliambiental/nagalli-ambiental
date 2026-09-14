@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { FileSignature } from "lucide-react";
 import { Topbar } from "@/components/Topbar";
+import { dataInputParaDate } from "@/lib/format";
 
 interface Empreendimento {
   id: number;
@@ -51,8 +52,8 @@ export default function NovoContratoPage() {
     const body: Record<string, unknown> = {
       clienteId: Number(form.clienteId),
       servicoProcesso: form.servicoProcesso,
-      dataAssinatura: new Date(form.dataAssinatura).toISOString(),
-      dataValidade: new Date(form.dataValidade).toISOString(),
+      dataAssinatura: dataInputParaDate(form.dataAssinatura)?.toISOString() || "",
+      dataValidade: dataInputParaDate(form.dataValidade)?.toISOString() || "",
       alertaRenovacaoDias: Number(form.alertaRenovacaoDias),
       empreendimentoId: form.empreendimentoId ? Number(form.empreendimentoId) : null,
     };

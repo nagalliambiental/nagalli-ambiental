@@ -9,6 +9,7 @@ import type { LucideIcon } from "lucide-react";
 import { useToast } from "@/components/Toast";
 import { useSession } from "next-auth/react";
 import { ehPrivilegiado } from "@/lib/perfil";
+import { dataInputParaIsoBR } from "@/lib/format";
 
 interface FieldConfig {
   name: string;
@@ -128,7 +129,7 @@ export default function EditEntityForm({
         let val: unknown = form[f.name];
         if (f.type === "checkbox") val = Boolean(val);
         else if (f.type === "number") val = val === "" || val == null ? null : Number(val);
-        else if (f.type === "date" && val) val = new Date(val as string).toISOString();
+        else if (f.type === "date" && val) val = dataInputParaIsoBR(String(val));
         else if (val === "" && !f.required) val = null;
         body[f.name] = val;
       }

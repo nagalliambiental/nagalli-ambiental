@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Topbar } from "@/components/Topbar";
 import { FolderKanban, Upload, Loader2, CheckCircle2, Search, Leaf } from "lucide-react";
+import { dataInputParaDate } from "@/lib/format";
 
 const TIPOS = [
   "Licença Prévia",
@@ -394,9 +395,9 @@ export default function NovoProcessoPage() {
         numLicenca: form.numLicenca || undefined,
         atividade: form.atividade || undefined,
         municipio: form.municipio || undefined,
-        validade: form.validade ? new Date(form.validade).toISOString() : undefined,
-        dataProtocolo: form.dataProtocolo ? new Date(form.dataProtocolo).toISOString() : undefined,
-        dataContato: form.dataContato ? new Date(form.dataContato).toISOString() : undefined,
+        validade: form.validade ? dataInputParaDate(form.validade)?.toISOString() : undefined,
+        dataProtocolo: form.dataProtocolo ? dataInputParaDate(form.dataProtocolo)?.toISOString() : undefined,
+        dataContato: form.dataContato ? dataInputParaDate(form.dataContato)?.toISOString() : undefined,
         alertaDias: Number(form.alertaDias) || 30,
         condicionantes: form.condicionantes || undefined,
         dadosEmpreendimento: form.dadosEmpreendimento || undefined,
@@ -409,7 +410,7 @@ export default function NovoProcessoPage() {
           tipoCompensacao: corte.tipoCompensacao || null,
           quantidadeMudas: corte.quantidadeMudas ? Number(corte.quantidadeMudas) : null,
           areaCompensacaoM2: corte.areaCompensacaoM2 ? Number(corte.areaCompensacaoM2) : null,
-          prazoCompensacao: corte.prazoCompensacao ? new Date(corte.prazoCompensacao).toISOString() : null,
+          prazoCompensacao: corte.prazoCompensacao ? dataInputParaDate(corte.prazoCompensacao)?.toISOString() : null,
         } : undefined,
       }),
     });

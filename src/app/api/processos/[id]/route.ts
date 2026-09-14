@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { logAuditoria } from "@/lib/audit";
+import { dataInputParaDate } from "@/lib/format";
 
 
 export async function GET(
@@ -80,10 +81,10 @@ export async function PUT(
   if (body.numLicenca !== undefined) data.numLicenca = body.numLicenca || null;
   if (body.atividade !== undefined) data.atividade = body.atividade || null;
   if (body.municipio !== undefined) data.municipio = body.municipio || null;
-  if (body.validade !== undefined) data.validade = body.validade ? new Date(body.validade) : null;
+  if (body.validade !== undefined) data.validade = body.validade ? dataInputParaDate(body.validade) : null;
   if (body.condicionantes !== undefined) data.condicionantes = body.condicionantes || null;
-  if (body.dataProtocolo !== undefined) data.dataProtocolo = body.dataProtocolo ? new Date(body.dataProtocolo) : null;
-  if (body.dataContato !== undefined) data.dataContato = body.dataContato ? new Date(body.dataContato) : null;
+  if (body.dataProtocolo !== undefined) data.dataProtocolo = body.dataProtocolo ? dataInputParaDate(body.dataProtocolo) : null;
+  if (body.dataContato !== undefined) data.dataContato = body.dataContato ? dataInputParaDate(body.dataContato) : null;
   if (body.alertaDias !== undefined) data.alertaDias = Number(body.alertaDias);
   if (body.status !== undefined) {
     data.status = body.status;

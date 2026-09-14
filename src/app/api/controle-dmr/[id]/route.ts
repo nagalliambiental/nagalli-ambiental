@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { dataInputParaDate } from "@/lib/format";
 
 
 const CAMPOS = ["t1Dmr", "t1Mtr", "t2Dmr", "t2Mtr", "t3Dmr", "t3Mtr", "t4Dmr", "t4Mtr"] as const;
@@ -26,7 +27,7 @@ export async function PATCH(
   }
   for (const campo of DATAS) {
     if (body[campo] !== undefined) {
-      data[campo] = body[campo] ? new Date(body[campo]) : null;
+      data[campo] = body[campo] ? dataInputParaDate(body[campo]) : null;
     }
   }
 

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requerPerfil } from "@/lib/perfil";
 import { logAuditoria } from "@/lib/audit";
+import { dataInputParaDate } from "@/lib/format";
 
 
 export async function GET(
@@ -46,8 +47,8 @@ export async function PUT(
       valor: body.valor !== undefined && body.valor !== null && body.valor !== "" ? Number(body.valor) : atual.valor,
       formaPagamento: body.formaPagamento ?? atual.formaPagamento,
       statusPagamento: body.statusPagamento ?? atual.statusPagamento,
-      dataVencimento: body.dataVencimento !== undefined ? (body.dataVencimento ? new Date(body.dataVencimento) : null) : atual.dataVencimento,
-      dataPagamento: body.dataPagamento !== undefined ? (body.dataPagamento ? new Date(body.dataPagamento) : null) : atual.dataPagamento,
+      dataVencimento: body.dataVencimento !== undefined ? (body.dataVencimento ? dataInputParaDate(body.dataVencimento) : null) : atual.dataVencimento,
+      dataPagamento: body.dataPagamento !== undefined ? (body.dataPagamento ? dataInputParaDate(body.dataPagamento) : null) : atual.dataPagamento,
       descricao: body.descricao !== undefined ? body.descricao ?? null : atual.descricao,
       clienteId: body.clienteId !== undefined && body.clienteId !== null && body.clienteId !== "" ? Number(body.clienteId) : atual.clienteId,
       ativo: body.ativo !== undefined ? Boolean(body.ativo) : atual.ativo,

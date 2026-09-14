@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAuditoria } from "@/lib/audit";
+import { dataInputParaDate } from "@/lib/format";
 
 export async function GET() {
   const session = await auth();
@@ -59,7 +60,7 @@ export async function POST(request: Request) {
         sistema: String(raw.sistema),
         numProtocolo: String(raw.numProtocolo),
         status: (raw.status as string) || "protocolado",
-        validade: raw.validade ? new Date(raw.validade) : null,
+        validade: raw.validade ? dataInputParaDate(raw.validade) : null,
         empreendimentoId: Number(raw.empreendimentoId),
         responsavelId: raw.responsavelId ? Number(raw.responsavelId) : null,
         observacoes: raw.observacoes || null,
@@ -68,8 +69,8 @@ export async function POST(request: Request) {
         municipio: raw.municipio || null,
         condicionantes: raw.condicionantes || null,
         dadosEmpreendimento: raw.dadosEmpreendimento || null,
-        dataProtocolo: raw.dataProtocolo ? new Date(raw.dataProtocolo) : null,
-        dataContato: raw.dataContato ? new Date(raw.dataContato) : null,
+        dataProtocolo: raw.dataProtocolo ? dataInputParaDate(raw.dataProtocolo) : null,
+        dataContato: raw.dataContato ? dataInputParaDate(raw.dataContato) : null,
         alertaDias: Number(raw.alertaDias) || 30,
       },
     });
@@ -83,7 +84,7 @@ export async function POST(request: Request) {
           tipoCompensacao: autorizacaoCorte.tipoCompensacao ?? null,
           quantidadeMudas: autorizacaoCorte.quantidadeMudas ?? null,
           areaCompensacaoM2: autorizacaoCorte.areaCompensacaoM2 ?? null,
-          prazoCompensacao: autorizacaoCorte.prazoCompensacao ? new Date(autorizacaoCorte.prazoCompensacao) : null,
+          prazoCompensacao: autorizacaoCorte.prazoCompensacao ? dataInputParaDate(autorizacaoCorte.prazoCompensacao) : null,
         },
       });
     }

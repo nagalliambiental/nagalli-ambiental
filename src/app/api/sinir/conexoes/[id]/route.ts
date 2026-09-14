@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { criptografar } from "@/lib/crypto";
+import { dataInputParaDate } from "@/lib/format";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -30,7 +31,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   if (unidade !== undefined) data.unidade = String(unidade);
   if (empreendimentoId !== undefined) data.empreendimentoId = empreendimentoId ? Number(empreendimentoId) : null;
   if (token !== undefined) data.token = criptografar(String(token));
-  if (venceEm !== undefined) data.venceEm = venceEm ? new Date(venceEm) : null;
+  if (venceEm !== undefined) data.venceEm = venceEm ? dataInputParaDate(venceEm) : null;
   if (ativo !== undefined) data.ativo = Boolean(ativo);
   data.modo = "real";
 

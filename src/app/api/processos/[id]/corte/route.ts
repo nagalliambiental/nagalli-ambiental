@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { logAuditoria } from "@/lib/audit";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
+import { dataInputParaDate } from "@/lib/format";
 
 export async function GET(
   _req: Request,
@@ -74,7 +75,7 @@ export async function PUT(
       tipoCompensacao: (tipoCompensacao as string) || null,
       quantidadeMudas: quantidadeMudas ? Number(quantidadeMudas) : null,
       areaCompensacaoM2: areaCompensacaoM2 ? Number(areaCompensacaoM2) : null,
-      prazoCompensacao: prazoCompensacao ? new Date(prazoCompensacao as string) : null,
+      prazoCompensacao: prazoCompensacao ? dataInputParaDate(prazoCompensacao as string) : null,
       statusCompensacao: (statusCompensacao as string) || "pendente",
       comprovante: comprovantePath,
     };

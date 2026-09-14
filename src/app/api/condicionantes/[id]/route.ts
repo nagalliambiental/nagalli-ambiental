@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { logAuditoria } from "@/lib/audit";
+import { dataInputParaDate } from "@/lib/format";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -20,8 +21,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   if (body?.prazo === null) {
     data.prazo = null;
   } else if (typeof body?.prazo === "string" && body.prazo) {
-    const d = new Date(body.prazo);
-    if (!isNaN(d.getTime())) data.prazo = d;
+    const d = dataInputParaDate(body.prazo);
+    if (d && !isNaN(d.getTime())) data.prazo = d;
   }
 
   if (Object.keys(data).length === 0) {

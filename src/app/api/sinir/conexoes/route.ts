@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { criptografar } from "@/lib/crypto";
+import { dataInputParaDate } from "@/lib/format";
 
 export async function GET() {
   const session = await auth();
@@ -62,7 +63,7 @@ export async function POST(req: NextRequest) {
       empreendimentoId: empreendimentoId ? Number(empreendimentoId) : null,
       token: criptografar(String(token)),
       modo: "real",
-      venceEm: venceEm ? new Date(venceEm) : null,
+      venceEm: venceEm ? dataInputParaDate(venceEm) : null,
     },
   });
 

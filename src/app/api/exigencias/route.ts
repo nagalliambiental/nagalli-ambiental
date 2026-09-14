@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAuditoria } from "@/lib/audit";
+import { dataInputParaDate } from "@/lib/format";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -42,7 +43,7 @@ export async function POST(request: Request) {
     const exigencia = await prisma.exigencia.create({
       data: {
         descricao: data.descricao,
-        prazo: data.prazo ? new Date(data.prazo) : new Date(),
+        prazo: data.prazo ? dataInputParaDate(data.prazo)! : new Date(),
         antecedenciaDias: data.antecedenciaDias !== undefined && data.antecedenciaDias !== "" ? Number(data.antecedenciaDias) : 7,
         cumprida: data.cumprida === true || data.cumprida === "true",
         processoId: Number(data.processoId),

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAuditoria } from "@/lib/audit";
+import { dataInputParaDate } from "@/lib/format";
 
 
 export async function GET(
@@ -45,9 +46,9 @@ const { id } = await params;
       descricao: body.descricao !== undefined ? body.descricao ?? null : atual.descricao,
       status: body.status ?? atual.status,
       prioridade: body.prioridade ?? atual.prioridade,
-      prazoFinal: body.prazoFinal !== undefined ? (body.prazoFinal ? new Date(body.prazoFinal) : null) : atual.prazoFinal,
+      prazoFinal: body.prazoFinal !== undefined ? (body.prazoFinal ? dataInputParaDate(body.prazoFinal) : null) : atual.prazoFinal,
       alertaPrazoFinal: body.alertaPrazoFinal !== undefined ? Number(body.alertaPrazoFinal) : atual.alertaPrazoFinal,
-      dataLimite: body.dataLimite !== undefined ? (body.dataLimite ? new Date(body.dataLimite) : null) : atual.dataLimite,
+      dataLimite: body.dataLimite !== undefined ? (body.dataLimite ? dataInputParaDate(body.dataLimite) : null) : atual.dataLimite,
       alertaDataLimite: body.alertaDataLimite !== undefined ? Number(body.alertaDataLimite) : atual.alertaDataLimite,
       responsavelId: body.responsavelId !== undefined && body.responsavelId !== null && body.responsavelId !== "" ? Number(body.responsavelId) : atual.responsavelId,
       empreendimentoId: body.empreendimentoId !== undefined ? (body.empreendimentoId ? Number(body.empreendimentoId) : null) : atual.empreendimentoId,

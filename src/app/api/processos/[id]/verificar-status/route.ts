@@ -58,7 +58,7 @@ export async function POST(_req: NextRequest, { params }: Params) {
     if (dados.validade) {
       const m = dados.validade.match(/(\d{2})\/(\d{2})\/(\d{4})/);
       if (m) {
-        const dt = new Date(`${m[3]}-${m[2]}-${m[1]}`);
+        const dt = new Date(`${m[3]}-${m[2]}-${m[1]}T12:00:00`);
         if (!isNaN(dt.getTime())) atualizacoes.validade = dt;
       }
     }

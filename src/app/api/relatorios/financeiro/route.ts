@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { createNagalliReport, type NagalliCell } from "@/lib/report-layout";
 import { buildXlsx, xlsxResponse } from "@/lib/report-xlsx";
+import { dataInputParaDate } from "@/lib/format";
 
 const statusLabels: Record<string, string> = {
   pendente: "Pendente", pago: "Pago", atrasado: "Atrasado", cancelado: "Cancelado",
@@ -28,8 +29,8 @@ export async function GET(request: Request) {
   if (clienteId) where.clienteId = Number(clienteId);
   if (dataInicio || dataFim) {
     where.dataVencimento = {};
-    if (dataInicio) where.dataVencimento.gte = new Date(dataInicio);
-    if (dataFim) where.dataVencimento.lte = new Date(dataFim);
+    if (dataInicio) where.dataVencimento.gte = dataInputParaDate(dataInicio)!;
+    if (dataFim) where.dataVencimento.lte = dataInputParaDate(`${dataFim}T23:59:59.999-03:00`)!;
   }
 
   const registros = await prisma.financeiro.findMany({
@@ -65,8 +66,8 @@ export async function GET(request: Request) {
     r.tipoCobranca || "—",
     { text: r.valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }), align: "right" },
     { text: statusLabels[r.statusPagamento] || r.statusPagamento, bold: true, color: statusColor[r.statusPagamento] },
-    { text: r.dataVencimento ? new Date(r.dataVencimento).toLocaleDateString("pt-BR") : "—", align: "center" },
-    { text: r.dataPagamento ? new Date(r.dataPagamento).toLocaleDateString("pt-BR") : "—", align: "center" },
+    { text: r.dataVencimento ? new Date(r.dataVencimento).toLocaleDateString("pt-BR", { timeZone: "UTC" }) : "—", align: "center" },
+    { text: r.dataPagamento ? new Date(r.dataPagamento).toLocaleDateString("pt-BR", { timeZone: "UTC" }) : "—", align: "center" },
   ]);
 
   const summary = [

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Topbar } from "@/components/Topbar";
 import { DollarSign } from "lucide-react";
+import { dataInputParaDate } from "@/lib/format";
 
 interface Cliente {
   id: number;
@@ -38,7 +39,7 @@ export default function NovaCobrancaPage() {
       ...form,
       valor: parseFloat(form.valor),
       clienteId: Number(form.clienteId),
-      dataVencimento: form.dataVencimento ? new Date(form.dataVencimento).toISOString() : undefined,
+      dataVencimento: form.dataVencimento ? dataInputParaDate(form.dataVencimento)?.toISOString() : undefined,
     };
     if (quitado) {
       body.statusPagamento = "pago";

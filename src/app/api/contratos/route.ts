@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requerPerfil } from "@/lib/perfil";
 import { logAuditoria } from "@/lib/audit";
+import { dataInputParaDate } from "@/lib/format";
 
 export async function GET() {
   const { erro } = await requerPerfil(["socio", "admin"]);
@@ -36,8 +37,8 @@ export async function POST(request: Request) {
       data: {
         clienteId: Number(body.clienteId),
         servicoProcesso: String(body.servicoProcesso),
-        dataAssinatura: new Date(body.dataAssinatura),
-        dataValidade: new Date(body.dataValidade),
+        dataAssinatura: dataInputParaDate(body.dataAssinatura)!,
+        dataValidade: dataInputParaDate(body.dataValidade)!,
         alertaRenovacaoDias: Number(body.alertaRenovacaoDias) || 60,
         empreendimentoId: body.empreendimentoId ? Number(body.empreendimentoId) : null,
       },

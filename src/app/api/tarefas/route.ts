@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAuditoria } from "@/lib/audit";
+import { dataInputParaDate } from "@/lib/format";
 
 export async function GET() {
   const session = await auth();
@@ -35,9 +36,9 @@ export async function POST(request: Request) {
         descricao: data.descricao ?? null,
         status: data.status ?? "pendente",
         prioridade: data.prioridade ?? "media",
-        prazoFinal: data.prazoFinal ? new Date(data.prazoFinal) : null,
+        prazoFinal: data.prazoFinal ? dataInputParaDate(data.prazoFinal) : null,
         alertaPrazoFinal: Number(data.alertaPrazoFinal ?? 30),
-        dataLimite: data.dataLimite ? new Date(data.dataLimite) : null,
+        dataLimite: data.dataLimite ? dataInputParaDate(data.dataLimite) : null,
         alertaDataLimite: Number(data.alertaDataLimite ?? 30),
         responsavelId: Number(data.responsavelId),
         empreendimentoId: data.empreendimentoId ? Number(data.empreendimentoId) : null,

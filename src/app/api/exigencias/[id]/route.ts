@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { logAuditoria } from "@/lib/audit";
+import { dataInputParaDate } from "@/lib/format";
 
 
 export async function GET(
@@ -52,7 +53,7 @@ export async function PUT(
     where: { id: Number(id) },
     data: {
       descricao: body.descricao ?? atual.descricao,
-      prazo: body.prazo ? new Date(body.prazo) : atual.prazo,
+      prazo: body.prazo ? dataInputParaDate(body.prazo)! : atual.prazo,
       antecedenciaDias: body.antecedenciaDias !== undefined ? Number(body.antecedenciaDias) : atual.antecedenciaDias,
       cumprida: body.cumprida !== undefined ? cumprida : atual.cumprida,
       processoId: body.processoId !== undefined ? Number(body.processoId) : atual.processoId,
