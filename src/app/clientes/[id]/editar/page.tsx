@@ -34,7 +34,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
         { name: "apelido", label: "Apelido", type: "text", required: true },
         { name: "razaoSocial", label: "Razão Social", type: "text", required: true },
         { name: "nomeFantasia", label: "Nome Fantasia", type: "text" },
-        { name: "cnpj", label: "CNPJ", type: "text", required: true, search: "cnpj" },
+        { name: "cnpj", label: "CNPJ/CPF", type: "text", required: true, search: "cnpj" },
         { name: "telefone", label: "Telefone", type: "text", required: true },
         { name: "email", label: "Email", type: "text", required: true },
         { name: "rua", label: "Rua", type: "text" },

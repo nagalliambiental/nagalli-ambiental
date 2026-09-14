@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Building2, Loader2, X, ChevronLeft, Search, Users, MapPin, Settings2, User } from "lucide-react";
 import { useToast } from "@/components/Toast";
+import { mascararCpf, mascararCnpj } from "@/lib/cliente-cnpj";
 
 interface ClienteFormData {
   apelido: string;
@@ -358,13 +359,13 @@ export default function NovoClientePage() {
               <input
                 value={form.cnpj}
                 onChange={(e) => {
-                  const valor = e.target.value.replace(/\D/g, "");
+                  const valor = mascararCpf(e.target.value);
                   setForm((f) => ({ ...f, cnpj: valor }));
                   setCnpjDuplicado(false);
                 }}
                 className={inputCls}
                 placeholder="000.000.000-00"
-                maxLength={11}
+                maxLength={14}
                 required
               />
             ) : (
@@ -372,14 +373,14 @@ export default function NovoClientePage() {
                 <input
                   value={form.cnpj}
                   onChange={(e) => {
-                    const valor = e.target.value.replace(/\D/g, "");
+                    const valor = mascararCnpj(e.target.value);
                     setForm((f) => ({ ...f, cnpj: valor }));
                     setCnpjDuplicado(false);
-                    if (valor.length === 14) void verificarCnpjDuplicado();
+                    if (valor.replace(/\D/g, "").length === 14) void verificarCnpjDuplicado();
                   }}
                   className={inputCls}
-                  placeholder="00000000000000"
-                  maxLength={14}
+                  placeholder="00.000.000/0000-00"
+                  maxLength={18}
                   required
                 />
                 <button
@@ -529,10 +530,10 @@ export default function NovoClientePage() {
             <label className={labelCls}>CPF do Resp. Tecnico</label>
             <input
               value={form.responsavelTecnicoCpf}
-              onChange={(e) => setForm((f) => ({ ...f, responsavelTecnicoCpf: e.target.value.replace(/\D/g, "") }))}
+              onChange={(e) => setForm((f) => ({ ...f, responsavelTecnicoCpf: mascararCpf(e.target.value) }))}
               className={inputCls}
               placeholder="000.000.000-00"
-              maxLength={11}
+              maxLength={14}
             />
           </div>
           <div>

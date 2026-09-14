@@ -10,6 +10,7 @@ import { useToast } from "@/components/Toast";
 import { useSession } from "next-auth/react";
 import { ehPrivilegiado } from "@/lib/perfil";
 import { dataInputParaIsoBR } from "@/lib/format";
+import { mascararCpfCnpj } from "@/lib/cliente-cnpj";
 
 interface FieldConfig {
   name: string;
@@ -157,18 +158,9 @@ export default function EditEntityForm({
     }
   }
 
-  function formatCNPJ(raw: string): string {
-    const digits = raw.replace(/\D/g, "").slice(0, 14);
-    return digits
-      .replace(/^(\d{2})(\d)/, "$1.$2")
-      .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
-      .replace(/\.(\d{3})(\d)/, ".$1/$2")
-      .replace(/(\d{4})(\d)/, "$1-$2");
-  }
-
   function setField(name: string, value: string | boolean) {
     const field = fields.find((f) => f.name === name);
-    const masked = field?.search === "cnpj" && typeof value === "string" ? formatCNPJ(value) : value;
+    const masked = field?.search === "cnpj" && typeof value === "string" ? mascararCpfCnpj(value) : value;
     setForm((prev) => ({ ...prev, [name]: masked }));
     setDirty(true);
     if (fieldErrors[name]) {
@@ -193,7 +185,7 @@ export default function EditEntityForm({
     if (!raw || typeof raw !== "string") return;
     const clean = raw.replace(/\D/g, "");
     if (field.search === "cep" && clean.length !== 8) return toast("CEP inválido (8 dígitos)", "error");
-    if (field.search === "cnpj" && clean.length !== 14) return toast("CNPJ inválido (14 dígitos)", "error");
+    if (field.search === "cnpj" && clean.length !== 14 && clean.length !== 11) return toast("CNPJ/CPF inválido (11 ou 14 dígitos)", "error");
     try {
       if (field.search === "sia") {
         if (!clean) return toast("Informe o nº do protocolo", "error");

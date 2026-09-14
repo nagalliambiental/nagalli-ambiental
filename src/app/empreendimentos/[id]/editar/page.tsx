@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import EditEntityForm from "@/components/EditEntityForm";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { mascararCpfCnpj } from "@/lib/cliente-cnpj";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +40,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
         { name: "apelido", label: "Apelido", type: "text", required: true },
         {
           name: "clienteId", label: "Cliente", type: "select", required: true,
-          options: clientes.map((c) => ({ value: String(c.id), label: c.cnpj ? `${c.apelido} — ${c.cnpj}` : c.apelido })),
+          options: clientes.map((c) => ({ value: String(c.id), label: c.cnpj ? `${c.apelido} — ${mascararCpfCnpj(c.cnpj)}` : c.apelido })),
         },
         { name: "cnpj", label: "CNPJ", type: "text" },
         { name: "unidadeSinir", label: "Unidade do SINIR", type: "text" },

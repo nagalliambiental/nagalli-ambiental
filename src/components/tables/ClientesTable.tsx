@@ -6,6 +6,7 @@ import RowActions from "@/components/RowActions";
 import { ChevronRight, ChevronDown, MapPin, FileText, ChevronDown as ChevronDownIcon } from "lucide-react";
 import Link from "next/link";
 import { TEMPLATES } from "@/lib/templates";
+import { mascararCpfCnpj } from "@/lib/cliente-cnpj";
 
 interface ClienteData {
   id: number;
@@ -50,7 +51,7 @@ export function ClientesTable({ data }: { data: ClienteData[] }) {
       ),
     },
     { header: "Razão Social", sortable: true, sortKey: "razaoSocial", hideBelow: "md", render: (c) => <span className="block max-w-[220px] truncate" title={c.razaoSocial}>{c.razaoSocial}</span> },
-    { header: "CNPJ", sortable: true, sortKey: "cnpj", hideBelow: "md", render: (c) => c.cnpj },
+    { header: "CNPJ/CPF", sortable: true, sortKey: "cnpj", hideBelow: "md", render: (c) => <span className="font-mono text-xs">{mascararCpfCnpj(c.cnpj)}</span> },
     { header: "Telefone", hideBelow: "xl", render: (c) => c.telefone },
     { header: "Empreendimentos", headerClassName: "text-center", className: "text-center", hideBelow: "xl", render: (c) => c._count.empreendimentos },
     { header: "Ações", render: (c) => <RowActions detailUrl={`/clientes/${c.id}`} editUrl={`/clientes/${c.id}/editar`} entity="cliente" entityName="Cliente" endpoint={`/api/clientes/${c.id}`} /> },

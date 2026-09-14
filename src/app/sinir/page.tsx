@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { Topbar } from "@/components/Topbar";
 import { Truck, RefreshCw, Send, Link2, Loader2, CheckCircle2, AlertTriangle, XCircle, FileDown, Trash2, Ban, ShieldCheck, Clock, Plus, X, Pencil, PackagePlus, Bookmark, Save, Mail, FileText } from "lucide-react";
 import { useToast } from "@/components/Toast";
+import { mascararCpfCnpj } from "@/lib/cliente-cnpj";
 
 type ToastFn = (message: string, type?: "success" | "error" | "info" | "warning") => void;
 
@@ -3291,7 +3292,7 @@ function ConexoesTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimen
                 {conexoes.map((c) => (
                   <tr key={c.id} className="border-b border-[var(--color-paper-100)] hover:bg-[var(--color-paper-50)]">
                     <td className="py-2 px-2 font-medium text-[var(--color-ink-800)]">{c.nome}</td>
-                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{c.cnpj}</td>
+                    <td className="py-2 px-2 text-[var(--color-ink-600)]">{mascararCpfCnpj(c.cnpj)}</td>
                     <td className="py-2 px-2 text-[var(--color-ink-600)]">{c.unidade}</td>
                     <td className="py-2 px-2 text-[var(--color-ink-600)]">
                       {c.temToken ? <span className="flex items-center gap-1 text-xs text-green-700"><CheckCircle2 size={12} /> token salvo</span> : <span className="text-xs text-[var(--color-ink-400)]">sem token</span>}

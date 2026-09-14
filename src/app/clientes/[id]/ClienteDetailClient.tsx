@@ -14,6 +14,7 @@ import {
 import Link from "next/link";
 import { useToast } from "@/components/Toast";
 import { formatarEndereco } from "@/lib/endereco";
+import { mascararCpfCnpj } from "@/lib/cliente-cnpj";
 import { TEMPLATES } from "@/lib/templates";
 import { HistoricoTab } from "@/components/HistoricoTab";
 import { AcessosTab } from "@/components/AcessosTab";
@@ -377,7 +378,7 @@ export function ClienteDetailClient({
                 </div>
                 <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
                   <FileText size={16} />
-                  <span className="font-mono">{cliente.cnpj}</span>
+                  <span className="font-mono">{mascararCpfCnpj(cliente.cnpj)}</span>
                 </div>
               </div>
             </div>

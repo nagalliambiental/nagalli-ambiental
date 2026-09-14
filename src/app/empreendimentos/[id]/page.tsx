@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { logAuditoria } from "@/lib/audit";
 import { ehPrivilegiado } from "@/lib/perfil";
+import { mascararCpfCnpj } from "@/lib/cliente-cnpj";
 import { Topbar } from "@/components/Topbar";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -127,7 +128,7 @@ export default async function EmpreendimentoDetailPage(props: { params: Promise<
                     </div>
                     {emp.cnpj && <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
                       <FileText size={16} />
-                      <span className="font-mono">{emp.cnpj}</span>
+                      <span className="font-mono">{mascararCpfCnpj(emp.cnpj)}</span>
                     </div>}
                     {emp.unidadeSinir && <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
                       <Hash size={16} />
