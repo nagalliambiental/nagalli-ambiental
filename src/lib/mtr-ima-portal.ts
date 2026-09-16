@@ -317,9 +317,17 @@ export async function consultarManifestoPortal(conexaoId: number, numero: string
 /* ──────────────── Download do PDF ──────────────── */
 
 export async function baixarManifestoPdfPortal(conexaoId: number, numero: string): Promise<{ buffer: Buffer; filename: string }> {
+  const sessao = await loginPortal(conexaoId);
+  return baixarManifestoPdfPortalComSessao(sessao, conexaoId, numero);
+}
+
+export async function baixarManifestoPdfPortalComSessao(
+  sessao: SessaoPortal,
+  conexaoId: number,
+  numero: string
+): Promise<{ buffer: Buffer; filename: string }> {
   const num = String(numero || "").trim();
   if (!num) throw new MtrImaError("Número do MTR é obrigatório", 400);
-  const sessao = await loginPortal(conexaoId);
   const res = await fetchPortal(
     sessao,
     `/ControllerServlet?acao=relatorio&nomeRelatorio=manifesto&manifesto=${encodeURIComponent(num)}&condicao=N`,

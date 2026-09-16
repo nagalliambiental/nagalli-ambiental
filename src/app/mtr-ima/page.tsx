@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { Topbar } from "@/components/Topbar";
-import { Truck, RefreshCw, Send, Link2, Loader2, CheckCircle2, FileDown, Trash2, Ban, Plus, X, PackagePlus, PackageCheck, FileText, Save, Pencil } from "lucide-react";
+import { Truck, RefreshCw, Send, Link2, Loader2, CheckCircle2, FileDown, Trash2, Ban, Plus, X, PackagePlus, PackageCheck, FileText, Save, Pencil, FolderArchive } from "lucide-react";
 import { useToast } from "@/components/Toast";
 import { mascararCpf, mascararCpfCnpj } from "@/lib/cliente-cnpj";
 
@@ -506,6 +506,40 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn; onChanged: ()
     }
   }
 
+  async function baixarTodosZip() {
+    if (lista.length === 0) {
+      toast("Nenhum MTR para baixar", "warning");
+      return;
+    }
+    setCarregando(true);
+    try {
+      const res = await fetch("/api/mtr-ima/exportar-zip", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: lista.map((m) => m.id) }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        toast(data?.error || "Falha ao baixar o lote em ZIP", "error");
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "mtr-ima.zip";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast(`Lote gerado com ${lista.length} MTR(s)`, "success");
+    } catch {
+      toast("Falha ao baixar o lote em ZIP", "error");
+    } finally {
+      setCarregando(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
@@ -561,7 +595,17 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn; onChanged: ()
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">MTRs encontrados ({visiveisToggle.length})</h2>
-          <div className="flex gap-1 text-xs">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={baixarTodosZip}
+              disabled={carregando || lista.length === 0}
+              className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
+              title="Baixar todos os MTRs da lista em um arquivo ZIP"
+            >
+              {carregando ? <Loader2 size={14} className="animate-spin" /> : <FolderArchive size={14} />}
+              {carregando ? "Baixando..." : `Baixar todos (ZIP) — ${visiveisToggle.length}`}
+            </button>
+            <div className="flex gap-1 text-xs">
             {[
               { key: "todos", label: `Todos (${lista.length})` },
               { key: "pendentes", label: `Sem recebimento (${semRecebimento.length})` },
@@ -574,6 +618,7 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn; onChanged: ()
                 {t.label}
               </button>
             ))}
+          </div>
           </div>
         </div>
         {visiveis.length === 0 ? (

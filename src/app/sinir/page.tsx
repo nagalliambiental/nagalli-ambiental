@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { Topbar } from "@/components/Topbar";
-import { Truck, RefreshCw, Send, Link2, Loader2, CheckCircle2, AlertTriangle, XCircle, FileDown, Trash2, Ban, ShieldCheck, Clock, Plus, X, Pencil, PackagePlus, Bookmark, Save, Mail, FileText } from "lucide-react";
+import { Truck, RefreshCw, Send, Link2, Loader2, CheckCircle2, AlertTriangle, XCircle, FileDown, Trash2, Ban, ShieldCheck, Clock, Plus, X, Pencil, PackagePlus, Bookmark, Save, Mail, FileText, FolderArchive } from "lucide-react";
 import { useToast } from "@/components/Toast";
 import { mascararCpfCnpj } from "@/lib/cliente-cnpj";
 
@@ -368,6 +368,7 @@ function PainelTab(props: {
 }) {
   const { conexoes, empreendimentos, manifestos, loading, certificados, pendentes, cancelados, filtro, setFiltro, onVerificar, toast } = props;
   const [verificando, setVerificando] = useState(false);
+  const [baixandoZip, setBaixandoZip] = useState(false);
   const [paginaManifestos, setPaginaManifestos] = useState(0);
   const totalPaginasM = Math.max(1, Math.ceil(manifestos.length / POR_PAGINA));
   const paginaM = Math.min(paginaManifestos, totalPaginasM - 1);
@@ -457,6 +458,41 @@ function PainelTab(props: {
   async function baixarCdf(m: Manifesto) {
     toast("Consultando o CDF no SINIR...", "info");
     await baixarArquivo("cdf", m);
+  }
+
+  async function baixarTodosZip() {
+    const alvo = manifestos;
+    if (alvo.length === 0) {
+      toast("Nenhum MTR para baixar", "warning");
+      return;
+    }
+    setBaixandoZip(true);
+    try {
+      const res = await fetch("/api/sinir/exportar-zip", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: alvo.map((m) => m.id) }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        toast(data?.error || "Falha ao baixar o lote em ZIP", "error");
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "mtr-sinir.zip";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast(`Lote gerado com ${alvo.length} MTR(s)`, "success");
+    } catch {
+      toast("Falha ao baixar o lote em ZIP", "error");
+    } finally {
+      setBaixandoZip(false);
+    }
   }
 
   function abrirModalCancelamento(m: Manifesto) {
@@ -627,9 +663,18 @@ function PainelTab(props: {
       </div>
 
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Manifestos</h2>
-          <div className="flex items-center gap-2 text-xs">
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <button
+              onClick={baixarTodosZip}
+              disabled={baixandoZip || manifestos.length === 0}
+              className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-3 py-1.5 font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
+              title="Baixar todos os MTRs da lista em um arquivo ZIP"
+            >
+              {baixandoZip ? <Loader2 size={14} className="animate-spin" /> : <FolderArchive size={14} />}
+              {baixandoZip ? "Baixando..." : `Baixar todos (ZIP) — ${manifestos.length}`}
+            </button>
             <button onClick={() => { setFiltro("todos"); setPaginaManifestos(0); }} className={`rounded-full px-3 py-1 font-medium ${filtro === "todos" ? "bg-[var(--color-brand-500)] text-white" : "bg-[var(--color-paper-100)] text-[var(--color-ink-600)]"}`}>
               Todos ({certificados + pendentes + cancelados})
             </button>
@@ -823,6 +868,7 @@ function MeusMtrsTab(props: {
   const [conexaoId, setConexaoId] = useState("");
   const [gerandoAlerta, setGerandoAlerta] = useState(false);
   const [consultando, setConsultando] = useState(false);
+  const [baixandoZip, setBaixandoZip] = useState(false);
   const [lista, setLista] = useState<Manifesto[]>([]);
   const [modalNotificar, setModalNotificar] = useState(false);
   const [contatosNotif, setContatosNotif] = useState<ContatoEmpreendimento[]>([]);
@@ -905,6 +951,40 @@ function MeusMtrsTab(props: {
       URL.revokeObjectURL(url);
     } catch {
       toast(`Falha ao baixar o ${prefixo}`, "error");
+    }
+  }
+
+  async function baixarTodosZip() {
+    if (lista.length === 0) {
+      toast("Nenhum MTR para baixar", "warning");
+      return;
+    }
+    setBaixandoZip(true);
+    try {
+      const res = await fetch("/api/sinir/exportar-zip", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: lista.map((m) => m.id) }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        toast(data?.error || "Falha ao baixar o lote em ZIP", "error");
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "mtr-sinir.zip";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast(`Lote gerado com ${lista.length} MTR(s)`, "success");
+    } catch {
+      toast("Falha ao baixar o lote em ZIP", "error");
+    } finally {
+      setBaixandoZip(false);
     }
   }
 
@@ -1151,7 +1231,17 @@ function MeusMtrsTab(props: {
             MTRs encontrados
             <span className="rounded-full bg-[var(--color-paper-100)] px-2 py-0.5 text-xs font-semibold tabular-nums text-[var(--color-ink-600)]">{lista.length}</span>
           </h2>
-          <div className="flex rounded-lg border border-[var(--color-paper-200)] bg-[var(--color-paper-50)] p-1 text-xs font-medium">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={baixarTodosZip}
+              disabled={baixandoZip || lista.length === 0}
+              className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
+              title="Baixar todos os MTRs da lista em um arquivo ZIP"
+            >
+              {baixandoZip ? <Loader2 size={14} className="animate-spin" /> : <FolderArchive size={14} />}
+              {baixandoZip ? "Baixando..." : `Baixar todos (ZIP) — ${lista.length}`}
+            </button>
+            <div className="flex rounded-lg border border-[var(--color-paper-200)] bg-[var(--color-paper-50)] p-1 text-xs font-medium">
             <button
               onClick={() => { setFiltro("todos"); setPaginaLista(0); }}
               className={`rounded-md px-3 py-1.5 transition-brand ${filtro === "todos" ? "bg-white text-[var(--color-ink-900)] shadow-sm" : "text-[var(--color-ink-500)] hover:text-[var(--color-ink-700)]"}`}
@@ -1164,6 +1254,7 @@ function MeusMtrsTab(props: {
             >
               Sem recebimento ({salvos.length})
             </button>
+          </div>
           </div>
         </div>
 
