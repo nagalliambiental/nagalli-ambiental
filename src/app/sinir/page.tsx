@@ -3236,7 +3236,7 @@ function ConexoesTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimen
         return;
       }
       toast("Conexão real cadastrada (token criptografado)", "success");
-      setForm({ nome: "", cnpj: "", unidade: "", empreendimentoId: "", token: "", modo: "mock", venceEm: "" });
+      setForm({ nome: "", cnpj: "", unidade: "", empreendimentoId: "", token: "", modo: "real", venceEm: "" });
       onChanged();
     } catch {
       toast("Erro ao salvar conexão", "error");
