@@ -368,7 +368,6 @@ function PainelTab(props: {
 }) {
   const { conexoes, empreendimentos, manifestos, loading, certificados, pendentes, cancelados, filtro, setFiltro, onVerificar, toast } = props;
   const [verificando, setVerificando] = useState(false);
-  const [baixandoZip, setBaixandoZip] = useState(false);
   const [paginaManifestos, setPaginaManifestos] = useState(0);
   const totalPaginasM = Math.max(1, Math.ceil(manifestos.length / POR_PAGINA));
   const paginaM = Math.min(paginaManifestos, totalPaginasM - 1);
@@ -458,41 +457,6 @@ function PainelTab(props: {
   async function baixarCdf(m: Manifesto) {
     toast("Consultando o CDF no SINIR...", "info");
     await baixarArquivo("cdf", m);
-  }
-
-  async function baixarTodosZip() {
-    const alvo = manifestos;
-    if (alvo.length === 0) {
-      toast("Nenhum MTR para baixar", "warning");
-      return;
-    }
-    setBaixandoZip(true);
-    try {
-      const res = await fetch("/api/sinir/exportar-zip", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: alvo.map((m) => m.id) }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        toast(data?.error || "Falha ao baixar o lote em ZIP", "error");
-        return;
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "mtr-sinir.zip";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      toast(`Lote gerado com ${alvo.length} MTR(s)`, "success");
-    } catch {
-      toast("Falha ao baixar o lote em ZIP", "error");
-    } finally {
-      setBaixandoZip(false);
-    }
   }
 
   function abrirModalCancelamento(m: Manifesto) {
@@ -666,15 +630,6 @@ function PainelTab(props: {
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Manifestos</h2>
           <div className="flex flex-wrap items-center gap-2 text-xs">
-            <button
-              onClick={baixarTodosZip}
-              disabled={baixandoZip || manifestos.length === 0}
-              className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-3 py-1.5 font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
-              title="Baixar todos os MTRs da lista em um arquivo ZIP"
-            >
-              {baixandoZip ? <Loader2 size={14} className="animate-spin" /> : <FolderArchive size={14} />}
-              {baixandoZip ? "Baixando..." : `Baixar todos (ZIP) — ${manifestos.length}`}
-            </button>
             <button onClick={() => { setFiltro("todos"); setPaginaManifestos(0); }} className={`rounded-full px-3 py-1 font-medium ${filtro === "todos" ? "bg-[var(--color-brand-500)] text-white" : "bg-[var(--color-paper-100)] text-[var(--color-ink-600)]"}`}>
               Todos ({certificados + pendentes + cancelados})
             </button>
