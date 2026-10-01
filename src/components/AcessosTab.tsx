@@ -35,7 +35,9 @@ export function AcessosTab({ clienteId, empreendimentos }: Props) {
   const [showForm, setShowForm] = useState(false);
   const [formLogin, setFormLogin] = useState("");
   const [formSenha, setFormSenha] = useState("");
+  const [formTipo, setFormTipo] = useState("");
   const [formDescricao, setFormDescricao] = useState("");
+  const [descricaoFoiEditada, setDescricaoFoiEditada] = useState(false);
   const [formEmpId, setFormEmpId] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -90,6 +92,7 @@ export function AcessosTab({ clienteId, empreendimentos }: Props) {
       });
       if (!res.ok) throw new Error();
       setFormLogin(""); setFormSenha(""); setFormDescricao(""); setFormEmpId("");
+      setFormTipo(""); setDescricaoFoiEditada(false);
       setShowForm(false);
       toast("Acesso criado", "success");
       fetchAcessos();
@@ -137,8 +140,23 @@ export function AcessosTab({ clienteId, empreendimentos }: Props) {
             </div>
           </div>
           <div>
+            <label className="block text-xs font-medium text-[var(--color-ink-600)] mb-1">Sistema / Tipo <span className="text-[var(--color-ink-400)] font-normal">(preenche a descrição)</span></label>
+            <select value={formTipo} onChange={(e) => { setFormTipo(e.target.value); if (!formDescricao.trim() || !descricaoFoiEditada) setFormDescricao(e.target.value); }}
+              className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]">
+              <option value="">Selecione o sistema...</option>
+              <option value="SINIR-MTR">SINIR-MTR</option>
+              <option value="SGA (IBAMA)">SGA (IBAMA)</option>
+              <option value="IBAMA - CTF">IBAMA - CTF</option>
+              <option value="Portal Nacional da Prefeitura">Portal Nacional</option>
+              <option value="Portal da Prefeitura">Portal da Prefeitura</option>
+              <option value="SCCL - Coleta">SCCL - Coleta</option>
+              <option value="CETESB">CETESB</option>
+              <option value="Outro">Outro</option>
+            </select>
+          </div>
+          <div>
             <label className="block text-xs font-medium text-[var(--color-ink-600)] mb-1">Descrição</label>
-            <input value={formDescricao} onChange={(e) => setFormDescricao(e.target.value)} placeholder="Ex: Portal da Prefeitura..."
+            <input value={formDescricao} onChange={(e) => { setFormDescricao(e.target.value); setDescricaoFoiEditada(true); }} placeholder="Ex: Portal da Prefeitura..."
               className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" />
           </div>
           <div>
