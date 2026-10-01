@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Plus, Check, CheckCircle2, Trash2, AlertTriangle, Clock, CalendarDays, BellRing, Paperclip, Download, Eye, FileText, Loader2 } from "lucide-react";
@@ -29,6 +30,7 @@ const labelClass = "block text-sm font-medium text-[var(--color-ink-700)] mb-1";
 
 export default function ExigenciasTab({ processoId }: { processoId: number }) {
   const { toast } = useToast();
+  const router = useRouter();
   const [exigencias, setExigencias] = useState<Exigencia[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -149,6 +151,7 @@ export default function ExigenciasTab({ processoId }: { processoId: number }) {
     toast("Exigência vinculada à licença", "success");
     setForm({ descricao: "", prazo: "", antecedenciaDias: "7" });
     load();
+    router.refresh();
   }
 
   async function toggleCumprida(e: Exigencia) {
@@ -160,6 +163,7 @@ export default function ExigenciasTab({ processoId }: { processoId: number }) {
     if (res.ok) {
       toast(e.cumprida ? "Exigência reaberta" : "Exigência cumprida", "success");
       load();
+      router.refresh();
     } else {
       toast("Erro ao atualizar", "error");
     }
@@ -171,6 +175,7 @@ export default function ExigenciasTab({ processoId }: { processoId: number }) {
     if (res.ok) {
       toast("Exigência excluída", "success");
       load();
+      router.refresh();
     } else {
       toast("Erro ao excluir", "error");
     }

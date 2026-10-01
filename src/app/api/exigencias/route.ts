@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAuditoria } from "@/lib/audit";
 import { dataInputParaDate } from "@/lib/format";
+import { sincronizarStatusProcessoPorExigencias } from "@/lib/exigencias-status";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -60,6 +61,8 @@ export async function POST(request: Request) {
       Number((session.user as { id: string }).id)
     );
 
+    await sincronizarStatusProcessoPorExigencias(exigencia.processoId);
+
     return NextResponse.json(exigencia, { status: 201 });
   } catch (error) {
     console.error("Erro ao criar exigência:", error);
@@ -76,7 +79,12 @@ export async function DELETE(req: NextRequest) {
   const ids = req.nextUrl.searchParams.get("ids");
   if (!ids) return NextResponse.json({ error: "ids é obrigatório" }, { status: 400 });
   try {
-    await prisma.exigencia.deleteMany({ where: { id: { in: ids.split(",").map(Number) } } });
+    const idsNum = ids.split(",").map(Number);
+    const alvos = await prisma.exigencia.findMany({ where: { id: { in: idsNum } }, select: { processoId: true } });
+    await prisma.exigencia.deleteMany({ where: { id: { in: idsNum } } });
+    for (const processoId of new Set(alvos.map((a) => a.processoId))) {
+      await sincronizarStatusProcessoPorExigencias(processoId);
+    }
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error("Erro ao remover exigências:", e);
@@ -90,6 +98,13 @@ export async function PATCH(req: NextRequest) {
   const ids = req.nextUrl.searchParams.get("ids");
   if (!ids) return NextResponse.json({ error: "ids é obrigatório" }, { status: 400 });
   const body = await req.json();
-  await prisma.exigencia.updateMany({ where: { id: { in: ids.split(",").map(Number) } }, data: body });
+  const idsNum = ids.split(",").map(Number);
+  const alvos = await prisma.exigencia.findMany({ where: { id: { in: idsNum } }, select: { processoId: true } });
+  await prisma.exigencia.updateMany({ where: { id: { in: idsNum } }, data: body });
+  if (body.cumprida !== undefined) {
+    for (const processoId of new Set(alvos.map((a) => a.processoId))) {
+      await sincronizarStatusProcessoPorExigencias(processoId);
+    }
+  }
   return NextResponse.json({ ok: true });
 }

@@ -5,6 +5,7 @@ import { logAuditoria } from "@/lib/audit";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { dataInputParaDate } from "@/lib/format";
+import { sincronizarStatusProcessoPorExigencias } from "@/lib/exigencias-status";
 
 export async function GET(
   _req: Request,
@@ -108,6 +109,13 @@ export async function PUT(
         where: { id: registro.exigenciaId },
         data: { cumprida: true },
       });
+    }
+
+    const mexeuEmExigencia =
+      (data.compensacaoExigida && data.prazoCompensacao && data.statusCompensacao !== "cumprida") ||
+      Boolean(registro.exigenciaId && data.statusCompensacao === "cumprida");
+    if (mexeuEmExigencia) {
+      await sincronizarStatusProcessoPorExigencias(processoId);
     }
 
     await logAuditoria("atualizar", "autorizacaoCorte", registro.id, data, usuarioId);

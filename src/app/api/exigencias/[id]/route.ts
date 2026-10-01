@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { logAuditoria } from "@/lib/audit";
 import { dataInputParaDate } from "@/lib/format";
+import { sincronizarStatusProcessoPorExigencias } from "@/lib/exigencias-status";
 
 
 export async function GET(
@@ -62,6 +63,14 @@ export async function PUT(
   });
 
   await logAuditoria("ATUALIZAR", "exigencia", exigencia.id, body, Number((session.user as { id: string }).id));
+
+  if (body.cumprida !== undefined || body.processoId !== undefined || atual.processoId !== exigencia.processoId) {
+    await sincronizarStatusProcessoPorExigencias(exigencia.processoId);
+    if (atual.processoId !== exigencia.processoId) {
+      await sincronizarStatusProcessoPorExigencias(atual.processoId);
+    }
+  }
+
   return NextResponse.json(exigencia);
 }
 
@@ -85,6 +94,8 @@ export async function DELETE(
     prisma.documento.deleteMany({ where: { exigenciaId: Number(id) } }),
     prisma.exigencia.delete({ where: { id: Number(id) } }),
   ]);
+
+  await sincronizarStatusProcessoPorExigencias(exigencia.processoId);
 
   await logAuditoria("EXCLUIR", "exigencia", Number(id), { descricao: exigencia.descricao }, Number((session.user as { id: string }).id));
   return NextResponse.json({ mensagem: "Exigência excluída" });
