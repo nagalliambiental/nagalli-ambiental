@@ -507,8 +507,9 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn; onChanged: ()
   }
 
   async function baixarTodosZip() {
-    if (lista.length === 0) {
-      toast("Nenhum MTR para baixar", "warning");
+    const elegiveis = lista.filter((m) => m.status !== "CANCELADO");
+    if (elegiveis.length === 0) {
+      toast("Nenhum MTR ativo (sem cancelados) para baixar", "warning");
       return;
     }
     setCarregando(true);
@@ -516,7 +517,7 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn; onChanged: ()
       const res = await fetch("/api/mtr-ima/exportar-zip", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: lista.map((m) => m.id) }),
+        body: JSON.stringify({ ids: elegiveis.map((m) => m.id) }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => null);
@@ -532,7 +533,11 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn; onChanged: ()
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-      toast(`Lote gerado com ${lista.length} MTR(s)`, "success");
+      const cancelados = lista.length - elegiveis.length;
+      toast(
+        `Lote gerado com ${elegiveis.length} MTR(s)${cancelados > 0 ? ` (${cancelados} cancelado(s) excluído(s))` : ""}`,
+        "success"
+      );
     } catch {
       toast("Falha ao baixar o lote em ZIP", "error");
     } finally {
@@ -598,12 +603,12 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn; onChanged: ()
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={baixarTodosZip}
-              disabled={carregando || lista.length === 0}
+              disabled={carregando || lista.filter((m) => m.status !== "CANCELADO").length === 0}
               className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
-              title="Baixar todos os MTRs da lista em um arquivo ZIP"
+              title="Baixar todos os MTRs ativos (exclui cancelados) em um arquivo ZIP"
             >
               {carregando ? <Loader2 size={14} className="animate-spin" /> : <FolderArchive size={14} />}
-              {carregando ? "Baixando..." : `Baixar todos (ZIP) — ${visiveisToggle.length}`}
+              {carregando ? "Baixando..." : `Baixar todos (ZIP) — ${lista.filter((m) => m.status !== "CANCELADO").length}`}
             </button>
             <div className="flex gap-1 text-xs">
             {[

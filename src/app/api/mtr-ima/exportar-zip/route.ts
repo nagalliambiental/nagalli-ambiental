@@ -22,11 +22,11 @@ export async function POST(req: NextRequest) {
 
   try {
     const manifestos = await prisma.mtrImaManifesto.findMany({
-      where: { id: { in: ids } },
+      where: { id: { in: ids }, status: { not: "CANCELADO" } },
       include: { conexao: { select: { id: true, nome: true, unidade: true } } },
     });
     if (manifestos.length === 0) {
-      return NextResponse.json({ error: "Nenhum MTR encontrado" }, { status: 404 });
+      return NextResponse.json({ error: "Nenhum MTR ativo encontrado (cancelados são excluídos)" }, { status: 404 });
     }
 
     const zip = new PizZip();

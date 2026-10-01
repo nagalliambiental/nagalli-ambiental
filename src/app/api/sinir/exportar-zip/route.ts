@@ -2,8 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAuditoria } from "@/lib/audit";
-import { baixarManifestoPdf, SinirConexaoCompleta, SinirError } from "@/lib/sinir";
+import { baixarManifestoPdf, baixarCertificadoPdf, consultarCertificadoMtr, SinirConexaoCompleta, SinirError } from "@/lib/sinir";
 import PizZip from "pizzip";
+
+async function baixarCdf(conexao: SinirConexaoCompleta, numero: string): Promise<{ buffer: Uint8Array; filename: string }> {
+  if (conexao.modo === "mock") {
+    throw new SinirError("CDF disponível apenas para conexões reais do SINIR", 400);
+  }
+  const cdfCodigo = await consultarCertificadoMtr(conexao, numero);
+  if (!cdfCodigo) {
+    throw new SinirError(`MTR ${numero} sem CDF emitido no SINIR`, 404);
+  }
+  return baixarCertificadoPdf(conexao, cdfCodigo);
+}
 
 
 
@@ -13,6 +24,7 @@ export async function POST(req: NextRequest) {
 
   const corpo = await req.json().catch(() => null);
   const ids = Array.isArray(corpo?.ids) ? corpo.ids.map(Number).filter((n: number) => Number.isFinite(n)) : [];
+  const tipo = corpo?.tipo === "cdf" ? "cdf" : "mtr";
 
   if (ids.length === 0) {
     return NextResponse.json({ error: "Nenhum MTR selecionado" }, { status: 400 });
@@ -23,11 +35,17 @@ export async function POST(req: NextRequest) {
 
   try {
     const manifestos = await prisma.sinirManifesto.findMany({
-      where: { id: { in: ids } },
+      where:
+        tipo === "cdf"
+          ? { id: { in: ids }, certificado: true }
+          : { id: { in: ids }, status: { not: "CANCELADO" } },
       include: { conexao: true },
     });
     if (manifestos.length === 0) {
-      return NextResponse.json({ error: "Nenhum MTR encontrado" }, { status: 404 });
+      return NextResponse.json(
+        { error: tipo === "cdf" ? "Nenhum MTR com CDF (certificado) encontrado" : "Nenhum MTR ativo encontrado (cancelados são excluídos)" },
+        { status: 404 }
+      );
     }
 
     const conexoesCache = new Map<number, SinirConexaoCompleta>();
@@ -52,11 +70,14 @@ export async function POST(req: NextRequest) {
           };
           conexoesCache.set(m.conexaoId, conexao);
         }
-        const { buffer, filename } = await baixarManifestoPdf(conexao, m.numero);
-        const pasta = `MTRs_${(m.conexao.nome || "conexao").replace(/[^\wÀ-ÿ-]+/g, "_")}`;
+        const { buffer, filename } =
+          tipo === "cdf"
+            ? await baixarCdf(conexao, m.numero)
+            : await baixarManifestoPdf(conexao, m.numero);
+        const pasta = tipo === "cdf" ? `CDFs_${(m.conexao.nome || "conexao").replace(/[^\wÀ-ÿ-]+/g, "_")}` : `MTRs_${(m.conexao.nome || "conexao").replace(/[^\wÀ-ÿ-]+/g, "_")}`;
         zip.file(`${pasta}/${filename}`, buffer);
       } catch (e) {
-        falhas.push({ numero: m.numero, erro: e instanceof SinirError ? e.message : "Erro ao baixar PDF" });
+        falhas.push({ numero: m.numero, erro: e instanceof SinirError ? e.message : tipo === "cdf" ? "Erro ao baixar CDF" : "Erro ao baixar PDF" });
       }
     }
 
@@ -79,14 +100,14 @@ export async function POST(req: NextRequest) {
       "DOWNLOAD",
       "SinirManifesto",
       manifestos[0].conexaoId,
-      { acao: "download_massa_zip", total: manifestos.length, baixados: manifestos.length - falhas.length, falhas: falhas.length },
+      { acao: tipo === "cdf" ? "download_massa_zip_cdf" : "download_massa_zip", total: manifestos.length, baixados: manifestos.length - falhas.length, falhas: falhas.length },
       session.user?.id ? Number(session.user.id) : undefined
     );
 
     return new NextResponse(zipBytes, {
       headers: {
         "Content-Type": "application/zip",
-        "Content-Disposition": `attachment; filename="mtr-sinir-${hoje}.zip"`,
+        "Content-Disposition": `attachment; filename="${tipo === "cdf" ? "cdf-sinir" : "mtr-sinir"}-${hoje}.zip"`,
       },
     });
   } catch (e) {

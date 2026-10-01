@@ -824,6 +824,7 @@ function MeusMtrsTab(props: {
   const [gerandoAlerta, setGerandoAlerta] = useState(false);
   const [consultando, setConsultando] = useState(false);
   const [baixandoZip, setBaixandoZip] = useState(false);
+  const [baixandoCdfZip, setBaixandoCdfZip] = useState(false);
   const [lista, setLista] = useState<Manifesto[]>([]);
   const [modalNotificar, setModalNotificar] = useState(false);
   const [contatosNotif, setContatosNotif] = useState<ContatoEmpreendimento[]>([]);
@@ -910,8 +911,9 @@ function MeusMtrsTab(props: {
   }
 
   async function baixarTodosZip() {
-    if (lista.length === 0) {
-      toast("Nenhum MTR para baixar", "warning");
+    const elegiveis = lista.filter((m) => m.status !== "CANCELADO");
+    if (elegiveis.length === 0) {
+      toast("Nenhum MTR ativo (sem cancelados) para baixar", "warning");
       return;
     }
     setBaixandoZip(true);
@@ -919,7 +921,7 @@ function MeusMtrsTab(props: {
       const res = await fetch("/api/sinir/exportar-zip", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: lista.map((m) => m.id) }),
+        body: JSON.stringify({ ids: elegiveis.map((m) => m.id) }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => null);
@@ -935,11 +937,50 @@ function MeusMtrsTab(props: {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-      toast(`Lote gerado com ${lista.length} MTR(s)`, "success");
+      const cancelados = lista.length - elegiveis.length;
+      toast(
+        `Lote gerado com ${elegiveis.length} MTR(s)${cancelados > 0 ? ` (${cancelados} cancelado(s) excluído(s))` : ""}`,
+        "success"
+      );
     } catch {
       toast("Falha ao baixar o lote em ZIP", "error");
     } finally {
       setBaixandoZip(false);
+    }
+  }
+
+  async function baixarCdfsZip() {
+    const comCdf = lista.filter((m) => m.certificado);
+    if (comCdf.length === 0) {
+      toast("Nenhum CDF disponível na lista", "warning");
+      return;
+    }
+    setBaixandoCdfZip(true);
+    try {
+      const res = await fetch("/api/sinir/exportar-zip", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: comCdf.map((m) => m.id), tipo: "cdf" }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        toast(data?.error || "Falha ao baixar os CDFs em ZIP", "error");
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "cdf-sinir.zip";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast(`ZIP de CDFs gerado com ${comCdf.length} certificado(s)`, "success");
+    } catch {
+      toast("Falha ao baixar os CDFs em ZIP", "error");
+    } finally {
+      setBaixandoCdfZip(false);
     }
   }
 
@@ -1189,12 +1230,21 @@ function MeusMtrsTab(props: {
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={baixarTodosZip}
-              disabled={baixandoZip || lista.length === 0}
+              disabled={baixandoZip || lista.filter((m) => m.status !== "CANCELADO").length === 0}
               className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
-              title="Baixar todos os MTRs da lista em um arquivo ZIP"
+              title="Baixar todos os MTRs ativos (exclui cancelados) em um arquivo ZIP"
             >
               {baixandoZip ? <Loader2 size={14} className="animate-spin" /> : <FolderArchive size={14} />}
-              {baixandoZip ? "Baixando..." : `Baixar todos (ZIP) — ${lista.length}`}
+              {baixandoZip ? "Baixando..." : `Baixar todos (ZIP) — ${lista.filter((m) => m.status !== "CANCELADO").length}`}
+            </button>
+            <button
+              onClick={baixarCdfsZip}
+              disabled={baixandoCdfZip || !lista.some((m) => m.certificado)}
+              className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-[var(--color-brand-600)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--color-brand-700)] disabled:opacity-50"
+              title="Baixar os CDFs (Certificados de Destinação Final) dos MTRs com certificado, em ZIP"
+            >
+              {baixandoCdfZip ? <Loader2 size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
+              {baixandoCdfZip ? "Baixando..." : `Baixar CDFs (ZIP) — ${lista.filter((m) => m.certificado).length}`}
             </button>
             <div className="flex rounded-lg border border-[var(--color-paper-200)] bg-[var(--color-paper-50)] p-1 text-xs font-medium">
             <button
