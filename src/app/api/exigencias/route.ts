@@ -15,6 +15,7 @@ export async function GET(req: NextRequest) {
   const exigencias = await prisma.exigencia.findMany({
     where: processoId ? { processoId: Number(processoId) } : undefined,
     include: {
+      documentos: { orderBy: { criadoEm: "desc" } },
       processo: {
         select: {
           id: true,

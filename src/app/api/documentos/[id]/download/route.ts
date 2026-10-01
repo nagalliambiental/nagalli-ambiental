@@ -21,12 +21,13 @@ const MIME_BY_EXT: Record<string, string> = {
   zip: "application/zip",
 };
 
-export async function GET(_req: Request, { params }: Params) {
+export async function GET(req: Request, { params }: Params) {
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
 
+  const inline = new URL(req.url).searchParams.get("inline") === "1";
   const { id } = await params;
   const doc = await prisma.documento.findUnique({ where: { id: Number(id) } });
   if (!doc) {
@@ -64,7 +65,7 @@ export async function GET(_req: Request, { params }: Params) {
     status: 200,
     headers: {
       "Content-Type": contentType,
-      "Content-Disposition": `attachment; filename="${doc.nome}"; filename*=UTF-8''${filename}`,
+      "Content-Disposition": `${inline ? "inline" : "attachment"}; filename="${doc.nome}"; filename*=UTF-8''${filename}`,
     },
   });
 }
