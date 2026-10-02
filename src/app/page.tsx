@@ -20,7 +20,7 @@ export default async function DashboardPage() {
     processosComValidade,
     exigenciasComPrazo,
     tppsComValidade,
-    pgrsComValidade,
+    pgrsAtivos,
   ] = await Promise.all([
     prisma.processo.count(),
     prisma.cliente.count(),
@@ -45,7 +45,7 @@ export default async function DashboardPage() {
       orderBy: { dataValidade: "asc" },
     }),
     prisma.pgrs.findMany({
-      where: { ativo: true, validade: { not: null } },
+      where: { ativo: true },
       include: { empreendimento: { select: { apelido: true } } },
       orderBy: { validade: "asc" },
     }),
@@ -86,6 +86,7 @@ export default async function DashboardPage() {
   const tppVencidas = tppAlertas.filter((t) => differenceInDays(t.dataValidade, hoje) < 0).length;
   const tppAVencer = tppAlertas.length - tppVencidas;
   const tppPrecisaAtencao = tppAlertas.length > 0;
+  const pgrsComValidade = pgrsAtivos.filter((p) => p.validade);
   const pgrsAlertas = pgrsComValidade.filter((p) => p.validade && differenceInDays(p.validade, hoje) <= p.alertaDias);
   const pgrsVencidos = pgrsAlertas.filter((p) => p.validade && differenceInDays(p.validade, hoje) < 0).length;
   const pgrsAVencer = pgrsAlertas.length - pgrsVencidos;
@@ -239,28 +240,30 @@ export default async function DashboardPage() {
             </div>
           )}
 
-          {pgrsComValidade.length > 0 && (
-            <div className={`rounded-[var(--radius-card)] border p-5 ${pgrsPrecisaAtencao ? "border-red-200 bg-red-50" : "border-[var(--color-paper-200)] bg-white"}`}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={`rounded-full p-2 ${pgrsPrecisaAtencao ? "bg-red-100" : "bg-[var(--color-brand-50)]"}`}>
-                    <ShieldCheck size={18} className={pgrsPrecisaAtencao ? "text-red-700" : "text-[var(--color-brand-600)]"} />
-                  </div>
-                  <div>
-                    <p className={`text-sm font-medium ${pgrsPrecisaAtencao ? "text-red-900" : "text-[var(--color-ink-900)]"}`}>
-                      PGRS ({pgrsComValidade.length})
-                    </p>
-                    <p className={`text-xs ${pgrsPrecisaAtencao ? "text-red-700" : "text-[var(--color-ink-500)]"}`}>
-                      {pgrsPrecisaAtencao
+          <div className={`rounded-[var(--radius-card)] border p-5 ${pgrsPrecisaAtencao ? "border-red-200 bg-red-50" : "border-[var(--color-paper-200)] bg-white"}`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`rounded-full p-2 ${pgrsPrecisaAtencao ? "bg-red-100" : "bg-[var(--color-brand-50)]"}`}>
+                  <ShieldCheck size={18} className={pgrsPrecisaAtencao ? "text-red-700" : "text-[var(--color-brand-600)]"} />
+                </div>
+                <div>
+                  <p className={`text-sm font-medium ${pgrsPrecisaAtencao ? "text-red-900" : "text-[var(--color-ink-900)]"}`}>
+                    PGRS ({pgrsAtivos.length})
+                  </p>
+                  <p className={`text-xs ${pgrsPrecisaAtencao ? "text-red-700" : "text-[var(--color-ink-500)]"}`}>
+                    {pgrsAtivos.length === 0
+                      ? "Nenhum PGRS cadastrado"
+                      : pgrsPrecisaAtencao
                         ? `${pgrsVencidos} vencido(s) · ${pgrsAVencer} em alerta`
                         : "Todos os PGRS vigentes"}
-                    </p>
-                  </div>
+                  </p>
                 </div>
-                <Link href="/pgrs" className={`focus-ring transition-brand rounded-lg px-3 py-1.5 text-xs font-medium text-white ${pgrsPrecisaAtencao ? "bg-red-600 hover:bg-red-700" : "bg-[var(--color-river-700)] hover:bg-[var(--color-river-500)]"}`}>
-                  Ver
-                </Link>
               </div>
+              <Link href={pgrsAtivos.length === 0 ? "/pgrs/novo" : "/pgrs"} className={`focus-ring transition-brand rounded-lg px-3 py-1.5 text-xs font-medium text-white ${pgrsPrecisaAtencao ? "bg-red-600 hover:bg-red-700" : "bg-[var(--color-river-700)] hover:bg-[var(--color-river-500)]"}`}>
+                {pgrsAtivos.length === 0 ? "Cadastrar" : "Ver"}
+              </Link>
+            </div>
+            {pgrsComValidade.length > 0 ? (
               <div className="mt-3 space-y-2">
                 {pgrsComValidade.slice(0, 4).map((p) => {
                   const diff = differenceInDays(p.validade!, hoje);
@@ -278,8 +281,15 @@ export default async function DashboardPage() {
                   );
                 })}
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="mt-3 rounded-lg border border-dashed border-[var(--color-paper-200)] bg-[var(--color-paper-50)] p-6 text-center">
+                <p className="text-sm text-[var(--color-ink-500)]">Cadastre o PGRS para acompanhar validade e deferimento</p>
+                <Link href="/pgrs/novo" className="focus-ring transition-brand mt-3 inline-flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--color-brand-600)]">
+                  Cadastrar PGRS
+                </Link>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </>
