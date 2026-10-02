@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Building2, CalendarClock, Plus, FileCheck2, FileSpreadsheet, LayoutDashboard, AlertTriangle, Truck } from "lucide-react";
+import { Building2, CalendarClock, Plus, FileCheck2, FileSpreadsheet, LayoutDashboard, AlertTriangle, Truck, ShieldCheck } from "lucide-react";
 import { Topbar } from "@/components/Topbar";
 import { StatCard } from "@/components/StatCard";
 import { prisma } from "@/lib/prisma";
@@ -20,6 +20,7 @@ export default async function DashboardPage() {
     processosComValidade,
     exigenciasComPrazo,
     tppsComValidade,
+    pgrsComValidade,
   ] = await Promise.all([
     prisma.processo.count(),
     prisma.cliente.count(),
@@ -42,6 +43,11 @@ export default async function DashboardPage() {
         empreendimento: { select: { apelido: true } },
       },
       orderBy: { dataValidade: "asc" },
+    }),
+    prisma.pgrs.findMany({
+      where: { ativo: true, validade: { not: null } },
+      include: { empreendimento: { select: { apelido: true } } },
+      orderBy: { validade: "asc" },
     }),
   ]);
 
@@ -80,6 +86,10 @@ export default async function DashboardPage() {
   const tppVencidas = tppAlertas.filter((t) => differenceInDays(t.dataValidade, hoje) < 0).length;
   const tppAVencer = tppAlertas.length - tppVencidas;
   const tppPrecisaAtencao = tppAlertas.length > 0;
+  const pgrsAlertas = pgrsComValidade.filter((p) => p.validade && differenceInDays(p.validade, hoje) <= p.alertaDias);
+  const pgrsVencidos = pgrsAlertas.filter((p) => p.validade && differenceInDays(p.validade, hoje) < 0).length;
+  const pgrsAVencer = pgrsAlertas.length - pgrsVencidos;
+  const pgrsPrecisaAtencao = pgrsAlertas.length > 0;
 
   return (
     <>
@@ -141,7 +151,7 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-3">
           {totalAlertas > 0 && (
             <div className="rounded-[var(--radius-card)] border border-red-200 bg-red-50 p-5">
               <div className="flex items-center justify-between">
@@ -221,6 +231,48 @@ export default async function DashboardPage() {
                       <div className={`shrink-0 text-right text-xs font-semibold ${diff < 0 ? "text-red-700" : diff <= 15 ? "text-amber-700" : "text-[var(--color-brand-600)]"}`}>
                         {format(t.dataValidade, "dd/MM", { locale: ptBR })}
                         <div>{diff < 0 ? `${Math.abs(diff)}d atraso` : diff <= 15 ? `${diff}d` : "OK"}</div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {pgrsComValidade.length > 0 && (
+            <div className={`rounded-[var(--radius-card)] border p-5 ${pgrsPrecisaAtencao ? "border-red-200 bg-red-50" : "border-[var(--color-paper-200)] bg-white"}`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`rounded-full p-2 ${pgrsPrecisaAtencao ? "bg-red-100" : "bg-[var(--color-brand-50)]"}`}>
+                    <ShieldCheck size={18} className={pgrsPrecisaAtencao ? "text-red-700" : "text-[var(--color-brand-600)]"} />
+                  </div>
+                  <div>
+                    <p className={`text-sm font-medium ${pgrsPrecisaAtencao ? "text-red-900" : "text-[var(--color-ink-900)]"}`}>
+                      PGRS ({pgrsComValidade.length})
+                    </p>
+                    <p className={`text-xs ${pgrsPrecisaAtencao ? "text-red-700" : "text-[var(--color-ink-500)]"}`}>
+                      {pgrsPrecisaAtencao
+                        ? `${pgrsVencidos} vencido(s) · ${pgrsAVencer} em alerta`
+                        : "Todos os PGRS vigentes"}
+                    </p>
+                  </div>
+                </div>
+                <Link href="/pgrs" className={`focus-ring transition-brand rounded-lg px-3 py-1.5 text-xs font-medium text-white ${pgrsPrecisaAtencao ? "bg-red-600 hover:bg-red-700" : "bg-[var(--color-river-700)] hover:bg-[var(--color-river-500)]"}`}>
+                  Ver
+                </Link>
+              </div>
+              <div className="mt-3 space-y-2">
+                {pgrsComValidade.slice(0, 4).map((p) => {
+                  const diff = differenceInDays(p.validade!, hoje);
+                  return (
+                    <Link key={p.id} href={`/pgrs/${p.id}`} className="focus-ring transition-brand flex items-center justify-between rounded-lg border bg-white p-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-[var(--color-ink-900)]">{p.empreendimento.apelido}</p>
+                        <p className="truncate text-xs text-[var(--color-ink-500)]">{p.numero || "PGRS"} · {p.orgao || "—"}</p>
+                      </div>
+                      <div className={`shrink-0 text-right text-xs font-semibold ${diff < 0 ? "text-red-700" : diff <= p.alertaDias ? "text-amber-700" : "text-[var(--color-brand-600)]"}`}>
+                        {format(p.validade!, "dd/MM", { locale: ptBR })}
+                        <div>{diff < 0 ? `${Math.abs(diff)}d atraso` : diff <= p.alertaDias ? `${diff}d` : "OK"}</div>
                       </div>
                     </Link>
                   );
