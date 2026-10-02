@@ -39,6 +39,7 @@ export const NAV_ITEMS: NavItem[] = [
     children: [
       { label: "Licenças", href: "/processos" },
       { label: "Prazos", href: "/prazos" },
+      { label: "PGRS", href: "/pgrs" },
       { label: "TPP", href: "/tpp" },
       { label: "Modelos", href: "/modelos" },
       { label: "Docs. Gerados", href: "/documentos-gerados" },

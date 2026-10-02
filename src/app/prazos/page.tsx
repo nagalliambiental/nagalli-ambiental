@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Prazos" };
 
 export default async function PrazosPage() {
-  const [exigencias, processosComValidade] = await Promise.all([
+  const [exigencias, processosComValidade, pgrsComValidade] = await Promise.all([
     prisma.exigencia.findMany({
       where: { cumprida: false },
       include: {
@@ -41,12 +41,23 @@ export default async function PrazosPage() {
       },
       orderBy: { validade: "asc" },
     }),
+    prisma.pgrs.findMany({
+      where: { ativo: true, validade: { not: null } },
+      select: {
+        id: true,
+        numero: true,
+        validade: true,
+        alertaDias: true,
+        empreendimento: { select: { apelido: true } },
+      },
+      orderBy: { validade: "asc" },
+    }),
   ]);
 
   return (
     <div>
       <Breadcrumbs items={[{ label: "Prazos" }]} />
-      <Topbar icon={CalendarClock} title="Prazos" subtitle="Acompanhe os prazos de licenças e exigências" />
+      <Topbar icon={CalendarClock} title="Prazos" subtitle="Acompanhe os prazos de licenças, exigências e PGRS" />
       <PrazosView
         processos={processosComValidade.map((p) => ({
           id: p.id,
@@ -70,6 +81,13 @@ export default async function PrazosPage() {
             orgao: e.processo.orgao,
             empreendimento: e.processo.empreendimento,
           },
+        }))}
+        pgrs={pgrsComValidade.map((p) => ({
+          id: p.id,
+          numero: p.numero,
+          validade: p.validade!.toISOString(),
+          alertaDias: p.alertaDias,
+          empreendimento: p.empreendimento,
         }))}
       />
     </div>

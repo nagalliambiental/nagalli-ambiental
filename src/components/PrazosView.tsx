@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { List, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { List, Calendar as CalendarIcon, ChevronLeft, ChevronRight, ShieldCheck } from "lucide-react";
 import { format, differenceInDays, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameDay, isSameMonth, addMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import Link from "next/link";
@@ -24,7 +24,15 @@ interface ExigenciaPrazo {
   processo: { id: number; numProtocolo: string; numLicenca?: string | null; tipo: string; orgao: { sigla: string }; empreendimento: { apelido: string; cliente: { apelido: string } } };
 }
 
-export function PrazosView({ processos, exigencias }: { processos: ProcessoPrazo[]; exigencias: ExigenciaPrazo[] }) {
+interface PgrsPrazo {
+  id: number;
+  numero: string | null;
+  validade: string;
+  alertaDias: number;
+  empreendimento: { apelido: string };
+}
+
+export function PrazosView({ processos, exigencias, pgrs = [] }: { processos: ProcessoPrazo[]; exigencias: ExigenciaPrazo[]; pgrs?: PgrsPrazo[] }) {
   const [view, setView] = useState<"lista" | "calendario">("lista");
 
   return (
@@ -32,28 +40,28 @@ export function PrazosView({ processos, exigencias }: { processos: ProcessoPrazo
       <div className="mb-4 flex items-center gap-2">
         <button
           onClick={() => setView("lista")}
-          className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${view === "lista" ? "bg-[var(--color-brand-500)] text-white" : "border border-[var(--color-paper-200)] text-[var(--color-ink-600)] hover:bg-[var(--color-paper-50)]"}`}
+          className={`focus-ring transition-brand flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${view === "lista" ? "bg-[var(--color-brand-500)] text-white" : "border border-[var(--color-paper-200)] text-[var(--color-ink-600)] hover:bg-[var(--color-paper-50)]"}`}
         >
           <List size={14} /> Lista
         </button>
         <button
           onClick={() => setView("calendario")}
-          className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${view === "calendario" ? "bg-[var(--color-brand-500)] text-white" : "border border-[var(--color-paper-200)] text-[var(--color-ink-600)] hover:bg-[var(--color-paper-50)]"}`}
+          className={`focus-ring transition-brand flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${view === "calendario" ? "bg-[var(--color-brand-500)] text-white" : "border border-[var(--color-paper-200)] text-[var(--color-ink-600)] hover:bg-[var(--color-paper-50)]"}`}
         >
           <CalendarIcon size={14} /> Calendário
         </button>
       </div>
 
       {view === "lista" ? (
-        <ListView processos={processos} exigencias={exigencias} />
+        <ListView processos={processos} exigencias={exigencias} pgrs={pgrs} />
       ) : (
-        <CalendarView processos={processos} exigencias={exigencias} />
+        <CalendarView processos={processos} exigencias={exigencias} pgrs={pgrs} />
       )}
     </div>
   );
 }
 
-function ListView({ processos, exigencias }: { processos: ProcessoPrazo[]; exigencias: ExigenciaPrazo[] }) {
+function ListView({ processos, exigencias, pgrs }: { processos: ProcessoPrazo[]; exigencias: ExigenciaPrazo[]; pgrs: PgrsPrazo[] }) {
   const now = new Date();
 
   return (
@@ -150,11 +158,55 @@ function ListView({ processos, exigencias }: { processos: ProcessoPrazo[]; exige
           </div>
         )}
       </div>
+
+      <div className="lg:col-span-2">
+        <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-4 mt-2 flex items-center gap-2">
+          <ShieldCheck size={18} />
+          PGRS
+        </h2>
+        {pgrs.length > 0 ? (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {pgrs.map((p) => {
+              const validade = new Date(p.validade);
+              const diasRestantes = differenceInDays(validade, now);
+              const isVencido = diasRestantes < 0;
+              const isAlert = !isVencido && diasRestantes <= p.alertaDias;
+
+              return (
+                <div key={p.id} className={`shadow-card rounded-[var(--radius-card)] border bg-white p-4 ${isVencido ? "border-red-300 bg-red-50" : isAlert ? "border-amber-200 bg-amber-50" : "border-[var(--color-paper-200)]"}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <Link href={`/pgrs/${p.id}`} className="text-sm font-semibold text-[var(--color-brand-600)] hover:underline truncate">{p.empreendimento.apelido}</Link>
+                        {isVencido && <span className="inline-flex shrink-0 rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">Vencido</span>}
+                        {isAlert && !isVencido && <span className="inline-flex shrink-0 rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">Alerta</span>}
+                      </div>
+                      <div className="mt-1 text-xs text-[var(--color-ink-500)]">PGRS{p.numero ? ` · ${p.numero}` : ""}</div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <div className={`text-right text-sm font-semibold ${isVencido ? "text-red-700" : isAlert ? "text-amber-700" : "text-[var(--color-ink-700)]"}`}>
+                        {format(validade, "dd/MM/yyyy", { locale: ptBR })}
+                      </div>
+                      <div className="text-xs text-[var(--color-ink-500)]">
+                        {isVencido ? `Vencido há ${Math.abs(diasRestantes)} dias` : `${diasRestantes} dias restantes`}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-3 py-6 text-[var(--color-ink-500)]">
+            <p className="font-display text-base font-medium text-[var(--color-ink-900)]">Nenhum PGRS com prazo</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
-function CalendarView({ processos, exigencias }: { processos: ProcessoPrazo[]; exigencias: ExigenciaPrazo[] }) {
+function CalendarView({ processos, exigencias, pgrs }: { processos: ProcessoPrazo[]; exigencias: ExigenciaPrazo[]; pgrs: PgrsPrazo[] }) {
   const now = new Date();
   const [mesAtual, setMesAtual] = useState(() => startOfMonth(now));
   const monthStart = startOfMonth(mesAtual);
@@ -163,9 +215,10 @@ function CalendarView({ processos, exigencias }: { processos: ProcessoPrazo[]; e
   const startDay = getDay(monthStart);
   const isMesAtual = isSameMonth(mesAtual, now);
 
-  const allEvents: { date: Date; label: string; href: string; type: "processo" | "exigencia"; vencido: boolean }[] = [
+  const allEvents: { date: Date; label: string; href: string; type: "processo" | "exigencia" | "pgrs"; vencido: boolean }[] = [
     ...processos.map((p) => ({ date: new Date(p.validade), label: `Lic: ${p.numLicenca || p.numProtocolo}`, href: `/processos/${p.id}`, type: "processo" as const, vencido: differenceInDays(new Date(p.validade), now) < 0 })),
     ...exigencias.map((e) => ({ date: new Date(e.prazo), label: `Exig: ${e.descricao.substring(0, 30)}`, href: `/processos/${e.processo.id}`, type: "exigencia" as const, vencido: differenceInDays(new Date(e.prazo), now) < 0 })),
+    ...pgrs.map((p) => ({ date: new Date(p.validade), label: `PGRS: ${p.empreendimento.apelido}`, href: `/pgrs/${p.id}`, type: "pgrs" as const, vencido: differenceInDays(new Date(p.validade), now) < 0 })),
   ];
 
   const getEventsForDay = (day: Date) => allEvents.filter((ev) => isSameDay(ev.date, day));

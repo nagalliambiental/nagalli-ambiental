@@ -103,6 +103,7 @@ model Cliente {
   residuos                                  ResiduoItem[]
   autorizacoesTpp                           AutorizacaoTpp[]
   contatos                                  Contato[]
+  pgrs                                      Pgrs[]
 }
 
 model Empreendimento {
@@ -143,6 +144,7 @@ acessos       Acesso[]
     autorizacoesTpp AutorizacaoTpp[]
     documentoGerados DocumentoGerado[]
     tarefas         Tarefa[]
+    pgrs            Pgrs[]
   }
 
 model Orgao {
@@ -268,6 +270,27 @@ model Documento {
   exigencia       Exigencia?     @relation(fields: [exigenciaId], references: [id])
   condicionante   Condicionante? @relation(fields: [condicionanteId], references: [id])
   processo        Processo?      @relation(fields: [processoId], references: [id])
+}
+
+model Pgrs {
+  id               Int            @id @default(autoincrement())
+  empreendimentoId Int
+  clienteId        Int?
+  numero           String?
+  orgao            String?
+  deferidoEm       DateTime?
+  validade         DateTime?
+  validadeOrigem   String?
+  alertaDias       Int            @default(180)
+  arquivoNome      String?
+  arquivoCaminho   String?
+  arquivoConteudo  Bytes?
+  observacoes      String?
+  ativo            Boolean        @default(true)
+  criadoEm         DateTime       @default(now())
+  atualizadoEm     DateTime       @updatedAt
+  empreendimento   Empreendimento @relation(fields: [empreendimentoId], references: [id])
+  cliente          Cliente?       @relation(fields: [clienteId], references: [id])
 }
 
 model TimelineProcesso {
