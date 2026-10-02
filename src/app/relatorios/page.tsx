@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Topbar } from "@/components/Topbar";
 import { useSession } from "next-auth/react";
-import { FileSpreadsheet, DollarSign, Building2, FileCheck2, Download, Loader2, Eye, BarChart3, FileText } from "lucide-react";
+import { FileSpreadsheet, DollarSign, Building2, FileCheck2, Download, Loader2, Eye, BarChart3, FileText, Truck, ShieldCheck } from "lucide-react";
 
 const currentYear = new Date().getFullYear();
 
@@ -84,6 +84,8 @@ export default function RelatoriosPage() {
   const financeiro = useDownload(`/api/relatorios/financeiro?status=${finStatus}`);
   const processos = useDownload(`/api/relatorios/processos?status=${procStatus}`);
   const clientes = useDownload("/api/relatorios/clientes");
+  const tpp = useDownload("/api/relatorios/tpp");
+  const pgrs = useDownload("/api/relatorios/pgrs");
 
   return (
     <div>
@@ -134,6 +136,14 @@ export default function RelatoriosPage() {
 
         <Card icon={Building2} title="Clientes" description="Consulte o cadastro completo de clientes e os empreendimentos vinculados a cada um">
           <DownloadButtons url="/api/relatorios/clientes" hook={clientes} />
+        </Card>
+
+        <Card icon={Truck} title="TPP — Produtos Perigosos" description="Acompanhe as autorizações de transporte: emissão, validade e situação de cada TPP">
+          <DownloadButtons url="/api/relatorios/tpp" hook={tpp} />
+        </Card>
+
+        <Card icon={ShieldCheck} title="PGRS" description="Veja os planos de gerenciamento de resíduos: protocolo, deferimento, validade e situação">
+          <DownloadButtons url="/api/relatorios/pgrs" hook={pgrs} />
         </Card>
       </div>
     </div>

@@ -103,6 +103,7 @@ export async function buildBackupWorkbook() {
     clientes, empreendimentos, processos, exigencias, financeiros, contratos, controlesDmr,
     tarefas, usuarios, acessos, propostas, responsaveis, orgaos, residuosItems,
     residuosAnuais, empresasContratadas, documentos, historicos, configuracoes, modelosProposta,
+    tpps, pgrs,
   ] = await Promise.all([
     prisma.cliente.findMany({ orderBy: { id: "asc" } }),
     prisma.empreendimento.findMany({
@@ -188,6 +189,14 @@ export async function buildBackupWorkbook() {
     prisma.configuracao.findMany({ orderBy: { id: "asc" } }),
     prisma.propostaModelo.findMany({
       select: { id: true, slug: true, nome: true, descricao: true, prefixoArquivo: true, campos: true, ativo: true, criadoEm: true, atualizadoEm: true },
+      orderBy: { id: "asc" },
+    }),
+    prisma.autorizacaoTpp.findMany({
+      include: { cliente: { select: { apelido: true } }, empreendimento: { select: { apelido: true } } },
+      orderBy: { id: "asc" },
+    }),
+    prisma.pgrs.findMany({
+      include: { cliente: { select: { apelido: true } }, empreendimento: { select: { apelido: true } } },
       orderBy: { id: "asc" },
     }),
   ]);
@@ -491,6 +500,37 @@ export async function buildBackupWorkbook() {
     Ativo: fmtSimNao(m.ativo),
     CriadoEm: fmtDataHora(m.criadoEm),
     AtualizadoEm: fmtDataHora(m.atualizadoEm),
+  })));
+
+  addSheet(wb, "TPP", tpps.map((t) => ({
+    ID: t.id,
+    Número: t.numero,
+    Cliente: t.cliente.apelido,
+    Empreendimento: t.empreendimento?.apelido || "",
+    "Data Emissão": fmtData(t.dataEmissao),
+    "Data Validade": fmtData(t.dataValidade),
+    "Dias p/ Validade": diasAte(t.dataValidade),
+    Veículos: t.veiculos || "",
+    "Classes de Risco": t.classesRisco || "",
+    Observações: t.observacoes || "",
+    Ativo: fmtSimNao(t.ativo),
+    CriadoEm: fmtDataHora(t.criadoEm),
+  })));
+
+  addSheet(wb, "PGRS", pgrs.map((p) => ({
+    ID: p.id,
+    Número: p.numero || "",
+    Cliente: p.cliente?.apelido || "",
+    Empreendimento: p.empreendimento.apelido,
+    Órgão: p.orgao || "",
+    "Deferido Em": fmtData(p.deferidoEm),
+    Validade: fmtData(p.validade),
+    "Dias p/ Validade": diasAte(p.validade),
+    "Origem Validade": p.validadeOrigem || "",
+    "Alerta Dias": p.alertaDias,
+    Observações: p.observacoes || "",
+    Ativo: fmtSimNao(p.ativo),
+    CriadoEm: fmtDataHora(p.criadoEm),
   })));
 
   return wb;

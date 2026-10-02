@@ -4,6 +4,12 @@
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
+# Regra permanente: novos módulos → Backup e Relatórios
+Ao cadastrar um novo módulo, model ou recurso no sistema, SEMPRE questionar ao usuário se deve ser incluído em:
+- **Backup**: sheet em `src/lib/backup.ts` (`buildBackupWorkbook`).
+- **Relatórios**: rota em `src/app/api/relatorios/<nome>/route.ts` (PDF via `createNagalliReport` + Excel via `buildXlsx`) e card em `src/app/relatorios/page.tsx`.
+Módulos já cobertos: TPP e PGRS (sheets + rotas `/api/relatorios/tpp` e `/api/relatorios/pgrs`).
+
 # Session: Professional improvements (timezone, toast, pagination, sorting, validation, error boundaries, etc.)
 
 ## Changes Made
