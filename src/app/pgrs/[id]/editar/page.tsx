@@ -67,6 +67,9 @@ export default function EditarPgrsPage() {
         return;
       }
       const data = await res.json();
+      if (data.deferidoEm) {
+        setForm((prev) => ({ ...prev, deferidoEm: prev.deferidoEm || data.deferidoEm }));
+      }
       if (data.validade) {
         setForm((prev) => ({ ...prev, validade: data.validade, validadeOrigem: "upload" }));
         const [y, m, d] = String(data.validade).split("-");

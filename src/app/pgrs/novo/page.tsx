@@ -57,6 +57,9 @@ export default function NovoPgrsPage() {
         return;
       }
       const data = await res.json();
+      if (data.deferidoEm) {
+        setForm((prev) => ({ ...prev, deferidoEm: prev.deferidoEm || data.deferidoEm }));
+      }
       if (data.validade) {
         setForm((prev) => ({
           ...prev,
@@ -64,6 +67,7 @@ export default function NovoPgrsPage() {
           validadeOrigem: "upload",
           numero: prev.numero || data.numero || "",
           orgao: prev.orgao || data.orgao || "",
+          deferidoEm: prev.deferidoEm || data.deferidoEm || "",
         }));
         const [y, m, d] = String(data.validade).split("-");
         toast(`Validade extraída do PDF: ${d}/${m}/${y}`, "success");

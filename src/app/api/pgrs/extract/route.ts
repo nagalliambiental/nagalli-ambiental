@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { extractFromBuffer } from "@/lib/extract-license";
+import { extractPgrsFromBuffer } from "@/lib/extract-pgrs";
 
 export async function POST(request: Request) {
   const session = await auth();
@@ -17,12 +17,13 @@ export async function POST(request: Request) {
 
     const ext = file.name.split(".").pop() || "pdf";
     const buffer = Buffer.from(await file.arrayBuffer());
-    const extracted = await extractFromBuffer(buffer, ext);
+    const extracted = await extractPgrsFromBuffer(buffer, ext);
 
     return NextResponse.json({
       validade: extracted.validade,
-      numero: extracted.numLicenca,
-      orgao: extracted.orgaoSigla,
+      deferidoEm: extracted.deferidoEm,
+      numero: extracted.numero,
+      orgao: extracted.orgao,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erro desconhecido";
