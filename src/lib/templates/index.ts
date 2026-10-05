@@ -23,4 +23,10 @@ export const TEMPLATES: TemplateMeta[] = [
     descricao:
       "Plano de Gerenciamento de Resíduos Sólidos Simplificado da Secretaria Municipal do Meio Ambiente de Curitiba/PR.",
   },
+  {
+    slug: "pgrs-sj-pinhais",
+    nome: "PGRS Simplificado — São José dos Pinhais",
+    descricao:
+      "Formulário de Plano de Gerenciamento de Resíduos Sólidos do município de São José dos Pinhais/PR.",
+  },
 ];

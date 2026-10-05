@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Topbar } from "@/components/Topbar";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { useToast } from "@/components/Toast";
+import { extrairPgrsDoTexto } from "@/lib/pgrs-extract";
 import {
   DadosEstabelecimentoFields,
   DadosEstabelecimentoValues,
@@ -27,6 +28,8 @@ import {
   GraduationCap,
   CalendarDays,
   Paperclip,
+  Upload,
+  Users,
 } from "lucide-react";
 import {
   emptyPgrsFormData,
@@ -39,12 +42,20 @@ import {
   ANEXO_CURITIBA_LABELS,
   type PgrsCuritibaFormData,
 } from "@/lib/templates/pgrs-curitiba/config";
+import {
+  emptyPgrsSjFormData,
+  ANEXO_SJ_LABELS,
+  type PgrsSjFormData,
+} from "@/lib/templates/pgrs-sj-pinhais/config";
 
 type AnexoKeysPinhais = "anexo1" | "anexo2" | "anexo3" | "anexo4";
 type AnexoKeysCuritiba = "anexo1" | "anexo2" | "anexo3" | "anexo4" | "anexo5" | "anexo6";
 
+type AnyPgrsFormData = PgrsPinhaisFormData | PgrsCuritibaFormData | PgrsSjFormData;
+
 type ClienteSer = Record<string, unknown> & {
   razaoSocial: string;
+  cnpj?: string | null;
   nomeFantasia?: string | null;
   ramoAtividade?: string | null;
   diasFuncionamento?: string | null;
@@ -60,6 +71,9 @@ type ClienteSer = Record<string, unknown> & {
   responsavelTecnicoCpf?: string | null;
   responsavelPgrsNome?: string | null;
   responsavelPgrsCargo?: string | null;
+  representanteLegalNome?: string | null;
+  respLegal?: string | null;
+  responsavelElaboracaoNome?: string | null;
   residuos?: { categoria: string; pontoGeracao: string; residuosGerados: string; quantificacao: string; acondicionamento: string; armazenamento: string; coletaInterna?: string | null; empresaTransporte: string; empresaDisposicaoFinal: string }[];
   empresasContratadas?: { nomeFantasia: string; razaoSocial: string; cnpj: string; numeroDataValidadeLicenca: string }[];
 };
@@ -164,48 +178,76 @@ interface Props {
   clienteId: number;
   clienteApelido: string;
   cliente: ClienteSer;
-  templateSlug: "pgrs-pinhais" | "pgrs-curitiba";
-  initialData?: Partial<PgrsPinhaisFormData | PgrsCuritibaFormData>;
+  templateSlug: "pgrs-pinhais" | "pgrs-curitiba" | "pgrs-sj-pinhais";
+  initialData?: Partial<AnyPgrsFormData>;
+  reaproveitar?: Record<string, unknown> | null;
   docId?: number;
 }
 
-export function PgrsForm({ clienteId, clienteApelido, cliente, templateSlug, initialData, docId }: Props) {
+export function PgrsForm({ clienteId, clienteApelido, cliente, templateSlug, initialData, reaproveitar, docId }: Props) {
   const isCuritiba = templateSlug === "pgrs-curitiba";
+  const isSj = templateSlug === "pgrs-sj-pinhais";
   const router = useRouter();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
 
-  const [form, setForm] = useState<PgrsPinhaisFormData | PgrsCuritibaFormData>(() => {
+  const [form, setForm] = useState<AnyPgrsFormData>(() => {
+    const base = isSj ? emptyPgrsSjFormData() : isCuritiba ? emptyPgrsCuritibaFormData() : emptyPgrsFormData();
     if (initialData && Object.keys(initialData).length > 2) {
-      const base = isCuritiba ? emptyPgrsCuritibaFormData() : emptyPgrsFormData();
-      return { ...base, ...initialData } as PgrsPinhaisFormData | PgrsCuritibaFormData;
+      return { ...base, ...initialData } as AnyPgrsFormData;
     }
     const perigosos = porCategoria(cliente, "PERIGOSO");
     const naoReciclaveis = porCategoria(cliente, "NAO_RECICLAVEL");
     const reciclaveis = porCategoria(cliente, "RECICLAVEL");
     const contratadas = empresasContratadas(cliente);
 
-    if (isCuritiba) {
-      const base = emptyPgrsCuritibaFormData();
-      return {
+    let resultado: AnyPgrsFormData;
+    if (isSj) {
+      resultado = {
         ...base,
         residuosPerigosos: perigosos.length ? perigosos : base.residuosPerigosos,
         residuosNaoReciclaveis: naoReciclaveis.length ? naoReciclaveis : base.residuosNaoReciclaveis,
         residuosReciclaveis: reciclaveis.length ? reciclaveis : base.residuosReciclaveis,
         empresasContratadas: contratadas.length ? contratadas : base.empresasContratadas,
-      };
+        respEmpreendimentoNome: cliente.representanteLegalNome || cliente.respLegal || "",
+        respImplantacaoNome: cliente.responsavelPgrsNome || "",
+        respImplantacaoCargo: cliente.responsavelPgrsCargo || "",
+        respTecnicoNome: cliente.responsavelElaboracaoNome || cliente.responsavelTecnicoNome || "",
+      } as AnyPgrsFormData;
+    } else if (isCuritiba) {
+      resultado = {
+        ...base,
+        residuosPerigosos: perigosos.length ? perigosos : base.residuosPerigosos,
+        residuosNaoReciclaveis: naoReciclaveis.length ? naoReciclaveis : base.residuosNaoReciclaveis,
+        residuosReciclaveis: reciclaveis.length ? reciclaveis : base.residuosReciclaveis,
+        empresasContratadas: contratadas.length ? contratadas : base.empresasContratadas,
+      } as AnyPgrsFormData;
+    } else {
+      resultado = {
+        ...base,
+        residuosPerigosos: perigosos.length ? perigosos : base.residuosPerigosos,
+        residuosNaoReciclaveis: naoReciclaveis.length ? naoReciclaveis : base.residuosNaoReciclaveis,
+        residuosReciclaveis: reciclaveis.length ? reciclaveis : base.residuosReciclaveis,
+        empresasContratadas: contratadas.length ? contratadas : base.empresasContratadas,
+        responsavelAssinaturaNome: cliente.responsavelPgrsNome || "",
+        responsavelAssinaturaCargo: cliente.responsavelPgrsCargo || "",
+      } as AnyPgrsFormData;
     }
-    const base = emptyPgrsFormData();
-    return {
-      ...base,
-      residuosPerigosos: perigosos.length ? perigosos : base.residuosPerigosos,
-      residuosNaoReciclaveis: naoReciclaveis.length ? naoReciclaveis : base.residuosNaoReciclaveis,
-      residuosReciclaveis: reciclaveis.length ? reciclaveis : base.residuosReciclaveis,
-      empresasContratadas: contratadas.length ? contratadas : base.empresasContratadas,
-      responsavelAssinaturaNome: cliente.responsavelPgrsNome || "",
-      responsavelAssinaturaCargo: cliente.responsavelPgrsCargo || "",
-    };
+
+    if (reaproveitar) {
+      const limpo: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(reaproveitar)) {
+        if (!(k in base) || v === null || v === undefined) continue;
+        if (Array.isArray(v)) {
+          if (v.length) limpo[k] = v;
+          continue;
+        }
+        limpo[k] = v;
+      }
+      resultado = { ...resultado, ...limpo } as AnyPgrsFormData;
+    }
+    return resultado;
   });
 
   const [dadosEstab, setDadosEstab] = useState<DadosEstabelecimentoValues>(() =>
@@ -219,7 +261,7 @@ export function PgrsForm({ clienteId, clienteApelido, cliente, templateSlug, ini
     return () => window.removeEventListener("beforeunload", handler);
   }, [dirty]);
 
-  const setFormField = (patch: Partial<PgrsPinhaisFormData | PgrsCuritibaFormData>) => {
+  const setFormField = (patch: Partial<AnyPgrsFormData>) => {
     setForm((prev) => ({ ...prev, ...patch }));
     setDirty(true);
   };
@@ -228,6 +270,69 @@ export function PgrsForm({ clienteId, clienteApelido, cliente, templateSlug, ini
     setForm((prev) => ({ ...prev, [cat]: itens }));
     setDirty(true);
   };
+
+  const arquivoRef = useRef<HTMLInputElement | null>(null);
+  const [importando, setImportando] = useState(false);
+
+  async function handleImportarArquivo(file: File) {
+    setImportando(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/documentos-gerados/extract", { method: "POST", body: fd });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        toast(String(err.error || "Erro ao ler o arquivo"), "error");
+        return;
+      }
+      const data = (await res.json()) as { texto?: string; campos?: Record<string, string> };
+      if (!data.texto) {
+        toast("Nenhum texto encontrado no arquivo", "warning");
+        return;
+      }
+
+      const { formPatch, estabPatch } = extrairPgrsDoTexto(data.texto);
+      const chavesForm = Object.keys(formPatch).filter((k) => k in form);
+      const chavesEstab = Object.keys(estabPatch).filter((k) => k in dadosEstab);
+
+      if (!chavesForm.length && !chavesEstab.length) {
+        toast("Nenhum dado de PGRS reconhecido no arquivo", "warning");
+        return;
+      }
+
+      if (chavesForm.length) {
+        setForm((prev) => {
+          const proximo = { ...prev } as Record<string, unknown>;
+          for (const k of chavesForm) proximo[k] = formPatch[k];
+          return proximo as unknown as AnyPgrsFormData;
+        });
+      }
+      if (chavesEstab.length) {
+        setDadosEstab((prev) => {
+          const proximo = { ...prev } as Record<string, unknown>;
+          for (const k of chavesEstab) proximo[k] = estabPatch[k];
+          return proximo as unknown as DadosEstabelecimentoValues;
+        });
+      }
+      setDirty(true);
+
+      toast(
+        `PGRS importado: ${chavesForm.length + chavesEstab.length} campo(s) preenchido(s)`,
+        "success"
+      );
+
+      const cnpjDoc = (data.campos?.cnpj || "").replace(/\D/g, "");
+      const cnpjCli = (cliente.cnpj || "").replace(/\D/g, "");
+      if (cnpjDoc && cnpjCli && cnpjDoc !== cnpjCli) {
+        toast("Atenção: o CNPJ do arquivo importado não corresponde a este cliente", "warning");
+      }
+    } catch {
+      toast("Erro ao importar o PGRS", "error");
+    } finally {
+      setImportando(false);
+      if (arquivoRef.current) arquivoRef.current.value = "";
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -251,7 +356,12 @@ export function PgrsForm({ clienteId, clienteApelido, cliente, templateSlug, ini
       const blob = await res.blob();
       const disposition = res.headers.get("Content-Disposition") || "";
       const match = disposition.match(/filename="([^"]+)"/);
-      const filename = match ? match[1] : `${isCuritiba ? "PGRS_Curitiba" : "PGRS_Pinhais"}.docx`;
+      const nomeArquivo = isSj
+        ? "PGRS_Sao_Jose_dos_Pinhais"
+        : isCuritiba
+          ? "PGRS_Curitiba"
+          : "PGRS_Pinhais";
+      const filename = match ? match[1] : `${nomeArquivo}.docx`;
       const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = blobUrl;
@@ -261,7 +371,16 @@ export function PgrsForm({ clienteId, clienteApelido, cliente, templateSlug, ini
       a.remove();
       URL.revokeObjectURL(blobUrl);
       setDirty(false);
-      toast(docId ? "Documento atualizado com sucesso" : (isCuritiba ? "PGRS Curitiba gerado com sucesso" : "PGRS Pinhais gerado com sucesso"), "success");
+      toast(
+        docId
+          ? "Documento atualizado com sucesso"
+          : isSj
+            ? "PGRS São José dos Pinhais gerado com sucesso"
+            : isCuritiba
+              ? "PGRS Curitiba gerado com sucesso"
+              : "PGRS Pinhais gerado com sucesso",
+        "success"
+      );
       router.refresh();
     } catch {
       toast("Erro ao gerar o documento", "error");
@@ -270,12 +389,18 @@ export function PgrsForm({ clienteId, clienteApelido, cliente, templateSlug, ini
     }
   }
 
-  const titulo = isCuritiba ? "PGRS Simplificado — Curitiba" : "PGRS Simplificado — Pinhais";
+  const titulo = isSj
+    ? "PGRS Simplificado — São José dos Pinhais"
+    : isCuritiba
+      ? "PGRS Simplificado — Curitiba"
+      : "PGRS Simplificado — Pinhais";
   const subtitulo = docId
     ? "Edite os dados e gere o documento atualizado"
-    : isCuritiba
-      ? "Plano de Gerenciamento de Resíduos Sólidos Simplificado da Secretaria Municipal do Meio Ambiente de Curitiba/PR"
-      : "Termo de Referência do Plano de Gerenciamento de Resíduos Sólidos Simplificado do município de Pinhais/PR";
+    : isSj
+      ? "Formulário de Plano de Gerenciamento de Resíduos Sólidos do município de São José dos Pinhais/PR"
+      : isCuritiba
+        ? "Plano de Gerenciamento de Resíduos Sólidos Simplificado da Secretaria Municipal do Meio Ambiente de Curitiba/PR"
+        : "Termo de Referência do Plano de Gerenciamento de Resíduos Sólidos Simplificado do município de Pinhais/PR";
 
   return (
     <div>
@@ -284,14 +409,35 @@ export function PgrsForm({ clienteId, clienteApelido, cliente, templateSlug, ini
         title={docId ? `Editar ${titulo} — ${clienteApelido}` : `${titulo} — ${clienteApelido}`}
         subtitle={subtitulo}
         actions={
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="focus-ring transition-brand flex items-center gap-2 rounded-lg border border-[var(--color-paper-200)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]"
-          >
-            <ArrowLeft size={16} />
-            Voltar
-          </button>
+          <>
+            <input
+              ref={arquivoRef}
+              type="file"
+              accept=".docx,.pdf"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleImportarArquivo(f);
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => arquivoRef.current?.click()}
+              disabled={importando}
+              className="focus-ring transition-brand inline-flex items-center gap-2 rounded-lg border border-[var(--color-paper-200)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)] disabled:opacity-50"
+            >
+              {importando ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+              {importando ? "Importando..." : "Importar PGRS"}
+            </button>
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="focus-ring transition-brand flex items-center gap-2 rounded-lg border border-[var(--color-paper-200)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]"
+            >
+              <ArrowLeft size={16} />
+              Voltar
+            </button>
+          </>
         }
       />
 
@@ -312,7 +458,7 @@ export function PgrsForm({ clienteId, clienteApelido, cliente, templateSlug, ini
           <EmpresasContratadasTable itens={(form as PgrsPinhaisFormData).empresasContratadas} onChange={(v) => setFormField({ empresasContratadas: v })} />
         </SectionCard>
 
-        {isCuritiba && (
+        {(isCuritiba || isSj) && (
           <>
             <SectionCard icon={GraduationCap} title="Treinamento e capacitação" subtitle="Capacitação do pessoal para segregação dos resíduos">
               <div className="space-y-4">
@@ -332,6 +478,14 @@ export function PgrsForm({ clienteId, clienteApelido, cliente, templateSlug, ini
                   <Campo label="Conselho de classe / nº de registro" value={(form as PgrsCuritibaFormData).capacitacaoConselhoRegistro} onChange={(v) => setFormField({ capacitacaoConselhoRegistro: v })} />
                 </div>
                 <Campo label="Conteúdos abordados" value={(form as PgrsCuritibaFormData).capacitacaoConteudos} onChange={(v) => setFormField({ capacitacaoConteudos: v })} textarea />
+                {isSj && !(form as PgrsSjFormData).capacitacaoOferta && (
+                  <Campo
+                    label="Justificativa (obrigatória ao marcar NÃO)"
+                    value={(form as PgrsSjFormData).capacitacaoJustificativa}
+                    onChange={(v) => setFormField({ capacitacaoJustificativa: v })}
+                    textarea
+                  />
+                )}
               </div>
             </SectionCard>
 
@@ -341,11 +495,45 @@ export function PgrsForm({ clienteId, clienteApelido, cliente, templateSlug, ini
           </>
         )}
 
+        {isSj && (
+          <SectionCard icon={Users} title="Responsáveis" subtitle="Responsáveis pelo empreendimento e pela elaboração do PGRS">
+            <div className="space-y-5">
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-500)]">
+                  Responsável do empreendimento
+                </p>
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                  <Campo label="Nome" value={(form as PgrsSjFormData).respEmpreendimentoNome} onChange={(v) => setFormField({ respEmpreendimentoNome: v })} />
+                  <Campo label="Cargo" value={(form as PgrsSjFormData).respEmpreendimentoCargo} onChange={(v) => setFormField({ respEmpreendimentoCargo: v })} />
+                </div>
+              </div>
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-500)]">
+                  Responsável pela implantação do PGRS
+                </p>
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                  <Campo label="Nome" value={(form as PgrsSjFormData).respImplantacaoNome} onChange={(v) => setFormField({ respImplantacaoNome: v })} />
+                  <Campo label="Cargo" value={(form as PgrsSjFormData).respImplantacaoCargo} onChange={(v) => setFormField({ respImplantacaoCargo: v })} />
+                </div>
+              </div>
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-500)]">
+                  Responsável técnico pela elaboração do PGRS
+                </p>
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                  <Campo label="Nome" value={(form as PgrsSjFormData).respTecnicoNome} onChange={(v) => setFormField({ respTecnicoNome: v })} />
+                  <Campo label="Cargo" value={(form as PgrsSjFormData).respTecnicoCargo} onChange={(v) => setFormField({ respTecnicoCargo: v })} />
+                </div>
+              </div>
+            </div>
+          </SectionCard>
+        )}
+
         <SectionCard icon={PenLine} title="Observações gerais" subtitle="Informações complementares">
           <Campo label="Observações" value={(form as PgrsPinhaisFormData).observacoesGerais} onChange={(v) => setFormField({ observacoesGerais: v })} textarea />
         </SectionCard>
 
-        {!isCuritiba && (
+        {!isCuritiba && !isSj && (
           <SectionCard icon={PenLine} title="Assinatura" subtitle="Responsável pela assinatura do documento">
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
               <Campo label="Nome do responsável" value={(form as PgrsPinhaisFormData).responsavelAssinaturaNome} onChange={(v) => setFormField({ responsavelAssinaturaNome: v })} />
@@ -356,23 +544,32 @@ export function PgrsForm({ clienteId, clienteApelido, cliente, templateSlug, ini
 
         <SectionCard icon={Paperclip} title="Anexos" subtitle="Informe se cada documento será anexado ao PGRS">
           <div>
-            {isCuritiba
-              ? (Object.keys(ANEXO_CURITIBA_LABELS) as AnexoKeysCuritiba[]).map((key) => (
+            {isSj
+              ? (Object.keys(ANEXO_SJ_LABELS) as AnexoKeysCuritiba[]).map((key) => (
                   <AnexoRow
                     key={key}
-                    label={ANEXO_CURITIBA_LABELS[key]}
-                    value={(form as PgrsCuritibaFormData)[key]}
-                    onChange={(v) => setFormField({ [key]: v } as Partial<PgrsCuritibaFormData>)}
+                    label={ANEXO_SJ_LABELS[key]}
+                    value={(form as PgrsSjFormData)[key]}
+                    onChange={(v) => setFormField({ [key]: v } as Partial<PgrsSjFormData>)}
                   />
                 ))
-              : (Object.keys(ANEXO_LABELS) as AnexoKeysPinhais[]).map((key) => (
-                  <AnexoRow
-                    key={key}
-                    label={ANEXO_LABELS[key]}
-                    value={(form as PgrsPinhaisFormData)[key]}
-                    onChange={(v) => setFormField({ [key]: v } as Partial<PgrsPinhaisFormData>)}
-                  />
-                ))}
+              : isCuritiba
+                ? (Object.keys(ANEXO_CURITIBA_LABELS) as AnexoKeysCuritiba[]).map((key) => (
+                    <AnexoRow
+                      key={key}
+                      label={ANEXO_CURITIBA_LABELS[key]}
+                      value={(form as PgrsCuritibaFormData)[key]}
+                      onChange={(v) => setFormField({ [key]: v } as Partial<PgrsCuritibaFormData>)}
+                    />
+                  ))
+                : (Object.keys(ANEXO_LABELS) as AnexoKeysPinhais[]).map((key) => (
+                    <AnexoRow
+                      key={key}
+                      label={ANEXO_LABELS[key]}
+                      value={(form as PgrsPinhaisFormData)[key]}
+                      onChange={(v) => setFormField({ [key]: v } as Partial<PgrsPinhaisFormData>)}
+                    />
+                  ))}
           </div>
         </SectionCard>
 

@@ -63,6 +63,14 @@ export function EditarDocumentoGeradoClient({
   }
 
   const isPgrcc = templateSlug === "pgrcc-iat";
+  const nomeTemplate =
+    templateSlug === "pgrs-pinhais"
+      ? "PGRS Pinhais"
+      : templateSlug === "pgrs-curitiba"
+        ? "PGRS Curitiba"
+        : templateSlug === "pgrs-sj-pinhais"
+          ? "PGRS São José dos Pinhais"
+          : templateSlug;
 
   return (
     <div>
@@ -75,7 +83,7 @@ export function EditarDocumentoGeradoClient({
 
       <Topbar
         icon={FileText}
-        title={`Editar ${isPgrcc ? "PGRCC IAT" : templateSlug === "pgrs-pinhais" ? "PGRS Pinhais" : "PGRS Curitiba"} — ${clienteApelido}`}
+        title={`Editar ${isPgrcc ? "PGRCC IAT" : nomeTemplate} — ${clienteApelido}`}
         subtitle="Edite os dados preenchidos e gere o documento atualizado"
         actions={
           <div className="flex items-center gap-2">
@@ -116,7 +124,7 @@ export function EditarDocumentoGeradoClient({
           clienteId={clienteId}
           clienteApelido={clienteApelido}
           cliente={cliente}
-          templateSlug={templateSlug as "pgrs-pinhais" | "pgrs-curitiba"}
+          templateSlug={templateSlug as "pgrs-pinhais" | "pgrs-curitiba" | "pgrs-sj-pinhais"}
           initialData={dadosSnapshot}
           docId={docId}
         />

@@ -80,8 +80,11 @@ export function buildDocxData(
 
     observacoes_gerais: form.observacoesGerais || "",
 
+    dirigente_nome: empresa.representanteLegalNome || empresa.respLegal || "",
+    dirigente_cargo: "",
     responsavel_empreendimento_nome: empresa.responsavelTecnicoNome || "",
     responsavel_empreendimento_conselho: empresa.responsavelTecnicoConselho || "",
+    responsavel_empreendimento_cargo: "",
     responsavel_implantacao_nome: empresa.responsavelPgrsNome || "",
     responsavel_implantacao_cargo: empresa.responsavelPgrsCargo || "",
     responsavel_elaboracao_assinatura_nome: configuracao?.responsavelNome || "",

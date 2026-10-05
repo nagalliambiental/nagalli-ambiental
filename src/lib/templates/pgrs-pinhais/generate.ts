@@ -47,6 +47,8 @@ export function buildDocxData(
     responsavel_tecnico_cpf: empresa.responsavelTecnicoCpf || "",
     responsavel_pgrs_nome: empresa.responsavelPgrsNome || "",
     responsavel_pgrs_cargo: empresa.responsavelPgrsCargo || "",
+    dirigente_nome: empresa.representanteLegalNome || empresa.respLegal || "",
+    dirigente_cargo: "",
 
     responsavel_elaboracao_nome: configuracao?.responsavelNome || "",
     responsavel_elaboracao_cpf: configuracao?.responsavelCpf || "",

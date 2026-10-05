@@ -636,6 +636,7 @@ export function ClienteDetailClient({
                       <span className="text-[var(--color-ink-700)]">
                         {d.templateSlug === "pgrs-pinhais" ? "PGRS Pinhais"
                           : d.templateSlug === "pgrs-curitiba" ? "PGRS Curitiba"
+                          : d.templateSlug === "pgrs-sj-pinhais" ? "PGRS São José dos Pinhais"
                           : d.templateSlug === "pgrcc-iat" ? "PGRCC IAT"
                           : d.templateSlug}
                       </span>

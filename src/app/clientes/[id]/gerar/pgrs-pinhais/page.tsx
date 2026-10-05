@@ -22,12 +22,19 @@ export default async function GerarPgrsPinhaisPage(props: { params: Promise<{ id
   });
   if (!cliente) notFound();
 
+  const anterior = await prisma.documentoGerado.findFirst({
+    where: { clienteId: cliente.id, templateSlug: { startsWith: "pgrs-" } },
+    orderBy: { createdAt: "desc" },
+    select: { dadosSnapshot: true },
+  });
+
   return (
     <PgrsForm
       clienteId={cliente.id}
       clienteApelido={cliente.apelido}
       cliente={JSON.parse(JSON.stringify(cliente))}
       templateSlug="pgrs-pinhais"
+      reaproveitar={(anterior?.dadosSnapshot as Record<string, unknown> | null) ?? null}
     />
   );
 }

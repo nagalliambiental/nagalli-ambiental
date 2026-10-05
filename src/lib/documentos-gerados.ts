@@ -10,8 +10,13 @@ import {
   buildDocxData as buildPgrccIat,
   renderDocx as renderPgrccIat,
 } from "@/lib/templates/pgrcc-iat/generate";
+import {
+  buildDocxData as buildSjPinhais,
+  renderDocx as renderSjPinhais,
+} from "@/lib/templates/pgrs-sj-pinhais/generate";
 import type { PgrsPinhaisFormData } from "@/lib/templates/pgrs-pinhais/config";
 import type { PgrsCuritibaFormData } from "@/lib/templates/pgrs-curitiba/config";
+import type { PgrsSjFormData } from "@/lib/templates/pgrs-sj-pinhais/config";
 import type { PgrccIatFormData } from "@/lib/templates/pgrcc-iat/config";
 import type { Cliente, Configuracao } from "@prisma/client";
 
@@ -34,6 +39,11 @@ export function gerarDocumentoBuffer(
       return {
         buffer: renderCuritiba(buildCuritiba(cliente, formData as unknown as PgrsCuritibaFormData, configuracao)),
         filename: safeNome("PGRS_Curitiba"),
+      };
+    case "pgrs-sj-pinhais":
+      return {
+        buffer: renderSjPinhais(buildSjPinhais(cliente, formData as unknown as PgrsSjFormData, configuracao)),
+        filename: safeNome("PGRS_Sao_Jose_dos_Pinhais"),
       };
     case "pgrcc-iat":
       return {

@@ -7,7 +7,7 @@ import { PgrsForm } from "@/components/PgrsForm";
 
 export const dynamic = "force-dynamic";
 
-export default async function GerarPgrsCuritibaPage(props: { params: Promise<{ id: string }> }) {
+export default async function GerarPgrsSjPinhaisPage(props: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
@@ -33,7 +33,7 @@ export default async function GerarPgrsCuritibaPage(props: { params: Promise<{ i
       clienteId={cliente.id}
       clienteApelido={cliente.apelido}
       cliente={JSON.parse(JSON.stringify(cliente))}
-      templateSlug="pgrs-curitiba"
+      templateSlug="pgrs-sj-pinhais"
       reaproveitar={(anterior?.dadosSnapshot as Record<string, unknown> | null) ?? null}
     />
   );

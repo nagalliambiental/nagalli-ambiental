@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    if (templateSlug === "pgrs-pinhais" || templateSlug === "pgrs-curitiba") {
+    if (templateSlug === "pgrs-pinhais" || templateSlug === "pgrs-curitiba" || templateSlug === "pgrs-sj-pinhais") {
       await tx.residuoItem.deleteMany({ where: { clienteId: Number(clienteId) } });
       const residuosParaSalvar = [
         ...(formData.residuosPerigosos || []).map((r: ResiduoInput, i: number) => ({ ...r, categoria: "PERIGOSO", ordem: i })),
