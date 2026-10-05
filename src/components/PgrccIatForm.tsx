@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Topbar } from "@/components/Topbar";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { useToast } from "@/components/Toast";
 import { BuscaLicencaIatModal } from "@/components/BuscaLicencaIatModal";
 import type { DadosLicenca } from "@/lib/iat";
-import { Loader2, ArrowLeft, FileText, User, Building2, MapPin, Recycle, Truck, Package, Download, HardHat, CircleCheck, PenLine, Search } from "lucide-react";
+import { Loader2, ArrowLeft, FileText, User, Building2, MapPin, Recycle, Truck, Package, Download, HardHat, CircleCheck, PenLine, Search, Upload } from "lucide-react";
 import {
   emptyPgrccIatFormData,
   CARACTERIZACAO_ROWS,
@@ -17,8 +17,9 @@ import {
   DESTINACAO_ROWS,
   PgrccIatFormData,
 } from "@/lib/templates/pgrcc-iat/config";
+import { extrairPgrccDoTexto } from "@/lib/pgrcc-iat-extract";
 
-type ClienteSer = Record<string, unknown> & { razaoSocial: string };
+type ClienteSer = Record<string, unknown> & { razaoSocial: string; cnpj?: string | null };
 type ConfigSer = Record<string, unknown>;
 
 interface Props {
@@ -27,6 +28,7 @@ interface Props {
   cliente: ClienteSer;
   configuracoes: ConfigSer | null;
   initialData?: Partial<PgrccIatFormData>;
+  reaproveitar?: Record<string, unknown> | null;
   docId?: number;
 }
 
@@ -112,7 +114,7 @@ function NumCell({
   );
 }
 
-export function PgrccIatForm({ clienteId, clienteApelido, cliente, configuracoes, initialData, docId }: Props) {
+export function PgrccIatForm({ clienteId, clienteApelido, cliente, configuracoes, initialData, reaproveitar, docId }: Props) {
   const router = useRouter();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
@@ -156,6 +158,19 @@ export function PgrccIatForm({ clienteId, clienteApelido, cliente, configuracoes
     base.assinaturaDia = String(hoje.getDate());
     base.assinaturaMes = hoje.toLocaleDateString("pt-BR", { month: "long" });
     base.assinaturaAno = String(hoje.getFullYear());
+
+    if (reaproveitar) {
+      const limpo: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(reaproveitar)) {
+        if (!(k in base) || v === null || v === undefined) continue;
+        if (Array.isArray(v)) {
+          if (v.length) limpo[k] = v;
+          continue;
+        }
+        limpo[k] = v;
+      }
+      return { ...base, ...limpo } as PgrccIatFormData;
+    }
 
     return base;
   });
@@ -306,6 +321,55 @@ export function PgrccIatForm({ clienteId, clienteApelido, cliente, configuracoes
 
   const empreendimentos = (cliente.empreendimentos as Record<string, unknown>[]) || [];
 
+  const arquivoRef = useRef<HTMLInputElement | null>(null);
+  const [importando, setImportando] = useState(false);
+
+  async function handleImportarArquivo(file: File) {
+    setImportando(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/documentos-gerados/extract", { method: "POST", body: fd });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        toast(String(err.error || "Erro ao ler o arquivo"), "error");
+        return;
+      }
+      const data = (await res.json()) as { texto?: string; campos?: Record<string, string> };
+      if (!data.texto) {
+        toast("Nenhum texto encontrado no arquivo", "warning");
+        return;
+      }
+
+      const patch = extrairPgrccDoTexto(data.texto);
+      const chaves = Object.keys(patch).filter((k) => k in form);
+      if (!chaves.length) {
+        toast("Nenhum dado de PGRCC reconhecido no arquivo", "warning");
+        return;
+      }
+
+      setForm((prev) => {
+        const proximo = { ...prev } as Record<string, unknown>;
+        for (const k of chaves) proximo[k] = (patch as Record<string, unknown>)[k];
+        return proximo as unknown as PgrccIatFormData;
+      });
+      setDirty(true);
+
+      toast(`PGRCC importado: ${chaves.length} campo(s) preenchido(s)`, "success");
+
+      const cnpjDoc = (data.campos?.cnpj || "").replace(/\D/g, "");
+      const cnpjCli = (cliente.cnpj || "").replace(/\D/g, "");
+      if (cnpjDoc && cnpjCli && cnpjDoc !== cnpjCli) {
+        toast("Atenção: o CNPJ do arquivo importado não corresponde a este cliente", "warning");
+      }
+    } catch {
+      toast("Erro ao importar o PGRCC", "error");
+    } finally {
+      setImportando(false);
+      if (arquivoRef.current) arquivoRef.current.value = "";
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
@@ -354,14 +418,35 @@ export function PgrccIatForm({ clienteId, clienteApelido, cliente, configuracoes
         title={docId ? `Editar PGRCC IAT — ${clienteApelido}` : `PGRCC IAT — ${clienteApelido}`}
         subtitle={docId ? "Edite os dados e gere o documento atualizado" : "Preencha os dados do Projeto Simplificado de Gerenciamento de Resíduos da Construção Civil (PGRCC)"}
         actions={
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="focus-ring transition-brand flex items-center gap-2 rounded-lg border border-[var(--color-paper-200)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]"
-          >
-            <ArrowLeft size={16} />
-            Voltar
-          </button>
+          <>
+            <input
+              ref={arquivoRef}
+              type="file"
+              accept=".docx,.pdf"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleImportarArquivo(f);
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => arquivoRef.current?.click()}
+              disabled={importando}
+              className="focus-ring transition-brand inline-flex items-center gap-2 rounded-lg border border-[var(--color-paper-200)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)] disabled:opacity-50"
+            >
+              {importando ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+              {importando ? "Importando..." : "Importar PGRCC"}
+            </button>
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="focus-ring transition-brand flex items-center gap-2 rounded-lg border border-[var(--color-paper-200)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]"
+            >
+              <ArrowLeft size={16} />
+              Voltar
+            </button>
+          </>
         }
       />
 

@@ -63,6 +63,12 @@ export default async function PgrccIatPage(props: { params: Promise<{ id: string
   ]);
   if (!cliente) notFound();
 
+  const anterior = await prisma.documentoGerado.findFirst({
+    where: { clienteId: cliente.id, templateSlug: "pgrcc-iat" },
+    orderBy: { createdAt: "desc" },
+    select: { dadosSnapshot: true },
+  });
+
   const empresa = (empresaConfig ?? {}) as Record<string, string | null | undefined>;
   const configCombinada = {
     ...(configuracao ?? {}),
@@ -81,6 +87,7 @@ export default async function PgrccIatPage(props: { params: Promise<{ id: string
       clienteApelido={cliente.apelido}
       cliente={JSON.parse(JSON.stringify(cliente))}
       configuracoes={JSON.parse(JSON.stringify(configCombinada))}
+      reaproveitar={(anterior?.dadosSnapshot as Record<string, unknown> | null) ?? null}
     />
   );
 }
