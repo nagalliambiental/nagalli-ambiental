@@ -30,29 +30,17 @@ export default function NovoDocumentoPage() {
 
       const uploadData = new FormData();
       uploadData.append("file", file);
+      uploadData.append("nome", form.nome || file.name);
+      uploadData.append("tipo", form.tipo);
+      if (form.processoId) uploadData.append("processoId", form.processoId);
+      if (form.exigenciaId) uploadData.append("exigenciaId", form.exigenciaId);
       const uploadRes = await fetch("/api/upload", { method: "POST", body: uploadData });
       if (!uploadRes.ok) {
-        toast("Erro ao fazer upload do arquivo", "error");
+        const err = await uploadRes.json().catch(() => ({}));
+        toast(err.error || "Erro ao fazer upload do arquivo", "error");
         return;
       }
-      const { path, size } = await uploadRes.json();
 
-      const docRes = await fetch("/api/documentos", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nome: form.nome || file.name,
-          tipo: form.tipo,
-          caminho: path,
-          tamanho: size,
-          processoId: form.processoId ? Number(form.processoId) : undefined,
-          exigenciaId: form.exigenciaId ? Number(form.exigenciaId) : undefined,
-        }),
-      });
-      if (!docRes.ok) {
-        toast("Erro ao criar documento", "error");
-        return;
-      }
       toast("Documento criado com sucesso", "success");
       router.push("/documentos");
       router.refresh();
