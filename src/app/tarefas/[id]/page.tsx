@@ -6,9 +6,10 @@ import { auth } from "@/lib/auth";
 import { Topbar } from "@/components/Topbar";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ClipboardList, User, Users, Building2, Calendar, Clock, BellRing, AlertTriangle, MessageSquare, Edit3, ArrowLeft, Link2, FileCheck2, Paperclip } from "lucide-react";
+import { ClipboardList, User, Users, Building2, Calendar, Clock, BellRing, AlertTriangle, MessageSquare, Edit3, ArrowLeft, Link2, FileCheck2, Paperclip, Repeat } from "lucide-react";
 import Link from "next/link";
 import DeleteButton from "@/components/DeleteButton";
+import { ROTULO_RECORRENCIA } from "@/lib/constants";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { Tabs } from "@/components/Tabs";
 import { UltimaModificacao } from "@/components/UltimaModificacao";
@@ -61,6 +62,14 @@ export default async function TarefaDetailPage(props: { params: Promise<{ id: st
       processo: { select: { id: true, numProtocolo: true, numLicenca: true, tipo: true } },
       condicionante: { select: { id: true, titulo: true } },
       exigencia: { select: { id: true, prazo: true, cumprida: true } },
+      serie: {
+        include: {
+          periodos: {
+            include: { responsavel: { select: { id: true, nome: true } } },
+            orderBy: { inicio: "asc" },
+          },
+        },
+      },
       _count: { select: { anexos: true } },
     },
   });
@@ -158,6 +167,61 @@ export default async function TarefaDetailPage(props: { params: Promise<{ id: st
               </div>
             ),
           },
+          ...(tarefa.serie
+            ? [{
+                key: "recorrencia",
+                label: "Recorrência",
+                content: (
+                  <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
+                    <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-1 flex items-center gap-2">
+                      <Repeat size={16} />
+                      Recorrência {ROTULO_RECORRENCIA[tarefa.serie.recorrencia as keyof typeof ROTULO_RECORRENCIA] ?? tarefa.serie.recorrencia}
+                    </h2>
+                    <p className="mb-4 text-xs text-[var(--color-ink-500)]">
+                      Ao concluir uma ocorrência, a próxima é criada automaticamente com o prazo recalculado.
+                    </p>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-[var(--color-paper-200)] text-left text-xs uppercase text-[var(--color-ink-500)]">
+                            <th className="py-2 pr-3 font-medium">Início</th>
+                            <th className="py-2 pr-3 font-medium">Fim</th>
+                            <th className="py-2 font-medium">Responsável</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {tarefa.serie.periodos.length === 0 && (
+                            <tr>
+                              <td colSpan={3} className="py-3 text-xs text-[var(--color-ink-500)]">
+                                Sem períodos — vale sempre o responsável da tarefa ({tarefa.responsavel.nome}).
+                              </td>
+                            </tr>
+                          )}
+                          {tarefa.serie.periodos.map((p) => {
+                            const hoje = new Date();
+                            const vigente = hoje >= p.inicio && hoje <= p.fim;
+                            return (
+                              <tr key={p.id} className={`border-b border-[var(--color-paper-100)] ${vigente ? "bg-green-50" : ""}`}>
+                                <td className="py-2 pr-3">{format(p.inicio, "dd/MM/yyyy", { locale: ptBR })}</td>
+                                <td className="py-2 pr-3">{format(p.fim, "dd/MM/yyyy", { locale: ptBR })}</td>
+                                <td className="py-2">
+                                  {p.responsavel.nome}
+                                  {vigente && (
+                                    <span className="ml-2 rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-medium text-green-700">
+                                      vigente
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ),
+              }]
+            : []),
           ...(tarefa.descricao
             ? [{
                 key: "descricao",

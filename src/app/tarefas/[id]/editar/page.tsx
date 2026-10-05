@@ -17,7 +17,10 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
   if (!session?.user) redirect("/login");
 
   const { id } = await props.params;
-  const tarefa = await prisma.tarefa.findUnique({ where: { id: Number(id) } });
+  const tarefa = await prisma.tarefa.findUnique({
+    where: { id: Number(id) },
+    include: { serie: { include: { periodos: { orderBy: { inicio: "asc" } } } } },
+  });
   if (!tarefa) notFound();
 
   const initial: TarefaFormInitial = {
@@ -36,6 +39,12 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
     empreendimentoId: tarefa.empreendimentoId,
     processoId: tarefa.processoId,
     condicionanteId: tarefa.condicionanteId,
+    recorrencia: tarefa.serie?.recorrencia ?? null,
+    periodos: (tarefa.serie?.periodos ?? []).map((p) => ({
+      inicio: p.inicio.toISOString(),
+      fim: p.fim.toISOString(),
+      responsavelId: p.responsavelId,
+    })),
   };
 
   return (

@@ -318,6 +318,7 @@ model Responsavel {
   processos  Processo[]
   usuario    Usuario?   @relation(fields: [usuarioId], references: [id])
   tarefas    Tarefa[]
+  periodos   TarefaPeriodo[]
 }
 
 model Tarefa {
@@ -339,6 +340,7 @@ model Tarefa {
   condicionanteId  Int?
   exigenciaId      Int?
   usuarioId        Int
+  serieId          Int?
   criadoEm         DateTime        @default(now())
   atualizadoEm     DateTime        @updatedAt
   ativo            Boolean         @default(true)
@@ -349,10 +351,31 @@ model Tarefa {
   condicionante    Condicionante?  @relation(fields: [condicionanteId], references: [id], onDelete: SetNull)
   exigencia        Exigencia?      @relation(fields: [exigenciaId], references: [id], onDelete: SetNull)
   usuario          Usuario         @relation(fields: [usuarioId], references: [id])
+  serie            TarefaSerie?    @relation(fields: [serieId], references: [id], onDelete: SetNull)
   anexos           TarefaAnexo[]
 
   @@index([processoId])
   @@index([status])
+}
+
+model TarefaSerie {
+  id          Int            @id @default(autoincrement())
+  recorrencia String
+  criadoEm    DateTime       @default(now())
+  tarefas     Tarefa[]
+  periodos    TarefaPeriodo[]
+}
+
+model TarefaPeriodo {
+  id            Int         @id @default(autoincrement())
+  serieId       Int
+  inicio        DateTime
+  fim           DateTime
+  responsavelId Int
+  serie         TarefaSerie @relation(fields: [serieId], references: [id], onDelete: Cascade)
+  responsavel   Responsavel @relation(fields: [responsavelId], references: [id])
+
+  @@index([serieId])
 }
 
 model TarefaAnexo {

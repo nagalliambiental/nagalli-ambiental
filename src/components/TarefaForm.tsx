@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/Toast";
-import { Paperclip } from "lucide-react";
+import { Paperclip, Plus, X } from "lucide-react";
+import { RECORRENCIA_TAREFA, ROTULO_RECORRENCIA } from "@/lib/constants";
 import type { OpcaoProcesso } from "@/components/tarefas/LinhaTarefa";
 
 interface ResponsavelOption {
@@ -38,6 +39,19 @@ export interface TarefaFormInitial {
   empreendimentoId: number | null;
   processoId?: number | null;
   condicionanteId?: number | null;
+  recorrencia?: string | null;
+  periodos?: {
+    inicio: string;
+    fim: string;
+    responsavelId: number;
+    responsavel?: { id: number; nome: string };
+  }[];
+}
+
+type PeriodoUI = { chave: string; inicio: string; fim: string; responsavelId: string };
+
+function chaveNova(): string {
+  return Math.random().toString(36).slice(2, 10);
 }
 
 const STATUS_OPTIONS = [
@@ -96,6 +110,15 @@ export default function TarefaForm({
   const [condicionantes, setCondicionantes] = useState<CondicaoOption[]>([]);
   const [arquivos, setArquivos] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
+  const [recorrencia, setRecorrencia] = useState(initial?.recorrencia ?? "");
+  const [periodos, setPeriodos] = useState<PeriodoUI[]>(
+    (initial?.periodos ?? []).map((p) => ({
+      chave: chaveNova(),
+      inicio: toDateInput(p.inicio),
+      fim: toDateInput(p.fim),
+      responsavelId: String(p.responsavelId),
+    }))
+  );
   const [form, setForm] = useState(() => {
     const url = modo === "novo" ? paramsIniciais() : { processoId: "", condicionanteId: "" };
     return {
@@ -186,6 +209,13 @@ export default function TarefaForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (recorrencia) {
+      const incompleto = periodos.some((p) => !p.inicio || !p.fim || !p.responsavelId);
+      if (incompleto) {
+        toast("Escala de períodos: preencha início, fim e responsável", "error");
+        return;
+      }
+    }
     setSaving(true);
     const payload = {
       titulo: form.titulo,
@@ -202,6 +232,10 @@ export default function TarefaForm({
       dataConclusao: form.status === "concluida" ? form.dataConclusao || null : null,
       prioridade: form.prioridade,
       status: form.status,
+      recorrencia: recorrencia || null,
+      periodos: recorrencia
+        ? periodos.map((p) => ({ inicio: p.inicio, fim: p.fim, responsavelId: Number(p.responsavelId) }))
+        : [],
     };
     const res = await fetch(endpoint, {
       method: modo === "editar" ? "PUT" : "POST",
@@ -331,6 +365,83 @@ export default function TarefaForm({
           </div>
         )}
       </div>
+      <div>
+        <label className={labelClass}>Recorrência</label>
+        <select value={recorrencia} onChange={(e) => setRecorrencia(e.target.value)} className={inputClass}>
+          <option value="">Não recorrente</option>
+          {(Object.values(RECORRENCIA_TAREFA) as string[]).map((r) => (
+            <option key={r} value={r}>
+              {ROTULO_RECORRENCIA[r as keyof typeof ROTULO_RECORRENCIA]}
+            </option>
+          ))}
+        </select>
+        <p className="mt-1 text-xs text-[var(--color-ink-500)]">
+          Ao concluir, a próxima ocorrência é criada automaticamente com o prazo recalculado.
+        </p>
+      </div>
+
+      {recorrencia && (
+        <div className="rounded-lg border border-[var(--color-paper-200)] bg-[var(--color-paper-100)] p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-[var(--color-ink-700)]">Escala de responsável por período</span>
+            <button
+              type="button"
+              onClick={() =>
+                setPeriodos((ps) => [...ps, { chave: chaveNova(), inicio: "", fim: "", responsavelId: form.responsavelId }])
+              }
+              className="focus-ring transition-brand inline-flex items-center gap-1 rounded-lg border border-[var(--color-paper-200)] bg-white px-2 py-1 text-xs font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]"
+            >
+              <Plus size={13} />
+              Período
+            </button>
+          </div>
+          {periodos.length === 0 && (
+            <p className="text-xs text-[var(--color-ink-500)]">
+              Sem períodos, vale sempre o responsável da tarefa.
+            </p>
+          )}
+          {periodos.map((p, i) => (
+            <div key={p.chave} className="grid grid-cols-[1fr_1fr_1.5fr_auto] items-center gap-2">
+              <input
+                type="date"
+                value={p.inicio}
+                onChange={(e) =>
+                  setPeriodos((ps) => ps.map((x, j) => (j === i ? { ...x, inicio: e.target.value } : x)))
+                }
+                className={inputClass}
+                placeholder="Início"
+              />
+              <input
+                type="date"
+                value={p.fim}
+                onChange={(e) => setPeriodos((ps) => ps.map((x, j) => (j === i ? { ...x, fim: e.target.value } : x)))}
+                className={inputClass}
+              />
+              <select
+                value={p.responsavelId}
+                onChange={(e) =>
+                  setPeriodos((ps) => ps.map((x, j) => (j === i ? { ...x, responsavelId: e.target.value } : x)))
+                }
+                className={inputClass}
+              >
+                <option value="">Responsável...</option>
+                {responsaveis.map((r) => (
+                  <option key={r.id} value={r.id}>{r.nome}</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => setPeriodos((ps) => ps.filter((_, j) => j !== i))}
+                className="focus-ring rounded p-1.5 text-[var(--color-ink-400)] hover:bg-[var(--color-paper-200)] hover:text-red-600"
+                title="Remover período"
+              >
+                <X size={15} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div>
         <label className={labelClass}>Observações</label>
         <textarea value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} rows={2} className={inputClass} />

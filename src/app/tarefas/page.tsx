@@ -39,6 +39,7 @@ export default async function TarefasPage({
         empreendimento: { select: { id: true, apelido: true } },
         processo: { select: { id: true, numProtocolo: true, numLicenca: true } },
         condicionante: { select: { id: true, titulo: true } },
+        serie: { select: { recorrencia: true } },
         _count: { select: { anexos: true } },
       },
       orderBy: [{ prazoFinal: { sort: "asc", nulls: "last" } }, { criadoEm: "desc" }],

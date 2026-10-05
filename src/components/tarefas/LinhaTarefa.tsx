@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useToast } from "@/components/Toast";
 import { formatDate } from "@/lib/format";
-import { Pencil, Trash2, X, CheckCircle2 } from "lucide-react";
+import { Pencil, Trash2, X, CheckCircle2, Repeat } from "lucide-react";
+import { ROTULO_RECORRENCIA } from "@/lib/constants";
 import { BotaoAnexos, TarefaAnexos } from "@/components/tarefas/TarefaAnexos";
 
 export type LinhaTarefaTarefa = {
@@ -28,6 +29,7 @@ export type LinhaTarefaTarefa = {
   processo: { id: number; numProtocolo: string; numLicenca: string | null } | null;
   condicionanteId: number | null;
   condicionante: { id: number; titulo: string } | null;
+  serie?: { recorrencia: string } | null;
   _count?: { anexos: number };
   criadoEm: string;
 };
@@ -218,6 +220,15 @@ export function LinhaTarefa({
               {tarefa.titulo}
             </Link>
             <span className="font-normal text-[var(--color-ink-500)]"> — {tarefa.responsavel.nome}</span>
+            {tarefa.serie && (
+              <span
+                className="ml-2 inline-flex items-center gap-1 rounded-md bg-violet-50 px-1.5 py-0.5 align-middle text-[11px] font-medium text-violet-700 ring-1 ring-violet-200"
+                title={`Tarefa recorrente ${ROTULO_RECORRENCIA[tarefa.serie.recorrencia as keyof typeof ROTULO_RECORRENCIA] ?? tarefa.serie.recorrencia}`}
+              >
+                <Repeat size={11} />
+                {ROTULO_RECORRENCIA[tarefa.serie.recorrencia as keyof typeof ROTULO_RECORRENCIA] ?? tarefa.serie.recorrencia}
+              </span>
+            )}
           </p>
           <p className="mt-0.5 text-xs text-[var(--color-ink-500)]">
             {tarefa.dataLimite ? `Limite de execução: ${formatDate(tarefa.dataLimite)}` : ""}
@@ -233,7 +244,7 @@ export function LinhaTarefa({
           </p>
           <p className="text-xs text-[var(--color-ink-500)]">
             {tarefa.processo
-              ? `Processo: ${tarefa.processo.numLicenca || tarefa.processo.numProtocolo}`
+              ? `Licença: ${tarefa.processo.numLicenca || tarefa.processo.numProtocolo}`
               : tarefa.empreendimento
                 ? `Empreendimento: ${tarefa.empreendimento.apelido}`
                 : "— sem vínculo —"}

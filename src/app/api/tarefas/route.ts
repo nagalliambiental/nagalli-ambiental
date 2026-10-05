@@ -5,6 +5,7 @@ import { dataInputParaDate } from "@/lib/format";
 import { requerAutenticado } from "@/lib/perfil";
 import { STATUS_TAREFA, PRIORIDADE_TAREFA } from "@/lib/constants";
 import { criarExigenciaEspelhada, sincronizarExigenciaTarefa } from "@/lib/tarefas-exigencia";
+import { criarSerie, ehRecorrenciaValida, type PeriodoEntrada } from "@/lib/tarefas-recorrencia";
 import type { Prisma } from "@prisma/client";
 
 const INCLUIR = {
@@ -14,6 +15,7 @@ const INCLUIR = {
   processo: { select: { id: true, numProtocolo: true, numLicenca: true } },
   condicionante: { select: { id: true, titulo: true } },
   exigencia: { select: { id: true, prazo: true, cumprida: true } },
+  serie: { select: { id: true, recorrencia: true } },
   _count: { select: { anexos: true } },
 } satisfies Prisma.TarefaInclude;
 
@@ -97,6 +99,19 @@ export async function POST(request: Request) {
           ? Number(data.exigenciaId)
           : null;
 
+    let serieId: number | null = null;
+    if (data.recorrencia) {
+      if (!ehRecorrenciaValida(data.recorrencia)) {
+        return NextResponse.json({ error: "Recorrência inválida" }, { status: 400 });
+      }
+      try {
+        serieId = await criarSerie(data.recorrencia, (data.periodos ?? []) as PeriodoEntrada[]);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Erro na escala de períodos";
+        return NextResponse.json({ error: msg }, { status: 400 });
+      }
+    }
+
     const tarefa = await prisma.tarefa.create({
       data: {
         titulo,
@@ -115,6 +130,7 @@ export async function POST(request: Request) {
         condicionanteId: data.condicionanteId ? Number(data.condicionanteId) : null,
         exigenciaId,
         usuarioId: Number((authResult.user as { id: string }).id),
+        serieId,
       },
       include: INCLUIR,
     });

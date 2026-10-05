@@ -5,6 +5,13 @@ import { dataInputParaDate } from "@/lib/format";
 import { requerAutenticado } from "@/lib/perfil";
 import { STATUS_TAREFA, PRIORIDADE_TAREFA } from "@/lib/constants";
 import { criarExigenciaEspelhada, sincronizarExigenciaTarefa } from "@/lib/tarefas-exigencia";
+import {
+  atualizarSerie,
+  criarSerie,
+  ehRecorrenciaValida,
+  gerarProximaOcorrencia,
+  type PeriodoEntrada,
+} from "@/lib/tarefas-recorrencia";
 import type { Prisma } from "@prisma/client";
 
 type Params = { params: Promise<{ id: string }> };
@@ -16,6 +23,14 @@ const INCLUIR = {
   processo: { select: { id: true, numProtocolo: true, numLicenca: true, tipo: true } },
   condicionante: { select: { id: true, titulo: true } },
   exigencia: { select: { id: true, prazo: true, cumprida: true, descricao: true } },
+  serie: {
+    include: {
+      periodos: {
+        include: { responsavel: { select: { id: true, nome: true } } },
+        orderBy: { inicio: "asc" as const },
+      },
+    },
+  },
   anexos: {
     select: { id: true, nome: true, mime: true, tamanho: true, criadoEm: true },
     orderBy: { criadoEm: "desc" as const },
@@ -36,7 +51,8 @@ export async function GET(_req: Request, { params }: Params) {
 
 async function aplicarCorpo(
   tarefaId: number,
-  body: Record<string, unknown>
+  body: Record<string, unknown>,
+  usuarioId: number
 ): Promise<{ erro: NextResponse | null }> {
   const atual = await prisma.tarefa.findUnique({ where: { id: tarefaId } });
   if (!atual || !atual.ativo) {
@@ -96,6 +112,31 @@ async function aplicarCorpo(
     });
   }
 
+  const virouConcluida = atual.status !== STATUS_TAREFA.CONCLUIDA && status === STATUS_TAREFA.CONCLUIDA;
+
+  let serieId = atual.serieId;
+  if (body.recorrencia !== undefined) {
+    const rec = body.recorrencia;
+    if (!rec) {
+      serieId = null;
+    } else {
+      if (!ehRecorrenciaValida(rec)) {
+        return { erro: NextResponse.json({ error: "Recorrência inválida" }, { status: 400 }) };
+      }
+      const periodos = (body.periodos ?? []) as PeriodoEntrada[];
+      try {
+        if (serieId) {
+          await atualizarSerie(serieId, rec, periodos);
+        } else {
+          serieId = await criarSerie(rec, periodos);
+        }
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Erro na escala de períodos";
+        return { erro: NextResponse.json({ error: msg }, { status: 400 }) };
+      }
+    }
+  }
+
   const tarefa = await prisma.tarefa.update({
     where: { id: tarefaId },
     data: {
@@ -127,6 +168,7 @@ async function aplicarCorpo(
       processoId,
       condicionanteId,
       exigenciaId,
+      serieId,
       statusObs: body.statusObs !== undefined ? ((body.statusObs as string | null) || null) : atual.statusObs,
       ativo: body.ativo !== undefined ? Boolean(body.ativo) : atual.ativo,
     },
@@ -134,6 +176,14 @@ async function aplicarCorpo(
   });
 
   await sincronizarExigenciaTarefa({ exigenciaId: tarefa.exigenciaId, status: tarefa.status });
+
+  if (virouConcluida && tarefa.serieId) {
+    try {
+      await gerarProximaOcorrencia(tarefa, usuarioId);
+    } catch (e) {
+      console.error("Erro ao gerar próxima ocorrência da tarefa recorrente:", e);
+    }
+  }
 
   return { erro: null };
 }
@@ -147,7 +197,7 @@ export async function PUT(request: Request, { params }: Params) {
   if (!body || typeof body !== "object") return NextResponse.json({ error: "Corpo inválido" }, { status: 400 });
 
   try {
-    const { erro } = await aplicarCorpo(Number(id), body);
+    const { erro } = await aplicarCorpo(Number(id), body, Number((authResult.user as { id: string }).id));
     if (erro) return erro;
     const tarefa = await prisma.tarefa.findUnique({ where: { id: Number(id) }, include: INCLUIR });
     await logAuditoria("atualizar", "tarefa", Number(id), body, Number((authResult.user as { id: string }).id));
@@ -167,7 +217,7 @@ export async function PATCH(request: Request, { params }: Params) {
   if (!body || typeof body !== "object") return NextResponse.json({ error: "Corpo inválido" }, { status: 400 });
 
   try {
-    const { erro } = await aplicarCorpo(Number(id), body);
+    const { erro } = await aplicarCorpo(Number(id), body, Number((authResult.user as { id: string }).id));
     if (erro) return erro;
     const tarefa = await prisma.tarefa.findUnique({ where: { id: Number(id) }, include: INCLUIR });
     await logAuditoria("atualizar", "tarefa", Number(id), body, Number((authResult.user as { id: string }).id));

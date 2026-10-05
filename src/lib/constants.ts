@@ -44,6 +44,22 @@ export const PRIORIDADE_TAREFA = {
 
 export type PrioridadeTarefa = (typeof PRIORIDADE_TAREFA)[keyof typeof PRIORIDADE_TAREFA];
 
+export const RECORRENCIA_TAREFA = {
+  SEMANAL: "semanal",
+  QUINZENAL: "quinzenal",
+  MENSAL: "mensal",
+  ANUAL: "anual",
+} as const;
+
+export type RecorrenciaTarefa = (typeof RECORRENCIA_TAREFA)[keyof typeof RECORRENCIA_TAREFA];
+
+export const ROTULO_RECORRENCIA: Record<RecorrenciaTarefa, string> = {
+  semanal: "Semanal",
+  quinzenal: "Quinzenal",
+  mensal: "Mensal",
+  anual: "Anual",
+};
+
 export const TIPO_DOCUMENTO = {
   LICENCA: "licenca",
   PARECER: "parecer",
