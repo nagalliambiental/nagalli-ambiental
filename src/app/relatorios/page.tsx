@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Topbar } from "@/components/Topbar";
 import { useSession } from "next-auth/react";
-import { FileSpreadsheet, DollarSign, Building2, FileCheck2, Download, Loader2, Eye, BarChart3, FileText, Truck, ShieldCheck } from "lucide-react";
+import { FileSpreadsheet, DollarSign, Building2, FileCheck2, Download, Loader2, Eye, BarChart3, FileText, Truck, ShieldCheck, ClipboardCheck } from "lucide-react";
 
 const currentYear = new Date().getFullYear();
 
@@ -80,12 +80,14 @@ export default function RelatoriosPage() {
   const [ano, setAno] = useState(currentYear);
   const [finStatus, setFinStatus] = useState("");
   const [procStatus, setProcStatus] = useState("");
+  const [tarefaStatus, setTarefaStatus] = useState("");
   const dmr = useDownload(`/api/relatorios/dmr?ano=${ano}`);
   const financeiro = useDownload(`/api/relatorios/financeiro?status=${finStatus}`);
   const processos = useDownload(`/api/relatorios/processos?status=${procStatus}`);
   const clientes = useDownload("/api/relatorios/clientes");
   const tpp = useDownload("/api/relatorios/tpp");
   const pgrs = useDownload("/api/relatorios/pgrs");
+  const tarefas = useDownload(`/api/relatorios/tarefas?status=${tarefaStatus}`);
 
   return (
     <div>
@@ -144,6 +146,21 @@ export default function RelatoriosPage() {
 
         <Card icon={ShieldCheck} title="PGRS" description="Veja os planos de gerenciamento de resíduos: protocolo, deferimento, validade e situação">
           <DownloadButtons url="/api/relatorios/pgrs" hook={pgrs} />
+        </Card>
+
+        <Card icon={ClipboardCheck} title="Tarefas" description="Acompanhe as tarefas: status, responsáveis, prazos e situação de cada uma">
+          <div className="mb-4">
+            <label className="block text-xs font-medium text-[var(--color-ink-500)] mb-1">Filtrar por situação</label>
+            <select value={tarefaStatus} onChange={(e) => setTarefaStatus(e.target.value)}
+              className="w-full rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]">
+              <option value="">Todas</option>
+              <option value="nao_iniciado">Não iniciado</option>
+              <option value="em_andamento">Em andamento</option>
+              <option value="para_revisao">Para revisão</option>
+              <option value="concluida">Concluída</option>
+            </select>
+          </div>
+          <DownloadButtons url={`/api/relatorios/tarefas?status=${tarefaStatus}`} hook={tarefas} />
         </Card>
       </div>
     </div>

@@ -6,25 +6,32 @@ import { auth } from "@/lib/auth";
 import { Topbar } from "@/components/Topbar";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ClipboardList, User, Users, Building2, Calendar, Clock, BellRing, AlertTriangle, MessageSquare, Edit3, ArrowLeft } from "lucide-react";
+import { ClipboardList, User, Users, Building2, Calendar, Clock, BellRing, AlertTriangle, MessageSquare, Edit3, ArrowLeft, Link2, FileCheck2, Paperclip } from "lucide-react";
 import Link from "next/link";
 import DeleteButton from "@/components/DeleteButton";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { Tabs } from "@/components/Tabs";
 import { UltimaModificacao } from "@/components/UltimaModificacao";
+import { TarefaAnexos } from "@/components/tarefas/TarefaAnexos";
 
 export const dynamic = "force-dynamic";
 
 const statusLabels: Record<string, string> = {
+  nao_iniciado: "Não iniciado",
+  em_andamento: "Em andamento",
+  para_revisao: "Para revisão",
+  concluida: "Concluída",
   pendente: "Pendente",
   iniciada: "Iniciada",
-  concluida: "Concluída",
 };
 
 const statusColors: Record<string, string> = {
+  nao_iniciado: "bg-[var(--color-paper-100)] text-[var(--color-ink-600)]",
+  em_andamento: "bg-blue-50 text-blue-600",
+  para_revisao: "bg-amber-50 text-amber-700",
+  concluida: "bg-green-50 text-green-700",
   pendente: "bg-[var(--color-river-100)] text-[var(--color-river-700)]",
   iniciada: "bg-blue-50 text-blue-600",
-  concluida: "bg-green-50 text-green-700",
 };
 
 const prioridadeLabels: Record<string, string> = {
@@ -48,12 +55,16 @@ export default async function TarefaDetailPage(props: { params: Promise<{ id: st
   const tarefa = await prisma.tarefa.findUnique({
     where: { id: Number(id) },
     include: {
-      responsavel: { select: { nome: true } },
+      responsavel: { select: { nome: true, funcao: true } },
       usuario: { select: { nome: true } },
       empreendimento: { select: { apelido: true } },
+      processo: { select: { id: true, numProtocolo: true, numLicenca: true, tipo: true } },
+      condicionante: { select: { id: true, titulo: true } },
+      exigencia: { select: { id: true, prazo: true, cumprida: true } },
+      _count: { select: { anexos: true } },
     },
   });
-  if (!tarefa) notFound();
+  if (!tarefa || !tarefa.ativo) notFound();
 
   return (
     <div>
@@ -94,10 +105,10 @@ export default async function TarefaDetailPage(props: { params: Promise<{ id: st
             content: (
               <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
                 <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-4">Informações</h2>
-                <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
                   <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
                     <ClipboardList size={16} />
-                    <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${statusColors[tarefa.status] || ""}`}>{statusLabels[tarefa.status] || tarefa.status}</span>
+                    <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${statusColors[tarefa.status] || ""}`}>{statusLabels[tarefa.status] || tarefa.status}</span>
                   </div>
                   <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
                     <AlertTriangle size={16} />
@@ -111,6 +122,34 @@ export default async function TarefaDetailPage(props: { params: Promise<{ id: st
                     <Building2 size={16} />
                     <span>Empreendimento: {tarefa.empreendimento?.apelido ?? "—"}</span>
                   </div>
+                  <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
+                    <Link2 size={16} />
+                    <span>
+                      Licença:{" "}
+                      {tarefa.processo ? (
+                        <Link href={`/processos/${tarefa.processo.id}`} className="font-medium text-[var(--color-brand-600)] hover:underline">
+                          {tarefa.processo.numLicenca || tarefa.processo.numProtocolo}
+                        </Link>
+                      ) : (
+                        "— sem vínculo —"
+                      )}
+                    </span>
+                  </div>
+                  {tarefa.condicionante && (
+                    <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
+                      <FileCheck2 size={16} />
+                      <span>Condicionante: {tarefa.condicionante.titulo}</span>
+                    </div>
+                  )}
+                  {tarefa.exigencia && (
+                    <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
+                      <FileCheck2 size={16} />
+                      <span>
+                        Exigência vinculada · {format(tarefa.exigencia.prazo, "dd/MM/yyyy", { locale: ptBR })} ·{" "}
+                        {tarefa.exigencia.cumprida ? "cumprida" : "em aberto"}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
                     <Users size={16} />
                     <span>Criador: {tarefa.usuario.nome}</span>
@@ -131,10 +170,25 @@ export default async function TarefaDetailPage(props: { params: Promise<{ id: st
                 ),
               }]
             : []),
+          ...(tarefa.observacoes
+            ? [{
+                key: "observacoes",
+                label: "Observações",
+                content: (
+                  <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
+                    <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-2 flex items-center gap-2">
+                      <MessageSquare size={16} />
+                      Observações
+                    </h2>
+                    <p className="text-sm text-[var(--color-ink-700)] whitespace-pre-wrap">{tarefa.observacoes}</p>
+                  </div>
+                ),
+              }]
+            : []),
           ...(tarefa.statusObs
             ? [{
                 key: "statusObs",
-                label: "Observação",
+                label: "Observação de status",
                 content: (
                   <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
                     <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-2 flex items-center gap-2">
@@ -146,6 +200,20 @@ export default async function TarefaDetailPage(props: { params: Promise<{ id: st
                 ),
               }]
             : []),
+          {
+            key: "anexos",
+            label: "Anexos",
+            count: tarefa._count.anexos,
+            content: (
+              <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
+                <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-4 flex items-center gap-2">
+                  <Paperclip size={16} />
+                  Anexos
+                </h2>
+                <TarefaAnexos tarefaId={tarefa.id} />
+              </div>
+            ),
+          },
           {
             key: "datas",
             label: "Datas",
@@ -179,6 +247,12 @@ export default async function TarefaDetailPage(props: { params: Promise<{ id: st
                     <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
                       <BellRing size={14} />
                       <span>Alerta {tarefa.alertaDataLimite} dias antes do limite</span>
+                    </div>
+                  )}
+                  {tarefa.dataConclusao && (
+                    <div className="flex items-center gap-2 text-emerald-700">
+                      <Clock size={14} />
+                      <span>Concluída em {format(tarefa.dataConclusao, "dd/MM/yyyy HH:mm", { locale: ptBR })}</span>
                     </div>
                   )}
                 </div>

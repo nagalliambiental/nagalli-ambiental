@@ -201,6 +201,7 @@ model Processo {
   orgao            Orgao              @relation(fields: [orgaoId], references: [id])
   responsavel      Responsavel?       @relation(fields: [responsavelId], references: [id])
   timeline         TimelineProcesso[]
+  tarefas          Tarefa[]
 }
 
 model Condicionante {
@@ -215,6 +216,7 @@ model Condicionante {
   processoId   Int
   processo     Processo    @relation(fields: [processoId], references: [id], onDelete: Cascade)
   documentos   Documento[]
+  tarefas      Tarefa[]
   criadoEm     DateTime    @default(now())
   atualizadoEm DateTime    @updatedAt
 
@@ -250,6 +252,7 @@ model Exigencia {
   atualizadoEm     DateTime    @updatedAt
   ativo            Boolean     @default(true)
   documentos       Documento[]
+  tarefas          Tarefa[]
   processo         Processo    @relation(fields: [processoId], references: [id])
 }
 
@@ -321,14 +324,20 @@ model Tarefa {
   id               Int             @id @default(autoincrement())
   titulo           String
   descricao        String?
-  status           String          @default("pendente")
+  observacoes      String?
+  status           String          @default("nao_iniciado")
   prioridade       String          @default("media")
   prazoFinal       DateTime?
   alertaPrazoFinal Int             @default(30)
   dataLimite       DateTime?
   alertaDataLimite Int             @default(30)
+  dataConclusao    DateTime?
+  importId         String?
   responsavelId    Int
   empreendimentoId Int?
+  processoId       Int?
+  condicionanteId  Int?
+  exigenciaId      Int?
   usuarioId        Int
   criadoEm         DateTime        @default(now())
   atualizadoEm     DateTime        @updatedAt
@@ -336,7 +345,28 @@ model Tarefa {
   statusObs        String?
   responsavel      Responsavel     @relation(fields: [responsavelId], references: [id])
   empreendimento   Empreendimento? @relation(fields: [empreendimentoId], references: [id])
+  processo         Processo?       @relation(fields: [processoId], references: [id], onDelete: SetNull)
+  condicionante    Condicionante?  @relation(fields: [condicionanteId], references: [id], onDelete: SetNull)
+  exigencia        Exigencia?      @relation(fields: [exigenciaId], references: [id], onDelete: SetNull)
   usuario          Usuario         @relation(fields: [usuarioId], references: [id])
+  anexos           TarefaAnexo[]
+
+  @@index([processoId])
+  @@index([status])
+}
+
+model TarefaAnexo {
+  id        Int      @id @default(autoincrement())
+  tarefaId  Int
+  nome      String
+  mime      String   @default("application/octet-stream")
+  tamanho   Int
+  conteudo  Bytes
+  criadoPor Int?
+  criadoEm  DateTime @default(now())
+  tarefa    Tarefa   @relation(fields: [tarefaId], references: [id], onDelete: Cascade)
+
+  @@index([tarefaId])
 }
 
 model Financeiro {

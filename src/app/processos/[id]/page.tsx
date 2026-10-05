@@ -3,6 +3,7 @@ export function generateStaticParams() { return []; }
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
+import { listarResponsaveis } from "@/lib/responsaveis";
 import { auth } from "@/lib/auth";
 import { logAuditoria } from "@/lib/audit";
 import { Topbar } from "@/components/Topbar";
@@ -18,6 +19,7 @@ import CompensacaoCorteCard from "@/components/CompensacaoCorteCard";
 import ProcessoStatusSelector from "@/components/ProcessoStatusSelector";
 import LicencaPdfCard from "@/components/LicencaPdfCard";
 import ExigenciasTab from "@/components/ExigenciasTab";
+import { TarefasProcessoTab } from "@/components/tarefas/TarefasProcessoTab";
 
 export const dynamic = "force-dynamic";
 
@@ -75,7 +77,7 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
     include: {
       orgao: true,
       empreendimento: { select: { apelido: true, id: true, cliente: { select: { apelido: true } } } },
-      _count: { select: { exigencias: true, documentos: true } },
+      _count: { select: { exigencias: true, documentos: true, tarefas: true } },
     },
   });
   if (!processo) notFound();
@@ -85,6 +87,36 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
     orderBy: { criadoEm: "desc" },
     select: { id: true, nome: true, tamanho: true, criadoEm: true },
   });
+
+  const [tarefasBrutas, responsaveis, empreendimentos, processosLista] = await Promise.all([
+    prisma.tarefa.findMany({
+      where: { processoId: processo.id, ativo: true },
+      include: {
+        responsavel: { select: { id: true, nome: true } },
+        usuario: { select: { id: true, nome: true } },
+        empreendimento: { select: { id: true, apelido: true } },
+        processo: { select: { id: true, numProtocolo: true, numLicenca: true } },
+        condicionante: { select: { id: true, titulo: true } },
+        _count: { select: { anexos: true } },
+      },
+      orderBy: [{ prazoFinal: { sort: "asc", nulls: "last" } }, { criadoEm: "desc" }],
+    }),
+    listarResponsaveis(),
+    prisma.empreendimento.findMany({ orderBy: { apelido: "asc" }, select: { id: true, apelido: true } }),
+    prisma.processo.findMany({
+      where: { ativo: true },
+      orderBy: [{ criadoEm: "desc" }],
+      select: {
+        id: true,
+        numProtocolo: true,
+        numLicenca: true,
+        empreendimentoId: true,
+        empreendimento: { select: { id: true, apelido: true } },
+      },
+    }),
+  ]);
+  const tarefasProcesso = JSON.parse(JSON.stringify(tarefasBrutas));
+  const processosOpcoes = JSON.parse(JSON.stringify(processosLista));
 
   await logAuditoria(
     "VISUALIZAR",
@@ -249,6 +281,20 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
             label: "Exigências",
             count: processo._count.exigencias,
             content: <ExigenciasTab processoId={processo.id} />,
+          },
+          {
+            key: "tarefas",
+            label: "Tarefas",
+            count: processo._count.tarefas,
+            content: (
+              <TarefasProcessoTab
+                processoId={processo.id}
+                tarefas={tarefasProcesso}
+                responsaveis={responsaveis}
+                empreendimentos={empreendimentos}
+                processos={processosOpcoes}
+              />
+            ),
           },
           ...(processo.tipo === "Autorização Ambiental para Corte"
             ? [

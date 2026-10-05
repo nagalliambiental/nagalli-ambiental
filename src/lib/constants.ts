@@ -27,15 +27,16 @@ export const STATUS_PAGAMENTO = {
 export type StatusPagamento = (typeof STATUS_PAGAMENTO)[keyof typeof STATUS_PAGAMENTO];
 
 export const STATUS_TAREFA = {
-  PENDENTE: "pendente",
+  NAO_INICIADO: "nao_iniciado",
   EM_ANDAMENTO: "em_andamento",
+  PARA_REVISAO: "para_revisao",
   CONCLUIDA: "concluida",
-  CANCELADA: "cancelada",
 } as const;
 
 export type StatusTarefa = (typeof STATUS_TAREFA)[keyof typeof STATUS_TAREFA];
 
 export const PRIORIDADE_TAREFA = {
+  URGENTE: "urgente",
   ALTA: "alta",
   MEDIA: "media",
   BAIXA: "baixa",

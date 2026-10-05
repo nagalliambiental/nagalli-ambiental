@@ -1,78 +1,198 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAuditoria } from "@/lib/audit";
 import { dataInputParaDate } from "@/lib/format";
+import { requerAutenticado } from "@/lib/perfil";
+import { STATUS_TAREFA, PRIORIDADE_TAREFA } from "@/lib/constants";
+import { criarExigenciaEspelhada, sincronizarExigenciaTarefa } from "@/lib/tarefas-exigencia";
+import type { Prisma } from "@prisma/client";
 
+type Params = { params: Promise<{ id: string }> };
 
-export async function GET(
-  _req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+const INCLUIR = {
+  responsavel: { select: { id: true, nome: true, email: true, telefone: true } },
+  usuario: { select: { id: true, nome: true } },
+  empreendimento: { select: { id: true, apelido: true } },
+  processo: { select: { id: true, numProtocolo: true, numLicenca: true, tipo: true } },
+  condicionante: { select: { id: true, titulo: true } },
+  exigencia: { select: { id: true, prazo: true, cumprida: true, descricao: true } },
+  anexos: {
+    select: { id: true, nome: true, mime: true, tamanho: true, criadoEm: true },
+    orderBy: { criadoEm: "desc" as const },
+  },
+  _count: { select: { anexos: true } },
+} satisfies Prisma.TarefaInclude;
 
-const { id } = await params;
-  const tarefa = await prisma.tarefa.findUnique({
-    where: { id: Number(id) },
-    include: {
-      responsavel: { select: { id: true, nome: true, email: true, telefone: true } },
-      usuario: { select: { id: true, nome: true } },
-      empreendimento: { select: { id: true, apelido: true } },
-    },
-  });
-  if (!tarefa) return NextResponse.json({ error: "Tarefa não encontrada" }, { status: 404 });
+export async function GET(_req: Request, { params }: Params) {
+  const authResult = await requerAutenticado();
+  if (!authResult.ok) return authResult.erro;
+
+  const { id } = await params;
+  const tarefa = await prisma.tarefa.findUnique({ where: { id: Number(id) }, include: INCLUIR });
+  if (!tarefa || !tarefa.ativo) return NextResponse.json({ error: "Tarefa não encontrada" }, { status: 404 });
 
   return NextResponse.json(tarefa);
 }
 
-export async function PUT(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+async function aplicarCorpo(
+  tarefaId: number,
+  body: Record<string, unknown>
+): Promise<{ erro: NextResponse | null }> {
+  const atual = await prisma.tarefa.findUnique({ where: { id: tarefaId } });
+  if (!atual || !atual.ativo) {
+    return { erro: NextResponse.json({ error: "Tarefa não encontrada" }, { status: 404 }) };
+  }
 
-const { id } = await params;
-  const body = await request.json();
+  const status = body.status !== undefined ? String(body.status) : atual.status;
+  if (!(Object.values(STATUS_TAREFA) as string[]).includes(status)) {
+    return { erro: NextResponse.json({ error: "Status inválido" }, { status: 400 }) };
+  }
+  const prioridade =
+    body.prioridade !== undefined && (Object.values(PRIORIDADE_TAREFA) as string[]).includes(String(body.prioridade))
+      ? String(body.prioridade)
+      : atual.prioridade;
 
-  const atual = await prisma.tarefa.findUnique({ where: { id: Number(id) } });
-  if (!atual) return NextResponse.json({ error: "Tarefa não encontrada" }, { status: 404 });
+  const titulo = body.titulo !== undefined ? String(body.titulo ?? "").trim() || atual.titulo : atual.titulo;
+  const processoId =
+    body.processoId !== undefined ? (body.processoId ? Number(body.processoId) : null) : atual.processoId;
+  const condicionanteId =
+    body.condicionanteId !== undefined
+      ? body.condicionanteId
+        ? Number(body.condicionanteId)
+        : null
+      : atual.condicionanteId;
+
+  const prazoFinal =
+    body.prazoFinal !== undefined
+      ? body.prazoFinal
+        ? dataInputParaDate(String(body.prazoFinal))
+        : null
+      : atual.prazoFinal;
+
+  const alertaPrazoFinal =
+    body.alertaPrazoFinal !== undefined ? Number(body.alertaPrazoFinal) : atual.alertaPrazoFinal;
+
+  const dataConclusao =
+    status === STATUS_TAREFA.CONCLUIDA
+      ? body.dataConclusao
+        ? dataInputParaDate(String(body.dataConclusao))
+        : (atual.dataConclusao ?? new Date())
+      : null;
+
+  let exigenciaId = body.exigenciaId !== undefined ? (body.exigenciaId ? Number(body.exigenciaId) : null) : atual.exigenciaId;
+
+  if (
+    processoId &&
+    processoId !== atual.processoId &&
+    body.criarExigencia !== false &&
+    !exigenciaId
+  ) {
+    exigenciaId = await criarExigenciaEspelhada({
+      processoId,
+      titulo,
+      descricao: body.descricao !== undefined ? (body.descricao as string | null) : atual.descricao,
+      prazoFinal,
+      alertaPrazoFinal,
+    });
+  }
 
   const tarefa = await prisma.tarefa.update({
-    where: { id: Number(id) },
+    where: { id: tarefaId },
     data: {
-      titulo: body.titulo ?? atual.titulo,
-      descricao: body.descricao !== undefined ? body.descricao ?? null : atual.descricao,
-      status: body.status ?? atual.status,
-      prioridade: body.prioridade ?? atual.prioridade,
-      prazoFinal: body.prazoFinal !== undefined ? (body.prazoFinal ? dataInputParaDate(body.prazoFinal) : null) : atual.prazoFinal,
-      alertaPrazoFinal: body.alertaPrazoFinal !== undefined ? Number(body.alertaPrazoFinal) : atual.alertaPrazoFinal,
-      dataLimite: body.dataLimite !== undefined ? (body.dataLimite ? dataInputParaDate(body.dataLimite) : null) : atual.dataLimite,
+      titulo,
+      descricao: body.descricao !== undefined ? ((body.descricao as string | null) || null) : atual.descricao,
+      observacoes: body.observacoes !== undefined ? ((body.observacoes as string | null) || null) : atual.observacoes,
+      status,
+      prioridade,
+      prazoFinal,
+      alertaPrazoFinal,
+      dataLimite:
+        body.dataLimite !== undefined
+          ? body.dataLimite
+            ? dataInputParaDate(String(body.dataLimite))
+            : null
+          : atual.dataLimite,
       alertaDataLimite: body.alertaDataLimite !== undefined ? Number(body.alertaDataLimite) : atual.alertaDataLimite,
-      responsavelId: body.responsavelId !== undefined && body.responsavelId !== null && body.responsavelId !== "" ? Number(body.responsavelId) : atual.responsavelId,
-      empreendimentoId: body.empreendimentoId !== undefined ? (body.empreendimentoId ? Number(body.empreendimentoId) : null) : atual.empreendimentoId,
-      statusObs: body.statusObs !== undefined ? body.statusObs ?? null : atual.statusObs,
+      dataConclusao,
+      responsavelId:
+        body.responsavelId !== undefined && body.responsavelId !== null && body.responsavelId !== ""
+          ? Number(body.responsavelId)
+          : atual.responsavelId,
+      empreendimentoId:
+        body.empreendimentoId !== undefined
+          ? body.empreendimentoId
+            ? Number(body.empreendimentoId)
+            : null
+          : atual.empreendimentoId,
+      processoId,
+      condicionanteId,
+      exigenciaId,
+      statusObs: body.statusObs !== undefined ? ((body.statusObs as string | null) || null) : atual.statusObs,
       ativo: body.ativo !== undefined ? Boolean(body.ativo) : atual.ativo,
     },
+    include: INCLUIR,
   });
 
-  await logAuditoria("ATUALIZAR", "tarefa", tarefa.id, body, Number((session.user as { id: string }).id));
-  return NextResponse.json(tarefa);
+  await sincronizarExigenciaTarefa({ exigenciaId: tarefa.exigenciaId, status: tarefa.status });
+
+  return { erro: null };
 }
 
-export async function DELETE(
-  _req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+export async function PUT(request: Request, { params }: Params) {
+  const authResult = await requerAutenticado();
+  if (!authResult.ok) return authResult.erro;
+
+  const { id } = await params;
+  const body = await request.json().catch(() => null);
+  if (!body || typeof body !== "object") return NextResponse.json({ error: "Corpo inválido" }, { status: 400 });
+
+  try {
+    const { erro } = await aplicarCorpo(Number(id), body);
+    if (erro) return erro;
+    const tarefa = await prisma.tarefa.findUnique({ where: { id: Number(id) }, include: INCLUIR });
+    await logAuditoria("atualizar", "tarefa", Number(id), body, Number((authResult.user as { id: string }).id));
+    return NextResponse.json(tarefa);
+  } catch (error) {
+    console.error("Erro ao atualizar tarefa:", error);
+    return NextResponse.json({ error: "Erro ao atualizar tarefa" }, { status: 400 });
+  }
+}
+
+export async function PATCH(request: Request, { params }: Params) {
+  const authResult = await requerAutenticado();
+  if (!authResult.ok) return authResult.erro;
+
+  const { id } = await params;
+  const body = await request.json().catch(() => null);
+  if (!body || typeof body !== "object") return NextResponse.json({ error: "Corpo inválido" }, { status: 400 });
+
+  try {
+    const { erro } = await aplicarCorpo(Number(id), body);
+    if (erro) return erro;
+    const tarefa = await prisma.tarefa.findUnique({ where: { id: Number(id) }, include: INCLUIR });
+    await logAuditoria("atualizar", "tarefa", Number(id), body, Number((authResult.user as { id: string }).id));
+    return NextResponse.json(tarefa);
+  } catch (error) {
+    console.error("Erro ao atualizar tarefa:", error);
+    return NextResponse.json({ error: "Erro ao atualizar tarefa" }, { status: 400 });
+  }
+}
+
+export async function DELETE(_req: Request, { params }: Params) {
+  const authResult = await requerAutenticado();
+  if (!authResult.ok) return authResult.erro;
 
   const { id } = await params;
   const tarefa = await prisma.tarefa.findUnique({ where: { id: Number(id) } });
-  if (!tarefa) return NextResponse.json({ error: "Tarefa não encontrada" }, { status: 404 });
+  if (!tarefa || !tarefa.ativo) return NextResponse.json({ error: "Tarefa não encontrada" }, { status: 404 });
 
-  await prisma.tarefa.delete({ where: { id: Number(id) } });
-  await logAuditoria("EXCLUIR", "tarefa", Number(id), { titulo: tarefa.titulo }, Number((session.user as { id: string }).id));
+  await prisma.$transaction([
+    prisma.tarefa.update({ where: { id: Number(id) }, data: { ativo: false } }),
+    ...(tarefa.exigenciaId
+      ? [prisma.exigencia.update({ where: { id: tarefa.exigenciaId }, data: { ativo: false, cumprida: false } })]
+      : []),
+  ]);
+
+  await logAuditoria("excluir", "tarefa", Number(id), { titulo: tarefa.titulo }, Number((authResult.user as { id: string }).id));
   return NextResponse.json({ mensagem: "Tarefa excluída" });
 }

@@ -24,14 +24,18 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
     id: tarefa.id,
     titulo: tarefa.titulo,
     descricao: tarefa.descricao,
+    observacoes: tarefa.observacoes,
     status: tarefa.status,
     prioridade: tarefa.prioridade,
     prazoFinal: tarefa.prazoFinal ? tarefa.prazoFinal.toISOString() : null,
     alertaPrazoFinal: tarefa.alertaPrazoFinal,
     dataLimite: tarefa.dataLimite ? tarefa.dataLimite.toISOString() : null,
     alertaDataLimite: tarefa.alertaDataLimite,
+    dataConclusao: tarefa.dataConclusao ? tarefa.dataConclusao.toISOString() : null,
     responsavelId: tarefa.responsavelId,
     empreendimentoId: tarefa.empreendimentoId,
+    processoId: tarefa.processoId,
+    condicionanteId: tarefa.condicionanteId,
   };
 
   return (

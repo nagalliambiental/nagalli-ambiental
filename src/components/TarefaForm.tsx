@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/Toast";
+import { Paperclip } from "lucide-react";
+import type { OpcaoProcesso } from "@/components/tarefas/LinhaTarefa";
 
 interface ResponsavelOption {
   id: number;
@@ -15,23 +17,33 @@ interface EmpreendimentoOption {
   apelido: string;
 }
 
+interface CondicaoOption {
+  id: number;
+  nome: string;
+}
+
 export interface TarefaFormInitial {
   id: number;
   titulo: string;
   descricao: string | null;
+  observacoes?: string | null;
   status: string;
   prioridade: string;
   prazoFinal: string | null;
   alertaPrazoFinal: number;
   dataLimite: string | null;
   alertaDataLimite: number;
+  dataConclusao?: string | null;
   responsavelId: number;
   empreendimentoId: number | null;
+  processoId?: number | null;
+  condicionanteId?: number | null;
 }
 
 const STATUS_OPTIONS = [
-  { value: "pendente", label: "Pendente" },
-  { value: "iniciada", label: "Iniciada" },
+  { value: "nao_iniciado", label: "Não iniciado" },
+  { value: "em_andamento", label: "Em andamento" },
+  { value: "para_revisao", label: "Para revisão" },
   { value: "concluida", label: "Concluída" },
 ];
 
@@ -54,6 +66,17 @@ function toDateInput(iso: string | null | undefined): string {
   return new Date(d.getTime() - tzoffset).toISOString().slice(0, 10);
 }
 
+function rotuloProcesso(p: OpcaoProcesso): string {
+  const num = p.numLicenca || p.numProtocolo;
+  return p.empreendimento ? `${num} · ${p.empreendimento.apelido}` : num;
+}
+
+function paramsIniciais(): { processoId: string; condicionanteId: string } {
+  if (typeof window === "undefined") return { processoId: "", condicionanteId: "" };
+  const p = new URLSearchParams(window.location.search);
+  return { processoId: p.get("processoId") ?? "", condicionanteId: p.get("condicionanteId") ?? "" };
+}
+
 export default function TarefaForm({
   modo,
   endpoint,
@@ -69,31 +92,97 @@ export default function TarefaForm({
   const { toast } = useToast();
   const [responsaveis, setResponsaveis] = useState<ResponsavelOption[]>([]);
   const [empreendimentos, setEmpreendimentos] = useState<EmpreendimentoOption[]>([]);
+  const [processos, setProcessos] = useState<OpcaoProcesso[]>([]);
+  const [condicionantes, setCondicionantes] = useState<CondicaoOption[]>([]);
+  const [arquivos, setArquivos] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({
-    titulo: initial?.titulo ?? "",
-    descricao: initial?.descricao ?? "",
-    responsavelId: initial ? String(initial.responsavelId) : "",
-    empreendimentoId: initial?.empreendimentoId ? String(initial.empreendimentoId) : "",
-    prazoFinal: toDateInput(initial?.prazoFinal),
-    alertaPrazoFinal: String(initial?.alertaPrazoFinal ?? 30),
-    dataLimite: toDateInput(initial?.dataLimite),
-    alertaDataLimite: String(initial?.alertaDataLimite ?? 30),
-    prioridade: initial?.prioridade ?? "media",
-    status: initial?.status ?? "pendente",
+  const [form, setForm] = useState(() => {
+    const url = modo === "novo" ? paramsIniciais() : { processoId: "", condicionanteId: "" };
+    return {
+      titulo: initial?.titulo ?? "",
+      descricao: initial?.descricao ?? "",
+      observacoes: initial?.observacoes ?? "",
+      responsavelId: initial ? String(initial.responsavelId) : "",
+      empreendimentoId: initial?.empreendimentoId ? String(initial.empreendimentoId) : "",
+      processoId: initial?.processoId ? String(initial.processoId) : url.processoId,
+      condicionanteId: initial?.condicionanteId ? String(initial.condicionanteId) : url.condicionanteId,
+      prazoFinal: toDateInput(initial?.prazoFinal),
+      alertaPrazoFinal: String(initial?.alertaPrazoFinal ?? 30),
+      dataLimite: toDateInput(initial?.dataLimite),
+      alertaDataLimite: String(initial?.alertaDataLimite ?? 30),
+      dataConclusao: toDateInput(initial?.dataConclusao),
+      prioridade: initial?.prioridade ?? "media",
+      status: initial?.status ?? "nao_iniciado",
+    };
   });
 
   useEffect(() => {
     Promise.all([
       fetch("/api/responsaveis").then((r) => r.json()),
       fetch("/api/empreendimentos").then((r) => r.json()),
+      fetch("/api/processos").then((r) => r.json()),
     ])
-      .then(([resp, emp]) => {
-        setResponsaveis(resp);
-        setEmpreendimentos(emp);
+      .then(([resp, emp, proc]) => {
+        setResponsaveis(Array.isArray(resp) ? resp : []);
+        setEmpreendimentos(Array.isArray(emp) ? emp : []);
+        setProcessos(
+          (Array.isArray(proc) ? proc : []).map(
+            (p: {
+              id: number;
+              numProtocolo: string;
+              numLicenca: string | null;
+              empreendimentoId: number;
+              empreendimento: { id: number; apelido: string } | null;
+            }) => ({
+              id: p.id,
+              numProtocolo: p.numProtocolo,
+              numLicenca: p.numLicenca,
+              empreendimentoId: p.empreendimentoId,
+              empreendimento: p.empreendimento,
+            })
+          )
+        );
       })
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!form.processoId) return;
+    let cancelado = false;
+    fetch(`/api/processos/${form.processoId}/condicionantes`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((d) => {
+        if (cancelado) return;
+        const arr = Array.isArray(d) ? d : [];
+        setCondicionantes(arr.map((c: { id: number; titulo: string }) => ({ id: c.id, nome: c.titulo })));
+      })
+      .catch(() => {});
+    return () => {
+      cancelado = true;
+    };
+  }, [form.processoId]);
+
+  const processosVisiveis = form.empreendimentoId
+    ? processos.filter((p) => p.empreendimentoId === Number(form.empreendimentoId))
+    : processos;
+  const processoSel = processos.find((p) => p.id === Number(form.processoId));
+  const processoNaLista = processosVisiveis.some((p) => p.id === Number(form.processoId));
+
+  async function enviarAnexos(tarefaId: number): Promise<void> {
+    if (arquivos.length === 0) return;
+    const fd = new FormData();
+    for (const f of arquivos) fd.append("arquivo", f);
+    const res = await fetch(`/api/tarefas/${tarefaId}/anexos`, { method: "POST", body: fd });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      toast(`Tarefa criada, mas houve erro nos anexos: ${d.error ?? "falha ao enviar"}`, "warning");
+    } else if (d.erros?.length) {
+      toast(`Tarefa criada com avisos: ${d.erros.join("; ")}`, "warning");
+    } else {
+      toast(`${d.anexos?.length ?? arquivos.length} anexo(s) enviado(s)`, "success");
+    }
+    setArquivos([]);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -101,12 +190,16 @@ export default function TarefaForm({
     const payload = {
       titulo: form.titulo,
       descricao: form.descricao,
+      observacoes: form.observacoes,
       responsavelId: Number(form.responsavelId),
       empreendimentoId: form.empreendimentoId ? Number(form.empreendimentoId) : null,
+      processoId: form.processoId ? Number(form.processoId) : null,
+      condicionanteId: form.condicionanteId ? Number(form.condicionanteId) : null,
       prazoFinal: form.prazoFinal || null,
       alertaPrazoFinal: Number(form.alertaPrazoFinal) || 0,
       dataLimite: form.dataLimite || null,
       alertaDataLimite: Number(form.alertaDataLimite) || 0,
+      dataConclusao: form.status === "concluida" ? form.dataConclusao || null : null,
       prioridade: form.prioridade,
       status: form.status,
     };
@@ -115,11 +208,17 @@ export default function TarefaForm({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
+    const d = await res.json().catch(() => ({}));
     setSaving(false);
     if (!res.ok) {
-      toast("Erro ao salvar tarefa", "error");
+      toast(d.error ?? "Erro ao salvar tarefa", "error");
       return;
     }
+
+    if (modo === "novo" && arquivos.length > 0 && d.id) {
+      await enviarAnexos(Number(d.id));
+    }
+
     toast("Tarefa salva com sucesso", "success");
     router.push(redirectTo);
     router.refresh();
@@ -147,13 +246,46 @@ export default function TarefaForm({
         </div>
         <div>
           <label className={labelClass}>Empreendimento</label>
-          <select value={form.empreendimentoId} onChange={(e) => setForm({ ...form, empreendimentoId: e.target.value })} className={inputClass}>
+          <select
+            value={form.empreendimentoId}
+            onChange={(e) => setForm({ ...form, empreendimentoId: e.target.value, processoId: "", condicionanteId: "" })}
+            className={inputClass}
+          >
             <option value="">Selecione...</option>
             {empreendimentos.map((emp) => (
               <option key={emp.id} value={emp.id}>{emp.apelido}</option>
             ))}
           </select>
         </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+            <label className={labelClass}>Licença</label>
+          <select
+            value={processoNaLista || !form.processoId ? form.processoId : ""}
+            onChange={(e) => setForm({ ...form, processoId: e.target.value, condicionanteId: "" })}
+            className={inputClass}
+          >
+            <option value="">Selecione...</option>
+            {!processoNaLista && processoSel && (
+              <option value={processoSel.id}>{rotuloProcesso(processoSel)}</option>
+            )}
+            {processosVisiveis.map((p) => (
+              <option key={p.id} value={p.id}>{rotuloProcesso(p)}</option>
+            ))}
+          </select>
+        </div>
+        {form.processoId && (
+          <div>
+            <label className={labelClass}>Condicionante</label>
+            <select value={form.condicionanteId} onChange={(e) => setForm({ ...form, condicionanteId: e.target.value })} className={inputClass}>
+              <option value="">Selecione...</option>
+              {condicionantes.map((c) => (
+                <option key={c.id} value={c.id}>{c.nome}</option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
@@ -175,7 +307,7 @@ export default function TarefaForm({
           <input type="number" min={0} value={form.alertaDataLimite} onChange={(e) => setForm({ ...form, alertaDataLimite: e.target.value })} className={inputClass} />
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         <div>
           <label className={labelClass}>Prioridade</label>
           <select value={form.prioridade} onChange={(e) => setForm({ ...form, prioridade: e.target.value })} className={inputClass}>
@@ -192,7 +324,41 @@ export default function TarefaForm({
             ))}
           </select>
         </div>
+        {form.status === "concluida" && (
+          <div>
+            <label className={labelClass}>Data de conclusão</label>
+            <input type="date" value={form.dataConclusao} onChange={(e) => setForm({ ...form, dataConclusao: e.target.value })} className={inputClass} />
+          </div>
+        )}
       </div>
+      <div>
+        <label className={labelClass}>Observações</label>
+        <textarea value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} rows={2} className={inputClass} />
+      </div>
+
+      {modo === "novo" && (
+        <div>
+          <label className={labelClass}>Anexos</label>
+          <label className="focus-ring transition-brand inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]">
+            <Paperclip size={14} />
+            {arquivos.length > 0 ? `${arquivos.length} arquivo(s) selecionado(s)` : "Selecionar arquivos"}
+            <input
+              type="file"
+              multiple
+              className="hidden"
+              onChange={(e) => setArquivos(e.target.files ? Array.from(e.target.files) : [])}
+            />
+          </label>
+          {arquivos.length > 0 && (
+            <ul className="mt-2 space-y-0.5 text-xs text-[var(--color-ink-500)]">
+              {arquivos.map((f) => (
+                <li key={f.name}>{f.name}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
       <div className="flex gap-3 pt-4">
         <button type="submit" disabled={saving} className="focus-ring transition-brand flex items-center gap-2 rounded-[var(--radius-card)] bg-[var(--color-brand-500)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">
           {saving ? "Salvando..." : "Salvar"}

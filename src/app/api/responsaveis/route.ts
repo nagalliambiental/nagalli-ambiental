@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { listarResponsaveis } from "@/lib/responsaveis";
 
 export async function GET() {
   const session = await auth();
@@ -8,9 +8,7 @@ export async function GET() {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
 
-  const responsaveis = await prisma.responsavel.findMany({
-    orderBy: { nome: "asc" },
-  });
+  const responsaveis = await listarResponsaveis();
 
   return NextResponse.json(responsaveis);
 }

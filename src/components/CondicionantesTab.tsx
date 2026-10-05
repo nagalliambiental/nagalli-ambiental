@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   ChevronDown, Plus, Upload, FileText, CheckCircle2, Circle, Trash2,
-  Loader2, Download, Sparkles, X, Pencil, AlertTriangle, Info,
+  Loader2, Download, Sparkles, X, Pencil, AlertTriangle, Info, ListTodo,
 } from "lucide-react";
 import { useToast } from "@/components/Toast";
 
@@ -34,6 +35,7 @@ function fmtTamanho(bytes: number): string {
 
 export function CondicionantesTab({ processoId, textoLegado }: { processoId: number; textoLegado?: string | null }) {
   const { toast } = useToast();
+  const router = useRouter();
   const [itens, setItens] = useState<ItemCondicao[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [aberto, setAberto] = useState<number | null>(null);
@@ -445,6 +447,16 @@ export function CondicionantesTab({ processoId, textoLegado }: { processoId: num
                           }}
                         />
                       </label>
+                      <button
+                        onClick={() =>
+                          router.push(`/tarefas/novo?processoId=${processoId}&condicionanteId=${item.id}`)
+                        }
+                        title="Criar tarefa vinculada a esta condicionante"
+                        className="focus-ring inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-ink-600)] hover:border-[var(--color-brand-400)] hover:text-[var(--color-brand-600)]"
+                      >
+                        <ListTodo size={13} />
+                        Virar tarefa
+                      </button>
                       <button
                         onClick={() => excluir(item.id)}
                         className="focus-ring ml-auto inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
