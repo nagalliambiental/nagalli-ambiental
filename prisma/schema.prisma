@@ -359,11 +359,13 @@ model Tarefa {
 }
 
 model TarefaSerie {
-  id          Int            @id @default(autoincrement())
-  recorrencia String
-  criadoEm    DateTime       @default(now())
-  tarefas     Tarefa[]
-  periodos    TarefaPeriodo[]
+  id             Int            @id @default(autoincrement())
+  recorrencia    String
+  ativo          Boolean        @default(true)
+  fimRecorrencia DateTime?
+  criadoEm       DateTime       @default(now())
+  tarefas        Tarefa[]
+  periodos       TarefaPeriodo[]
 }
 
 model TarefaPeriodo {

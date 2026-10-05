@@ -10,6 +10,7 @@ import {
   criarSerie,
   ehRecorrenciaValida,
   gerarProximaOcorrencia,
+  type OpcoesSerie,
   type PeriodoEntrada,
 } from "@/lib/tarefas-recorrencia";
 import type { Prisma } from "@prisma/client";
@@ -124,11 +125,20 @@ async function aplicarCorpo(
         return { erro: NextResponse.json({ error: "Recorrência inválida" }, { status: 400 }) };
       }
       const periodos = (body.periodos ?? []) as PeriodoEntrada[];
+      const opcoesSerie: OpcoesSerie = {
+        ...(body.recorrenciaAtiva !== undefined ? { ativo: body.recorrenciaAtiva !== false } : {}),
+        ...(body.fimRecorrencia !== undefined
+          ? { fimRecorrencia: body.fimRecorrencia ? dataInputParaDate(String(body.fimRecorrencia)) : null }
+          : {}),
+      };
       try {
         if (serieId) {
-          await atualizarSerie(serieId, rec, periodos);
+          await atualizarSerie(serieId, rec, periodos, opcoesSerie);
         } else {
-          serieId = await criarSerie(rec, periodos);
+          serieId = await criarSerie(rec, periodos, {
+            ativo: opcoesSerie.ativo ?? true,
+            fimRecorrencia: opcoesSerie.fimRecorrencia ?? null,
+          });
         }
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Erro na escala de períodos";

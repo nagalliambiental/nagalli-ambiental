@@ -40,6 +40,8 @@ export interface TarefaFormInitial {
   processoId?: number | null;
   condicionanteId?: number | null;
   recorrencia?: string | null;
+  serieAtiva?: boolean;
+  fimRecorrencia?: string | null;
   periodos?: {
     inicio: string;
     fim: string;
@@ -111,6 +113,8 @@ export default function TarefaForm({
   const [arquivos, setArquivos] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
   const [recorrencia, setRecorrencia] = useState(initial?.recorrencia ?? "");
+  const [serieAtiva, setSerieAtiva] = useState(initial?.serieAtiva ?? true);
+  const [fimRecorrencia, setFimRecorrencia] = useState(toDateInput(initial?.fimRecorrencia));
   const [periodos, setPeriodos] = useState<PeriodoUI[]>(
     (initial?.periodos ?? []).map((p) => ({
       chave: chaveNova(),
@@ -233,6 +237,8 @@ export default function TarefaForm({
       prioridade: form.prioridade,
       status: form.status,
       recorrencia: recorrencia || null,
+      recorrenciaAtiva: serieAtiva,
+      fimRecorrencia: recorrencia ? fimRecorrencia || null : null,
       periodos: recorrencia
         ? periodos.map((p) => ({ inicio: p.inicio, fim: p.fim, responsavelId: Number(p.responsavelId) }))
         : [],
@@ -378,6 +384,28 @@ export default function TarefaForm({
         <p className="mt-1 text-xs text-[var(--color-ink-500)]">
           Ao concluir, a próxima ocorrência é criada automaticamente com o prazo recalculado.
         </p>
+        {recorrencia && (
+          <div className="mt-3 grid grid-cols-2 items-end gap-4">
+            <label className="flex items-center gap-2 text-sm font-medium text-[var(--color-ink-700)]">
+              <input
+                type="checkbox"
+                checked={serieAtiva}
+                onChange={(e) => setSerieAtiva(e.target.checked)}
+                className="h-4 w-4 rounded border-[var(--color-paper-200)] text-[var(--color-brand-500)] focus:ring-[var(--color-brand-500)]"
+              />
+              Recorrência ativa
+            </label>
+            <div>
+              <label className={labelClass}>Terminar em (opcional)</label>
+              <input
+                type="date"
+                value={fimRecorrencia}
+                onChange={(e) => setFimRecorrencia(e.target.value)}
+                className={inputClass}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {recorrencia && (

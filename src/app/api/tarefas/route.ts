@@ -105,7 +105,10 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Recorrência inválida" }, { status: 400 });
       }
       try {
-        serieId = await criarSerie(data.recorrencia, (data.periodos ?? []) as PeriodoEntrada[]);
+        serieId = await criarSerie(data.recorrencia, (data.periodos ?? []) as PeriodoEntrada[], {
+          ativo: data.recorrenciaAtiva !== false,
+          fimRecorrencia: data.fimRecorrencia ? dataInputParaDate(data.fimRecorrencia) : null,
+        });
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Erro na escala de períodos";
         return NextResponse.json({ error: msg }, { status: 400 });

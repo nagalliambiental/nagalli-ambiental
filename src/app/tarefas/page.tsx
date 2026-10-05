@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Tarefas" };
 
 const ABAS = [
-  { value: "", label: "Todas" },
+  { value: "", label: "Em aberto" },
   { value: STATUS_TAREFA.NAO_INICIADO, label: "Não iniciadas" },
   { value: STATUS_TAREFA.EM_ANDAMENTO, label: "Em andamento" },
   { value: STATUS_TAREFA.PARA_REVISAO, label: "Para revisão" },
@@ -62,7 +62,11 @@ export default async function TarefasPage({
 
   const termo = q?.trim().toLowerCase();
   const filtradas = todas.filter((t) => {
-    if (status && t.status !== status) return false;
+    if (status) {
+      if (t.status !== status) return false;
+    } else if (t.status === STATUS_TAREFA.CONCLUIDA) {
+      return false;
+    }
     if (responsavelId && t.responsavelId !== Number(responsavelId)) return false;
     if (termo) {
       const alvo = `${t.titulo} ${t.descricao ?? ""} ${t.observacoes ?? ""}`.toLowerCase();
@@ -142,7 +146,7 @@ export default async function TarefasPage({
           <nav className="flex flex-wrap gap-x-5">
             {ABAS.map((aba) => {
               const ativa = (status ?? "") === aba.value;
-              const total = aba.value ? contagem(aba.value) : todas.length;
+              const total = aba.value ? contagem(aba.value) : emAberto;
               return (
                 <Link
                   key={aba.value || "todas"}

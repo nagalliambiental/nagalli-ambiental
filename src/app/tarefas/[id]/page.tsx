@@ -176,9 +176,19 @@ export default async function TarefaDetailPage(props: { params: Promise<{ id: st
                     <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-1 flex items-center gap-2">
                       <Repeat size={16} />
                       Recorrência {ROTULO_RECORRENCIA[tarefa.serie.recorrencia as keyof typeof ROTULO_RECORRENCIA] ?? tarefa.serie.recorrencia}
+                      <span
+                        className={`rounded px-1.5 py-0.5 text-xs font-medium ${
+                          tarefa.serie.ativo ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"
+                        }`}
+                      >
+                        {tarefa.serie.ativo ? "Ativa" : "Pausada"}
+                      </span>
                     </h2>
                     <p className="mb-4 text-xs text-[var(--color-ink-500)]">
                       Ao concluir uma ocorrência, a próxima é criada automaticamente com o prazo recalculado.
+                      {tarefa.serie.fimRecorrencia
+                        ? ` Termina em ${format(tarefa.serie.fimRecorrencia, "dd/MM/yyyy", { locale: ptBR })}.`
+                        : ""}
                     </p>
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">

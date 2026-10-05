@@ -40,6 +40,8 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
     processoId: tarefa.processoId,
     condicionanteId: tarefa.condicionanteId,
     recorrencia: tarefa.serie?.recorrencia ?? null,
+    serieAtiva: tarefa.serie?.ativo ?? true,
+    fimRecorrencia: tarefa.serie?.fimRecorrencia ? tarefa.serie.fimRecorrencia.toISOString() : null,
     periodos: (tarefa.serie?.periodos ?? []).map((p) => ({
       inicio: p.inicio.toISOString(),
       fim: p.fim.toISOString(),

@@ -42,6 +42,40 @@ export function proximaData(base: Date, recorrencia: RecorrenciaTarefa): Date {
   }
 }
 
+function somaDias(base: Date, dias: number): Date {
+  const d = new Date(base);
+  d.setDate(d.getDate() + dias);
+  return d;
+}
+
+function meiaNoite(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function diaNumero(d: Date): number {
+  return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+}
+
+/**
+ * Prevê a próxima data da regra sem cair no passado (regra do aam-nagalli):
+ * se o avanço pela frequência já passou de hoje, conta a partir de hoje.
+ */
+export function preverProximaData(base: Date, recorrencia: RecorrenciaTarefa, hoje: Date = new Date()): Date {
+  const proxima = proximaData(base, recorrencia);
+  return diaNumero(proxima) <= diaNumero(hoje) ? proximaData(hoje, recorrencia) : proxima;
+}
+
+/**
+ * Preserva o intervalo entre prazo final e data limite da ocorrência anterior
+ * (mesma regra do aam-nagalli): a data limite acompanha o novo prazo.
+ */
+export function calcularDataLimite(novoPrazo: Date, prazoFinal: Date | null, dataLimite: Date | null): Date | null {
+  if (!dataLimite) return null;
+  if (!prazoFinal) return new Date(novoPrazo);
+  const offsetDias = Math.round((meiaNoite(dataLimite).getTime() - meiaNoite(prazoFinal).getTime()) / 86400000);
+  return somaDias(novoPrazo, offsetDias);
+}
+
 export type PeriodoEntrada = { inicio: string | Date; fim: string | Date; responsavelId: number };
 
 export type PeriodoNormalizado = { inicio: Date; fim: Date; responsavelId: number };
@@ -76,15 +110,20 @@ export function responsavelParaData(
   return null;
 }
 
+export type OpcoesSerie = { ativo?: boolean; fimRecorrencia?: Date | null };
+
 export async function criarSerie(
   recorrencia: RecorrenciaTarefa,
-  periodos: PeriodoEntrada[]
+  periodos: PeriodoEntrada[],
+  opcoes: OpcoesSerie = {}
 ): Promise<number> {
   const norm = normalizarPeriodos(periodos);
   if (!norm.ok) throw new Error(norm.erro);
   const serie = await prisma.tarefaSerie.create({
     data: {
       recorrencia,
+      ativo: opcoes.ativo ?? true,
+      fimRecorrencia: opcoes.fimRecorrencia ?? null,
       periodos: {
         create: norm.periodos.map((p) => ({
           inicio: p.inicio,
@@ -100,7 +139,8 @@ export async function criarSerie(
 export async function atualizarSerie(
   serieId: number,
   recorrencia: RecorrenciaTarefa,
-  periodos: PeriodoEntrada[]
+  periodos: PeriodoEntrada[],
+  opcoes: OpcoesSerie = {}
 ): Promise<void> {
   const norm = normalizarPeriodos(periodos);
   if (!norm.ok) throw new Error(norm.erro);
@@ -108,6 +148,8 @@ export async function atualizarSerie(
     where: { id: serieId },
     data: {
       recorrencia,
+      ...(opcoes.ativo !== undefined ? { ativo: opcoes.ativo } : {}),
+      ...(opcoes.fimRecorrencia !== undefined ? { fimRecorrencia: opcoes.fimRecorrencia } : {}),
       periodos: {
         deleteMany: {},
         create: norm.periodos.map((p) => ({
@@ -125,6 +167,7 @@ type TarefaClone = {
   titulo: string;
   descricao: string | null;
   observacoes: string | null;
+  status: string;
   prioridade: string;
   alertaPrazoFinal: number;
   dataLimite: Date | null;
@@ -140,28 +183,43 @@ type TarefaClone = {
 };
 
 /**
- * Ao concluir uma tarefa recorrente, cria a próxima ocorrência:
- * prazo avança pela frequência e o responsável sai da escala por período
- * (mantém o atual se nenhum período cobrir a nova data).
+ * Ao concluir uma tarefa recorrente, cria a próxima ocorrência seguindo as
+ * regras de negócio do aam-nagalli:
+ * - só gera quando a tarefa realmente está concluída;
+ * - não gera se a série está pausada (`ativo = false`);
+ * - só existe uma ocorrência aberta por série (nenhuma nova se já há outra);
+ * - o prazo nunca nasce no passado (conta a partir de hoje se atrasado);
+ * - preserva o intervalo prazo final → data limite;
+ * - se o novo prazo passar do fim da recorrência, pausa a série e não gera.
+ * O responsável sai da escala por período (mantém o atual se nenhum cobrir a nova data).
  */
 export async function gerarProximaOcorrencia(tarefa: TarefaClone, usuarioId: number): Promise<number | null> {
   if (!tarefa.serieId) return null;
+  if (tarefa.status !== STATUS_TAREFA.CONCLUIDA) return null;
   const serie = await prisma.tarefaSerie.findUnique({
     where: { id: tarefa.serieId },
     include: { periodos: true },
   });
   if (!serie || !ehRecorrenciaValida(serie.recorrencia)) return null;
+  if (!serie.ativo) return null;
 
-  const base = tarefa.prazoFinal ?? tarefa.dataConclusao ?? new Date();
-  const novoPrazo = proximaData(base, serie.recorrencia);
-  const responsavelId =
-    responsavelParaData(serie.periodos, novoPrazo) ?? tarefa.responsavelId;
-
-  const existente = await prisma.tarefa.findFirst({
-    where: { serieId: serie.id, prazoFinal: novoPrazo, ativo: true },
+  const outraAberta = await prisma.tarefa.findFirst({
+    where: { serieId: serie.id, id: { not: tarefa.id }, ativo: true, status: { not: STATUS_TAREFA.CONCLUIDA } },
     select: { id: true },
   });
-  if (existente) return null;
+  if (outraAberta) return null;
+
+  const base = tarefa.prazoFinal ?? tarefa.dataConclusao ?? new Date();
+  const novoPrazo = preverProximaData(base, serie.recorrencia);
+
+  if (serie.fimRecorrencia && diaNumero(novoPrazo) > diaNumero(serie.fimRecorrencia)) {
+    await prisma.tarefaSerie.update({ where: { id: serie.id }, data: { ativo: false } });
+    return null;
+  }
+
+  const novoDataLimite = calcularDataLimite(novoPrazo, tarefa.prazoFinal, tarefa.dataLimite);
+  const responsavelId =
+    responsavelParaData(serie.periodos, novoPrazo) ?? tarefa.responsavelId;
 
   const nova = await prisma.tarefa.create({
     data: {
@@ -172,7 +230,7 @@ export async function gerarProximaOcorrencia(tarefa: TarefaClone, usuarioId: num
       prioridade: tarefa.prioridade,
       prazoFinal: novoPrazo,
       alertaPrazoFinal: tarefa.alertaPrazoFinal,
-      dataLimite: tarefa.dataLimite,
+      dataLimite: novoDataLimite,
       alertaDataLimite: tarefa.alertaDataLimite,
       responsavelId,
       empreendimentoId: tarefa.empreendimentoId,
