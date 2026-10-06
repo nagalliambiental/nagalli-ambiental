@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Loader2, Plus, Trash2, Key, Link as LinkIcon } from "lucide-react";
 import { useToast } from "@/components/Toast";
+import { SelecaoBusca } from "@/components/SelecaoBusca";
 
 interface AcessoEntry {
   id: number;
@@ -161,13 +162,13 @@ export function AcessosTab({ clienteId, empreendimentos }: Props) {
           </div>
           <div>
             <label className="block text-xs font-medium text-[var(--color-ink-600)] mb-1">Vincular a empreendimento (opcional)</label>
-            <select value={formEmpId} onChange={(e) => setFormEmpId(e.target.value)}
-              className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]">
-              <option value="">Nenhum</option>
-              {empreendimentos.map((e) => (
-                <option key={e.id} value={e.id}>{e.apelido}</option>
-              ))}
-            </select>
+            <SelecaoBusca
+              valor={formEmpId}
+              onChange={(v) => setFormEmpId(v)}
+              opcoes={empreendimentos.map((e) => ({ value: String(e.id), label: e.apelido }))}
+              className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]"
+              placeholder="Nenhum"
+            />
           </div>
           <button onClick={handleCreate} disabled={saving}
             className="flex items-center gap-1.5 rounded-lg bg-[var(--color-brand-500)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50">

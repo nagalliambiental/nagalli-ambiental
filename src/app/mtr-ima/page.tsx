@@ -6,6 +6,7 @@ import { Topbar } from "@/components/Topbar";
 import { Truck, RefreshCw, Send, Link2, Loader2, CheckCircle2, FileDown, Trash2, Ban, Plus, X, PackagePlus, PackageCheck, FileText, Save, Pencil, FolderArchive } from "lucide-react";
 import { useToast } from "@/components/Toast";
 import { mascararCpf, mascararCpfCnpj } from "@/lib/cliente-cnpj";
+import { SelecaoBusca } from "@/components/SelecaoBusca";
 
 type ToastFn = (message: string, type?: "success" | "error" | "info" | "warning") => void;
 
@@ -1056,12 +1057,13 @@ function EmitirTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimento
           </div>
           <div className="flex flex-col gap-1 md:col-span-2">
             <label className={labelCls}>Vincular empreendimento (preenche gerador)</label>
-            <select value={form.empreendimentoId} onChange={(e) => selecionarEmpreendimento(e.target.value)} className={inputCls}>
-              <option value="">Selecione um empreendimento...</option>
-              {empreendimentos.map((e) => (
-                <option key={e.id} value={e.id}>{e.cliente.apelido} — {e.apelido}</option>
-              ))}
-            </select>
+            <SelecaoBusca
+              valor={form.empreendimentoId}
+              onChange={(v) => selecionarEmpreendimento(v)}
+              opcoes={empreendimentos.map((e) => ({ value: String(e.id), label: `${e.cliente.apelido} — ${e.apelido}` }))}
+              className={inputCls}
+              placeholder="Selecione um empreendimento..."
+            />
           </div>
           <div className="flex flex-col gap-1">
             <label className={labelCls}>CNPJ Gerador</label>
@@ -1886,12 +1888,13 @@ function ConexoesTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimen
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <div className="flex flex-col gap-1 md:col-span-2">
             <label className={labelCls}>Vincular empreendimento (preenche automaticamente)</label>
-            <select value={form.empreendimentoId} onChange={(e) => selecionarEmpreendimento(e.target.value)} className={inputCls}>
-              <option value="">Selecione um empreendimento cadastrado...</option>
-              {empreendimentos.map((e) => (
-                <option key={e.id} value={e.id}>{e.cliente.apelido} — {e.apelido}</option>
-              ))}
-            </select>
+            <SelecaoBusca
+              valor={form.empreendimentoId}
+              onChange={(v) => selecionarEmpreendimento(v)}
+              opcoes={empreendimentos.map((e) => ({ value: String(e.id), label: `${e.cliente.apelido} — ${e.apelido}` }))}
+              className={inputCls}
+              placeholder="Selecione um empreendimento cadastrado..."
+            />
           </div>
           <div className="flex flex-col gap-1">
             <label className={labelCls}>Nome (razão social)</label>

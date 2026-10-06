@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Loader2, Plus, Trash2, Paperclip, Clock, User, FileText, X, MapPin } from "lucide-react";
 import { useToast } from "@/components/Toast";
+import { SelecaoBusca } from "@/components/SelecaoBusca";
 import Link from "next/link";
 
 interface HistoricoEntry {
@@ -136,16 +137,13 @@ export function HistoricoTab({ clienteId, empreendimentoId, empreendimentos }: P
             className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)] resize-none"
           />
           {empreendimentos && (
-            <select
-              value={selectedEmpId}
-              onChange={(e) => setSelectedEmpId(e.target.value)}
+            <SelecaoBusca
+              valor={selectedEmpId}
+              onChange={(v) => setSelectedEmpId(v)}
+              opcoes={empreendimentos.map((e) => ({ value: String(e.id), label: e.apelido }))}
               className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]"
-            >
-              <option value="">Vincular a um empreendimento (opcional)</option>
-              {empreendimentos.map((e) => (
-                <option key={e.id} value={e.id}>{e.apelido}</option>
-              ))}
-            </select>
+              placeholder="Vincular a um empreendimento (opcional)"
+            />
           )}
           <div className="flex items-center gap-3">
             <label className="focus-ring transition-brand flex cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]">

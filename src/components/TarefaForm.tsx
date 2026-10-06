@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/components/Toast";
 import { Paperclip, Plus, X } from "lucide-react";
 import { RECORRENCIA_TAREFA, ROTULO_RECORRENCIA } from "@/lib/constants";
+import { SelecaoBusca } from "@/components/SelecaoBusca";
 import type { OpcaoProcesso } from "@/components/tarefas/LinhaTarefa";
 
 interface ResponsavelOption {
@@ -286,16 +287,12 @@ export default function TarefaForm({
         </div>
         <div>
           <label className={labelClass}>Empreendimento</label>
-          <select
-            value={form.empreendimentoId}
-            onChange={(e) => setForm({ ...form, empreendimentoId: e.target.value, processoId: "", condicionanteId: "" })}
-            className={inputClass}
-          >
-            <option value="">Selecione...</option>
-            {empreendimentos.map((emp) => (
-              <option key={emp.id} value={emp.id}>{emp.apelido}</option>
-            ))}
-          </select>
+            <SelecaoBusca
+              valor={form.empreendimentoId}
+              onChange={(v) => setForm({ ...form, empreendimentoId: v, processoId: "", condicionanteId: "" })}
+              opcoes={empreendimentos.map((emp) => ({ value: String(emp.id), label: emp.apelido }))}
+              className={inputClass}
+            />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-4">

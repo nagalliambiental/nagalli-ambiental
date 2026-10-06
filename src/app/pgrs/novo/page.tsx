@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ShieldCheck, Upload, Loader2, FileCheck2 } from "lucide-react";
 import { Topbar } from "@/components/Topbar";
 import { useToast } from "@/components/Toast";
+import { SelecaoBusca } from "@/components/SelecaoBusca";
 
 interface Empreendimento {
   id: number;
@@ -124,17 +125,14 @@ export default function NovoPgrsPage() {
         <form onSubmit={handleSubmit} className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5 space-y-4">
           <div>
             <label className={labelClass}>Empreendimento <span className="text-red-500">*</span></label>
-            <select
-              value={form.empreendimentoId}
-              onChange={(e) => setForm({ ...form, empreendimentoId: e.target.value })}
+            <SelecaoBusca
+              valor={form.empreendimentoId}
+              onChange={(v) => setForm({ ...form, empreendimentoId: v })}
+              opcoes={empreendimentos.map((emp) => ({ value: String(emp.id), label: emp.apelido }))}
               className={inputClass}
+              placeholder="Selecione..."
               required
-            >
-              <option value="">Selecione...</option>
-              {empreendimentos.map((emp) => (
-                <option key={emp.id} value={emp.id}>{emp.apelido}</option>
-              ))}
-            </select>
+            />
           </div>
 
           <div>

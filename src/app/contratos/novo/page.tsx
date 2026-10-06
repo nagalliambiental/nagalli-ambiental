@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { FileSignature } from "lucide-react";
 import { Topbar } from "@/components/Topbar";
+import { SelecaoBusca } from "@/components/SelecaoBusca";
 import { dataInputParaDate } from "@/lib/format";
 
 interface Empreendimento {
@@ -83,17 +84,24 @@ export default function NovoContratoPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Cliente <span className="text-red-500">*</span></label>
-              <select value={form.clienteId} onChange={(e) => setForm({ ...form, clienteId: e.target.value })} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" required>
-                <option value="">Selecione...</option>
-                {clientes.map((c) => <option key={c.id} value={c.id}>{c.apelido}</option>)}
-              </select>
+              <SelecaoBusca
+                valor={form.clienteId}
+                onChange={(v) => setForm({ ...form, clienteId: v })}
+                opcoes={clientes.map((c) => ({ value: String(c.id), label: c.apelido }))}
+                className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]"
+                placeholder="Selecione..."
+                required
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Empreendimento</label>
-              <select value={form.empreendimentoId} onChange={(e) => setForm({ ...form, empreendimentoId: e.target.value })} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]">
-                <option value="">Sem vínculo</option>
-                {empreendimentos.map((e) => <option key={e.id} value={e.id}>{e.apelido}</option>)}
-              </select>
+              <SelecaoBusca
+                valor={form.empreendimentoId}
+                onChange={(v) => setForm({ ...form, empreendimentoId: v })}
+                opcoes={empreendimentos.map((e) => ({ value: String(e.id), label: e.apelido }))}
+                className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]"
+                placeholder="Sem vínculo"
+              />
             </div>
           </div>
           <div>

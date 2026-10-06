@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Plus, Trash2, Loader2, Users } from "lucide-react";
 import { useToast } from "@/components/Toast";
+import { SelecaoBusca } from "@/components/SelecaoBusca";
 
 interface EmpreendimentoOpcao {
   id: number;
@@ -149,18 +150,16 @@ export function ContatosTabCliente({ empreendimentos, clienteId }: ContatosTabCl
         {empreendimentos.length > 0 && (
           <div className="mt-3 max-w-xs">
             <label className="mb-1 block text-xs font-medium text-[var(--color-ink-500)]">Vincular a empreendimento (opcional)</label>
-            <select
-              value={empreendimentoId}
-              onChange={(e) => setEmpreendimentoId(e.target.value)}
+            <SelecaoBusca
+              valor={empreendimentoId}
+              onChange={(v) => setEmpreendimentoId(v)}
+              opcoes={empreendimentos.map((e) => ({
+                value: String(e.id),
+                label: `${e.apelido}${e.unidadeSinir ? ` · unid. ${e.unidadeSinir}` : ""}`,
+              }))}
               className="w-full rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm"
-            >
-              <option value="">Sem vinculo especifico...</option>
-              {empreendimentos.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.apelido}{e.unidadeSinir ? ` · unid. ${e.unidadeSinir}` : ""}
-                </option>
-              ))}
-            </select>
+              placeholder="Sem vinculo especifico..."
+            />
           </div>
         )}
 

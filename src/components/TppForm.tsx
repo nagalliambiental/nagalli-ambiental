@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Upload, Loader2, CheckCircle2, FileText, RefreshCw } from "lucide-react";
 import { useToast } from "@/components/Toast";
+import { SelecaoBusca } from "@/components/SelecaoBusca";
 
 export type TppInicial = {
   id: number;
@@ -273,29 +274,23 @@ export default function TppForm({ modo, tppId, inicial, renovarId }: Props) {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <label className="mb-1 block text-sm font-medium text-[var(--color-ink-700)]">Cliente *</label>
-          <select
-            value={form.clienteId}
-            onChange={(e) => setField("clienteId", e.target.value)}
+          <SelecaoBusca
+            valor={form.clienteId}
+            onChange={(v) => setField("clienteId", v)}
+            opcoes={clientes.map((c) => ({ value: String(c.id), label: c.apelido }))}
             className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]"
-          >
-            <option value="">Selecione...</option>
-            {clientes.map((c) => (
-              <option key={c.id} value={c.id}>{c.apelido}</option>
-            ))}
-          </select>
+            placeholder="Selecione..."
+          />
         </div>
         <div>
           <label className="mb-1 block text-sm font-medium text-[var(--color-ink-700)]">Empreendimento</label>
-          <select
-            value={form.empreendimentoId}
-            onChange={(e) => setField("empreendimentoId", e.target.value)}
+          <SelecaoBusca
+            valor={form.empreendimentoId}
+            onChange={(v) => setField("empreendimentoId", v)}
+            opcoes={empreendimentosDoCliente.map((e) => ({ value: String(e.id), label: e.apelido }))}
             className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]"
-          >
-            <option value="">Selecione...</option>
-            {empreendimentosDoCliente.map((e) => (
-              <option key={e.id} value={e.id}>{e.apelido}</option>
-            ))}
-          </select>
+            placeholder="Selecione..."
+          />
         </div>
       </div>
 

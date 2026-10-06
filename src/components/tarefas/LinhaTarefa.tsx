@@ -8,6 +8,7 @@ import { formatDate } from "@/lib/format";
 import { Pencil, Trash2, X, CheckCircle2, Repeat } from "lucide-react";
 import { ROTULO_RECORRENCIA } from "@/lib/constants";
 import { BotaoAnexos, TarefaAnexos } from "@/components/tarefas/TarefaAnexos";
+import { SelecaoBusca } from "@/components/SelecaoBusca";
 
 export type LinhaTarefaTarefa = {
   id: number;
@@ -367,16 +368,13 @@ export function LinhaTarefa({
               )}
               <div>
                 <label className={labelClass}>Empreendimento</label>
-                <select
-                  value={form.empreendimentoId}
-                  onChange={(e) => setForm((f) => ({ ...f, empreendimentoId: e.target.value, processoId: "", condicionanteId: "" }))}
+                <SelecaoBusca
+                  valor={form.empreendimentoId}
+                  onChange={(v) => setForm((f) => ({ ...f, empreendimentoId: v, processoId: "", condicionanteId: "" }))}
+                  opcoes={empreendimentos.map((emp) => ({ value: String(emp.id), label: emp.apelido }))}
                   className={inputClass}
-                >
-                  <option value="">— sem empreendimento —</option>
-                  {empreendimentos.map((emp) => (
-                    <option key={emp.id} value={emp.id}>{emp.apelido}</option>
-                  ))}
-                </select>
+                  placeholder="- sem empreendimento -"
+                />
               </div>
               <div>
                 <label className={labelClass}>Licença</label>

@@ -39,7 +39,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
       fields={[
         { name: "apelido", label: "Apelido", type: "text", required: true },
         {
-          name: "clienteId", label: "Cliente", type: "select", required: true,
+          name: "clienteId", label: "Cliente", type: "select", required: true, busca: true,
           options: clientes.map((c) => ({ value: String(c.id), label: c.cnpj ? `${c.apelido} — ${mascararCpfCnpj(c.cnpj)}` : c.apelido })),
         },
         { name: "cnpj", label: "CNPJ", type: "text" },

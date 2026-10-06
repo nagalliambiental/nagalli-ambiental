@@ -6,6 +6,7 @@ import { Topbar } from "@/components/Topbar";
 import { Truck, RefreshCw, Send, Link2, Loader2, CheckCircle2, AlertTriangle, XCircle, FileDown, Trash2, Ban, ShieldCheck, Clock, Plus, X, Pencil, PackagePlus, Bookmark, Save, Mail, FileText, FolderArchive } from "lucide-react";
 import { useToast } from "@/components/Toast";
 import { mascararCpfCnpj } from "@/lib/cliente-cnpj";
+import { SelecaoBusca } from "@/components/SelecaoBusca";
 
 type ToastFn = (message: string, type?: "success" | "error" | "info" | "warning") => void;
 
@@ -594,12 +595,13 @@ function PainelTab(props: {
         <div className="flex flex-wrap items-end gap-2">
           <div className="flex flex-col gap-1">
             <label className="text-xs text-[var(--color-ink-500)]">Empreendimento (declarante)</label>
-            <select value={dmrEmpId} onChange={(e) => setDmrEmpId(e.target.value)} className="rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm">
-              <option value="">Selecione...</option>
-              {empreendimentos.map((e) => (
-                <option key={e.id} value={e.id}>{e.cliente.apelido} — {e.apelido}{e.unidadeSinir ? ` — unid. ${e.unidadeSinir}` : ""}</option>
-              ))}
-            </select>
+            <SelecaoBusca
+              valor={dmrEmpId}
+              onChange={(v) => setDmrEmpId(v)}
+              opcoes={empreendimentos.map((e) => ({ value: String(e.id), label: `${e.cliente.apelido} — ${e.apelido}${e.unidadeSinir ? ` — unid. ${e.unidadeSinir}` : ""}` }))}
+              className="rounded-lg border border-[var(--color-paper-200)] px-2.5 py-2 text-sm"
+              placeholder="Selecione..."
+            />
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-xs text-[var(--color-ink-500)]">Trimestre</label>
@@ -2154,12 +2156,13 @@ function abrirModalResiduo(indice?: number) {
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <div className="flex flex-col gap-1 md:col-span-2">
           <label className="text-xs font-medium text-[var(--color-ink-500)]">Empreendimento (preenche os dados do gerador)</label>
-          <select value={form.empreendimentoId} onChange={(e) => selecionarEmpreendimento(e.target.value)} className={inputCls}>
-            <option value="">Selecione um empreendimento cadastrado...</option>
-            {empreendimentos.map((e) => (
-              <option key={e.id} value={e.id}>{e.cliente.apelido} — {e.apelido}{e.cnpj ? "" : " (sem CNPJ próprio)"}{e.unidadeSinir ? ` — unid. ${e.unidadeSinir}` : ""}</option>
-            ))}
-          </select>
+          <SelecaoBusca
+            valor={form.empreendimentoId}
+            onChange={(v) => selecionarEmpreendimento(v)}
+            opcoes={empreendimentos.map((e) => ({ value: String(e.id), label: `${e.cliente.apelido} — ${e.apelido}${e.cnpj ? "" : " (sem CNPJ próprio)"}${e.unidadeSinir ? ` — unid. ${e.unidadeSinir}` : ""}` }))}
+            className={inputCls}
+            placeholder="Selecione um empreendimento cadastrado..."
+          />
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-[var(--color-ink-500)]">Conexão</label>
@@ -3311,12 +3314,13 @@ function ConexoesTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimen
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <div className="flex flex-col gap-1 md:col-span-2">
             <label className="text-xs font-medium text-[var(--color-ink-500)]">Vincular empreendimento (preenche automaticamente)</label>
-            <select value={form.empreendimentoId} onChange={(e) => selecionarEmpreendimento(e.target.value)} className={inputCls}>
-              <option value="">Selecione um empreendimento cadastrado...</option>
-              {empreendimentos.map((e) => (
-                <option key={e.id} value={e.id}>{e.cliente.apelido} — {e.apelido}{e.unidadeSinir ? ` — unid. ${e.unidadeSinir}` : ""}</option>
-              ))}
-            </select>
+            <SelecaoBusca
+              valor={form.empreendimentoId}
+              onChange={(v) => selecionarEmpreendimento(v)}
+              opcoes={empreendimentos.map((e) => ({ value: String(e.id), label: `${e.cliente.apelido} — ${e.apelido}${e.unidadeSinir ? ` — unid. ${e.unidadeSinir}` : ""}` }))}
+              className={inputCls}
+              placeholder="Selecione um empreendimento cadastrado..."
+            />
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium text-[var(--color-ink-500)]">Nome (razão social)</label>

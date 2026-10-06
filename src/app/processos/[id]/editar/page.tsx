@@ -35,7 +35,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
         { name: "tipo", label: "Tipo", type: "text", required: true },
         { name: "numProtocolo", label: "Nº Protocolo", type: "text", required: true, search: "sia" },
         { name: "numLicenca", label: "Nº Licença", type: "text" },
-        { name: "empreendimentoId", label: "Empreendimento", type: "select", required: true, optionsUrl: "/api/empreendimentos", optionLabelKey: "apelido" },
+        { name: "empreendimentoId", label: "Empreendimento", type: "select", required: true, optionsUrl: "/api/empreendimentos", optionLabelKey: "apelido", busca: true },
         { name: "sistema", label: "Sistema", type: "text", required: true },
         { name: "status", label: "Status", type: "select", required: true, options: [
           { value: "protocolado", label: "Protocolado" },

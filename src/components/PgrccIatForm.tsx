@@ -18,6 +18,7 @@ import {
   PgrccIatFormData,
 } from "@/lib/templates/pgrcc-iat/config";
 import { extrairPgrccDoTexto } from "@/lib/pgrcc-iat-extract";
+import { SelecaoBusca } from "@/components/SelecaoBusca";
 
 type ClienteSer = Record<string, unknown> & { razaoSocial: string; cnpj?: string | null };
 type ConfigSer = Record<string, unknown>;
@@ -120,6 +121,7 @@ export function PgrccIatForm({ clienteId, clienteApelido, cliente, configuracoes
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [buscaAberta, setBuscaAberta] = useState<{ tipo: "transporte" | "destinacao"; id: string } | null>(null);
+  const [empSelecionado, setEmpSelecionado] = useState("");
   const [form, setForm] = useState<PgrccIatFormData>(() => {
     if (initialData && Object.keys(initialData).length > 2) {
       const base = emptyPgrccIatFormData();
@@ -481,16 +483,16 @@ export function PgrccIatForm({ clienteId, clienteApelido, cliente, configuracoes
           {empreendimentos.length > 0 && (
             <div className="mb-5">
               <label className={labelCls}>Empreendimento (preenchimento automático)</label>
-              <select
+              <SelecaoBusca
+                valor={empSelecionado}
+                onChange={(v) => { setEmpSelecionado(v); aplicarEmpreendimento(v); }}
+                opcoes={empreendimentos.map((e) => ({
+                  value: String(e.id),
+                  label: String(e.apelido ?? e.descricao ?? ""),
+                }))}
                 className={inputCls}
-                defaultValue=""
-                onChange={(e) => aplicarEmpreendimento(e.target.value)}
-              >
-                <option value="">Selecione...</option>
-                {empreendimentos.map((e) => (
-                  <option key={String(e.id)} value={String(e.id)}>{String(e.apelido ?? e.descricao ?? "")}</option>
-                ))}
-              </select>
+                placeholder="Selecione..."
+              />
             </div>
           )}
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2">

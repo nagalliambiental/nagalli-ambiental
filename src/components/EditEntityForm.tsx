@@ -11,6 +11,7 @@ import { useSession } from "next-auth/react";
 import { ehPrivilegiado } from "@/lib/perfil";
 import { dataInputParaIsoBR } from "@/lib/format";
 import { mascararCpfCnpj } from "@/lib/cliente-cnpj";
+import { SelecaoBusca } from "@/components/SelecaoBusca";
 
 interface FieldConfig {
   name: string;
@@ -24,6 +25,7 @@ interface FieldConfig {
   search?: "cep" | "cnpj" | "sia";
   upload?: boolean;
   step?: string;
+  busca?: boolean;
   validate?: (value: string | boolean) => string | null;
 }
 
@@ -338,6 +340,16 @@ export default function EditEntityForm({
                       <span className="text-sm text-[var(--color-ink-500)]">{form[f.name] ? "Sim" : "Não"}</span>
                     </label>
                   ) : f.type === "select" ? (
+                    f.busca ? (
+                      <SelecaoBusca
+                        valor={String(form[f.name] ?? "")}
+                        onChange={(v) => setField(f.name, v)}
+                        opcoes={f.optionsUrl ? (opcoesDinamicas[f.name] || []) : f.options || []}
+                        className={`input-field ${fieldErrors[f.name] ? "input-error" : ""}`}
+                        placeholder="Selecione..."
+                        required={f.required}
+                      />
+                    ) : (
                     <select
                       value={form[f.name] as string || ""}
                       onChange={(e) => setField(f.name, e.target.value)}
@@ -349,6 +361,7 @@ export default function EditEntityForm({
                         <option key={o.value} value={o.value}>{o.label}</option>
                       ))}
                     </select>
+                    )
                   ) : f.type === "textarea" ? (
                     <div className="space-y-2">
                       <textarea
