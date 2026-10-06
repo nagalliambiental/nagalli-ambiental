@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import { MobileNav } from "@/components/MobileNav";
+import { AppTopBar } from "@/components/AppTopBar";
 import { TermosModal } from "@/components/TermosModal";
 import { useSession } from "next-auth/react";
 
@@ -21,6 +22,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
       <MobileNav />
       <TermosModal />
       <div className="lg:pl-[var(--sidebar-width)]">
+        <AppTopBar />
         <main className="mx-auto max-w-6xl px-5 py-8 sm:px-8 sm:py-10">{children}</main>
       </div>
     </>
