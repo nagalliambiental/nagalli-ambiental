@@ -353,6 +353,7 @@ model Tarefa {
   usuario          Usuario         @relation(fields: [usuarioId], references: [id])
   serie            TarefaSerie?    @relation(fields: [serieId], references: [id], onDelete: SetNull)
   anexos           TarefaAnexo[]
+  notificacoes     Notificacao[]
 
   @@index([processoId])
   @@index([status])
@@ -392,6 +393,50 @@ model TarefaAnexo {
   tarefa    Tarefa   @relation(fields: [tarefaId], references: [id], onDelete: Cascade)
 
   @@index([tarefaId])
+}
+
+model Notificacao {
+  id                    Int       @id @default(autoincrement())
+  tipo                  String
+  mensagem              String
+  canal                 String    @default("in_app")
+  destinatarioUsuarioId Int?
+  lida                  Boolean   @default(false)
+  dataEnvio             DateTime  @default(now())
+  dataEvento            DateTime?
+  criadoEm              DateTime  @default(now())
+  url                   String?
+  tarefaId              Int?
+
+  tarefa Tarefa? @relation(fields: [tarefaId], references: [id], onDelete: Cascade)
+
+  @@index([lida, destinatarioUsuarioId])
+  @@index([tarefaId])
+}
+
+model LegislacaoIat {
+  id                Int       @id @default(autoincrement())
+  tipo              String // "IN" | "OT"
+  numero            Int
+  ano               Int
+  titulo            String
+  ementa            String
+  url               String?
+  anexosUrl         String?
+  situacao          String    @default("vigente") // vigente | revogada
+  revogadaPor       String?
+  hash              String
+  fonteUrl          String
+  dataAto           DateTime? // data do ato (metadado CreationDate/ModDate do PDF oficial)
+  dataAtoConsultada Boolean   @default(false)
+  dataAtoTentativas Int       @default(0)
+  dataPublicacao    String? // "YYYY-MM" extraído da pasta do PDF no site
+  criadoEm          DateTime  @default(now())
+  atualizadoEm      DateTime  @updatedAt
+  ultimaVerificacao DateTime  @default(now())
+
+  @@unique([tipo, numero, ano])
+  @@index([situacao, ano])
 }
 
 model Financeiro {

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/cron/legislacao-iat",
+      "schedule": "0 9 * * *"
+    }
+  ],
+  "functions": {
+    "src/app/api/cron/legislacao-iat/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/ferramentas/legislacao-iat/sincronizar/route.ts": {
+      "maxDuration": 60
+    }
+  }
+}

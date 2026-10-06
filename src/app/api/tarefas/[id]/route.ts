@@ -187,6 +187,17 @@ async function aplicarCorpo(
 
   await sincronizarExigenciaTarefa({ exigenciaId: tarefa.exigenciaId, status: tarefa.status });
 
+  if (virouConcluida) {
+    try {
+      await prisma.notificacao.updateMany({
+        where: { tarefaId: tarefa.id, lida: false },
+        data: { lida: true },
+      });
+    } catch (e) {
+      console.error("Erro ao marcar notificações da tarefa como lidas:", e);
+    }
+  }
+
   if (virouConcluida && tarefa.serieId) {
     try {
       await gerarProximaOcorrencia(tarefa, usuarioId);

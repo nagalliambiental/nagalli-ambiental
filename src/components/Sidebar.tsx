@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { Plus, ChevronDown } from "lucide-react";
 import { NAV_ITEMS, type NavChild } from "@/lib/nav-items";
 import { UserMenu } from "@/components/UserMenu";
+import { SinoNotificacoes } from "@/components/SinoNotificacoes";
 import { useSession } from "next-auth/react";
 import { useState } from "react";
 
@@ -50,6 +51,9 @@ export default function Sidebar() {
             Nagalli Ambiental
           </p>
           <p className="text-xs text-[var(--color-ink-500)]">Sistema de Gestão</p>
+        </div>
+        <div className="ml-auto">
+          <SinoNotificacoes />
         </div>
       </div>
       <div className="river-divider" />

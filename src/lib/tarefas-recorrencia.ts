@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
-import { RECORRENCIA_TAREFA, STATUS_TAREFA, type RecorrenciaTarefa } from "@/lib/constants";
+import { RECORRENCIA_TAREFA, ROTULO_RECORRENCIA, STATUS_TAREFA, type RecorrenciaTarefa } from "@/lib/constants";
 import { logAuditoria } from "@/lib/audit";
+import { criarNotificacao } from "@/lib/notificacoes";
 
 export function ehRecorrenciaValida(v: unknown): v is RecorrenciaTarefa {
   return typeof v === "string" && (Object.values(RECORRENCIA_TAREFA) as string[]).includes(v);
@@ -247,6 +248,23 @@ export async function gerarProximaOcorrencia(tarefa: TarefaClone, usuarioId: num
     tarefaOrigem: tarefa.id,
     prazoFinal: novoPrazo.toISOString(),
   }, usuarioId);
+
+  try {
+    const responsavel = await prisma.responsavel.findUnique({
+      where: { id: responsavelId },
+      select: { usuarioId: true },
+    });
+    await criarNotificacao({
+      tipo: "tarefa_recorrente",
+      mensagem: `Nova ocorrência recorrente (${ROTULO_RECORRENCIA[serie.recorrencia]}): ${nova.titulo}`,
+      url: `/tarefas/${nova.id}`,
+      tarefaId: nova.id,
+      destinatarioUsuarioId: responsavel?.usuarioId ?? null,
+      dataEvento: new Date(),
+    });
+  } catch (e) {
+    console.error("Erro ao criar notificação da ocorrência recorrente:", e);
+  }
 
   return nova.id;
 }

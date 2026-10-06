@@ -8,6 +8,7 @@ import {
   DatabaseBackup,
   Wallet,
   Recycle,
+  Scale,
   type LucideIcon,
 } from "lucide-react";
 
@@ -54,6 +55,7 @@ export const NAV_ITEMS: NavItem[] = [
     ],
   },
   { label: "Tarefas", href: "/tarefas", icon: ListTodo },
+  { label: "Legislação IAT", href: "/legislacao-iat", icon: Scale },
   { label: "Backups", href: "/backups", icon: DatabaseBackup, adminOnly: true },
   {
     label: "Financeiro/Propostas", icon: Wallet,

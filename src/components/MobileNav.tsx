@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { NAV_ITEMS, type NavChild } from "@/lib/nav-items";
 import { useSession } from "next-auth/react";
 import { Menu, X, ChevronDown } from "lucide-react";
+import { SinoNotificacoes } from "@/components/SinoNotificacoes";
 import { useState } from "react";
 
 export function MobileNav() {
@@ -47,12 +48,15 @@ export function MobileNav() {
             Nagalli Ambiental
           </span>
         </div>
-        <button
-          onClick={() => setOpen(!open)}
-          className="focus-ring rounded-lg p-1.5 text-[var(--color-ink-700)]"
-        >
-          {open ? <X size={22} /> : <Menu size={22} />}
-        </button>
+        <div className="flex items-center gap-1">
+          <SinoNotificacoes />
+          <button
+            onClick={() => setOpen(!open)}
+            className="focus-ring rounded-lg p-1.5 text-[var(--color-ink-700)]"
+          >
+            {open ? <X size={22} /> : <Menu size={22} />}
+          </button>
+        </div>
       </div>
       {open && (
         <nav className="border-b border-[var(--color-paper-200)] bg-[var(--color-paper-0)] px-4 pb-4 pt-2 space-y-1">
