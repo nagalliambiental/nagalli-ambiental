@@ -1,8 +1,11 @@
 import Link from "next/link";
-import { Building2, CalendarClock, Plus, FileCheck2, FileSpreadsheet, LayoutDashboard, AlertTriangle, Truck, ShieldCheck } from "lucide-react";
+import { Building2, CalendarClock, Plus, FileCheck2, FileSpreadsheet, LayoutDashboard, AlertTriangle, Truck, ShieldCheck, ListTodo } from "lucide-react";
 import { Topbar } from "@/components/Topbar";
 import { StatCard } from "@/components/StatCard";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { STATUS_TAREFA } from "@/lib/constants";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { getTrimestreAtual, getDiasFimTrimestre } from "@/lib/dmr-parser";
@@ -11,7 +14,18 @@ import { Breadcrumbs } from "@/components/Breadcrumbs";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Dashboard" };
 
+const ROTULO_STATUS_TAREFA: Record<string, string> = {
+  nao_iniciado: "Não iniciado",
+  em_andamento: "Em andamento",
+  para_revisao: "Para revisão",
+  concluida: "Concluída",
+};
+
 export default async function DashboardPage() {
+  const session = await auth();
+  if (!session?.user) redirect("/login");
+  const usuarioId = session.user?.id ? Number(session.user.id) : null;
+
   const [
     totalProcessos,
     totalClientes,
@@ -21,6 +35,8 @@ export default async function DashboardPage() {
     exigenciasComPrazo,
     tppsComValidade,
     pgrsAtivos,
+    minhasTarefasTotal,
+    minhasTarefas,
   ] = await Promise.all([
     prisma.processo.count(),
     prisma.cliente.count(),
@@ -48,6 +64,22 @@ export default async function DashboardPage() {
       where: { ativo: true },
       include: { empreendimento: { select: { apelido: true } } },
       orderBy: { validade: "asc" },
+    }),
+    prisma.tarefa.count({
+      where: { ativo: true, status: { not: STATUS_TAREFA.CONCLUIDA }, responsavel: { usuarioId: usuarioId ?? -1 } },
+    }),
+    prisma.tarefa.findMany({
+      where: { ativo: true, status: { not: STATUS_TAREFA.CONCLUIDA }, responsavel: { usuarioId: usuarioId ?? -1 } },
+      orderBy: [{ prazoFinal: { sort: "asc", nulls: "last" } }, { criadoEm: "desc" }],
+      take: 6,
+      select: {
+        id: true,
+        titulo: true,
+        status: true,
+        prazoFinal: true,
+        prioridade: true,
+        empreendimento: { select: { apelido: true } },
+      },
     }),
   ]);
 
@@ -126,6 +158,72 @@ export default async function DashboardPage() {
         <Link href="/prazos" className="block h-full">
           <StatCard label="Exigencias Pendentes" value={exigenciasPendentes} icon={CalendarClock} accent={exigenciasPendentes > 0 ? "river" : "brand"} />
         </Link>
+      </div>
+
+      <div className="mt-6 rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="rounded-full bg-[var(--color-brand-50)] p-2">
+              <ListTodo size={18} className="text-[var(--color-brand-600)]" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-[var(--color-ink-900)]">
+                Minhas tarefas ({minhasTarefasTotal})
+              </p>
+              <p className="text-xs text-[var(--color-ink-500)]">
+                Somente tarefas atribuídas a você · o módulo Tarefas mostra as de todos
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/tarefas"
+            className="focus-ring transition-brand rounded-lg bg-[var(--color-brand-500)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--color-brand-600)]"
+          >
+            Ver todas
+          </Link>
+        </div>
+        {minhasTarefas.length > 0 ? (
+          <div className="mt-4 space-y-2">
+            {minhasTarefas.map((t) => {
+              const dias = t.prazoFinal ? differenceInDays(t.prazoFinal, hoje) : null;
+              return (
+                <Link
+                  key={t.id}
+                  href={`/tarefas/${t.id}`}
+                  className="focus-ring transition-brand flex items-center justify-between rounded-lg border border-[var(--color-paper-200)] bg-white p-3 hover:bg-[var(--color-paper-50)]"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-[var(--color-ink-900)]">{t.titulo}</p>
+                    <p className="text-xs text-[var(--color-ink-500)]">
+                      {ROTULO_STATUS_TAREFA[t.status] ?? t.status}
+                      {t.empreendimento ? ` · ${t.empreendimento.apelido}` : ""}
+                    </p>
+                  </div>
+                  <div
+                    className={`shrink-0 text-right text-xs font-semibold ${
+                      dias === null
+                        ? "text-[var(--color-ink-400)]"
+                        : dias < 0
+                          ? "text-red-700"
+                          : dias <= 3
+                            ? "text-amber-700"
+                            : "text-[var(--color-brand-600)]"
+                    }`}
+                  >
+                    {t.prazoFinal ? format(t.prazoFinal, "dd/MM", { locale: ptBR }) : "Sem prazo"}
+                    {dias !== null && <div>{dias < 0 ? `${Math.abs(dias)}d atraso` : `${dias}d`}</div>}
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="mt-4 rounded-lg border border-dashed border-[var(--color-paper-200)] bg-[var(--color-paper-50)] p-6 text-center">
+            <p className="text-sm text-[var(--color-ink-500)]">
+              Nenhuma tarefa aberta atribuída a você.
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="mt-6 space-y-4">

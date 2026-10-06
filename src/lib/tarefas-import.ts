@@ -1,6 +1,7 @@
 import * as XLSX from "xlsx";
 import { prisma } from "@/lib/prisma";
 import { PRIORIDADE_TAREFA, STATUS_TAREFA } from "@/lib/constants";
+import { notificarTarefaNova } from "@/lib/notificacoes";
 
 export const TAREFAS_IMPORT_MAX = 2000;
 
@@ -306,7 +307,8 @@ export async function importarTarefasXlsx(
         exigenciasCriadas++;
       }
 
-      await prisma.tarefa.create({
+      const responsavelId = l.responsavelId ?? (await garantirResponsavelPadrao(erros, l));
+      const nova = await prisma.tarefa.create({
         data: {
           titulo: l.titulo,
           descricao: l.descricao,
@@ -314,14 +316,16 @@ export async function importarTarefasXlsx(
           prioridade: l.prioridade,
           prazoFinal: l.prazoFinal,
           alertaPrazoFinal: l.alertaPrazoFinal,
-          responsavelId: l.responsavelId ?? (await garantirResponsavelPadrao(erros, l)),
+          responsavelId,
           empreendimentoId: l.empreendimentoId,
           processoId: l.processoId,
           exigenciaId,
           usuarioId,
           importId,
         },
+        select: { id: true },
       });
+      await notificarTarefaNova({ id: nova.id, titulo: l.titulo, responsavelId, criadoPorUsuarioId: usuarioId });
       criadas++;
     }
   }

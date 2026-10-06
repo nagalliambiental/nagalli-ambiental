@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { logAuditoria } from "@/lib/audit";
 import { dataInputParaDate } from "@/lib/format";
 import { requerAutenticado } from "@/lib/perfil";
+import { notificarTarefaNova } from "@/lib/notificacoes";
 import { STATUS_TAREFA, PRIORIDADE_TAREFA } from "@/lib/constants";
 import { criarExigenciaEspelhada } from "@/lib/tarefas-exigencia";
 
@@ -95,6 +96,13 @@ export async function POST(req: Request, { params }: Params) {
     });
 
     await logAuditoria("criar", "tarefa", tarefa.id, { titulo, processoId }, Number((authResult.user as { id: string }).id));
+
+    await notificarTarefaNova({
+      id: tarefa.id,
+      titulo,
+      responsavelId,
+      criadoPorUsuarioId: Number((authResult.user as { id: string }).id),
+    });
 
     return NextResponse.json(tarefa, { status: 201 });
   } catch (error) {

@@ -32,3 +32,37 @@ export async function criarNotificacao(n: NotificacaoEntrada, dedupe = false): P
     },
   });
 }
+
+/**
+ * Notifica a criação de uma tarefa: se o responsável estiver vinculado a um
+ * usuário, a notificação é direcionada a ele; caso contrário, fica global.
+ * O criador não recebe notificação quando ele mesmo é o responsável.
+ */
+export async function notificarTarefaNova(tarefa: {
+  id: number;
+  titulo: string;
+  responsavelId: number;
+  criadoPorUsuarioId?: number | null;
+}): Promise<void> {
+  try {
+    const responsavel = await prisma.responsavel.findUnique({
+      where: { id: tarefa.responsavelId },
+      select: { nome: true, usuarioId: true },
+    });
+    if (!responsavel) return;
+    const dono = responsavel.usuarioId;
+    if (dono && tarefa.criadoPorUsuarioId && dono === tarefa.criadoPorUsuarioId) return;
+    await criarNotificacao({
+      tipo: "tarefa_nova",
+      mensagem: dono
+        ? `Nova tarefa: ${tarefa.titulo}`
+        : `Nova tarefa: ${tarefa.titulo} (para ${responsavel.nome})`,
+      url: `/tarefas/${tarefa.id}`,
+      tarefaId: tarefa.id,
+      destinatarioUsuarioId: dono,
+      dataEvento: new Date(),
+    });
+  } catch (e) {
+    console.error("Erro ao criar notificação de tarefa nova:", e);
+  }
+}
