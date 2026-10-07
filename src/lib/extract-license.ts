@@ -160,10 +160,12 @@ export async function runOcr(buffer: Buffer, ext: string, timeoutMs = 15000): Pr
   const res = await fetch(OCR_API, { method: "POST", body: formData, signal: AbortSignal.timeout(timeoutMs) });
   if (!res.ok) throw new Error(`OCR API failed: ${res.status}`);
   const json = await res.json();
-  if (json.IsErroredOnProcessing) {
+  const texto: string =
+    json.ParsedResults?.map((r: { ParsedText?: string }) => r.ParsedText || "").join("\n") || "";
+  if (json.IsErroredOnProcessing && !texto.trim()) {
     throw new Error(json.ErrorMessage?.[0] || "OCR processing error");
   }
-  return json.ParsedResults?.map((r: { ParsedText?: string }) => r.ParsedText || "").join("\n") || "";
+  return texto;
 }
 
 export async function extrairTextoPdf(buffer: Buffer): Promise<string> {
