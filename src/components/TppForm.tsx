@@ -162,7 +162,7 @@ export default function TppForm({ modo, tppId, inicial, renovarId }: Props) {
       setExtractedMsg(
         campos > 0
           ? `${arquivo.name} — ${campos} campo(s) extraído(s) do documento`
-          : `${arquivo.name} — documento não reconhecido como TPP`
+          : `${arquivo.name} — documento não reconhecido como TPP${data.diagnostico ? ` (${data.diagnostico})` : ""}`
       );
     } catch {
       setUploadError("Erro ao processar documento");

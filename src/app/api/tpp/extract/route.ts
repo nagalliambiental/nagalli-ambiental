@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { extractTppFromBuffer } from "@/lib/extract-tpp";
 import { auth } from "@/lib/auth";
+export const maxDuration = 60;
 
 export async function POST(request: Request) {
   const session = await auth();
@@ -26,7 +27,7 @@ export async function POST(request: Request) {
       extracted.veiculos,
       extracted.classesRisco,
     ].filter(Boolean).length;
-    console.log(`[extract-tpp] ${file.name} (${ext}): ${count} campo(s), numero=${extracted.numero || "-"}`);
+    console.log(`[extract-tpp] ${file.name} (${ext}): ${count} campo(s), numero=${extracted.numero || "-"}, ${extracted.diagnostico || ""}`);
 
     return NextResponse.json(extracted);
   } catch (error) {

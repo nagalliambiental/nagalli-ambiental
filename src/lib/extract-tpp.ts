@@ -7,11 +7,17 @@ export interface CamposTpp {
   validoAte: string | null;
   veiculos: string | null;
   classesRisco: string | null;
+  diagnostico?: string;
 }
 
 function detectarTpp(texto: string): boolean {
   const t = texto.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  return t.includes("produtos perigosos") && t.includes("autorizacao ambiental");
+  if (!t.includes("produtos perigosos")) return false;
+  return (
+    t.includes("autorizacao ambiental") ||
+    t.includes("transporte interestadual") ||
+    t.includes("modal rodoviario")
+  );
 }
 
 const RE_PLACA = /^\s*(?:[-•*]\s*|\d{1,2}[.)\-]\s*)*([A-Z]{3}\d[A-Z0-9]\d{2})\s*(.*)$/i;
@@ -155,7 +161,21 @@ export function extrairTpp(texto: string): CamposTpp {
   };
 }
 
+function contarCampos(r: CamposTpp): number {
+  return [r.numero, r.cnpj, r.emitidoEm, r.validoAte, r.veiculos, r.classesRisco].filter(Boolean).length;
+}
+
+function pontos(r: CamposTpp): number {
+  return contarCampos(r) * 10 + (r.numero ? 1 : 0) + (r.veiculos ? 1 : 0);
+}
+
+function resultadoVazio(): CamposTpp {
+  return { numero: null, cnpj: null, emitidoEm: null, validoAte: null, veiculos: null, classesRisco: null };
+}
+
 export async function extractTppFromBuffer(buffer: Buffer, ext: string): Promise<CamposTpp> {
+  const diagnostico: string[] = [`entrada ${ext} ${buffer.length}B`];
+
   let textoLocal: string | null = null;
   if (ext === "pdf") {
     try {
@@ -163,30 +183,40 @@ export async function extractTppFromBuffer(buffer: Buffer, ext: string): Promise
     } catch {
       textoLocal = null;
     }
+    if (textoLocal && textoLocal.replace(/\s+/g, "").length < 20) textoLocal = null;
+    if (!textoLocal) diagnostico.push("pdf sem texto");
   }
 
-  let textoOcr: string | null = null;
-  try {
-    textoOcr = await runOcr(buffer, ext);
-  } catch {
-    textoOcr = null;
-  }
-
-  const candidatos = [textoOcr, textoLocal]
-    .filter((t): t is string => !!t && t.replace(/\s+/g, "").length >= 20)
-    .map(limparTextoPdf);
-
-  let melhor: CamposTpp | null = null;
+  let melhor: CamposTpp = resultadoVazio();
   let melhoresPontos = -1;
-  for (const texto of candidatos) {
-    const r = extrairTpp(texto);
-    const qtd = [r.numero, r.cnpj, r.emitidoEm, r.validoAte, r.veiculos, r.classesRisco].filter(Boolean).length;
-    const pontos = qtd * 10 + (r.numero ? 1 : 0) + (r.veiculos ? 1 : 0);
-    if (pontos > melhoresPontos) {
+
+  if (textoLocal) {
+    const r = extrairTpp(limparTextoPdf(textoLocal));
+    diagnostico.push(`texto local ${textoLocal.length} chars -> ${contarCampos(r)} campos`);
+    if (pontos(r) > melhoresPontos) {
       melhor = r;
-      melhoresPontos = pontos;
+      melhoresPontos = pontos(r);
+    }
+    if (r.numero && r.emitidoEm && r.validoAte) {
+      return { ...melhor, diagnostico: diagnostico.join("; ") };
     }
   }
 
-  return melhor ?? { numero: null, cnpj: null, emitidoEm: null, validoAte: null, veiculos: null, classesRisco: null };
+  try {
+    const textoOcr = await runOcr(buffer, ext, 12000);
+    if (textoOcr && textoOcr.replace(/\s+/g, "").length >= 20) {
+      const r = extrairTpp(limparTextoPdf(textoOcr));
+      diagnostico.push(`OCR ${textoOcr.length} chars -> ${contarCampos(r)} campos`);
+      if (pontos(r) > melhoresPontos) {
+        melhor = r;
+        melhoresPontos = pontos(r);
+      }
+    } else {
+      diagnostico.push("OCR vazio");
+    }
+  } catch (e) {
+    diagnostico.push(`OCR falhou: ${e instanceof Error ? e.message : e}`);
+  }
+
+  return { ...melhor, diagnostico: diagnostico.join("; ") };
 }

@@ -144,7 +144,7 @@ export function extrairModalidade(text: string): string | null {
   return null;
 }
 
-export async function runOcr(buffer: Buffer, ext: string): Promise<string> {
+export async function runOcr(buffer: Buffer, ext: string, timeoutMs = 15000): Promise<string> {
   const mime = MIME_TYPES[ext] || "application/pdf";
   const base64 = buffer.toString("base64");
   const dataUri = `data:${mime};base64,${base64}`;
@@ -157,7 +157,7 @@ export async function runOcr(buffer: Buffer, ext: string): Promise<string> {
   formData.append("isOverlayRequired", "false");
   formData.append("OCREngine", "2");
 
-  const res = await fetch(OCR_API, { method: "POST", body: formData });
+  const res = await fetch(OCR_API, { method: "POST", body: formData, signal: AbortSignal.timeout(timeoutMs) });
   if (!res.ok) throw new Error(`OCR API failed: ${res.status}`);
   const json = await res.json();
   if (json.IsErroredOnProcessing) {
@@ -169,8 +169,13 @@ export async function runOcr(buffer: Buffer, ext: string): Promise<string> {
 export async function extrairTextoPdf(buffer: Buffer): Promise<string> {
   try {
     const parsed = await pdfParse(buffer);
-    return parsed?.text || "";
-  } catch {
+    const texto = parsed?.text || "";
+    if (texto.replace(/\s+/g, "").length < 20) {
+      console.warn(`[extract-license] pdf-parse devolveu texto vazio/curto (len=${texto.length}, bytes=${buffer.length})`);
+    }
+    return texto;
+  } catch (e) {
+    console.warn(`[extract-license] pdf-parse falhou: ${e instanceof Error ? e.message : e} (bytes=${buffer.length})`);
     return "";
   }
 }
