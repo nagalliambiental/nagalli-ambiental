@@ -4,6 +4,7 @@ import { Topbar } from "@/components/Topbar";
 import { Plus, Users, Check, X } from "lucide-react";
 import RowActions from "@/components/RowActions";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { TabelaComBusca } from "@/components/BuscaLocal";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Usuários" };
@@ -28,6 +29,33 @@ export default async function UsuariosPage() {
     orderBy: { nome: "asc" },
   });
 
+  const linhas = usuarios.map((u) => ({
+    id: u.id,
+    texto: [u.nome, u.email, perfilLabels[u.perfil] ?? u.perfil].filter(Boolean).join(" "),
+    conteudo: (
+      <tr key={u.id} className="border-t border-[var(--color-paper-200)] text-[var(--color-ink-700)] hover:bg-[var(--color-paper-50)] transition-colors">
+        <td className="px-3 py-3 font-medium text-[var(--color-ink-900)]"><span className="block max-w-[200px] truncate" title={u.nome}>{u.nome}</span></td>
+        <td className="px-3 py-3"><span className="block max-w-[200px] truncate" title={u.email}>{u.email}</span></td>
+        <td className="hidden md:table-cell px-3 py-3">
+          <span className={`inline-block rounded px-2 py-1 text-xs font-medium ${perfilColors[u.perfil] || "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]"}`}>
+            {perfilLabels[u.perfil] || u.perfil}
+          </span>
+        </td>
+        <td className="hidden lg:table-cell px-3 py-3 text-center">{u._count.tarefas}</td>
+        <td className="hidden lg:table-cell px-3 py-3 text-center">
+          {u.ativo ? (
+            <Check size={18} className="text-[var(--color-brand-600)]" />
+          ) : (
+            <X size={18} className="text-[var(--color-river-700)]" />
+          )}
+        </td>
+        <td className="px-3 py-3">
+          <RowActions detailUrl={`/usuarios/${u.id}`} editUrl={`/usuarios/${u.id}/editar`} entity="usuario" entityName="Usuário" endpoint={`/api/usuarios/${u.id}`} />
+        </td>
+      </tr>
+    ),
+  }));
+
   return (
     <div>
       <Breadcrumbs items={[{ label: "Usuários" }]} />
@@ -47,8 +75,10 @@ export default async function UsuariosPage() {
 
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white">
         {usuarios.length > 0 ? (
-          <table className="w-full text-sm">
-            <thead>
+          <TabelaComBusca
+            linhas={linhas}
+            placeholder="Buscar por nome, email ou perfil..."
+            cabecalho={
               <tr className="border-b border-[var(--color-paper-200)] bg-[var(--color-paper-50)] text-left text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-500)]">
                 <th className="text-left px-3 py-3 font-medium">Nome</th>
                 <th className="text-left px-3 py-3 font-medium">Email</th>
@@ -57,32 +87,8 @@ export default async function UsuariosPage() {
                 <th className="text-center hidden lg:table-cell px-3 py-3 font-medium">Ativo</th>
                 <th className="text-left px-3 py-3 font-medium">Ações</th>
               </tr>
-            </thead>
-            <tbody>
-              {usuarios.map((u) => (
-                <tr key={u.id} className="border-t border-[var(--color-paper-200)] text-[var(--color-ink-700)] hover:bg-[var(--color-paper-50)] transition-colors">
-                  <td className="px-3 py-3 font-medium text-[var(--color-ink-900)]"><span className="block max-w-[200px] truncate" title={u.nome}>{u.nome}</span></td>
-                  <td className="px-3 py-3"><span className="block max-w-[200px] truncate" title={u.email}>{u.email}</span></td>
-                  <td className="hidden md:table-cell px-3 py-3">
-                    <span className={`inline-block rounded px-2 py-1 text-xs font-medium ${perfilColors[u.perfil] || "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]"}`}>
-                      {perfilLabels[u.perfil] || u.perfil}
-                    </span>
-                  </td>
-                  <td className="hidden lg:table-cell px-3 py-3 text-center">{u._count.tarefas}</td>
-                  <td className="hidden lg:table-cell px-3 py-3 text-center">
-                    {u.ativo ? (
-                      <Check size={18} className="text-[var(--color-brand-600)]" />
-                    ) : (
-                      <X size={18} className="text-[var(--color-river-700)]" />
-                    )}
-                  </td>
-                  <td className="px-3 py-3">
-                    <RowActions detailUrl={`/usuarios/${u.id}`} editUrl={`/usuarios/${u.id}/editar`} entity="usuario" entityName="Usuário" endpoint={`/api/usuarios/${u.id}`} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+            }
+          />
         ) : (
           <div className="flex flex-col items-center gap-3 py-12 text-[var(--color-ink-500)]">
             <div className="rounded-lg bg-[var(--color-paper-100)] p-3">

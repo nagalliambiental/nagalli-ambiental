@@ -4,10 +4,17 @@
     {
       "path": "/api/cron/legislacao-iat",
       "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/diario",
+      "schedule": "0 7 * * *"
     }
   ],
   "functions": {
     "src/app/api/cron/legislacao-iat/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/cron/diario/route.ts": {
       "maxDuration": 60
     },
     "src/app/api/ferramentas/legislacao-iat/sincronizar/route.ts": {

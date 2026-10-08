@@ -1,10 +1,24 @@
 "use client";
 
 import { useState } from "react";
-import { List, Calendar as CalendarIcon, ChevronLeft, ChevronRight, ShieldCheck } from "lucide-react";
+import { List, Calendar as CalendarIcon, ChevronLeft, ChevronRight, ShieldCheck, Truck, Search, X } from "lucide-react";
 import { format, differenceInDays, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameDay, isSameMonth, addMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import Link from "next/link";
+
+/** Janela de alerta de TPP (AutorizacaoTpp não possui alertaDias). */
+const JANELA_TPP_DIAS = 30;
+
+function normalizar(s: string): string {
+  return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
+function combina(texto: string, busca: string): boolean {
+  const tokens = normalizar(busca).split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) return true;
+  const alvo = normalizar(texto);
+  return tokens.every((t) => alvo.includes(t));
+}
 
 interface ProcessoPrazo {
   id: number;
@@ -32,12 +46,52 @@ interface PgrsPrazo {
   empreendimento: { apelido: string };
 }
 
-export function PrazosView({ processos, exigencias, pgrs = [] }: { processos: ProcessoPrazo[]; exigencias: ExigenciaPrazo[]; pgrs?: PgrsPrazo[] }) {
+interface TppPrazo {
+  id: number;
+  numero: string;
+  validade: string;
+  clienteApelido: string;
+  empreendimentoApelido?: string | null;
+}
+
+export function PrazosView({ processos, exigencias, pgrs = [], tpps = [] }: { processos: ProcessoPrazo[]; exigencias: ExigenciaPrazo[]; pgrs?: PgrsPrazo[]; tpps?: TppPrazo[] }) {
   const [view, setView] = useState<"lista" | "calendario">("lista");
+  const [busca, setBusca] = useState("");
+
+  const processoFiltrados = processos.filter((p) =>
+    combina([p.numLicenca || p.numProtocolo, p.numProtocolo, p.tipo, p.orgao.sigla, p.empreendimento.apelido, p.empreendimento.cliente?.apelido].filter(Boolean).join(" "), busca)
+  );
+  const exigenciasFiltradas = exigencias.filter((e) =>
+    combina([e.descricao, e.processo.numLicenca || e.processo.numProtocolo, e.processo.tipo, e.processo.orgao.sigla, e.processo.empreendimento.apelido, e.processo.empreendimento.cliente.apelido].filter(Boolean).join(" "), busca)
+  );
+  const pgrsFiltrados = pgrs.filter((p) =>
+    combina([p.numero || "", p.empreendimento.apelido].filter(Boolean).join(" "), busca)
+  );
+  const tppsFiltrados = tpps.filter((t) =>
+    combina([t.numero, t.clienteApelido, t.empreendimentoApelido || ""].filter(Boolean).join(" "), busca)
+  );
 
   return (
     <div>
-      <div className="mb-4 flex items-center gap-2">
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="relative">
+          <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-ink-500)]" />
+          <input
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Buscar por número, empreendimento, cliente..."
+            className="focus-ring w-72 rounded-lg border border-[var(--color-paper-200)] bg-white px-9 py-2 text-sm text-[var(--color-ink-900)] placeholder:text-[var(--color-ink-500)]"
+          />
+          {busca && (
+            <button
+              type="button"
+              onClick={() => setBusca("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-[var(--color-ink-500)] hover:text-[var(--color-ink-900)]"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
         <button
           onClick={() => setView("lista")}
           className={`focus-ring transition-brand flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${view === "lista" ? "bg-[var(--color-brand-500)] text-white" : "border border-[var(--color-paper-200)] text-[var(--color-ink-600)] hover:bg-[var(--color-paper-50)]"}`}
@@ -53,15 +107,15 @@ export function PrazosView({ processos, exigencias, pgrs = [] }: { processos: Pr
       </div>
 
       {view === "lista" ? (
-        <ListView processos={processos} exigencias={exigencias} pgrs={pgrs} />
+        <ListView processos={processoFiltrados} exigencias={exigenciasFiltradas} pgrs={pgrsFiltrados} tpps={tppsFiltrados} />
       ) : (
-        <CalendarView processos={processos} exigencias={exigencias} pgrs={pgrs} />
+        <CalendarView processos={processoFiltrados} exigencias={exigenciasFiltradas} pgrs={pgrsFiltrados} tpps={tppsFiltrados} />
       )}
     </div>
   );
 }
 
-function ListView({ processos, exigencias, pgrs }: { processos: ProcessoPrazo[]; exigencias: ExigenciaPrazo[]; pgrs: PgrsPrazo[] }) {
+function ListView({ processos, exigencias, pgrs, tpps }: { processos: ProcessoPrazo[]; exigencias: ExigenciaPrazo[]; pgrs: PgrsPrazo[]; tpps: TppPrazo[] }) {
   const now = new Date();
 
   return (
@@ -202,11 +256,57 @@ function ListView({ processos, exigencias, pgrs }: { processos: ProcessoPrazo[];
           </div>
         )}
       </div>
+
+      <div className="lg:col-span-2">
+        <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-4 mt-2 flex items-center gap-2">
+          <Truck size={18} />
+          TPP
+        </h2>
+        {tpps.length > 0 ? (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {tpps.map((t) => {
+              const validade = new Date(t.validade);
+              const diasRestantes = differenceInDays(validade, now);
+              const isVencido = diasRestantes < 0;
+              const isAlert = !isVencido && diasRestantes <= JANELA_TPP_DIAS;
+
+              return (
+                <div key={t.id} className={`shadow-card rounded-[var(--radius-card)] border bg-white p-4 ${isVencido ? "border-red-300 bg-red-50" : isAlert ? "border-amber-200 bg-amber-50" : "border-[var(--color-paper-200)]"}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <Link href="/tpp" className="font-mono text-sm font-semibold text-[var(--color-brand-600)] hover:underline truncate">{t.numero}</Link>
+                        {isVencido && <span className="inline-flex shrink-0 rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">Vencido</span>}
+                        {isAlert && !isVencido && <span className="inline-flex shrink-0 rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">Alerta</span>}
+                      </div>
+                      <div className="mt-1 text-xs text-[var(--color-ink-500)] truncate">
+                        {t.clienteApelido}{t.empreendimentoApelido ? ` · ${t.empreendimentoApelido}` : ""}
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <div className={`text-right text-sm font-semibold ${isVencido ? "text-red-700" : isAlert ? "text-amber-700" : "text-[var(--color-ink-700)]"}`}>
+                        {format(validade, "dd/MM/yyyy", { locale: ptBR })}
+                      </div>
+                      <div className="text-xs text-[var(--color-ink-500)]">
+                        {isVencido ? `Vencido há ${Math.abs(diasRestantes)} dias` : `${diasRestantes} dias restantes`}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-3 py-6 text-[var(--color-ink-500)]">
+            <p className="font-display text-base font-medium text-[var(--color-ink-900)]">Nenhuma TPP com prazo</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
-function CalendarView({ processos, exigencias, pgrs }: { processos: ProcessoPrazo[]; exigencias: ExigenciaPrazo[]; pgrs: PgrsPrazo[] }) {
+function CalendarView({ processos, exigencias, pgrs, tpps }: { processos: ProcessoPrazo[]; exigencias: ExigenciaPrazo[]; pgrs: PgrsPrazo[]; tpps: TppPrazo[] }) {
   const now = new Date();
   const [mesAtual, setMesAtual] = useState(() => startOfMonth(now));
   const monthStart = startOfMonth(mesAtual);
@@ -215,10 +315,11 @@ function CalendarView({ processos, exigencias, pgrs }: { processos: ProcessoPraz
   const startDay = getDay(monthStart);
   const isMesAtual = isSameMonth(mesAtual, now);
 
-  const allEvents: { date: Date; label: string; href: string; type: "processo" | "exigencia" | "pgrs"; vencido: boolean }[] = [
+  const allEvents: { date: Date; label: string; href: string; type: "processo" | "exigencia" | "pgrs" | "tpp"; vencido: boolean }[] = [
     ...processos.map((p) => ({ date: new Date(p.validade), label: `Lic: ${p.numLicenca || p.numProtocolo}`, href: `/processos/${p.id}`, type: "processo" as const, vencido: differenceInDays(new Date(p.validade), now) < 0 })),
     ...exigencias.map((e) => ({ date: new Date(e.prazo), label: `Exig: ${e.descricao.substring(0, 30)}`, href: `/processos/${e.processo.id}`, type: "exigencia" as const, vencido: differenceInDays(new Date(e.prazo), now) < 0 })),
     ...pgrs.map((p) => ({ date: new Date(p.validade), label: `PGRS: ${p.empreendimento.apelido}`, href: `/pgrs/${p.id}`, type: "pgrs" as const, vencido: differenceInDays(new Date(p.validade), now) < 0 })),
+    ...tpps.map((t) => ({ date: new Date(t.validade), label: `TPP: ${t.numero}`, href: `/tpp`, type: "tpp" as const, vencido: differenceInDays(new Date(t.validade), now) < 0 })),
   ];
 
   const getEventsForDay = (day: Date) => allEvents.filter((ev) => isSameDay(ev.date, day));

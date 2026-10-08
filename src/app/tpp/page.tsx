@@ -9,6 +9,7 @@ import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Plus, Truck, CheckCircle2, CalendarClock, AlertTriangle, FileText, Pencil, RefreshCw } from "lucide-react";
 import DeleteButton from "@/components/DeleteButton";
+import { TabelaComBusca } from "@/components/BuscaLocal";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "TPP" };
@@ -28,7 +29,7 @@ export default async function TppPage() {
 
   const registros = await prisma.autorizacaoTpp.findMany({
     include: {
-      cliente: { select: { id: true, apelido: true } },
+      cliente: { select: { id: true, apelido: true, razaoSocial: true } },
       empreendimento: { select: { id: true, apelido: true } },
     },
     orderBy: [{ ativo: "desc" }, { dataValidade: "asc" }],
@@ -40,6 +41,46 @@ export default async function TppPage() {
   ).length;
   const vencidas = registros.filter((r) => r.ativo && r.dataValidade < hoje).length;
   const vigentes = registros.filter((r) => r.ativo && r.dataValidade >= hoje).length;
+
+  const linhas = registros.map((r) => {
+    const s = situacao(r.dataValidade, hoje);
+    return {
+      id: r.id,
+      texto: [r.numero, r.cliente.apelido, r.cliente.razaoSocial, r.empreendimento?.apelido ?? ""].filter(Boolean).join(" "),
+      conteudo: (
+        <tr key={r.id} className={`border-b border-[var(--color-paper-100)] ${!r.ativo ? "opacity-50" : ""}`}>
+          <td className="px-5 py-3">
+            <Link href={`/clientes/${r.cliente.id}`} className="font-medium text-[var(--color-ink-900)] hover:text-[var(--color-brand-600)] hover:underline">
+              {r.cliente.apelido}
+            </Link>
+          </td>
+          <td className="px-5 py-3 text-[var(--color-ink-700)]">
+            {r.empreendimento ? r.empreendimento.apelido : "—"}
+          </td>
+          <td className="px-5 py-3 font-mono text-[var(--color-ink-900)]">{r.numero}</td>
+          <td className="px-5 py-3 text-[var(--color-ink-600)]">{format(r.dataEmissao, "dd/MM/yyyy", { locale: ptBR })}</td>
+          <td className="px-5 py-3 text-[var(--color-ink-600)]">{format(r.dataValidade, "dd/MM/yyyy", { locale: ptBR })}</td>
+          <td className="px-5 py-3">
+            <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${s.cls}`}>{s.label}</span>
+          </td>
+          <td className="px-5 py-3">
+            <div className="flex items-center justify-end gap-1">
+              <Link href={`/tpp/${r.id}`} className="rounded-md p-1.5 text-[var(--color-ink-500)] hover:bg-[var(--color-paper-100)] hover:text-[var(--color-brand-600)]" title="Ver">
+                <FileText size={16} />
+              </Link>
+              <Link href={`/tpp/${r.id}/editar`} className="rounded-md p-1.5 text-[var(--color-ink-500)] hover:bg-[var(--color-paper-100)] hover:text-[var(--color-brand-600)]" title="Editar">
+                <Pencil size={16} />
+              </Link>
+              <Link href={`/tpp/novo?renovar=${r.id}`} className="rounded-md p-1.5 text-[var(--color-ink-500)] hover:bg-[var(--color-paper-100)] hover:text-[var(--color-brand-600)]" title="Renovar">
+                <RefreshCw size={16} />
+              </Link>
+              <DeleteButton entity="TPP" endpoint={`/api/tpp/${r.id}`} redirectTo="/tpp" iconOnly />
+            </div>
+          </td>
+        </tr>
+      ),
+    };
+  });
 
   return (
     <div>
@@ -75,56 +116,21 @@ export default async function TppPage() {
             </p>
           </div>
         ) : (
-          <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-[var(--color-paper-200)] text-left text-[var(--color-ink-500)]">
-                  <th className="px-5 py-3 font-medium">Cliente</th>
-                  <th className="px-5 py-3 font-medium">Empreendimento</th>
-                  <th className="px-5 py-3 font-medium">Nº registro</th>
-                  <th className="px-5 py-3 font-medium">Emitido em</th>
-                  <th className="px-5 py-3 font-medium">Válido até</th>
-                  <th className="px-5 py-3 font-medium">Situação</th>
-                  <th className="px-5 py-3 text-right font-medium">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {registros.map((r) => {
-                  const s = situacao(r.dataValidade, hoje);
-                  return (
-                    <tr key={r.id} className={`border-b border-[var(--color-paper-100)] ${!r.ativo ? "opacity-50" : ""}`}>
-                      <td className="px-5 py-3">
-                        <Link href={`/clientes/${r.cliente.id}`} className="font-medium text-[var(--color-ink-900)] hover:text-[var(--color-brand-600)] hover:underline">
-                          {r.cliente.apelido}
-                        </Link>
-                      </td>
-                      <td className="px-5 py-3 text-[var(--color-ink-700)]">
-                        {r.empreendimento ? r.empreendimento.apelido : "—"}
-                      </td>
-                      <td className="px-5 py-3 font-mono text-[var(--color-ink-900)]">{r.numero}</td>
-                      <td className="px-5 py-3 text-[var(--color-ink-600)]">{format(r.dataEmissao, "dd/MM/yyyy", { locale: ptBR })}</td>
-                      <td className="px-5 py-3 text-[var(--color-ink-600)]">{format(r.dataValidade, "dd/MM/yyyy", { locale: ptBR })}</td>
-                      <td className="px-5 py-3">
-                        <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${s.cls}`}>{s.label}</span>
-                      </td>
-                      <td className="px-5 py-3">
-                        <div className="flex items-center justify-end gap-1">
-                          <Link href={`/tpp/${r.id}`} className="rounded-md p-1.5 text-[var(--color-ink-500)] hover:bg-[var(--color-paper-100)] hover:text-[var(--color-brand-600)]" title="Ver">
-                            <FileText size={16} />
-                          </Link>
-                          <Link href={`/tpp/${r.id}/editar`} className="rounded-md p-1.5 text-[var(--color-ink-500)] hover:bg-[var(--color-paper-100)] hover:text-[var(--color-brand-600)]" title="Editar">
-                            <Pencil size={16} />
-                          </Link>
-                          <Link href={`/tpp/novo?renovar=${r.id}`} className="rounded-md p-1.5 text-[var(--color-ink-500)] hover:bg-[var(--color-paper-100)] hover:text-[var(--color-brand-600)]" title="Renovar">
-                            <RefreshCw size={16} />
-                          </Link>
-                          <DeleteButton entity="TPP" endpoint={`/api/tpp/${r.id}`} redirectTo="/tpp" iconOnly />
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <TabelaComBusca
+            linhas={linhas}
+            placeholder="Buscar por número, cliente ou empreendimento..."
+            cabecalho={
+              <tr className="border-b border-[var(--color-paper-200)] text-left text-[var(--color-ink-500)]">
+                <th className="px-5 py-3 font-medium">Cliente</th>
+                <th className="px-5 py-3 font-medium">Empreendimento</th>
+                <th className="px-5 py-3 font-medium">Nº registro</th>
+                <th className="px-5 py-3 font-medium">Emitido em</th>
+                <th className="px-5 py-3 font-medium">Válido até</th>
+                <th className="px-5 py-3 font-medium">Situação</th>
+                <th className="px-5 py-3 text-right font-medium">Ações</th>
+              </tr>
+            }
+          />
         )}
       </div>
     </div>

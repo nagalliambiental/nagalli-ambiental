@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { Topbar } from "@/components/Topbar";
-import { Truck, RefreshCw, Send, Link2, Loader2, CheckCircle2, FileDown, Trash2, Ban, Plus, X, PackagePlus, PackageCheck, FileText, Save, Pencil, FolderArchive } from "lucide-react";
+import { Truck, RefreshCw, Send, Search, Link2, Loader2, CheckCircle2, FileDown, Trash2, Ban, Plus, X, PackagePlus, PackageCheck, FileText, Save, Pencil, FolderArchive } from "lucide-react";
 import { useToast } from "@/components/Toast";
 import { mascararCpf, mascararCpfCnpj } from "@/lib/cliente-cnpj";
 import { SelecaoBusca } from "@/components/SelecaoBusca";
@@ -210,6 +210,15 @@ function haDias(dias: number) {
   return isoHoje(d);
 }
 
+function normalizar(s: string): string {
+  return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
+function combina(texto: string, busca: string): boolean {
+  const tokens = normalizar(busca).split(/\s+/).filter(Boolean);
+  return tokens.every((t) => normalizar(texto).includes(t));
+}
+
 export default function MtrImaPage() {
   const { toast } = useToast();
   const { data: session } = useSession();
@@ -345,6 +354,7 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn; onChanged: ()
   const [lista, setLista] = useState<Manifesto[]>([]);
   const [carregando, setCarregando] = useState(false);
   const [toggle, setToggle] = useState("todos");
+  const [busca, setBusca] = useState("");
   const [pagina, setPagina] = useState(0);
   const [modalCancel, setModalCancel] = useState<Manifesto | null>(null);
   const [justificativaCancel, setJustificativaCancel] = useState("");
@@ -360,9 +370,20 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn; onChanged: ()
   const recebidos = lista.filter((m) => m.status === "RECEBIDO").length;
   const cancelados = lista.filter((m) => m.status === "CANCELADO").length;
   const visiveisToggle = toggle === "todos" ? lista : semRecebimento;
-  const totalPaginas = Math.max(1, Math.ceil(visiveisToggle.length / POR_PAGINA));
+  const visiveisBusca = visiveisToggle.filter((m) =>
+    combina(
+      [
+        m.numero,
+        m.clienteNome || (m.conexao.unidade ? `${m.conexao.nome} — unid. ${m.conexao.unidade}` : m.conexao.nome),
+        m.destinadorNome || "",
+        m.transportadorNome || "",
+      ].join(" "),
+      busca,
+    )
+  );
+  const totalPaginas = Math.max(1, Math.ceil(visiveisBusca.length / POR_PAGINA));
   const pag = Math.min(pagina, totalPaginas - 1);
-  const visiveis = visiveisToggle.slice(pag * POR_PAGINA, pag * POR_PAGINA + POR_PAGINA);
+  const visiveis = visiveisBusca.slice(pag * POR_PAGINA, pag * POR_PAGINA + POR_PAGINA);
 
   async function consultar(forcarId?: string, tudo = false) {
     const id = forcarId ?? conexaoEfetiva;
@@ -600,8 +621,33 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn; onChanged: ()
 
       <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">MTRs encontrados ({visiveisToggle.length})</h2>
+          <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">MTRs encontrados ({visiveisBusca.length})</h2>
           <div className="flex flex-wrap items-center gap-2">
+            <div className="relative">
+              <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-ink-500)]" />
+              <input
+                value={busca}
+                onChange={(e) => {
+                  setBusca(e.target.value);
+                  setPagina(0);
+                }}
+                placeholder="Buscar por número, gerador ou empresa..."
+                className="focus-ring w-72 max-w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-9 py-2 text-sm text-[var(--color-ink-900)] placeholder:text-[var(--color-ink-500)]"
+              />
+              {busca && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBusca("");
+                    setPagina(0);
+                  }}
+                  title="Limpar busca"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-[var(--color-ink-500)] hover:text-[var(--color-ink-900)]"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
             <button
               onClick={baixarTodosZip}
               disabled={carregando || lista.filter((m) => m.status !== "CANCELADO").length === 0}
@@ -631,7 +677,9 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn; onChanged: ()
           <p className="py-4 text-center text-sm text-[var(--color-ink-500)]">
             {carregando
               ? "Carregando..."
-              : "Nenhum MTR encontrado. Selecione a conexão e o período e clique em Consultar portal."}
+              : busca.trim()
+                ? "Nenhum MTR corresponde à busca — ajuste o termo ou limpe o campo."
+                : "Nenhum MTR encontrado. Selecione a conexão e o período e clique em Consultar portal."}
           </p>
         ) : (
           <>
@@ -697,7 +745,7 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn; onChanged: ()
               ))}
             </ul>
             <div className="mt-3 flex items-center justify-between text-xs text-[var(--color-ink-500)]">
-              <span>{visiveisToggle.length} registro(s) — Página {pag + 1} de {totalPaginas}</span>
+              <span>{visiveisBusca.length} registro(s) — Página {pag + 1} de {totalPaginas}</span>
               <div className="flex gap-2">
                 <button disabled={pag === 0} onClick={() => setPagina((p) => p - 1)} className="rounded px-2 py-1 disabled:opacity-40">Anterior</button>
                 <button disabled={pag === totalPaginas - 1} onClick={() => setPagina((p) => p + 1)} className="rounded px-2 py-1 disabled:opacity-40">Próxima</button>

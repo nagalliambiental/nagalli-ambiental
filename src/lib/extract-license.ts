@@ -148,7 +148,8 @@ export async function runOcr(buffer: Buffer, ext: string, timeoutMs = 15000): Pr
   const mime = MIME_TYPES[ext] || "application/pdf";
   const base64 = buffer.toString("base64");
   const dataUri = `data:${mime};base64,${base64}`;
-  const apiKey = process.env.OCR_API_KEY || "helloworld";
+  const apiKey = process.env.OCR_API_KEY;
+  if (!apiKey) throw new Error("OCR_API_KEY não configurado (defina a variável de ambiente OCR_API_KEY)");
 
   const formData = new FormData();
   formData.append("base64Image", dataUri);

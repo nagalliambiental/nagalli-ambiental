@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { Topbar } from "@/components/Topbar";
-import { Truck, RefreshCw, Send, Link2, Loader2, CheckCircle2, AlertTriangle, XCircle, FileDown, Trash2, Ban, ShieldCheck, Clock, Plus, X, Pencil, PackagePlus, Bookmark, Save, Mail, FileText, FolderArchive } from "lucide-react";
+import { Truck, RefreshCw, Send, Search, Link2, Loader2, CheckCircle2, AlertTriangle, XCircle, FileDown, Trash2, Ban, ShieldCheck, Clock, Plus, X, Pencil, PackagePlus, Bookmark, Save, Mail, FileText, FolderArchive } from "lucide-react";
 import { useToast } from "@/components/Toast";
 import { mascararCpfCnpj } from "@/lib/cliente-cnpj";
 import { SelecaoBusca } from "@/components/SelecaoBusca";
@@ -166,6 +166,15 @@ function fmtData(v: string | null) {
 function fmtQtd(v: number | null, u: string | null) {
   if (v == null) return "—";
   return `${v.toLocaleString("pt-BR")} ${u || ""}`.trim();
+}
+
+function normalizar(s: string): string {
+  return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
+function combina(texto: string, busca: string): boolean {
+  const tokens = normalizar(busca).split(/\s+/).filter(Boolean);
+  return tokens.every((t) => normalizar(texto).includes(t));
 }
 
 export default function SinirPage() {
@@ -370,9 +379,13 @@ function PainelTab(props: {
   const { conexoes, empreendimentos, manifestos, loading, certificados, pendentes, cancelados, filtro, setFiltro, onVerificar, toast } = props;
   const [verificando, setVerificando] = useState(false);
   const [paginaManifestos, setPaginaManifestos] = useState(0);
-  const totalPaginasM = Math.max(1, Math.ceil(manifestos.length / POR_PAGINA));
+  const [buscaManifestos, setBuscaManifestos] = useState("");
+  const manifestosFiltrados = manifestos.filter((m) =>
+    combina([m.numero, m.clienteNome || "", m.empreendNome || "", m.cdfNumero || ""].join(" "), buscaManifestos)
+  );
+  const totalPaginasM = Math.max(1, Math.ceil(manifestosFiltrados.length / POR_PAGINA));
   const paginaM = Math.min(paginaManifestos, totalPaginasM - 1);
-  const visiveisM = manifestos.slice(paginaM * POR_PAGINA, paginaM * POR_PAGINA + POR_PAGINA);
+  const visiveisM = manifestosFiltrados.slice(paginaM * POR_PAGINA, paginaM * POR_PAGINA + POR_PAGINA);
   const [conexaoId, setConexaoId] = useState("");
   const [dataInicial, setDataInicial] = useState(() => {
     const d = new Date();
@@ -632,6 +645,31 @@ function PainelTab(props: {
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)]">Manifestos</h2>
           <div className="flex flex-wrap items-center gap-2 text-xs">
+            <div className="relative">
+              <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-ink-500)]" />
+              <input
+                value={buscaManifestos}
+                onChange={(e) => {
+                  setBuscaManifestos(e.target.value);
+                  setPaginaManifestos(0);
+                }}
+                placeholder="Buscar por número, cliente ou empreendimento..."
+                className="focus-ring w-72 max-w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-9 py-2 text-sm text-[var(--color-ink-900)] placeholder:text-[var(--color-ink-500)]"
+              />
+              {buscaManifestos && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBuscaManifestos("");
+                    setPaginaManifestos(0);
+                  }}
+                  title="Limpar busca"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-[var(--color-ink-500)] hover:text-[var(--color-ink-900)]"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
             <button onClick={() => { setFiltro("todos"); setPaginaManifestos(0); }} className={`rounded-full px-3 py-1 font-medium ${filtro === "todos" ? "bg-[var(--color-brand-500)] text-white" : "bg-[var(--color-paper-100)] text-[var(--color-ink-600)]"}`}>
               Todos ({certificados + pendentes + cancelados})
             </button>
@@ -651,6 +689,10 @@ function PainelTab(props: {
         ) : manifestos.length === 0 ? (
           <p className="py-8 text-center text-sm text-[var(--color-ink-500)]">
             Nenhum manifesto ainda. Use a verificação acima para listar as cargas do período.
+          </p>
+        ) : manifestosFiltrados.length === 0 ? (
+          <p className="py-8 text-center text-sm text-[var(--color-ink-500)]">
+            Nenhum manifesto corresponde à busca &quot;{buscaManifestos.trim()}&quot;.
           </p>
         ) : (
           <div>
@@ -723,9 +765,9 @@ function PainelTab(props: {
             </table>
           </div>
         )}
-        {manifestos.length > POR_PAGINA && (
+        {manifestosFiltrados.length > POR_PAGINA && (
           <div className="mt-3 flex items-center justify-between text-xs text-[var(--color-ink-600)]">
-            <span>{manifestos.length} registro(s) — Página {paginaM + 1} de {totalPaginasM}</span>
+            <span>{manifestosFiltrados.length} registro(s) — Página {paginaM + 1} de {totalPaginasM}</span>
             <div className="flex gap-2">
               <button
                 onClick={() => setPaginaManifestos(Math.max(0, paginaM - 1))}

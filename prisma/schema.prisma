@@ -863,3 +863,11 @@ model AutorizacaoTpp {
   @@index([empreendimentoId])
   @@index([dataValidade])
 }
+
+model LoginTentativa {
+  id       Int      @id @default(autoincrement())
+  chave    String
+  criadoEm DateTime @default(now())
+
+  @@index([chave, criadoEm])
+}

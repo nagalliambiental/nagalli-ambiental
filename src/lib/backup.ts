@@ -96,6 +96,23 @@ export async function registrarBackup(buf: Buffer, origem: string, usuarioId?: n
   return caminho;
 }
 
+/**
+ * Gera e registra um backup se o último tiver mais de INTERVALO_BACKUP_DIAS
+ * dias. Usado pelo cron diário (/api/cron/diario) — não depende de sessão.
+ * Retorna true se um backup foi gerado.
+ */
+export async function backupSeVencido(): Promise<boolean> {
+  const cfg = await prisma.configuracao.findFirst({ select: { ultimoBackupEm: true } });
+  const ultimo = cfg?.ultimoBackupEm;
+  if (ultimo && Date.now() - ultimo.getTime() < INTERVALO_BACKUP_DIAS * 86_400_000) {
+    return false;
+  }
+  const wb = await buildBackupWorkbook();
+  const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" }) as Buffer;
+  await registrarBackup(buf, "automatico");
+  return true;
+}
+
 export async function buildBackupWorkbook() {
   const wb = XLSX.utils.book_new();
 

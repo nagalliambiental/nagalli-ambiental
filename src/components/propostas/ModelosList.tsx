@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/Toast";
+import { CampoBusca, combina } from "@/components/BuscaLocal";
 import { FileText, Pencil, Trash2, Plus, FileStack, Eye, Copy } from "lucide-react";
 
 export interface ModeloLinha {
@@ -21,6 +23,7 @@ export interface ModeloLinha {
 export default function ModelosList({ modelos }: { modelos: ModeloLinha[] }) {
   const router = useRouter();
   const { toast } = useToast();
+  const [busca, setBusca] = useState("");
 
   const handleExcluir = async (id: number, nome: string) => {
     if (!confirm(`Excluir o modelo "${nome}"?`)) return;
@@ -51,8 +54,21 @@ export default function ModelosList({ modelos }: { modelos: ModeloLinha[] }) {
     );
   }
 
+  const filtrados = modelos.filter((m) => combina(`${m.nome} ${m.descricao} ${m.slug}`, busca));
+
   return (
     <div>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <CampoBusca value={busca} onChange={setBusca} placeholder="Buscar por nome, slug ou descrição..." />
+        <span className="text-xs text-[var(--color-ink-500)]">
+          {filtrados.length} de {modelos.length} modelo(s)
+        </span>
+      </div>
+      {filtrados.length === 0 ? (
+        <div className="px-5 py-10 text-center text-sm text-[var(--color-ink-500)]">
+          Nenhum resultado para <span className="font-medium text-[var(--color-ink-700)]">&ldquo;{busca}&rdquo;</span>
+        </div>
+      ) : (
       <table className="w-full text-sm">
         <thead className="bg-[var(--color-paper-50)]">
           <tr>
@@ -65,7 +81,7 @@ export default function ModelosList({ modelos }: { modelos: ModeloLinha[] }) {
           </tr>
         </thead>
         <tbody className="divide-y divide-[var(--color-paper-200)]">
-          {modelos.map((m) => (
+          {filtrados.map((m) => (
             <tr key={m.embutido ? `emb-${m.slug}` : m.id} className="hover:bg-[var(--color-paper-50)]">
               <td className="p-3">
                 <div className="flex items-center gap-2">
@@ -142,6 +158,7 @@ export default function ModelosList({ modelos }: { modelos: ModeloLinha[] }) {
           ))}
         </tbody>
       </table>
+      )}
     </div>
   );
 }

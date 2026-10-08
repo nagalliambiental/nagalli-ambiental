@@ -62,7 +62,7 @@ export default async function EditarUsuarioPage(props: { params: Promise<{ id: s
           },
           { name: "cpf", label: "CPF", type: "text" },
           { name: "conselho", label: "Conselho (CREA/CRQ)", type: "text" },
-          { name: "senha", label: "Nova senha (deixe em branco para manter)", type: "password" },
+          { name: "senha", label: "Nova senha (deixe em branco para manter)", type: "password", minLength: 8 },
           { name: "ativo", label: "Ativo", type: "checkbox" },
         ]}
       />

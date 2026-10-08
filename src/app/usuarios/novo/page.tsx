@@ -14,15 +14,27 @@ export default function NovoUsuarioPage() {
     perfil: "tecnico",
   });
   const [saving, setSaving] = useState(false);
+  const [erro, setErro] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (form.senha.length < 8) {
+      setErro("A senha precisa de pelo menos 8 caracteres");
+      return;
+    }
+    setErro("");
     setSaving(true);
-    await fetch("/api/usuarios", {
+    const res = await fetch("/api/usuarios", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
     });
+    if (!res.ok) {
+      const dados = await res.json().catch(() => ({}));
+      setErro(dados.error || "Erro ao criar usuário");
+      setSaving(false);
+      return;
+    }
     router.push("/usuarios");
     router.refresh();
   }
@@ -32,6 +44,9 @@ export default function NovoUsuarioPage() {
       <Topbar icon={Users} title="Novo Usuário" subtitle="Cadastre um novo usuário no sistema" />
       <div className="mx-auto max-w-2xl">
         <form onSubmit={handleSubmit} className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5 space-y-4">
+          {erro && (
+            <div className="bg-red-50 text-red-700 text-sm p-3 rounded-lg border border-red-200">{erro}</div>
+          )}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Nome</label>
@@ -45,7 +60,7 @@ export default function NovoUsuarioPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Senha</label>
-              <input type="password" value={form.senha} onChange={(e) => setForm({ ...form, senha: e.target.value })} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" required />
+              <input type="password" value={form.senha} onChange={(e) => setForm({ ...form, senha: e.target.value })} className="w-full rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-900)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]" required minLength={8} autoComplete="new-password" />
             </div>
             <div>
               <label className="block text-sm font-medium text-[var(--color-ink-700)] mb-1">Perfil</label>

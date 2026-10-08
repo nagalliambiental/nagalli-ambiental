@@ -30,6 +30,12 @@ export async function POST(request: Request) {
 
   try {
     const data = await request.json();
+    if (typeof data.senha !== "string" || data.senha.length < 8) {
+      return NextResponse.json(
+        { error: "A senha precisa de pelo menos 8 caracteres" },
+        { status: 400 }
+      );
+    }
     const senha = await bcrypt.hash(data.senha, 10);
 
     const usuario = await prisma.usuario.create({

@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Prazos" };
 
 export default async function PrazosPage() {
-  const [exigencias, processosComValidade, pgrsComValidade] = await Promise.all([
+  const [exigencias, processosComValidade, pgrsComValidade, tppsComValidade] = await Promise.all([
     prisma.exigencia.findMany({
       where: { cumprida: false },
       include: {
@@ -52,12 +52,23 @@ export default async function PrazosPage() {
       },
       orderBy: { validade: "asc" },
     }),
+    prisma.autorizacaoTpp.findMany({
+      where: { ativo: true },
+      select: {
+        id: true,
+        numero: true,
+        dataValidade: true,
+        cliente: { select: { apelido: true } },
+        empreendimento: { select: { apelido: true } },
+      },
+      orderBy: { dataValidade: "asc" },
+    }),
   ]);
 
   return (
     <div>
       <Breadcrumbs items={[{ label: "Prazos" }]} />
-      <Topbar icon={CalendarClock} title="Prazos" subtitle="Acompanhe os prazos de licenças, exigências e PGRS" />
+      <Topbar icon={CalendarClock} title="Prazos" subtitle="Acompanhe os prazos de licenças, exigências, PGRS e TPP" />
       <PrazosView
         processos={processosComValidade.map((p) => ({
           id: p.id,
@@ -88,6 +99,13 @@ export default async function PrazosPage() {
           validade: p.validade!.toISOString(),
           alertaDias: p.alertaDias,
           empreendimento: p.empreendimento,
+        }))}
+        tpps={tppsComValidade.map((t) => ({
+          id: t.id,
+          numero: t.numero,
+          validade: t.dataValidade.toISOString(),
+          clienteApelido: t.cliente.apelido,
+          empreendimentoApelido: t.empreendimento?.apelido ?? null,
         }))}
       />
     </div>

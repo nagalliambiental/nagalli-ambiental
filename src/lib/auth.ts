@@ -1,8 +1,13 @@
-import NextAuth from "next-auth";
+import NextAuth, { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
 import { logAuditoria } from "./audit";
+import { loginBloqueado, registrarTentativaFalha, limparTentativas } from "./rate-limit-login";
+
+class LoginBloqueadoError extends CredentialsSignin {
+  code = "login_bloqueado";
+}
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
@@ -15,18 +20,49 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
+        const chave = String(credentials.email).trim().toLowerCase();
+
+        // Bloqueio temporário após tentativas falhas (falha aberta: erro de
+        // infraestrutura no rate limit não pode impedir o login).
+        try {
+          if (await loginBloqueado(chave)) throw new LoginBloqueadoError();
+        } catch (e) {
+          if (e instanceof LoginBloqueadoError) throw e;
+          console.error("Rate limit de login indisponível:", e);
+        }
+
+        const registrarFalha = async () => {
+          try {
+            await registrarTentativaFalha(chave);
+          } catch (e) {
+            console.error("Erro ao registrar tentativa de login:", e);
+          }
+        };
+
         const usuario = await prisma.usuario.findUnique({
           where: { email: credentials.email as string },
         });
 
-        if (!usuario || !usuario.ativo) return null;
+        if (!usuario || !usuario.ativo) {
+          await registrarFalha();
+          return null;
+        }
 
         const senhaCorreta = await bcrypt.compare(
           credentials.password as string,
           usuario.senha
         );
 
-        if (!senhaCorreta) return null;
+        if (!senhaCorreta) {
+          await registrarFalha();
+          return null;
+        }
+
+        try {
+          await limparTentativas(chave);
+        } catch (e) {
+          console.error("Erro ao limpar tentativas de login:", e);
+        }
 
         return {
           id: String(usuario.id),

@@ -20,7 +20,11 @@ export default function LoginPage() {
     const result = await signIn("credentials", { email, password, redirect: false });
 
     if (result?.error) {
-      setError("Email ou senha inválidos");
+      setError(
+        result.code === "login_bloqueado"
+          ? "Muitas tentativas de login. Aguarde alguns minutos e tente novamente."
+          : "Email ou senha inválidos"
+      );
       setLoading(false);
     } else {
       router.push("/");

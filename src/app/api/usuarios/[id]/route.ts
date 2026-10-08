@@ -53,6 +53,13 @@ export async function PUT(
   const { id } = await params;
   const body = await _req.json();
 
+  if (body.senha && (typeof body.senha !== "string" || body.senha.length < 8)) {
+    return NextResponse.json(
+      { error: "A senha precisa de pelo menos 8 caracteres" },
+      { status: 400 }
+    );
+  }
+
   const data: Record<string, unknown> = {};
   if (body.perfil !== undefined) data.perfil = body.perfil;
   if (body.ativo !== undefined) data.ativo = body.ativo;

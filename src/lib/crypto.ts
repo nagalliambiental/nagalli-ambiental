@@ -1,6 +1,13 @@
 import crypto from "crypto";
 
 const KEY_HEX = process.env.CRIPTOGRAFIA_SECRET || "nagalli-ambiental-dev-secret";
+
+if (!process.env.CRIPTOGRAFIA_SECRET && process.env.NODE_ENV === "production") {
+  console.warn(
+    "[crypto] CRIPTOGRAFIA_SECRET ausente — usando o segredo padrão (inseguro). Configure a variável de ambiente CRIPTOGRAFIA_SECRET no Vercel."
+  );
+}
+
 const KEY = crypto.createHash("sha256").update(KEY_HEX).digest();
 const ALGORITMO = "aes-256-gcm";
 

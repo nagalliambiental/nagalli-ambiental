@@ -26,6 +26,7 @@ interface FieldConfig {
   upload?: boolean;
   step?: string;
   busca?: boolean;
+  minLength?: number;
   validate?: (value: string | boolean) => string | null;
 }
 
@@ -114,6 +115,10 @@ export default function EditEntityForm({
       const val = form[f.name];
       if (f.required && (!val || (typeof val === "string" && !val.trim()))) {
         errors[f.name] = `${f.label} é obrigatório`;
+        continue;
+      }
+      if (f.minLength && typeof val === "string" && val && val.length < f.minLength) {
+        errors[f.name] = `${f.label} precisa de pelo menos ${f.minLength} caracteres`;
         continue;
       }
       if (f.validate && typeof val === "string") {
