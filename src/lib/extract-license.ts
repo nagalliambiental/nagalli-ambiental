@@ -33,6 +33,7 @@ const FINS_SECAO: RegExp[] = [
   /^\s*\d{1,2}\s*[.)]\s+[A-ZÀ-Ü\s]{4,}$/m,
   /^\s*(?:DADOS\s+(?:DO|DA)\s+\w|DADOS\s+COMPLEMENTARES|DADOS\s+DO\s+TITULAR|DADOS\s+DO\s+PROPONENTE|DADOS\s+DO\s+REQUERENTE|DADOS\s+CONTRATANTE|DADOS\s+DO\s+CONTRATADO)\b[^\n]*$/im,
   /^(?:ANEXOS?|ANEXO\s+[A-Z0-9]|OBSERVA[ÇC][ÕO]ES|ASSINATURAS?|RESPONS[ÁA]VEIS?|LOCAL\s+E\s+DATA|C[ÓO]DIGO\s+DE\s+BARRAS)\s*$/m,
+  /^\s*DOCUMENTOS\s+ANEXOS?\b[^\n]*$/im,
   /(?:^|\n)\s*P[aá]gina\s+\d+/i,
   /(?:^|\n)\s*Assinatura do Representante/i,
   /(?:^|\n)\s*Esta LICEN[ÇC]A/i,
@@ -53,6 +54,7 @@ export interface CamposLicenca {
   sistema: string | null;
   municipio: string | null;
   razaoSocial: string | null;
+  atividade: string | null;
   modalidade: string | null;
 }
 
@@ -97,6 +99,9 @@ export function extrairCnpj(text: string): string | null {
 }
 
 export function extrairRazaoSocial(text: string): string | null {
+  const nomeRazao = text.match(/NOME\s*\/\s*RAZ[ÃA]O\s*:\s*([^\n\r]+)/i);
+  if (nomeRazao?.[1]?.trim()) return nomeRazao[1].trim();
+
   const cnpj = extrairCnpj(text);
   if (cnpj) {
     const idx = text.indexOf(cnpj);
@@ -114,11 +119,17 @@ export function extrairRazaoSocial(text: string): string | null {
 }
 
 export function extrairMunicipio(text: string): string | null {
+  const dadosEmpreendimento = text.match(/DADOS\s+DO\s+EMPREENDIMENTO([\s\S]{0,700})/i)?.[1] || "";
+  const mIma = dadosEmpreendimento.match(/\b([A-ZÀ-Ü][A-ZÀ-Ü .'-]{2,})\s*\/\s*[A-Z]{2}\b/);
+  if (mIma?.[1]) return mIma[1].trim();
+
   const m = text.match(/(?:prefeitura municipal de|secretaria de meio ambiente de)[ \t]+([A-ZÀ-Ü][A-Za-záàâãéêíóôõúç]+)/i);
   return m ? m[1].trim() : null;
 }
 
 const PADROES_MODALIDADE = [
+  /(licen[çc]a\s+ambiental\s+por\s+ades[ãa]o\s+e\s+compromisso)/i,
+  /(licen[çc]a\s+ambiental\s+por\s+compromisso)/i,
   /(renova[çc][ãa]o\s+da\s+licen[çc]a\s+de\s+opera[çc][ãa]o)/i,
   /(licen[çc]a\s+pr[ée]via)/i,
   /(licen[çc]a\s+de\s+instala[çc][ãa]o)/i,
@@ -131,6 +142,13 @@ const PADROES_MODALIDADE = [
 ];
 
 export function extrairModalidade(text: string): string | null {
+  if (/licen[çc]a\s+ambiental\s+por\s+ades[ãa]o\s+e\s+compromisso/i.test(text)) {
+    return "Licença Ambiental por Adesão e Compromisso";
+  }
+  if (/licen[çc]a\s+ambiental\s+por\s+compromisso/i.test(text)) {
+    return "Licença Ambiental por Compromisso";
+  }
+
   const mCorte = text.match(/autoriza[çc][ãa]o\s+de\s+explora[çc][ãa]o\s*[-–]?\s*corte/i);
   if (mCorte) return "Autorização Ambiental para Corte";
 
@@ -142,6 +160,16 @@ export function extrairModalidade(text: string): string | null {
     }
   }
   return null;
+}
+
+function dataIso(dia: string, mes: string, ano: string): string {
+  return `${ano}-${mes.padStart(2, "0")}-${dia.padStart(2, "0")}`;
+}
+
+function adicionarMeses(data: string, meses: number): string {
+  const [ano, mes, dia] = data.split("-").map(Number);
+  const resultado = new Date(Date.UTC(ano, mes - 1 + meses, dia));
+  return `${resultado.getUTCFullYear()}-${String(resultado.getUTCMonth() + 1).padStart(2, "0")}-${String(resultado.getUTCDate()).padStart(2, "0")}`;
 }
 
 export async function runOcr(buffer: Buffer, ext: string, timeoutMs = 15000): Promise<string> {
@@ -353,7 +381,7 @@ export function extrairDadosEmpreendimento(texto: string): string | null {
   const blocoDados = texto.slice(fim);
   const linhas = blocoDados.split("\n");
 
-  const RE_TRANSICAO = /(?:diz\s+respeito\s+somente|descri[çc][õo]es?\s+acima|itens?\s+abaixo|devendo\s+a\s+favorecida|d[ée]cima\s+acima)/i;
+  const RE_TRANSICAO = /(?:diz\s+respeito\s+somente|descri[çc][õo]es?\s+acima|itens?\s+abaixo|devendo\s+a\s+favorecida|d[ée]cima\s+acima|^da\s+viabilidade\b)/i;
   const RE_ITEM_NUM = /^\s*\d+\.\s+[A-ZÀ-Ü]/;
   let primeiroItemNum = -1;
 
@@ -390,10 +418,23 @@ export function extrairDadosEmpreendimento(texto: string): string | null {
     .filter((l) => !(CABECALHO_MAISCULAS.test(l) && l.length <= 40))
     .join("\n");
   secao = secao.replace(/\n{3,}/g, "\n\n").trim();
+  secao = secao.replace(/\n?Da\s+viabilidade[\s\S]*$/i, "").trim();
   secao = secao.replace(/\d+\s*[-–]?\s*$/m, "").trim();
   secao = secao.replace(/\d+\s*[-–]\s*CONDICIONANTES\s*$/i, "").trim();
 
   return secao.length >= 10 ? secao : null;
+}
+
+function extrairCondicionantesLacIma(texto: string): string | null {
+  const partes: string[] = [];
+  const geral = texto.match(/CONDI[ÇC][ÕO]ES\s+GERAIS([\s\S]*?)(?=DOCUMENTOS\s+ANEXOS|RCE\s+N[º°o])/i);
+  if (geral?.[1]) partes.push(`Condições gerais\n${geral[1].trim()}`);
+
+  const termos = texto.match(/TERMOS\s+E\s+CONDI[ÇC][ÕO]ES([\s\S]*?)(?=FCEI\s*:\s*\d+\s*C[ÓO]DIGO\s*:)/i);
+  if (termos?.[1]) partes.push(`Termos e condições\n${termos[1].trim()}`);
+
+  const resultado = partes.join("\n\n").replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+  return resultado.length >= 20 ? resultado : null;
 }
 
 const PADROES_DATA = [
@@ -451,6 +492,29 @@ export function extractFields(text: string): CamposLicenca {
   let dataProtocolo: string | null = null;
   let numLicenca: string | null = null;
   let numProtocolo: string | null = null;
+  let atividade: string | null = null;
+
+  // Formato oficial do IMA/SC para LAC de transporte de produtos perigosos.
+  // Esses documentos informam a validade como quantidade de meses a partir de
+  // uma data, e usam um protocolo alfanumérico (TPP/26362/TSP).
+  const lacIma = /LICEN[ÇC]A\s+AMBIENTAL\s+POR\s+COMPROMISSO/i.test(text) && /\bIMA\b/i.test(text);
+  if (lacIma) {
+    const mLicenca = text.match(/LICEN[ÇC]A\s+AMBIENTAL\s+POR\s+COMPROMISSO\s*LAC\s*N[º°o]?\s*([\d./-]+)/i);
+    if (mLicenca) numLicenca = mLicenca[1].trim();
+
+    const mProcesso = text.match(/processo\s+de\s+licenciamento\s+ambiental\s*n[º°o]?\s*([A-Z0-9]+\/[A-Z0-9]+\/[A-Z0-9]+)/i);
+    if (mProcesso) numProtocolo = mProcesso[1].trim();
+
+    const mData = text.match(/Prazo\s+de\s+validade[\s\S]{0,120}?Data:\s*(\d{2})\/(\d{2})\/(\d{4})/i);
+    if (mData) {
+      dataProtocolo = dataIso(mData[1], mData[2], mData[3]);
+      const mMeses = text.match(/\((\d{1,3})\)\s*meses[\s\S]{0,120}?Data:/i);
+      if (mMeses) validade = adicionarMeses(dataProtocolo, Number(mMeses[1]));
+    }
+
+    const mAtividade = text.match(/Atividade:\s*([\s\S]*?)(?=\n\s*Dados\s+do\s+(?:Empreendedor|Empreendimento))/i);
+    if (mAtividade) atividade = mAtividade[1].replace(/\s+/g, " ").trim();
+  }
 
   const mSinaflor = text.match(
     /N[uú]mero\s+da\s+Autoriza[çc][ãa]o\s*Registro\s+Sinaflor\s*Validade\s*(\d{4}\.\d{1,2}\.\d{4}\.\d{4})\s*(\d{5,})\s+(\d{2})\/(\d{2})\/(\d{4})\s+[aà]\s+(\d{2})\/(\d{2})\/(\d{4})/i
@@ -544,12 +608,13 @@ export function extractFields(text: string): CamposLicenca {
     numLicenca,
     numProtocolo,
     dataProtocolo,
-    condicionantes: extrairSecaoCondicionantes(text),
+    condicionantes: lacIma ? extrairCondicionantesLacIma(text) : extrairSecaoCondicionantes(text),
     dadosEmpreendimento: extrairDadosEmpreendimento(text),
     orgaoSigla,
     sistema: detectarSistema(text, orgaoSigla),
     municipio: extrairMunicipio(text),
     razaoSocial: extrairRazaoSocial(text),
+    atividade,
     modalidade: extrairModalidade(text),
   };
 }

@@ -34,6 +34,39 @@ test("extractFields não confunde protocolo com licença", () => {
   assert.equal(r.numProtocolo, "777.2023");
 });
 
+test("extractFields identifica LAC-TPP do IMA/SC", () => {
+  const texto = [
+    "ESTADO DE SANTA CATARINA",
+    "IMA — Instituto do Meio Ambiente de Santa Catarina",
+    "INSTITUTO DO MEIO AMBIENTE DO ESTADO DE SANTA CATARINA",
+    "LICENÇA AMBIENTAL POR COMPROMISSO LAC Nº 2396/2026",
+    "processo de licenciamento ambiental n° TPP/26362/TSP",
+    "Atividade: 47.10.10 – Transporte rodoviário de produtos perigosos, resíduos perigosos ou rejeitos perigosos, exclusivamente no território catarinense",
+    "Dados do Empreendedor",
+    "NOME/RAZÃO: JOIN TRANSPORTES INTELIGENTES LTDA",
+    "CPF/CNPJ: 86.906.583/0004-82",
+    "Dados do Empreendimento",
+    "ENDEREÇO: Rua Armando Andrade, 97 - BOM RETIRO",
+    "CEP: 89223066 - JOINVILLE/SC",
+    "Condições gerais",
+    "A presente licença poderá ser suspensa ou cancelada.",
+    "Documentos anexos",
+    "Prazo de validade (48) meses, a contar da Data: 01/09/2026",
+  ].join("\n");
+
+  const r = extractFields(texto);
+  assert.equal(r.modalidade, "Licença Ambiental por Compromisso");
+  assert.equal(r.numLicenca, "2396/2026");
+  assert.equal(r.numProtocolo, "TPP/26362/TSP");
+  assert.equal(r.dataProtocolo, "2026-09-01");
+  assert.equal(r.validade, "2030-09-01");
+  assert.equal(r.orgaoSigla, "IMA");
+  assert.equal(r.municipio, "JOINVILLE");
+  assert.equal(r.razaoSocial, "JOIN TRANSPORTES INTELIGENTES LTDA");
+  assert.equal(r.atividade, "47.10.10 – Transporte rodoviário de produtos perigosos, resíduos perigosos ou rejeitos perigosos, exclusivamente no território catarinense");
+  assert.ok(r.condicionantes?.includes("A presente licença"));
+});
+
 test("extractFields retorna null quando não há condicionantes", () => {
   const texto = "Documento sem seção de condicionantes";
   const r = extractFields(texto);
