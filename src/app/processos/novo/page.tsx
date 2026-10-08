@@ -89,6 +89,7 @@ export default function NovoProcessoPage() {
   const [error, setError] = useState("");
   const [extracting, setExtracting] = useState(false);
   const [extractedFile, setExtractedFile] = useState<string | null>(null);
+  const [arquivoLicenca, setArquivoLicenca] = useState<File | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [buscandoSia, setBuscandoSia] = useState(false);
   const consultasFeitas = useRef(new Set<string>());
@@ -143,6 +144,7 @@ export default function NovoProcessoPage() {
     setExtracting(true);
     setError("");
     setUploadError(null);
+    setArquivoLicenca(null);
 
     try {
       const body = new FormData();
@@ -161,6 +163,7 @@ export default function NovoProcessoPage() {
 
       const data = await res.json();
       importacaoViaUpload.current = true;
+      setArquivoLicenca(file);
 
       let orgaoIdImportado: string | undefined;
       if (data.orgaoSigla) {
@@ -425,6 +428,22 @@ export default function NovoProcessoPage() {
       return;
     }
 
+    const processo = await res.json();
+    if (arquivoLicenca) {
+      const documento = new FormData();
+      documento.append("file", arquivoLicenca);
+      documento.append("tipo", "licenca");
+      documento.append("processoId", String(processo.id));
+      documento.append("nome", arquivoLicenca.name);
+
+      const upload = await fetch("/api/upload", { method: "POST", body: documento });
+      if (!upload.ok) {
+        setError("Licença criada, mas não foi possível salvar o arquivo PDF vinculado. Tente anexá-lo na licença criada.");
+        setSaving(false);
+        return;
+      }
+    }
+
     router.push("/processos");
     router.refresh();
   }
@@ -437,6 +456,7 @@ export default function NovoProcessoPage() {
           <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5 space-y-4">
             <h2 className="font-display text-sm font-semibold text-[var(--color-ink-900)]">Upload de Licença</h2>
             <p className="text-xs text-[var(--color-ink-500)]">Anexe o documento da licença (PDF ou imagem) para preenchimento automático de nº da licença, protocolo, validade, condicionantes, tipo e órgão.</p>
+            <p className="text-xs text-[var(--color-brand-600)]">Ao salvar, o arquivo será automaticamente vinculado à licença como documento do tipo Licença.</p>
 
             <label className="focus-ring transition-brand flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-[var(--color-paper-200)] px-4 py-6 text-sm text-[var(--color-ink-500)] hover:border-[var(--color-brand-300)] hover:text-[var(--color-brand-600)]">
               {extracting ? (
