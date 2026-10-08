@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Topbar } from "@/components/Topbar";
 import { SectionCard } from "@/components/ui/SectionCard";
-import { Loader2, Save, ArrowLeft, Search, AlertCircle, FileText } from "lucide-react";
+import { Loader2, Save, ArrowLeft, Search, AlertCircle, FileText, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useToast } from "@/components/Toast";
 import { useSession } from "next-auth/react";
@@ -40,15 +40,19 @@ interface EditEntityFormProps {
   icon?: LucideIcon;
 }
 
+const ENTITY_ICONS: Record<string, LucideIcon> = { usuario: Users };
+
 export default function EditEntityForm({
+  entity,
   entityName,
   endpoint,
   redirectTo,
   fields,
   data,
   method = "PUT",
-  icon: Icon = FileText,
+  icon,
 }: EditEntityFormProps) {
+  const Icon = icon ?? ENTITY_ICONS[entity] ?? FileText;
   const router = useRouter();
   const { toast } = useToast();
   const { data: session } = useSession();

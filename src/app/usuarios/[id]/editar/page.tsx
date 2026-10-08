@@ -5,7 +5,6 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { ehPrivilegiado } from "@/lib/perfil";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
-import { Users } from "lucide-react";
 import EditEntityForm from "@/components/EditEntityForm";
 
 export const dynamic = "force-dynamic";
@@ -45,7 +44,6 @@ export default async function EditarUsuarioPage(props: { params: Promise<{ id: s
         entityName="Usuário"
         endpoint={`/api/usuarios/${usuario.id}`}
         redirectTo={`/usuarios/${usuario.id}`}
-        icon={Users}
         method="PUT"
         data={{ ...usuario }}
         fields={[
