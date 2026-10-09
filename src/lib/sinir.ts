@@ -1156,6 +1156,7 @@ const SECOES_CLASSE: { letra: string; titulo: string; subtitulo: string }[] = [
   { letra: "B", titulo: "CLASSE B", subtitulo: "Não inertes — Classe II A (NBR 10.004), RCC Classe B e RSS Grupo B" },
   { letra: "C", titulo: "CLASSE C", subtitulo: "Inertes — Classe II B (NBR 10.004), RCC Classe C e RSS Grupo C" },
   { letra: "D", titulo: "CLASSE D", subtitulo: "Outros — RCC Classes D, RSS Grupos D/E e resíduos não especificados" },
+  { letra: "N", titulo: "NÃO IDENTIFICADA", subtitulo: "MTR sem classe de resíduo disponível no detalhe do SINIR" },
 ];
 
 export async function gerarPdfMtrsPorClasse(
@@ -1168,11 +1169,11 @@ export async function gerarPdfMtrsPorClasse(
   const { embedNagalliLogo, drawNagalliTopo, drawNagalliFooter, PALETTE } = await import("./report-branding");
 
   const gruposPorLetra = new Map<string, MtrPorClasseItem[]>();
-  for (const letra of ["A", "B", "C", "D"]) gruposPorLetra.set(letra, []);
+  for (const letra of ["A", "B", "C", "D", "N"]) gruposPorLetra.set(letra, []);
   for (const m of mtrs) {
-    const letra = (m.classeNome || "").toUpperCase().replace(/[^ABCD]/g, "").charAt(0);
-    if (letra && gruposPorLetra.has(letra)) gruposPorLetra.get(letra)!.push(m);
-    else gruposPorLetra.get("D")!.push(m);
+    const valor = (m.classeNome || "").toUpperCase();
+    const letra = /\b[ABCD]\b/.test(valor) ? valor.match(/\b([ABCD])\b/)![1] : "N";
+    gruposPorLetra.get(letra)!.push(m);
   }
 
   const pdf = await PDFDocument.create();

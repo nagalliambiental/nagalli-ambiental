@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAuditoria } from "@/lib/audit";
-import { consultarTodosManifestos, SINIR_TIPOS_PARCEIRO } from "@/lib/sinir";
+import { consultarManifesto, consultarTodosManifestos, SINIR_TIPOS_PARCEIRO } from "@/lib/sinir";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json().catch(() => ({}));
-  const { conexaoId, dataInicial, dataFinal } = body;
+  const { conexaoId, dataInicial, dataFinal, incluirClasses = true } = body;
   if (!conexaoId) {
     return NextResponse.json({ error: "conexaoId é obrigatório" }, { status: 400 });
   }
@@ -79,10 +79,29 @@ export async function POST(req: NextRequest) {
   };
   const itens: ManifestoEnriquecido[] = [];
   for (const m of manifestos) {
+    let classeNome = m.classeNome;
+    let classeRisco = m.classeRisco;
+    let residuos = m.residuos;
+
+    // A consulta em lote não traz resíduos/classe. Busca o detalhe apenas
+    // quando solicitado e quando a classe ainda não está persistida.
+    if (incluirClasses && (!classeNome || classeNome === "Não identificado")) {
+      try {
+        const detalhe = await consultarManifesto(conexaoCompleta, m.numero);
+        if (detalhe) {
+          classeNome = detalhe.classeNome;
+          classeRisco = detalhe.classeRisco || classeRisco;
+          residuos = detalhe.residuos;
+        }
+      } catch {
+        // O MTR continua disponível mesmo se o detalhe individual falhar.
+      }
+    }
+
     // A consulta em lote não retorna resíduos/classe — preserva o que já está no banco
-    const temClasseNova = Boolean(m.classeNome) && m.classeNome !== "Não identificado";
+    const temClasseNova = Boolean(classeNome) && classeNome !== "Não identificado";
     const dadosClasseUpdate = temClasseNova
-      ? { classeRisco: m.classeRisco, classeNome: m.classeNome }
+      ? { classeRisco, classeNome }
       : {};
     const salvo = await prisma.sinirManifesto.upsert({
       where: { conexaoId_numero: { conexaoId: conexao.id, numero: m.numero } },
@@ -101,8 +120,9 @@ export async function POST(req: NextRequest) {
         unidade: m.unidade,
         dataExpedicao: m.dataExpedicao,
         dataRecebimento: m.dataRecebimento,
-        classeRisco: m.classeRisco,
-        classeNome: m.classeNome === "Não identificado" ? null : m.classeNome,
+        classeRisco,
+        classeNome: classeNome === "Não identificado" ? null : classeNome,
+        ...(residuos ? { residuos: residuos as never } : {}),
       },
       update: {
         status: m.status,
@@ -118,12 +138,13 @@ export async function POST(req: NextRequest) {
         dataExpedicao: m.dataExpedicao,
         dataRecebimento: m.dataRecebimento,
         ...dadosClasseUpdate,
+        ...(residuos ? { residuos: residuos as never } : {}),
       },
     });
     itens.push({
       ...m,
-      classeNome: salvo.classeNome || m.classeNome || "Não identificado",
-      classeRisco: m.classeRisco || salvo.classeRisco || "",
+      classeNome: salvo.classeNome || classeNome || "Não identificado",
+      classeRisco: classeRisco || salvo.classeRisco || "",
       cdfNumero: m.cdfNumero || salvo.cdfNumero || undefined,
       id: salvo.id,
       conexao: { id: conexao.id, nome: conexao.nome, modo: conexao.modo },

@@ -850,6 +850,11 @@ function diasEmSalvo(m: Manifesto) {
   return Math.max(0, Math.floor((Date.now() - base.getTime()) / 86400000));
 }
 
+function letraClasse(classe: string | null | undefined): string {
+  const match = String(classe || "").toUpperCase().match(/\b([ABCD])\b/);
+  return match?.[1] || "";
+}
+
 // Rótulo do trimestre corrente (período de referência do SINIR)
 function rotuloTrimestre(ref = new Date()) {
   return `${Math.floor(ref.getMonth() / 3) + 1}º trimestre de ${ref.getFullYear()}`;
@@ -876,6 +881,7 @@ function MeusMtrsTab(props: {
   const [enviandoNotif, setEnviandoNotif] = useState(false);
   const [carregandoContatos, setCarregandoContatos] = useState(false);
   const [paginaLista, setPaginaLista] = useState(0);
+  const [classeFiltro, setClasseFiltro] = useState("todas");
 
   const pad = (n: number) => String(n).padStart(2, "0");
   const hoje = new Date();
@@ -890,7 +896,13 @@ function MeusMtrsTab(props: {
     (m) => (m.status === "SALVO" || m.status === "EMITIDO") && !m.certificado
   );
   const emAtraso = salvos.filter((m) => diasEmSalvo(m) > limiteDias);
-  const listaFiltrada = filtro === "pendentes" ? salvos : lista;
+  const listaPorStatus = filtro === "pendentes" ? salvos : lista;
+  const classeContagens = { A: 0, B: 0, C: 0, D: 0 };
+  for (const m of listaPorStatus) {
+    const classe = letraClasse(m.classeNome) as keyof typeof classeContagens;
+    if (classe && classe in classeContagens) classeContagens[classe]++;
+  }
+  const listaFiltrada = listaPorStatus.filter((m) => classeFiltro === "todas" || letraClasse(m.classeNome) === classeFiltro);
   const totalPaginasL = Math.max(1, Math.ceil(listaFiltrada.length / POR_PAGINA));
   const paginaL = Math.min(paginaLista, totalPaginasL - 1);
   const visiveisL = listaFiltrada.slice(paginaL * POR_PAGINA, paginaL * POR_PAGINA + POR_PAGINA);
@@ -914,7 +926,7 @@ function MeusMtrsTab(props: {
       const res = await fetch("/api/sinir/meus-mtrs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conexaoId: Number(conexaoUsar), dataInicial, dataFinal }),
+        body: JSON.stringify({ conexaoId: Number(conexaoUsar), dataInicial, dataFinal, incluirClasses: true }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) {
@@ -955,7 +967,7 @@ function MeusMtrsTab(props: {
   }
 
   async function baixarTodosZip() {
-    const elegiveis = lista.filter((m) => m.status !== "CANCELADO");
+    const elegiveis = listaFiltrada.filter((m) => m.status !== "CANCELADO");
     if (elegiveis.length === 0) {
       toast("Nenhum MTR ativo (sem cancelados) para baixar", "warning");
       return;
@@ -981,7 +993,7 @@ function MeusMtrsTab(props: {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-      const cancelados = lista.length - elegiveis.length;
+      const cancelados = listaFiltrada.length - elegiveis.length;
       toast(
         `Lote gerado com ${elegiveis.length} MTR(s)${cancelados > 0 ? ` (${cancelados} cancelado(s) excluído(s))` : ""}`,
         "success"
@@ -994,7 +1006,7 @@ function MeusMtrsTab(props: {
   }
 
   async function baixarCdfsZip() {
-    const comCdf = lista.filter((m) => m.certificado);
+    const comCdf = listaFiltrada.filter((m) => m.certificado);
     if (comCdf.length === 0) {
       toast("Nenhum CDF disponível na lista", "warning");
       return;
@@ -1200,7 +1212,10 @@ function MeusMtrsTab(props: {
             onClick={async () => {
               toast(`Gerando relatório por classe de resíduo (${rotuloTrimestre()})...`, "info");
               try {
-                const res = await fetch(`/api/sinir/mtrs-por-classe?conexaoId=${conexaoEfetiva}&filtro=recebidos`);
+                const filtroRelatorio = filtro === "pendentes" ? "pendentes" : filtro === "todos" ? "todos" : "recebidos";
+                const params = new URLSearchParams({ conexaoId: conexaoEfetiva, filtro: filtroRelatorio, dataInicial, dataFinal });
+                if (classeFiltro !== "todas") params.set("classe", classeFiltro);
+                const res = await fetch(`/api/sinir/mtrs-por-classe?${params.toString()}`);
                 if (!res.ok) {
                   const data = await res.json().catch(() => null);
                   throw new Error(data?.error || "Falha ao gerar relatório");
@@ -1269,33 +1284,33 @@ function MeusMtrsTab(props: {
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-paper-200)] px-5 py-4">
           <h2 className="font-display flex items-center gap-2 text-base font-semibold text-[var(--color-ink-900)]">
             MTRs encontrados
-            <span className="rounded-full bg-[var(--color-paper-100)] px-2 py-0.5 text-xs font-semibold tabular-nums text-[var(--color-ink-600)]">{lista.length}</span>
+            <span className="rounded-full bg-[var(--color-paper-100)] px-2 py-0.5 text-xs font-semibold tabular-nums text-[var(--color-ink-600)]">{listaFiltrada.length}</span>
           </h2>
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={baixarTodosZip}
-              disabled={baixandoZip || lista.filter((m) => m.status !== "CANCELADO").length === 0}
+               disabled={baixandoZip || listaFiltrada.filter((m) => m.status !== "CANCELADO").length === 0}
               className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
               title="Baixar todos os MTRs ativos (exclui cancelados) em um arquivo ZIP"
             >
               {baixandoZip ? <Loader2 size={14} className="animate-spin" /> : <FolderArchive size={14} />}
-              {baixandoZip ? "Baixando..." : `Baixar todos (ZIP) — ${lista.filter((m) => m.status !== "CANCELADO").length}`}
+               {baixandoZip ? "Baixando..." : `Baixar filtrados (ZIP) — ${listaFiltrada.filter((m) => m.status !== "CANCELADO").length}`}
             </button>
             <button
               onClick={baixarCdfsZip}
-              disabled={baixandoCdfZip || !lista.some((m) => m.certificado)}
+               disabled={baixandoCdfZip || !listaFiltrada.some((m) => m.certificado)}
               className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-[var(--color-brand-600)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--color-brand-700)] disabled:opacity-50"
               title="Baixar os CDFs (Certificados de Destinação Final) dos MTRs com certificado, em ZIP"
             >
               {baixandoCdfZip ? <Loader2 size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
-              {baixandoCdfZip ? "Baixando..." : `Baixar CDFs (ZIP) — ${lista.filter((m) => m.certificado).length}`}
+               {baixandoCdfZip ? "Baixando..." : `Baixar CDFs filtrados (ZIP) — ${listaFiltrada.filter((m) => m.certificado).length}`}
             </button>
             <div className="flex rounded-lg border border-[var(--color-paper-200)] bg-[var(--color-paper-50)] p-1 text-xs font-medium">
             <button
               onClick={() => { setFiltro("todos"); setPaginaLista(0); }}
               className={`rounded-md px-3 py-1.5 transition-brand ${filtro === "todos" ? "bg-white text-[var(--color-ink-900)] shadow-sm" : "text-[var(--color-ink-500)] hover:text-[var(--color-ink-700)]"}`}
             >
-              Todos ({lista.length})
+               Todos ({lista.length})
             </button>
             <button
               onClick={() => { setFiltro("pendentes"); setPaginaLista(0); }}
@@ -1303,8 +1318,22 @@ function MeusMtrsTab(props: {
             >
               Sem recebimento ({salvos.length})
             </button>
-          </div>
-          </div>
+           </div>
+           <div className="flex items-center gap-2 text-xs font-medium text-[var(--color-ink-500)]">
+             <span>Classe</span>
+             <select
+               value={classeFiltro}
+               onChange={(e) => { setClasseFiltro(e.target.value); setPaginaLista(0); }}
+               className="rounded-lg border border-[var(--color-paper-200)] bg-white px-2.5 py-1.5 text-xs text-[var(--color-ink-700)]"
+             >
+               <option value="todas">Todas ({listaPorStatus.length})</option>
+               <option value="A">Classe A ({classeContagens.A})</option>
+               <option value="B">Classe B ({classeContagens.B})</option>
+               <option value="C">Classe C ({classeContagens.C})</option>
+               <option value="D">Classe D ({classeContagens.D})</option>
+             </select>
+           </div>
+           </div>
         </div>
 
         {emAtraso.length > 0 && (
@@ -1319,11 +1348,11 @@ function MeusMtrsTab(props: {
             <Loader2 size={24} className="animate-spin text-[var(--color-brand-500)]" />
             Consultando o SINIR...
           </div>
-        ) : lista.length === 0 ? (
+         ) : listaFiltrada.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-1 py-14 text-center">
             <FileText size={28} className="mb-1 text-[var(--color-ink-300)]" />
-            <p className="text-sm font-medium text-[var(--color-ink-700)]">Nenhum MTR para o período informado</p>
-            <p className="text-sm text-[var(--color-ink-500)]">Ajuste as datas e clique em &quot;Consultar SINIR&quot;.</p>
+            <p className="text-sm font-medium text-[var(--color-ink-700)]">Nenhum MTR encontrado com os filtros atuais</p>
+            <p className="text-sm text-[var(--color-ink-500)]">Ajuste as datas, o status ou a classe selecionada.</p>
           </div>
         ) : (
           <>
@@ -1347,7 +1376,7 @@ function MeusMtrsTab(props: {
                   .map((m) => {
                     const salvo = (m.status === "SALVO" || m.status === "EMITIDO") && !m.certificado;
                     const atrasado = salvo && diasEmSalvo(m) > limiteDias;
-                    const letraClasse = (m.classeNome || "").toUpperCase().replace(/[^ABCD]/g, "").charAt(0);
+                    const letraClasseMtr = letraClasse(m.classeNome);
                     return (
                       <tr
                         key={m.id}
@@ -1359,9 +1388,9 @@ function MeusMtrsTab(props: {
                         <td className="hidden max-w-[160px] truncate px-2 py-2.5 text-[var(--color-ink-600)] lg:table-cell" title={m.transportadorNome || undefined}>{m.transportadorNome || "—"}</td>
                         <td className="whitespace-nowrap px-2 py-2.5 tabular-nums text-[var(--color-ink-600)]">{fmtData(m.dataExpedicao)}</td>
                         <td className="px-2 py-2.5">
-                          {letraClasse ? (
-                            <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-bold ${CLASSE_BADGE[letraClasse]}`}>
-                              Classe {letraClasse}
+                           {letraClasseMtr ? (
+                             <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-bold ${CLASSE_BADGE[letraClasseMtr]}`}>
+                               Classe {letraClasseMtr}
                             </span>
                           ) : (
                             <span className="text-xs text-[var(--color-ink-400)]">—</span>
@@ -1428,7 +1457,7 @@ function MeusMtrsTab(props: {
             {visiveisL.map((m) => {
               const salvo = (m.status === "SALVO" || m.status === "EMITIDO") && !m.certificado;
               const atrasado = salvo && diasEmSalvo(m) > limiteDias;
-              const letraClasse = (m.classeNome || "").toUpperCase().replace(/[^ABCD]/g, "").charAt(0);
+              const letraClasseMtr = letraClasse(m.classeNome);
               return (
                 <li key={m.id} className={`px-4 py-3 ${atrasado ? "bg-red-50/70" : salvo ? "bg-amber-50/40" : ""}`}>
                   <div className="flex items-center justify-between gap-2">
@@ -1467,9 +1496,9 @@ function MeusMtrsTab(props: {
                     <div>
                       <dt className="text-[var(--color-ink-400)]">Classe</dt>
                       <dd>
-                        {letraClasse ? (
-                          <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-bold ${CLASSE_BADGE[letraClasse]}`}>
-                            Classe {letraClasse}
+                        {letraClasseMtr ? (
+                          <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-bold ${CLASSE_BADGE[letraClasseMtr]}`}>
+                            Classe {letraClasseMtr}
                           </span>
                         ) : (
                           <span className="text-[var(--color-ink-300)]">—</span>

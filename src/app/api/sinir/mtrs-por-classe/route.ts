@@ -12,6 +12,7 @@ export async function GET(req: NextRequest) {
 
   const conexaoId = Number(req.nextUrl.searchParams.get("conexaoId"));
   const filtro = req.nextUrl.searchParams.get("filtro") || "recebidos";
+  const classeFiltro = req.nextUrl.searchParams.get("classe") || "";
 
   if (!conexaoId) {
     return NextResponse.json({ error: "conexaoId é obrigatório" }, { status: 400 });
@@ -37,24 +38,30 @@ export async function GET(req: NextRequest) {
     ultimoUsoEm: conexao.ultimoUsoEm,
   };
 
-  const filtroStatus = (() => {
-    switch (filtro) {
-      case "pendentes": return { in: ["SALVO", "EMITIDO"] };
-      case "certificados": return { equals: true };
-      case "cancelados": return { in: ["CANCELADO"] };
-      case "recebidos":
-      default: return { equals: "RECEBIDO" };
-    }
-  })();
-
   const where: Record<string, unknown> = { conexaoId };
-  where.status = filtro === "recebidos" ? "RECEBIDO" : filtroStatus;
-  if (filtro === "certificados") {
+  if (filtro === "todos") where.status = { not: "CANCELADO" };
+  else if (filtro === "pendentes") {
+    where.status = { in: ["SALVO", "EMITIDO"] };
+    where.certificado = false;
+  } else if (filtro === "certificados") {
     where.certificado = true;
-  }
+  } else if (filtro === "cancelados") where.status = "CANCELADO";
+  else where.status = "RECEBIDO";
 
-  // Período do trimestre corrente do SINIR (data inicial e data final automáticas)
-  const { inicio, fim, rotulo } = trimestreCorrente();
+  const dataInicial = req.nextUrl.searchParams.get("dataInicial");
+  const dataFinal = req.nextUrl.searchParams.get("dataFinal");
+  let periodo: { inicio: Date; fim: Date; rotulo: string };
+  if (dataInicial && dataFinal) {
+    const inicio = new Date(`${dataInicial}T00:00:00`);
+    const fim = new Date(`${dataFinal}T23:59:59`);
+    if (isNaN(inicio.getTime()) || isNaN(fim.getTime()) || inicio > fim) {
+      return NextResponse.json({ error: "Período inválido" }, { status: 400 });
+    }
+    periodo = { inicio, fim, rotulo: `${dataInicial} a ${dataFinal}` };
+  } else {
+    periodo = trimestreCorrente();
+  }
+  const { inicio, fim, rotulo } = periodo;
   where.dataExpedicao = { gte: inicio, lte: fim };
 
   const manifestosLocais = await prisma.sinirManifesto.findMany({
@@ -87,10 +94,12 @@ export async function GET(req: NextRequest) {
     }
 
     const ident = classeDeResiduos(residuos);
-    const letra = ident.letra || "D";
+    const letra = ident.letra || "N";
     const descSinir = ident.descricaoSinir
       ? `Classe ${ident.letra} (${ident.descricaoSinir})`
       : "Não identificada";
+
+    if (classeFiltro && letra !== classeFiltro.toUpperCase()) continue;
 
     mtrsPorClasse.push({
       numero: m.numero,
