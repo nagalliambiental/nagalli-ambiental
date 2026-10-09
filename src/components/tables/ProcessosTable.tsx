@@ -64,6 +64,7 @@ export function ProcessosTable({ data }: { data: ProcessoData[] }) {
     },
     {
       header: "Validade",
+      sortable: true, sortKey: "validade",
       hideBelow: "md",
       render: (p) => (p.validade ? format(new Date(p.validade), "dd/MM/yyyy", { locale: ptBR }) : "—"),
     },

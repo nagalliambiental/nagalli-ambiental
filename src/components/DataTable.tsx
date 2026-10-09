@@ -94,8 +94,21 @@ export function DataTable<T extends { id: number }>({
   const sorted = useMemo(() => {
     if (!sortKey) return data;
     return [...data].sort((a, b) => {
-      const aVal = String((a as Record<string, unknown>)[sortKey] ?? "");
-      const bVal = String((b as Record<string, unknown>)[sortKey] ?? "");
+      const aRaw = (a as Record<string, unknown>)[sortKey];
+      const bRaw = (b as Record<string, unknown>)[sortKey];
+      const aMissing = aRaw == null || aRaw === "";
+      const bMissing = bRaw == null || bRaw === "";
+      if (aMissing !== bMissing) return aMissing ? 1 : -1;
+
+      const aDate = aRaw instanceof Date ? aRaw.getTime() : typeof aRaw === "string" && /^\d{4}-\d{2}-\d{2}/.test(aRaw) ? Date.parse(aRaw) : NaN;
+      const bDate = bRaw instanceof Date ? bRaw.getTime() : typeof bRaw === "string" && /^\d{4}-\d{2}-\d{2}/.test(bRaw) ? Date.parse(bRaw) : NaN;
+      if (!Number.isNaN(aDate) && !Number.isNaN(bDate)) {
+        const cmp = aDate - bDate;
+        return sortDir === "asc" ? cmp : -cmp;
+      }
+
+      const aVal = String(aRaw ?? "");
+      const bVal = String(bRaw ?? "");
       const cmp = aVal.localeCompare(bVal, "pt-BR", { numeric: true });
       return sortDir === "asc" ? cmp : -cmp;
     });
