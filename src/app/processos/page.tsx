@@ -20,10 +20,16 @@ export default async function ProcessosPage({
   const { status, tab } = await searchParams;
 
   const where: Prisma.ProcessoWhereInput = {};
+  const limiteProximoVencimento = new Date();
+  limiteProximoVencimento.setDate(limiteProximoVencimento.getDate() + 180);
   if (tab === "encerradas") {
     where.OR = [{ status: "encerrado" }, { renovacaoPendente: true }];
   } else {
-    if (status) {
+    if (status === "proximo_vencimento") {
+      where.status = { notIn: ["encerrado", "em_renovacao"] };
+      where.renovacaoPendente = false;
+      where.validade = { not: null, lte: limiteProximoVencimento };
+    } else if (status) {
       where.status = status;
     } else {
       where.status = { not: "encerrado" };
@@ -63,6 +69,7 @@ export default async function ProcessosPage({
                  { value: "protocolado", label: "Protocolado" },
                  { value: "em_andamento", label: "Em Andamento" },
                  { value: "em_renovacao", label: "Em Renovação" },
+                 { value: "proximo_vencimento", label: "Próximo do Vencimento" },
                  { value: "exigencia_recebida", label: "Exigência Recebida" },
                 { value: "deferido", label: "Deferido" },
                 { value: "indeferido", label: "Indeferido" },
