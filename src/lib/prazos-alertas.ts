@@ -55,7 +55,7 @@ export async function gerarAlertasDeVencimento(): Promise<{ criados: number; ver
 
   // --- Licenças (processos com validade) ---
   const processos = await prisma.processo.findMany({
-    where: { validade: { not: null }, renovacaoPendente: false },
+    where: { validade: { not: null }, renovacaoPendente: false, status: { not: "em_renovacao" } },
     select: {
       id: true,
       numProtocolo: true,
@@ -124,7 +124,10 @@ export async function gerarAlertasDeVencimento(): Promise<{ criados: number; ver
 
   // --- Exigências pendentes ---
   const exigencias = await prisma.exigencia.findMany({
-    where: { cumprida: false },
+      where: {
+        cumprida: false,
+        processo: { renovacaoPendente: false, status: { not: "em_renovacao" } },
+      },
     select: {
       id: true,
       descricao: true,

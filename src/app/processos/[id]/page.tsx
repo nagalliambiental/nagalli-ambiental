@@ -26,6 +26,7 @@ export const dynamic = "force-dynamic";
 const statusLabels: Record<string, string> = {
   protocolado: "Protocolado",
   em_andamento: "Em Andamento",
+  em_renovacao: "Em Renovação",
   exigencia_recebida: "Exigência Recebida",
   deferido: "Deferido",
   indeferido: "Indeferido",
@@ -36,6 +37,7 @@ const statusLabels: Record<string, string> = {
 const statusColors: Record<string, string> = {
   protocolado: "bg-[var(--color-brand-50)] text-[var(--color-brand-600)]",
   em_andamento: "bg-[var(--color-river-100)] text-[var(--color-river-700)]",
+  em_renovacao: "bg-amber-50 text-amber-800",
   exigencia_recebida: "bg-[var(--color-river-100)] text-[var(--color-river-700)]",
   deferido: "bg-[var(--color-brand-50)] text-[var(--color-brand-600)]",
   indeferido: "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]",
@@ -48,6 +50,9 @@ function statusExibicao(
   validade: Date | null,
   renovacaoPendente: boolean
 ): { label: string; color: string } {
+  if (status === "em_renovacao") {
+    return { label: "Em Renovação", color: statusColors.em_renovacao };
+  }
   if (renovacaoPendente || status === "encerrado") {
     return { label: "Encerrado", color: "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]" };
   }

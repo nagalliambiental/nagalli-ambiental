@@ -5,7 +5,7 @@ import { createNagalliReport, type NagalliCell } from "@/lib/report-layout";
 import { buildXlsx, xlsxResponse } from "@/lib/report-xlsx";
 
 const statusLabels: Record<string, string> = {
-  protocolado: "Protocolado", em_andamento: "Em Andamento", exigencia_recebida: "Exigência Recebida",
+  protocolado: "Protocolado", em_andamento: "Em Andamento", em_renovacao: "Em Renovação", exigencia_recebida: "Exigência Recebida",
   deferido: "Deferido", indeferido: "Indeferido", arquivado: "Arquivado",
 };
 

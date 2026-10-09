@@ -60,9 +60,10 @@ export default async function ProcessosPage({
               paramName="status"
               options={[
                 { value: "", label: "Todos os status" },
-                { value: "protocolado", label: "Protocolado" },
-                { value: "em_andamento", label: "Em Andamento" },
-                { value: "exigencia_recebida", label: "Exigência Recebida" },
+                 { value: "protocolado", label: "Protocolado" },
+                 { value: "em_andamento", label: "Em Andamento" },
+                 { value: "em_renovacao", label: "Em Renovação" },
+                 { value: "exigencia_recebida", label: "Exigência Recebida" },
                 { value: "deferido", label: "Deferido" },
                 { value: "indeferido", label: "Indeferido" },
                 { value: "arquivado", label: "Arquivado" },

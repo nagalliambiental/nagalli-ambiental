@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 
-const STATUS_PROTEGIDO = ["arquivado", "encerrado", "indeferido", "cancelado"];
+const STATUS_PROTEGIDO = ["arquivado", "encerrado", "indeferido", "cancelado", "em_renovacao"];
 const STATUS_EXIGENCIA_RECEBIDA = "exigencia_recebida";
 
 /**

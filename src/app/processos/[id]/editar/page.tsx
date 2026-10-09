@@ -40,6 +40,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
         { name: "status", label: "Status", type: "select", required: true, options: [
           { value: "protocolado", label: "Protocolado" },
           { value: "em_andamento", label: "Em Andamento" },
+          { value: "em_renovacao", label: "Em Renovação" },
           { value: "exigencia_recebida", label: "Exigência Recebida" },
           { value: "deferido", label: "Deferido" },
           { value: "indeferido", label: "Indeferido" },

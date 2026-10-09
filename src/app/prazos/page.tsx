@@ -10,7 +10,10 @@ export const metadata = { title: "Prazos" };
 export default async function PrazosPage() {
   const [exigencias, processosComValidade, pgrsComValidade, tppsComValidade] = await Promise.all([
     prisma.exigencia.findMany({
-      where: { cumprida: false },
+      where: {
+        cumprida: false,
+        processo: { renovacaoPendente: false, status: { not: "em_renovacao" } },
+      },
       include: {
         processo: {
           select: {
@@ -28,7 +31,7 @@ export default async function PrazosPage() {
       orderBy: { prazo: "asc" },
     }),
     prisma.processo.findMany({
-      where: { validade: { not: null }, renovacaoPendente: false },
+      where: { validade: { not: null }, renovacaoPendente: false, status: { not: "em_renovacao" } },
       select: {
         id: true,
         numProtocolo: true,

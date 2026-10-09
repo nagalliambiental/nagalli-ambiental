@@ -41,14 +41,14 @@ export default async function DashboardPage() {
     prisma.processo.count(),
     prisma.cliente.count(),
     prisma.empreendimento.count(),
-    prisma.exigencia.count({ where: { cumprida: false } }),
+    prisma.exigencia.count({ where: { cumprida: false, processo: { renovacaoPendente: false, status: { not: "em_renovacao" } } } }),
     prisma.processo.findMany({
-      where: { validade: { not: null }, ativo: true, renovacaoPendente: false },
+       where: { validade: { not: null }, ativo: true, renovacaoPendente: false, status: { not: "em_renovacao" } },
       include: { empreendimento: { select: { apelido: true } }, orgao: { select: { sigla: true } } },
       orderBy: { validade: "asc" },
     }),
     prisma.exigencia.findMany({
-      where: { cumprida: false, processo: { renovacaoPendente: false } },
+       where: { cumprida: false, processo: { renovacaoPendente: false, status: { not: "em_renovacao" } } },
       include: { processo: { select: { id: true, numProtocolo: true, numLicenca: true, empreendimento: { select: { apelido: true } } } } },
       orderBy: { prazo: "asc" },
     }),

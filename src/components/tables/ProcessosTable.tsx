@@ -19,12 +19,13 @@ interface ProcessoData {
 }
 
 const statusLabels: Record<string, string> = {
-  protocolado: "Protocolado", em_andamento: "Em Andamento", exigencia_recebida: "Exigência Recebida",
+  protocolado: "Protocolado", em_andamento: "Em Andamento", em_renovacao: "Em Renovação", exigencia_recebida: "Exigência Recebida",
   deferido: "Deferido", indeferido: "Indeferido", arquivado: "Arquivado", encerrado: "Encerrado",
 };
 const statusColors: Record<string, string> = {
   protocolado: "bg-[var(--color-brand-50)] text-[var(--color-brand-600)]",
   em_andamento: "bg-[var(--color-river-100)] text-[var(--color-river-700)]",
+  em_renovacao: "bg-amber-50 text-amber-800",
   deferido: "bg-[var(--color-brand-50)] text-[var(--color-brand-600)]",
   indeferido: "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]",
   arquivado: "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]",
@@ -32,6 +33,9 @@ const statusColors: Record<string, string> = {
 };
 
 function statusExibicao(p: ProcessoData): { label: string; color: string } {
+  if (p.status === "em_renovacao") {
+    return { label: "Em Renovação", color: statusColors.em_renovacao };
+  }
   if (p.renovacaoPendente || p.status === "encerrado") {
     return { label: "Encerrado", color: "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]" };
   }

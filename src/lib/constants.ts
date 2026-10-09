@@ -9,6 +9,7 @@ export type Perfil = (typeof PERFIS)[keyof typeof PERFIS];
 export const STATUS_PROCESSO = {
   PROTOCOLADO: "protocolado",
   EM_ANALISE: "em_analise",
+  EM_RENOVACAO: "em_renovacao",
   DEFERIDO: "deferido",
   INDEFERIDO: "indeferido",
   ARQUIVADO: "arquivado",

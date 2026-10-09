@@ -126,6 +126,7 @@ export default function RelatoriosPage() {
               <option value="">Todos</option>
               <option value="protocolado">Protocolado</option>
               <option value="em_andamento">Em Andamento</option>
+              <option value="em_renovacao">Em Renovação</option>
               <option value="exigencia_recebida">Exigência Recebida</option>
               <option value="deferido">Deferido</option>
               <option value="indeferido">Indeferido</option>
