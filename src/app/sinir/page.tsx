@@ -855,6 +855,12 @@ function letraClasse(classe: string | null | undefined): string {
   return match?.[1] || "";
 }
 
+function tipoClasse(classe: string | null | undefined): string {
+  const valor = String(classe || "").toUpperCase();
+  if (valor === "A (SOLO)") return "A (Solo)";
+  return letraClasse(classe) || "Não identificada";
+}
+
 // Rótulo do trimestre corrente (período de referência do SINIR)
 function rotuloTrimestre(ref = new Date()) {
   return `${Math.floor(ref.getMonth() / 3) + 1}º trimestre de ${ref.getFullYear()}`;
@@ -874,6 +880,7 @@ function MeusMtrsTab(props: {
   const [consultando, setConsultando] = useState(false);
   const [baixandoZip, setBaixandoZip] = useState(false);
   const [baixandoCdfZip, setBaixandoCdfZip] = useState(false);
+  const [reclassificando, setReclassificando] = useState(false);
   const [lista, setLista] = useState<Manifesto[]>([]);
   const [modalNotificar, setModalNotificar] = useState(false);
   const [contatosNotif, setContatosNotif] = useState<ContatoEmpreendimento[]>([]);
@@ -897,15 +904,16 @@ function MeusMtrsTab(props: {
   );
   const emAtraso = salvos.filter((m) => diasEmSalvo(m) > limiteDias);
   const listaPorStatus = filtro === "pendentes" ? salvos : lista;
-  const classeContagens = { A: 0, B: 0, C: 0, D: 0 };
+  const classeContagens = { "A (Solo)": 0, A: 0, B: 0, C: 0, D: 0, "Não identificada": 0 };
   for (const m of listaPorStatus) {
-    const classe = letraClasse(m.classeNome) as keyof typeof classeContagens;
+    const classe = tipoClasse(m.classeNome) as keyof typeof classeContagens;
     if (classe && classe in classeContagens) classeContagens[classe]++;
   }
-  const listaFiltrada = listaPorStatus.filter((m) => classeFiltro === "todas" || letraClasse(m.classeNome) === classeFiltro);
+  const listaFiltrada = listaPorStatus.filter((m) => classeFiltro === "todas" || tipoClasse(m.classeNome) === classeFiltro);
   const totalPaginasL = Math.max(1, Math.ceil(listaFiltrada.length / POR_PAGINA));
   const paginaL = Math.min(paginaLista, totalPaginasL - 1);
   const visiveisL = listaFiltrada.slice(paginaL * POR_PAGINA, paginaL * POR_PAGINA + POR_PAGINA);
+  const semClasse = lista.filter((m) => tipoClasse(m.classeNome) === "Não identificada");
 
   async function consultarSinir(idConexao?: string) {
     const conexaoUsar = idConexao || conexaoEfetiva;
@@ -1038,6 +1046,72 @@ function MeusMtrsTab(props: {
     } finally {
       setBaixandoCdfZip(false);
     }
+  }
+
+  async function reclassificarSemClasse() {
+    if (!conexaoEfetiva || semClasse.length === 0) return;
+    setReclassificando(true);
+    try {
+      const res = await fetch("/api/sinir/reclassificar-classes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conexaoId: Number(conexaoEfetiva) }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        toast(data?.error || "Falha ao reclassificar MTRs", "error");
+        return;
+      }
+      const atualizados = new Map<number, string>((data.itens || []).map((item: { id: number; classeNome: string }) => [item.id, item.classeNome]));
+      setLista((atual) => atual.map((m) => atualizados.has(m.id) ? { ...m, classeNome: atualizados.get(m.id)! } : m));
+      toast(`${data.atualizados} MTR(s) reclassificado(s); ${data.falhas} sem classificação`, data.falhas ? "warning" : "success");
+    } catch {
+      toast("Falha ao reclassificar MTRs", "error");
+    } finally {
+      setReclassificando(false);
+    }
+  }
+
+  async function salvarClasseManual(m: Manifesto, classeNome: string) {
+    try {
+      const res = await fetch("/api/sinir/manifestos/classe", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: m.id, classeNome }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        toast(data?.error || "Falha ao salvar a classe", "error");
+        return;
+      }
+      setLista((atual) => atual.map((item) => item.id === m.id ? { ...item, classeNome: data.classeNome } : item));
+      toast(`MTR ${m.numero} classificado como ${classeNome}`, "success");
+    } catch {
+      toast("Falha ao salvar a classe", "error");
+    }
+  }
+
+  function renderClasse(m: Manifesto) {
+    const tipo = tipoClasse(m.classeNome);
+    const letra = letraClasse(tipo);
+    if (tipo !== "Não identificada") {
+      return <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-bold ${CLASSE_BADGE[letra]}`}>{tipo}</span>;
+    }
+    return (
+      <select
+        defaultValue=""
+        onChange={(e) => { if (e.target.value) void salvarClasseManual(m, e.target.value); }}
+        className="rounded border border-amber-300 bg-amber-50 px-1.5 py-1 text-xs text-amber-800"
+        title="Definir classe manualmente"
+      >
+        <option value="">Definir classe</option>
+        <option value="A (Solo)">A (Solo)</option>
+        <option value="A">A</option>
+        <option value="B">B</option>
+        <option value="C">C</option>
+        <option value="D">D</option>
+      </select>
+    );
   }
 
   async function gerarAlertaPdf() {
@@ -1327,12 +1401,23 @@ function MeusMtrsTab(props: {
                className="rounded-lg border border-[var(--color-paper-200)] bg-white px-2.5 py-1.5 text-xs text-[var(--color-ink-700)]"
              >
                <option value="todas">Todas ({listaPorStatus.length})</option>
+               <option value="A (Solo)">Classe A (Solo) ({classeContagens["A (Solo)"]})</option>
                <option value="A">Classe A ({classeContagens.A})</option>
                <option value="B">Classe B ({classeContagens.B})</option>
                <option value="C">Classe C ({classeContagens.C})</option>
                <option value="D">Classe D ({classeContagens.D})</option>
+               <option value="Não identificada">Não identificada ({classeContagens["Não identificada"]})</option>
              </select>
-           </div>
+             <button
+               type="button"
+               onClick={() => void reclassificarSemClasse()}
+               disabled={reclassificando || semClasse.length === 0}
+               className="focus-ring rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-100 disabled:opacity-50"
+               title="Consulta novamente no SINIR os MTRs sem classe"
+             >
+               {reclassificando ? "Reclassificando..." : `Reclassificar sem classe (${semClasse.length})`}
+             </button>
+            </div>
            </div>
         </div>
 
@@ -1376,7 +1461,6 @@ function MeusMtrsTab(props: {
                   .map((m) => {
                     const salvo = (m.status === "SALVO" || m.status === "EMITIDO") && !m.certificado;
                     const atrasado = salvo && diasEmSalvo(m) > limiteDias;
-                    const letraClasseMtr = letraClasse(m.classeNome);
                     return (
                       <tr
                         key={m.id}
@@ -1386,16 +1470,10 @@ function MeusMtrsTab(props: {
                         <td className="max-w-[180px] truncate px-2 py-2.5 text-[var(--color-ink-700)]" title={m.clienteNome || undefined}>{m.clienteNome || "—"}</td>
                         <td className="hidden max-w-[180px] truncate px-2 py-2.5 text-[var(--color-ink-600)] lg:table-cell" title={m.destinadorNome || undefined}>{m.destinadorNome || "—"}</td>
                         <td className="hidden max-w-[160px] truncate px-2 py-2.5 text-[var(--color-ink-600)] lg:table-cell" title={m.transportadorNome || undefined}>{m.transportadorNome || "—"}</td>
-                        <td className="whitespace-nowrap px-2 py-2.5 tabular-nums text-[var(--color-ink-600)]">{fmtData(m.dataExpedicao)}</td>
-                        <td className="px-2 py-2.5">
-                           {letraClasseMtr ? (
-                             <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-bold ${CLASSE_BADGE[letraClasseMtr]}`}>
-                               Classe {letraClasseMtr}
-                            </span>
-                          ) : (
-                            <span className="text-xs text-[var(--color-ink-400)]">—</span>
-                          )}
-                        </td>
+                         <td className="whitespace-nowrap px-2 py-2.5 tabular-nums text-[var(--color-ink-600)]">{fmtData(m.dataExpedicao)}</td>
+                         <td className="px-2 py-2.5">
+                           {renderClasse(m)}
+                         </td>
                         <td className="hidden px-2 py-2.5 xl:table-cell">
                           {m.cdfNumero ? (
                             <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 font-mono text-xs font-semibold text-emerald-700">
@@ -1457,7 +1535,6 @@ function MeusMtrsTab(props: {
             {visiveisL.map((m) => {
               const salvo = (m.status === "SALVO" || m.status === "EMITIDO") && !m.certificado;
               const atrasado = salvo && diasEmSalvo(m) > limiteDias;
-              const letraClasseMtr = letraClasse(m.classeNome);
               return (
                 <li key={m.id} className={`px-4 py-3 ${atrasado ? "bg-red-50/70" : salvo ? "bg-amber-50/40" : ""}`}>
                   <div className="flex items-center justify-between gap-2">
@@ -1496,13 +1573,7 @@ function MeusMtrsTab(props: {
                     <div>
                       <dt className="text-[var(--color-ink-400)]">Classe</dt>
                       <dd>
-                        {letraClasseMtr ? (
-                          <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-bold ${CLASSE_BADGE[letraClasseMtr]}`}>
-                            Classe {letraClasseMtr}
-                          </span>
-                        ) : (
-                          <span className="text-[var(--color-ink-300)]">—</span>
-                        )}
+                        {renderClasse(m)}
                       </dd>
                     </div>
                     <div className="col-span-2">

@@ -429,7 +429,7 @@ async function listarManifestosReais(
 
       // A classe vem aninhada em listaManifestoResiduo[].classe (quando o endpoint retorna)
       const identClasse = classeDeResiduos(residuos);
-      const classeNome = identClasse.letra || "Não identificado";
+       const classeNome = identClasse.classeNome || "Não identificada";
 
       manifestos.push({
         numero,
@@ -557,19 +557,8 @@ const gerador = extrairParceiro(obj.parceiroGerador || obj.gerador || obj.dadosG
       const residuos = Array.isArray(obj.listaManifestoResiduo) ? (obj.listaManifestoResiduo as Record<string, unknown>[]) : [];
 
       // A classe vem aninhada em listaManifestoResiduo[].classe.claCodigo
-      let classeNome = "Não identificado";
-      for (const r of residuos) {
-        const classe = ((r as Record<string, unknown>)?.classe || {}) as Record<string, unknown>;
-        const claCodigo = num(classe.claCodigo);
-        if (claCodigo != null && MAPA_CLASSE_LETRA[claCodigo]) {
-          classeNome = MAPA_CLASSE_LETRA[claCodigo];
-          break;
-        }
-        const desc = String(classe.claDescricao || "").toUpperCase();
-        if (desc.includes("CLASSE I") && !desc.includes("II")) { classeNome = "A"; break; }
-        if (desc.includes("II A") || desc.includes("II-A")) { classeNome = "B"; break; }
-        if (desc.includes("II B") || desc.includes("II-B")) { classeNome = "C"; break; }
-      }
+      const identClasse = classeDeResiduos(residuos);
+      const classeNome = identClasse.classeNome || "Não identificada";
 
   return {
     numero: numeroString(obj.manNumero) || numero,
@@ -594,6 +583,27 @@ const gerador = extrairParceiro(obj.parceiroGerador || obj.gerador || obj.dadosG
     classeNome,
     residuos: Array.isArray(obj.listaManifestoResiduo) ? obj.listaManifestoResiduo : undefined,
   };
+}
+
+export async function consultarManifestoComRetry(
+  conexao: SinirConexaoCompleta,
+  numero: string,
+  tentativas = 3,
+): Promise<SinirManifestoDados | null> {
+  let ultimoErro: unknown;
+  for (let tentativa = 1; tentativa <= tentativas; tentativa++) {
+    try {
+      const detalhe = await consultarManifesto(conexao, numero);
+      if (detalhe) return detalhe;
+    } catch (erro) {
+      ultimoErro = erro;
+    }
+    if (tentativa < tentativas) {
+      await new Promise((resolve) => setTimeout(resolve, tentativa * 350));
+    }
+  }
+  if (ultimoErro) throw ultimoErro;
+  return null;
 }
 
 // ---------- Emissão ----------
@@ -873,6 +883,7 @@ const MAPA_CLASSE_LETRA: Record<number, string> = {
 
 export interface ClasseIdentificada {
   letra: string;
+  classeNome: string;
   descricaoSinir: string;
   resCodigoIbama: string;
   resDescricao: string;
@@ -919,10 +930,19 @@ export function classeDeResiduos(residuos: unknown): ClasseIdentificada {
     }
 
     if (letra) {
-      return { letra, descricaoSinir: claDescricao || "Sem descrição", resCodigoIbama, resDescricao };
+      const codigoIbama = resCodigoIbama.replace(/\D/g, "");
+      const solo = letra === "A" &&
+        (["170504", "170508"].includes(codigoIbama) || /^\s*(?:solo|terra)\b/i.test(resDescricao));
+      return {
+        letra,
+        classeNome: solo ? "A (Solo)" : letra,
+        descricaoSinir: claDescricao || "Sem descrição",
+        resCodigoIbama,
+        resDescricao,
+      };
     }
   }
-  return { letra: "", descricaoSinir: "", resCodigoIbama: "", resDescricao: "" };
+  return { letra: "", classeNome: "", descricaoSinir: "", resCodigoIbama: "", resDescricao: "" };
 }
 
 function num(v: unknown): number | null {
@@ -1152,7 +1172,8 @@ export interface MtrPorClasseItem {
 }
 
 const SECOES_CLASSE: { letra: string; titulo: string; subtitulo: string }[] = [
-  { letra: "A", titulo: "CLASSE A", subtitulo: "Resíduos perigosos — Classe I (NBR 10.004), RCC Classe A e RSS Grupo A" },
+  { letra: "A (Solo)", titulo: "CLASSE A (SOLO)", subtitulo: "Solo/terra classificado como Classe A" },
+  { letra: "A", titulo: "CLASSE A", subtitulo: "Classe A (exceto solo), RCC e RSS Grupo A" },
   { letra: "B", titulo: "CLASSE B", subtitulo: "Não inertes — Classe II A (NBR 10.004), RCC Classe B e RSS Grupo B" },
   { letra: "C", titulo: "CLASSE C", subtitulo: "Inertes — Classe II B (NBR 10.004), RCC Classe C e RSS Grupo C" },
   { letra: "D", titulo: "CLASSE D", subtitulo: "Outros — RCC Classes D, RSS Grupos D/E e resíduos não especificados" },
@@ -1169,10 +1190,10 @@ export async function gerarPdfMtrsPorClasse(
   const { embedNagalliLogo, drawNagalliTopo, drawNagalliFooter, PALETTE } = await import("./report-branding");
 
   const gruposPorLetra = new Map<string, MtrPorClasseItem[]>();
-  for (const letra of ["A", "B", "C", "D", "N"]) gruposPorLetra.set(letra, []);
+  for (const letra of ["A (Solo)", "A", "B", "C", "D", "N"]) gruposPorLetra.set(letra, []);
   for (const m of mtrs) {
     const valor = (m.classeNome || "").toUpperCase();
-    const letra = /\b[ABCD]\b/.test(valor) ? valor.match(/\b([ABCD])\b/)![1] : "N";
+    const letra = valor === "A (SOLO)" ? "A (Solo)" : /\b[ABCD]\b/.test(valor) ? valor.match(/\b([ABCD])\b/)![1] : "N";
     gruposPorLetra.get(letra)!.push(m);
   }
 

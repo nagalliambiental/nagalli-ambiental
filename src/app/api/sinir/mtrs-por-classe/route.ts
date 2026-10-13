@@ -94,17 +94,17 @@ export async function GET(req: NextRequest) {
     }
 
     const ident = classeDeResiduos(residuos);
-    const letra = ident.letra || "N";
+    const classeNome = ident.classeNome || "N";
     const descSinir = ident.descricaoSinir
-      ? `Classe ${ident.letra} (${ident.descricaoSinir})`
+      ? `${classeNome} (${ident.descricaoSinir})`
       : "Não identificada";
 
-    if (classeFiltro && letra !== classeFiltro.toUpperCase()) continue;
+    if (classeFiltro && classeNome.toUpperCase() !== classeFiltro.toUpperCase()) continue;
 
     mtrsPorClasse.push({
       numero: m.numero,
       classeRisco: ident.resCodigoIbama || "",
-      classeNome: letra,
+      classeNome,
       dataExpedicao: m.dataExpedicao,
       destinadorNome: m.destinadorNome,
       resDescricao: ident.resDescricao || null,

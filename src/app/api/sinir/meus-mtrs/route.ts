@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAuditoria } from "@/lib/audit";
-import { consultarManifesto, consultarTodosManifestos, SINIR_TIPOS_PARCEIRO } from "@/lib/sinir";
+import { consultarManifestoComRetry, consultarTodosManifestos, SINIR_TIPOS_PARCEIRO } from "@/lib/sinir";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
     // quando solicitado e quando a classe ainda não está persistida.
     if (incluirClasses && (!classeNome || classeNome === "Não identificado")) {
       try {
-        const detalhe = await consultarManifesto(conexaoCompleta, m.numero);
+        const detalhe = await consultarManifestoComRetry(conexaoCompleta, m.numero);
         if (detalhe) {
           classeNome = detalhe.classeNome;
           classeRisco = detalhe.classeRisco || classeRisco;
