@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAuditoria } from "@/lib/audit";
-import { consultarManifestoComRetry, consultarTodosManifestos, SINIR_TIPOS_PARCEIRO } from "@/lib/sinir";
+import { classeDeCodigoIbama, consultarManifestoComRetry, consultarTodosManifestos, listarCatalogos, SINIR_TIPOS_PARCEIRO } from "@/lib/sinir";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -78,6 +78,15 @@ export async function POST(req: NextRequest) {
     conexao: { id: number; nome: string; modo: string };
   };
   const itens: ManifestoEnriquecido[] = [];
+  let catalogos: Awaited<ReturnType<typeof listarCatalogos>> | null = null;
+  if (incluirClasses) {
+    try {
+      catalogos = await listarCatalogos(conexaoCompleta);
+    } catch {
+      // A consulta individual continua sendo tentada se o catálogo falhar.
+    }
+  }
+
   for (const m of manifestos) {
     let classeNome = m.classeNome;
     let classeRisco = m.classeRisco;
@@ -86,6 +95,14 @@ export async function POST(req: NextRequest) {
     // A consulta em lote não traz resíduos/classe. Busca o detalhe apenas
     // quando solicitado e quando a classe ainda não está persistida.
     if (incluirClasses && (!classeNome || classeNome === "Não identificado")) {
+      const codigo = String(classeRisco || "").replace(/\D/g, "");
+      const catalogo = catalogos?.residuos.find((item) => item.resCodigoIbama.replace(/\D/g, "") === codigo);
+      const classeCatalogo = classeDeCodigoIbama(classeRisco, catalogo?.resNome || "");
+      if (classeCatalogo.classeNome) {
+        classeNome = classeCatalogo.classeNome;
+      }
+
+      if (!classeNome || classeNome === "Não identificado") {
       try {
         const detalhe = await consultarManifestoComRetry(conexaoCompleta, m.numero);
         if (detalhe) {
@@ -95,6 +112,7 @@ export async function POST(req: NextRequest) {
         }
       } catch {
         // O MTR continua disponível mesmo se o detalhe individual falhar.
+      }
       }
     }
 

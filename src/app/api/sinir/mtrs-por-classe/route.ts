@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { logAuditoria } from "@/lib/audit";
-import { classeDeResiduos, consultarManifesto, gerarPdfMtrsPorClasse, trimestreCorrente, type MtrPorClasseItem } from "@/lib/sinir";
+import { classeDeCodigoIbama, classeDeResiduos, consultarManifesto, gerarPdfMtrsPorClasse, listarCatalogos, trimestreCorrente, type MtrPorClasseItem } from "@/lib/sinir";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -73,6 +73,12 @@ export async function GET(req: NextRequest) {
   const unidadeSinir = conexao.empreendimento?.unidadeSinir || conexao.unidade;
 
   const mtrsPorClasse: MtrPorClasseItem[] = [];
+  let catalogos: Awaited<ReturnType<typeof listarCatalogos>> | null = null;
+  try {
+    catalogos = await listarCatalogos(conexaoCompleta);
+  } catch {
+    // A classificação continua pelo detalhe do manifesto.
+  }
 
   for (const m of manifestosLocais) {
     let residuos = m.residuos as unknown[];
@@ -93,7 +99,11 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const ident = classeDeResiduos(residuos);
+    let ident = classeDeResiduos(residuos);
+    if (!ident.classeNome) {
+      const catalogo = catalogos?.residuos.find((item) => item.resCodigoIbama.replace(/\D/g, "") === String(m.classeRisco || "").replace(/\D/g, ""));
+      ident = classeDeCodigoIbama(m.classeRisco, catalogo?.resNome || "");
+    }
     const classeNome = ident.classeNome || "N";
     const descSinir = ident.descricaoSinir
       ? `${classeNome} (${ident.descricaoSinir})`

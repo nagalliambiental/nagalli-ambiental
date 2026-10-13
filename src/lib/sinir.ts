@@ -889,6 +889,33 @@ export interface ClasseIdentificada {
   resDescricao: string;
 }
 
+export function classeDeCodigoIbama(codigo: string | null | undefined, descricao = ""): ClasseIdentificada {
+  const original = String(codigo || "").trim();
+  const normalizado = original.replace(/\D/g, "");
+  const texto = descricao.toUpperCase();
+  let letra = "";
+
+  if (/CLASSE\s+D\b/.test(texto)) letra = "D";
+  else if (/CLASSE\s+C\b/.test(texto)) letra = "C";
+  else if (/CLASSE\s+B\b/.test(texto)) letra = "B";
+  else if (/CLASSE\s+A\b|GRUPO\s+A\b/.test(texto)) letra = "A";
+  else if (/CLASSE\s+II\s*-?\s*B\b/.test(texto)) letra = "C";
+  else if (/CLASSE\s+II\s*-?\s*A\b/.test(texto)) letra = "B";
+  else if (/CLASSE\s+I\b|PERIGOS[OA]S?/.test(texto) || original.includes("*")) letra = "A";
+  else if (/OUTROS/.test(texto)) letra = "D";
+
+  if (!letra) return { letra: "", classeNome: "", descricaoSinir: "", resCodigoIbama: original, resDescricao: descricao };
+
+  const solo = letra === "A" && (normalizado === "170504" || /^\s*SOLOS?\b/.test(texto) || /^\s*TERRA\b/.test(texto));
+  return {
+    letra,
+    classeNome: solo ? "A (Solo)" : letra,
+    descricaoSinir: descricao || "Sem descrição",
+    resCodigoIbama: original,
+    resDescricao: descricao,
+  };
+}
+
 // Extrai o número do CDF emitido (código > 0 indica CDF existente)
 export function extrairCdfNumero(obj: Record<string, unknown>): string | undefined {
   for (const candidato of [obj.cdfNumero, obj.cdfCodigo, obj.cdfEmitidoNumero]) {
@@ -932,7 +959,7 @@ export function classeDeResiduos(residuos: unknown): ClasseIdentificada {
     if (letra) {
       const codigoIbama = resCodigoIbama.replace(/\D/g, "");
       const solo = letra === "A" &&
-        (["170504", "170508"].includes(codigoIbama) || /^\s*(?:solo|terra)\b/i.test(resDescricao));
+        (codigoIbama === "170504" || /^\s*(?:solo|terra)\b/i.test(resDescricao));
       return {
         letra,
         classeNome: solo ? "A (Solo)" : letra,

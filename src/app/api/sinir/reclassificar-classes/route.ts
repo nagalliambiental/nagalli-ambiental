@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { consultarManifestoComRetry, classeDeResiduos, type SinirConexaoCompleta } from "@/lib/sinir";
+import { classeDeCodigoIbama, classeDeResiduos, consultarManifestoComRetry, listarCatalogos, type SinirConexaoCompleta } from "@/lib/sinir";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
       OR: [{ classeNome: null }, { classeNome: "" }, { classeNome: "Não identificada" }, { classeNome: "Não identificado" }],
     },
     orderBy: { dataExpedicao: "desc" },
-    select: { id: true, numero: true },
+    select: { id: true, numero: true, classeRisco: true },
   });
 
   const conexaoCompleta: SinirConexaoCompleta = {
@@ -37,9 +37,27 @@ export async function POST(req: NextRequest) {
 
   const atualizados: { id: number; numero: string; classeNome: string }[] = [];
   const falhas: { id: number; numero: string; erro: string }[] = [];
+  let catalogos: Awaited<ReturnType<typeof listarCatalogos>> | null = null;
+  try {
+    catalogos = await listarCatalogos(conexaoCompleta);
+  } catch {
+    // A consulta individual continua sendo usada se o catálogo falhar.
+  }
 
   for (const m of mtrs) {
     try {
+      const codigo = String(m.classeRisco || "").replace(/\D/g, "");
+      const catalogo = catalogos?.residuos.find((item) => item.resCodigoIbama.replace(/\D/g, "") === codigo);
+      const classeCatalogo = classeDeCodigoIbama(m.classeRisco, catalogo?.resNome || "");
+      if (classeCatalogo.classeNome) {
+        await prisma.sinirManifesto.update({
+          where: { id: m.id },
+          data: { classeNome: classeCatalogo.classeNome, classeRisco: m.classeRisco },
+        });
+        atualizados.push({ id: m.id, numero: m.numero, classeNome: classeCatalogo.classeNome });
+        continue;
+      }
+
       const detalhe = await consultarManifestoComRetry(conexaoCompleta, m.numero);
       if (!detalhe) {
         falhas.push({ id: m.id, numero: m.numero, erro: "SINIR não retornou os resíduos" });
