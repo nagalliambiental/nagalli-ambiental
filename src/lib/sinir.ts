@@ -859,24 +859,27 @@ export function trimestreCorrente(ref = new Date()) {
 
 // ---------- Identificação de Classe a partir dos resíduos do manifesto ----------
 
-// Tabela oficial de classes do SINIR (claCodigo -> letra do relatório)
+// Tabela oficial de classes do SINIR (claCodigo -> classe do relatório).
+// Correlação adotada na operação: perigosos (NBR Classe I, RCC Classe D,
+// RSS e códigos IBAMA com (*)) = D; RCC A/B/C = A/B/C (solo 170504 = A (Solo));
+// NBR Classe II A = B; NBR Classe II B = C.
 const MAPA_CLASSE_LETRA: Record<number, string> = {
-  1: "A", // CLASSE I - Perigosos (NBR 10.004)
+  1: "D", // CLASSE I - Perigosos (NBR 10.004)
   2: "D", // OUTROS
   11: "A", // CLASSE A (RCC)
   12: "B", // CLASSE B (RCC)
   13: "C", // CLASSE C (RCC)
-  14: "D", // CLASSE D (RCC)
-  21: "A", // GRUPO A1 (RSS)
-  22: "A", // GRUPO A2 (RSS)
-  23: "A", // GRUPO A3 (RSS)
-  24: "A", // GRUPO A4 (RSS)
-  25: "A", // GRUPO A5 (RSS)
-  32: "B", // GRUPO B (RSS)
-  33: "C", // GRUPO C (RSS)
+  14: "D", // CLASSE D (RCC - perigosos)
+  21: "D", // GRUPO A1 (RSS - infectantes)
+  22: "D", // GRUPO A2 (RSS - infectantes)
+  23: "D", // GRUPO A3 (RSS - infectantes)
+  24: "D", // GRUPO A4 (RSS - infectantes)
+  25: "D", // GRUPO A5 (RSS - infectantes)
+  32: "D", // GRUPO B (RSS - químicos)
+  33: "D", // GRUPO C (RSS - radioativos)
   34: "D", // GRUPO D (RSS)
-  35: "D", // GRUPO E (RSS)
-  41: "A", // GRUPO A (RSS)
+  35: "D", // GRUPO E (RSS - perfurocortantes)
+  41: "D", // GRUPO A (RSS - infectantes)
   42: "C", // CLASSE II B - Inertes (NBR 10.004)
   43: "B", // CLASSE II A - Não inertes (NBR 10.004)
 };
@@ -895,13 +898,15 @@ export function classeDeCodigoIbama(codigo: string | null | undefined, descricao
   const texto = descricao.toUpperCase();
   let letra = "";
 
-  if (/CLASSE\s+D\b/.test(texto)) letra = "D";
+  if (/CLASSE\s+II\s*-?\s*B\b/.test(texto)) letra = "C";
+  else if (/CLASSE\s+II\s*-?\s*A\b/.test(texto)) letra = "B";
+  else if (/CLASSE\s+D\b/.test(texto)) letra = "D";
   else if (/CLASSE\s+C\b/.test(texto)) letra = "C";
   else if (/CLASSE\s+B\b/.test(texto)) letra = "B";
-  else if (/CLASSE\s+A\b|GRUPO\s+A\b/.test(texto)) letra = "A";
-  else if (/CLASSE\s+II\s*-?\s*B\b/.test(texto)) letra = "C";
-  else if (/CLASSE\s+II\s*-?\s*A\b/.test(texto)) letra = "B";
-  else if (/CLASSE\s+I\b|PERIGOS[OA]S?/.test(texto) || original.includes("*")) letra = "A";
+  else if (/CLASSE\s+A\b/.test(texto)) letra = "A";
+  else if (/CLASSE\s+I\b/.test(texto) || /PERIGOS[OA]S?/.test(texto) || original.includes("*")) letra = "D";
+  else if (/GRUPO\s+[ABCDE]/.test(texto)) letra = "D";
+  else if (normalizado === "170504") letra = "A";
   else if (/OUTROS/.test(texto)) letra = "D";
 
   if (!letra) return { letra: "", classeNome: "", descricaoSinir: "", resCodigoIbama: original, resDescricao: descricao };
@@ -947,13 +952,15 @@ export function classeDeResiduos(residuos: unknown): ClasseIdentificada {
     if (claCodigo != null && MAPA_CLASSE_LETRA[claCodigo]) letra = MAPA_CLASSE_LETRA[claCodigo];
     else {
       const d = claDescricao.toUpperCase();
-      if (d.includes("CLASSE I") && !d.includes("II")) letra = "A";
-      else if (d.includes("II A") || d.includes("II-A")) letra = "B";
-      else if (d.includes("II B") || d.includes("II-B")) letra = "C";
-      else if (/CLASSE A\b|GRUPO A/.test(d)) letra = "A";
-      else if (/CLASSE B\b|GRUPO B/.test(d)) letra = "B";
-      else if (/CLASSE C\b|GRUPO C/.test(d)) letra = "C";
-      else if (/CLASSE D\b|GRUPO [DE]/.test(d)) letra = "D";
+      if (/(?:CLASSE\s+)?II\s*-?\s*B\b/.test(d)) letra = "C";
+      else if (/(?:CLASSE\s+)?II\s*-?\s*A\b/.test(d)) letra = "B";
+      else if (/CLASSE\s+D\b/.test(d)) letra = "D";
+      else if (/CLASSE\s+C\b/.test(d)) letra = "C";
+      else if (/CLASSE\s+B\b/.test(d)) letra = "B";
+      else if (/CLASSE\s+A\b/.test(d)) letra = "A";
+      else if (/CLASSE\s+I\b/.test(d)) letra = "D";
+      else if (/GRUPO\s+[ABCDE]/.test(d)) letra = "D";
+      else if (/OUTROS/.test(d)) letra = "D";
     }
 
     if (letra) {
@@ -1202,11 +1209,11 @@ export interface MtrPorClasseItem {
 }
 
 const SECOES_CLASSE: { letra: string; titulo: string; subtitulo: string }[] = [
-  { letra: "A (Solo)", titulo: "CLASSE A (SOLO)", subtitulo: "Solo/terra classificado como Classe A" },
-  { letra: "A", titulo: "CLASSE A", subtitulo: "Classe A (exceto solo), RCC e RSS Grupo A" },
-  { letra: "B", titulo: "CLASSE B", subtitulo: "Não inertes — Classe II A (NBR 10.004), RCC Classe B e RSS Grupo B" },
-  { letra: "C", titulo: "CLASSE C", subtitulo: "Inertes — Classe II B (NBR 10.004), RCC Classe C e RSS Grupo C" },
-  { letra: "D", titulo: "CLASSE D", subtitulo: "Outros — RCC Classes D, RSS Grupos D/E e resíduos não especificados" },
+  { letra: "A (Solo)", titulo: "CLASSE A (SOLO)", subtitulo: "Solos e rochas — código 170504 (CONAMA 307)" },
+  { letra: "A", titulo: "CLASSE A", subtitulo: "RCC Classe A — reutilizáveis e recicláveis (CONAMA 307)" },
+  { letra: "B", titulo: "CLASSE B", subtitulo: "Não inertes — Classe II A (NBR 10.004) e RCC Classe B" },
+  { letra: "C", titulo: "CLASSE C", subtitulo: "Inertes — Classe II B (NBR 10.004) e RCC Classe C" },
+  { letra: "D", titulo: "CLASSE D", subtitulo: "Perigosos — Classe I (NBR 10.004), RCC Classe D, RSS e códigos IBAMA com (*)" },
   { letra: "N", titulo: "NÃO IDENTIFICADA", subtitulo: "MTR sem classe de resíduo disponível no detalhe do SINIR" },
 ];
 

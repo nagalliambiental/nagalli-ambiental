@@ -65,8 +65,8 @@ export async function POST(req: NextRequest) {
   // Sincroniza com o banco: upsert por (conexaoId, numero)
   for (const m of manifestos) {
     const ident = classeDeResiduos(m.residuos);
-    const dadosClasse = ident.letra
-      ? { classeNome: ident.letra, classeRisco: ident.resCodigoIbama || m.classeRisco || null }
+    const dadosClasse = ident.classeNome
+      ? { classeNome: ident.classeNome, classeRisco: ident.resCodigoIbama || m.classeRisco || null }
       : {};
     await prisma.sinirManifesto.upsert({
       where: { conexaoId_numero: { conexaoId: conexao.id, numero: m.numero } },

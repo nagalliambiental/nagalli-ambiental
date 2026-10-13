@@ -356,6 +356,9 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn; onChanged: ()
   const [toggle, setToggle] = useState("todos");
   const [busca, setBusca] = useState("");
   const [pagina, setPagina] = useState(0);
+  const [classeFiltro, setClasseFiltro] = useState("todas");
+  const [reclassificando, setReclassificando] = useState(false);
+  const [gerandoRelatorio, setGerandoRelatorio] = useState(false);
   const [modalCancel, setModalCancel] = useState<Manifesto | null>(null);
   const [justificativaCancel, setJustificativaCancel] = useState("");
   const [cancelando, setCancelando] = useState(false);
@@ -370,6 +373,11 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn; onChanged: ()
   const recebidos = lista.filter((m) => m.status === "RECEBIDO").length;
   const cancelados = lista.filter((m) => m.status === "CANCELADO").length;
   const visiveisToggle = toggle === "todos" ? lista : semRecebimento;
+  const classeContagens: Record<string, number> = {};
+  for (const m of visiveisToggle) {
+    const classe = m.classeNome || "Não identificada";
+    classeContagens[classe] = (classeContagens[classe] || 0) + 1;
+  }
   const visiveisBusca = visiveisToggle.filter((m) =>
     combina(
       [
@@ -380,7 +388,7 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn; onChanged: ()
       ].join(" "),
       busca,
     )
-  );
+  ).filter((m) => classeFiltro === "todas" || (m.classeNome || "Não identificada") === classeFiltro);
   const totalPaginas = Math.max(1, Math.ceil(visiveisBusca.length / POR_PAGINA));
   const pag = Math.min(pagina, totalPaginas - 1);
   const visiveis = visiveisBusca.slice(pag * POR_PAGINA, pag * POR_PAGINA + POR_PAGINA);
@@ -529,7 +537,7 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn; onChanged: ()
   }
 
   async function baixarTodosZip() {
-    const elegiveis = lista.filter((m) => m.status !== "CANCELADO");
+    const elegiveis = visiveisBusca.filter((m) => m.status !== "CANCELADO");
     if (elegiveis.length === 0) {
       toast("Nenhum MTR ativo (sem cancelados) para baixar", "warning");
       return;
@@ -564,6 +572,58 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn; onChanged: ()
       toast("Falha ao baixar o lote em ZIP", "error");
     } finally {
       setCarregando(false);
+    }
+  }
+
+  async function reclassificarClasses() {
+    if (!conexaoEfetiva) return;
+    setReclassificando(true);
+    try {
+      const res = await fetch("/api/mtr-ima/reclassificar-classes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conexaoId: Number(conexaoEfetiva) }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        toast(data?.error || "Falha ao classificar MTRs", "error");
+        return;
+      }
+      toast(`${data.classificados} MTR(s) classificado(s); ${data.falhas} sem classe encontrada`, data.falhas ? "warning" : "success");
+      await recarregarLista(conexaoEfetiva);
+    } catch {
+      toast("Falha ao classificar MTRs", "error");
+    } finally {
+      setReclassificando(false);
+    }
+  }
+
+  async function imprimirPorClasse() {
+    if (!conexaoEfetiva) return;
+    setGerandoRelatorio(true);
+    try {
+      const params = new URLSearchParams({ conexaoId: conexaoEfetiva, dataInicial, dataFinal });
+      if (classeFiltro !== "todas") params.set("classe", classeFiltro);
+      const res = await fetch(`/api/mtr-ima/relatorio-classes?${params.toString()}`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        toast(data?.error || "Falha ao gerar relatório por classe", "error");
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `mtrs-ima-por-classe-${new Date().toISOString().slice(0, 10)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast("Relatório por classe gerado", "success");
+    } catch {
+      toast("Falha ao gerar relatório por classe", "error");
+    } finally {
+      setGerandoRelatorio(false);
     }
   }
 
@@ -649,13 +709,29 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn; onChanged: ()
               )}
             </div>
             <button
+              onClick={imprimirPorClasse}
+              disabled={gerandoRelatorio || !conexaoEfetiva}
+              className="focus-ring transition-brand flex items-center gap-2 rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-xs font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-50)] disabled:opacity-50"
+            >
+              {gerandoRelatorio ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />}
+              {gerandoRelatorio ? "Gerando..." : "Imprimir por classe"}
+            </button>
+            <button
+              onClick={reclassificarClasses}
+              disabled={reclassificando || !conexaoEfetiva}
+              className="focus-ring transition-brand flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800 hover:bg-amber-100 disabled:opacity-50"
+            >
+              {reclassificando ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+              {reclassificando ? "Classificando..." : "Classificar MTRs"}
+            </button>
+            <button
               onClick={baixarTodosZip}
-              disabled={carregando || lista.filter((m) => m.status !== "CANCELADO").length === 0}
+              disabled={carregando || visiveisBusca.filter((m) => m.status !== "CANCELADO").length === 0}
               className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
               title="Baixar todos os MTRs ativos (exclui cancelados) em um arquivo ZIP"
             >
               {carregando ? <Loader2 size={14} className="animate-spin" /> : <FolderArchive size={14} />}
-              {carregando ? "Baixando..." : `Baixar todos (ZIP) — ${lista.filter((m) => m.status !== "CANCELADO").length}`}
+              {carregando ? "Baixando..." : `Baixar filtrados (ZIP) — ${visiveisBusca.filter((m) => m.status !== "CANCELADO").length}`}
             </button>
             <div className="flex gap-1 text-xs">
             {[
@@ -669,9 +745,19 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn; onChanged: ()
               >
                 {t.label}
               </button>
-            ))}
-          </div>
-          </div>
+             ))}
+           </div>
+           <select
+             value={classeFiltro}
+             onChange={(e) => { setClasseFiltro(e.target.value); setPagina(0); }}
+             className="rounded-lg border border-[var(--color-paper-200)] bg-white px-2.5 py-1.5 text-xs font-medium text-[var(--color-ink-700)]"
+           >
+             <option value="todas">Todas as classes</option>
+             {Object.entries(classeContagens).sort(([a], [b]) => a.localeCompare(b)).map(([classe, quantidade]) => (
+               <option key={classe} value={classe}>{classe} ({quantidade})</option>
+             ))}
+           </select>
+           </div>
         </div>
         {visiveis.length === 0 ? (
           <p className="py-4 text-center text-sm text-[var(--color-ink-500)]">
@@ -692,6 +778,7 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn; onChanged: ()
                     <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Destinador</th>
                     <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Transportador</th>
                     <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Expedição</th>
+                    <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Classe</th>
                     <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Situação</th>
                     <th className="py-2 px-2 font-medium text-[var(--color-ink-700)]">Ações</th>
                   </tr>
@@ -704,6 +791,7 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn; onChanged: ()
                       <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.destinadorNome || "—"}</td>
                       <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.transportadorNome || "—"}</td>
                       <td className="py-2 px-2 text-[var(--color-ink-600)] whitespace-nowrap">{fmtData(m.dataExpedicao)}</td>
+                      <td className="py-2 px-2 text-[var(--color-ink-600)]">{m.classeNome || "Não identificada"}</td>
                       <td className="py-2 px-2">
                         {m.status === "RECEBIDO" ? (
                           <span className="text-xs font-medium text-green-700">Recebido</span>
@@ -739,8 +827,9 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn; onChanged: ()
                   <dl className="mt-2 grid grid-cols-2 gap-1 text-xs text-[var(--color-ink-600)]">
                     <dt className="font-medium">Gerador</dt><dd className="truncate">{m.clienteNome || (m.conexao.unidade ? `${m.conexao.nome} — unid. ${m.conexao.unidade}` : m.conexao.nome)}</dd>
                     <dt className="font-medium">Transportador</dt><dd className="truncate">{m.transportadorNome || "—"}</dd>
-                    <dt className="font-medium">Expedição</dt><dd>{fmtData(m.dataExpedicao)}</dd>
-                  </dl>
+                     <dt className="font-medium">Expedição</dt><dd>{fmtData(m.dataExpedicao)}</dd>
+                     <dt className="font-medium">Classe</dt><dd>{m.classeNome || "Não identificada"}</dd>
+                   </dl>
                 </li>
               ))}
             </ul>
@@ -2028,8 +2117,8 @@ function ConexoesTab(props: { conexoes: Conexao[]; empreendimentos: Empreendimen
               </tbody>
             </table>
           </div>
-        )}
-      </div>
+            )}
+          </div>
     </div>
   );
 }
