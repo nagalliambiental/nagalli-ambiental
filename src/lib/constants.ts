@@ -36,6 +36,22 @@ export const STATUS_TAREFA = {
 
 export type StatusTarefa = (typeof STATUS_TAREFA)[keyof typeof STATUS_TAREFA];
 
+export const SUBSTATUS_TAREFA = {
+  AGUARDANDO_CLIENTE: "aguardando_cliente",
+  AGUARDANDO_ORGAO: "aguardando_orgao",
+  AGUARDANDO_TERCEIRO: "aguardando_terceiro",
+  PAUSADA: "pausada",
+} as const;
+
+export type SubstatusTarefa = (typeof SUBSTATUS_TAREFA)[keyof typeof SUBSTATUS_TAREFA];
+
+export const ROTULO_SUBSTATUS_TAREFA: Record<string, string> = {
+  aguardando_cliente: "Aguardando cliente",
+  aguardando_orgao: "Aguardando órgão",
+  aguardando_terceiro: "Aguardando terceiros",
+  pausada: "Pausada",
+};
+
 export const PRIORIDADE_TAREFA = {
   URGENTE: "urgente",
   ALTA: "alta",

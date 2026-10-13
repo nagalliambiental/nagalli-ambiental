@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { logAuditoria } from "@/lib/audit";
 import { dataInputParaDate } from "@/lib/format";
 import { requerAutenticado } from "@/lib/perfil";
-import { STATUS_TAREFA, PRIORIDADE_TAREFA } from "@/lib/constants";
+import { STATUS_TAREFA, PRIORIDADE_TAREFA, SUBSTATUS_TAREFA } from "@/lib/constants";
 import { criarExigenciaEspelhada, sincronizarExigenciaTarefa } from "@/lib/tarefas-exigencia";
 import {
   atualizarSerie,
@@ -115,6 +115,26 @@ async function aplicarCorpo(
 
   const virouConcluida = atual.status !== STATUS_TAREFA.CONCLUIDA && status === STATUS_TAREFA.CONCLUIDA;
 
+  let substatus: string | null;
+  if (body.substatus !== undefined) {
+    const v = String(body.substatus ?? "").trim();
+    if (v && !(Object.values(SUBSTATUS_TAREFA) as string[]).includes(v)) {
+      return { erro: NextResponse.json({ error: "Substatus inválido" }, { status: 400 }) };
+    }
+    substatus = v || null;
+  } else {
+    substatus = atual.substatus;
+  }
+  const substatusMotivo =
+    body.substatusMotivo !== undefined
+      ? ((body.substatusMotivo as string | null)?.toString().trim() || null)
+      : atual.substatusMotivo;
+  // Entrou em espera agora: marca o início; saiu da espera: limpa.
+  // Trocou de um aguardando para outro: mantém a data original.
+  let aguardandoDesde = atual.aguardandoDesde;
+  if (substatus && !atual.substatus) aguardandoDesde = new Date();
+  else if (!substatus) aguardandoDesde = null;
+
   let serieId = atual.serieId;
   if (body.recorrencia !== undefined) {
     const rec = body.recorrencia;
@@ -180,6 +200,9 @@ async function aplicarCorpo(
       exigenciaId,
       serieId,
       statusObs: body.statusObs !== undefined ? ((body.statusObs as string | null) || null) : atual.statusObs,
+      substatus,
+      substatusMotivo,
+      aguardandoDesde,
       ativo: body.ativo !== undefined ? Boolean(body.ativo) : atual.ativo,
     },
     include: INCLUIR,

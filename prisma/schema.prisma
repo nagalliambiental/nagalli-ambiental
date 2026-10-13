@@ -345,6 +345,9 @@ model Tarefa {
   atualizadoEm     DateTime        @updatedAt
   ativo            Boolean         @default(true)
   statusObs        String?
+  substatus        String?
+  substatusMotivo   String?
+  aguardandoDesde  DateTime?
   responsavel      Responsavel     @relation(fields: [responsavelId], references: [id])
   empreendimento   Empreendimento? @relation(fields: [empreendimentoId], references: [id])
   processo         Processo?       @relation(fields: [processoId], references: [id], onDelete: SetNull)

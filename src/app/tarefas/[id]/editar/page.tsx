@@ -29,6 +29,8 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
     descricao: tarefa.descricao,
     observacoes: tarefa.observacoes,
     status: tarefa.status,
+    substatus: tarefa.substatus,
+    substatusMotivo: tarefa.substatusMotivo,
     prioridade: tarefa.prioridade,
     prazoFinal: tarefa.prazoFinal ? tarefa.prazoFinal.toISOString() : null,
     alertaPrazoFinal: tarefa.alertaPrazoFinal,

@@ -4,7 +4,7 @@ import { logAuditoria } from "@/lib/audit";
 import { dataInputParaDate } from "@/lib/format";
 import { requerAutenticado } from "@/lib/perfil";
 import { notificarTarefaNova } from "@/lib/notificacoes";
-import { STATUS_TAREFA, PRIORIDADE_TAREFA } from "@/lib/constants";
+import { STATUS_TAREFA, PRIORIDADE_TAREFA, SUBSTATUS_TAREFA } from "@/lib/constants";
 import { criarExigenciaEspelhada, sincronizarExigenciaTarefa } from "@/lib/tarefas-exigencia";
 import { criarSerie, ehRecorrenciaValida, type PeriodoEntrada } from "@/lib/tarefas-recorrencia";
 import type { Prisma } from "@prisma/client";
@@ -80,6 +80,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Responsável é obrigatório" }, { status: 400 });
     }
 
+    const substatus = data.substatus ? String(data.substatus) : null;
+    if (substatus && !(Object.values(SUBSTATUS_TAREFA) as string[]).includes(substatus)) {
+      return NextResponse.json({ error: "Substatus inválido" }, { status: 400 });
+    }
+    const substatusMotivo = data.substatusMotivo ? String(data.substatusMotivo).trim() || null : null;
+
     const processoId = data.processoId ? Number(data.processoId) : null;
     const prazoRaw = data.prazoFinal ?? data.prazoData;
     const prazoFinal = prazoRaw ? dataInputParaDate(String(prazoRaw)) : null;
@@ -135,6 +141,9 @@ export async function POST(request: Request) {
         exigenciaId,
         usuarioId: Number((authResult.user as { id: string }).id),
         serieId,
+        substatus,
+        substatusMotivo,
+        aguardandoDesde: substatus ? new Date() : null,
       },
       include: INCLUIR,
     });

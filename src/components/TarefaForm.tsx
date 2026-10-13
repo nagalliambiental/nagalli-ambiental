@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/Toast";
 import { Paperclip, Plus, X } from "lucide-react";
-import { RECORRENCIA_TAREFA, ROTULO_RECORRENCIA } from "@/lib/constants";
+import { RECORRENCIA_TAREFA, ROTULO_RECORRENCIA, SUBSTATUS_TAREFA, ROTULO_SUBSTATUS_TAREFA } from "@/lib/constants";
 import { SelecaoBusca } from "@/components/SelecaoBusca";
 import type { OpcaoProcesso } from "@/components/tarefas/LinhaTarefa";
 
@@ -30,6 +30,8 @@ export interface TarefaFormInitial {
   descricao: string | null;
   observacoes?: string | null;
   status: string;
+  substatus?: string | null;
+  substatusMotivo?: string | null;
   prioridade: string;
   prazoFinal: string | null;
   alertaPrazoFinal: number;
@@ -141,6 +143,8 @@ export default function TarefaForm({
       dataConclusao: toDateInput(initial?.dataConclusao),
       prioridade: initial?.prioridade ?? "media",
       status: initial?.status ?? "nao_iniciado",
+      substatus: initial?.substatus ?? "",
+      substatusMotivo: initial?.substatusMotivo ?? "",
     };
   });
 
@@ -237,6 +241,8 @@ export default function TarefaForm({
       dataConclusao: form.status === "concluida" ? form.dataConclusao || null : null,
       prioridade: form.prioridade,
       status: form.status,
+      substatus: form.substatus || null,
+      substatusMotivo: form.substatusMotivo.trim() || null,
       recorrencia: recorrencia || null,
       recorrenciaAtiva: serieAtiva,
       fimRecorrencia: recorrencia ? fimRecorrencia || null : null,
@@ -365,6 +371,23 @@ export default function TarefaForm({
           <div>
             <label className={labelClass}>Data de conclusão</label>
             <input type="date" value={form.dataConclusao} onChange={(e) => setForm({ ...form, dataConclusao: e.target.value })} className={inputClass} />
+          </div>
+        )}
+        {form.status !== "concluida" && (
+          <div>
+            <label className={labelClass}>Substatus (pausa o prazo)</label>
+            <select value={form.substatus} onChange={(e) => setForm({ ...form, substatus: e.target.value })} className={inputClass}>
+              <option value="">Nenhum — andamento normal</option>
+              {(Object.values(SUBSTATUS_TAREFA) as string[]).map((s) => (
+                <option key={s} value={s}>{ROTULO_SUBSTATUS_TAREFA[s]}</option>
+              ))}
+            </select>
+          </div>
+        )}
+        {form.status !== "concluida" && form.substatus !== "" && (
+          <div>
+            <label className={labelClass}>Motivo da espera</label>
+            <input value={form.substatusMotivo} onChange={(e) => setForm({ ...form, substatusMotivo: e.target.value })} placeholder="Ex.: aguardando matrícula atualizada do cliente" className={inputClass} />
           </div>
         )}
       </div>

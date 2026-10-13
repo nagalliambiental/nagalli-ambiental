@@ -4,6 +4,7 @@ import { createNagalliReport, type NagalliCell } from "@/lib/report-layout";
 import { buildXlsx, xlsxResponse } from "@/lib/report-xlsx";
 import { formatDate } from "@/lib/format";
 import { STATUS_TAREFA } from "@/lib/constants";
+import { situacaoTarefa, diasAguardando } from "@/lib/tarefas-situacao";
 import type { Prisma } from "@prisma/client";
 
 const ROTULO_STATUS: Record<string, string> = {
@@ -19,10 +20,6 @@ const ROTULO_PRIORIDADE: Record<string, string> = {
   media: "Média",
   baixa: "Baixa",
 };
-
-function diasAte(data: Date): number {
-  return Math.ceil((data.getTime() - Date.now()) / 86400000);
-}
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -65,17 +62,25 @@ export async function GET(request: Request) {
   ];
 
   const rows: NagalliCell[][] = tarefas.map((t) => {
-    const concluida = t.status === STATUS_TAREFA.CONCLUIDA;
-    const dias = t.prazoFinal ? diasAte(t.prazoFinal) : null;
-    const situacao = concluida
-      ? "Concluída"
-      : dias === null
-        ? "Sem prazo"
-        : dias < 0
-          ? "Atrasada"
-          : dias <= t.alertaPrazoFinal
-            ? `Vence em ${dias}d`
-            : "No prazo";
+    const { situacao, dias } = situacaoTarefa({
+      status: t.status,
+      substatus: t.substatus,
+      prazoFinal: t.prazoFinal,
+      alertaPrazoFinal: t.alertaPrazoFinal,
+    });
+    const espera = situacao === "aguardando" ? diasAguardando(t.aguardandoDesde) : 0;
+    const situacaoTexto =
+      situacao === "concluida"
+        ? "Concluída"
+        : situacao === "aguardando"
+          ? `Aguardando${espera > 0 ? ` há ${espera}d` : ""}`
+          : situacao === "sem_prazo"
+            ? "Sem prazo"
+            : situacao === "atrasada"
+              ? "Atrasada"
+              : situacao === "vence_em"
+                ? `Vence em ${dias}d`
+                : "No prazo";
 
     return [
       { text: t.titulo, bold: true },
@@ -84,15 +89,22 @@ export async function GET(request: Request) {
       t.responsavel.nome,
       t.processo?.numLicenca || t.processo?.numProtocolo || "—",
       { text: t.prazoFinal ? formatDate(t.prazoFinal) : "—", align: "center" },
-      { text: situacao, align: "center", bold: situacao === "Atrasada" },
+      { text: situacaoTexto, align: "center", bold: situacao === "atrasada" },
     ];
   });
 
   const emAberto = tarefas.filter((t) => t.status !== STATUS_TAREFA.CONCLUIDA).length;
   const concluidas = tarefas.length - emAberto;
   const atrasadas = tarefas.filter(
-    (t) => t.status !== STATUS_TAREFA.CONCLUIDA && t.prazoFinal && diasAte(t.prazoFinal) < 0
+    (t) =>
+      situacaoTarefa({
+        status: t.status,
+        substatus: t.substatus,
+        prazoFinal: t.prazoFinal,
+        alertaPrazoFinal: t.alertaPrazoFinal,
+      }).situacao === "atrasada"
   ).length;
+  const aguardando = tarefas.filter((t) => t.status !== STATUS_TAREFA.CONCLUIDA && !!t.substatus).length;
 
   const filtros: string[] = [];
   if (status) filtros.push(`Status: ${ROTULO_STATUS[status] ?? status}`);
@@ -102,6 +114,7 @@ export async function GET(request: Request) {
     { label: "Total de tarefas", value: String(tarefas.length) },
     { label: "Em aberto", value: String(emAberto) },
     ...(concluidas > 0 ? [{ label: "Concluídas", value: String(concluidas) }] : []),
+    ...(aguardando > 0 ? [{ label: "Aguardando", value: String(aguardando) }] : []),
     ...(atrasadas > 0 ? [{ label: "Atrasadas", value: String(atrasadas) }] : []),
   ];
 

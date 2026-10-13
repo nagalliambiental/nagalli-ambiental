@@ -80,7 +80,7 @@ export default async function TarefasPage({
   const concluidas = contagem(STATUS_TAREFA.CONCLUIDA);
   const emAberto = todas.length - concluidas;
   const atrasadas = todas.filter(
-    (t) => t.status !== STATUS_TAREFA.CONCLUIDA && t.prazoFinal !== null && t.prazoFinal < agora
+    (t) => t.status !== STATUS_TAREFA.CONCLUIDA && !t.substatus && t.prazoFinal !== null && t.prazoFinal < agora
   ).length;
 
   const tarefas = JSON.parse(JSON.stringify(filtradas)) as LinhaTarefaTarefa[];

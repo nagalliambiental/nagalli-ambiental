@@ -76,6 +76,9 @@ export default async function DashboardPage() {
         id: true,
         titulo: true,
         status: true,
+        substatus: true,
+        substatusMotivo: true,
+        aguardandoDesde: true,
         prazoFinal: true,
         prioridade: true,
         empreendimento: { select: { apelido: true } },
@@ -186,6 +189,8 @@ export default async function DashboardPage() {
           <div className="mt-4 space-y-2">
             {minhasTarefas.map((t) => {
               const dias = t.prazoFinal ? differenceInDays(t.prazoFinal, hoje) : null;
+              const aguardando = !!t.substatus;
+              const diasEspera = aguardando && t.aguardandoDesde ? differenceInDays(hoje, t.aguardandoDesde) : 0;
               return (
                 <Link
                   key={t.id}
@@ -201,17 +206,23 @@ export default async function DashboardPage() {
                   </div>
                   <div
                     className={`shrink-0 text-right text-xs font-semibold ${
-                      dias === null
-                        ? "text-[var(--color-ink-400)]"
-                        : dias < 0
-                          ? "text-red-700"
-                          : dias <= 3
-                            ? "text-amber-700"
-                            : "text-[var(--color-brand-600)]"
+                      aguardando
+                        ? "text-amber-700"
+                        : dias === null
+                          ? "text-[var(--color-ink-400)]"
+                          : dias < 0
+                            ? "text-red-700"
+                            : dias <= 3
+                              ? "text-amber-700"
+                              : "text-[var(--color-brand-600)]"
                     }`}
                   >
                     {t.prazoFinal ? format(t.prazoFinal, "dd/MM", { locale: ptBR }) : "Sem prazo"}
-                    {dias !== null && <div>{dias < 0 ? `${Math.abs(dias)}d atraso` : `${dias}d`}</div>}
+                    {aguardando ? (
+                      <div title={t.substatusMotivo ?? undefined}>Aguardando{diasEspera > 0 ? ` há ${diasEspera}d` : ""}</div>
+                    ) : (
+                      dias !== null && <div>{dias < 0 ? `${Math.abs(dias)}d atraso` : `${dias}d`}</div>
+                    )}
                   </div>
                 </Link>
               );
