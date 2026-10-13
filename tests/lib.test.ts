@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { ehPrivilegiado } from "../src/lib/perfil";
 import { criptografar, descriptografar } from "../src/lib/crypto";
 import { formatDateTime, formatDate } from "../src/lib/format";
+import { classeDeResiduos } from "../src/lib/sinir";
 
 test("ehPrivilegiado só aceita socio/admin", () => {
   assert.equal(ehPrivilegiado("socio"), true);
@@ -10,6 +11,21 @@ test("ehPrivilegiado só aceita socio/admin", () => {
   assert.equal(ehPrivilegiado("tecnico"), false);
   assert.equal(ehPrivilegiado(undefined), false);
   assert.equal(ehPrivilegiado(""), false);
+});
+
+test("classifica RCC Classe A solo pelo código IBAMA", () => {
+  const classe = classeDeResiduos([{ classe: { claCodigo: 11 }, residuo: { resCodigoIbama: "170504", resDescricao: "Solos e rochas" } }]);
+  assert.equal(classe.classeNome, "A (Solo)");
+});
+
+test("classifica RCC Classe A não solo", () => {
+  const classe = classeDeResiduos([{ classe: { claCodigo: 11 }, residuo: { resCodigoIbama: "170102", resDescricao: "Tijolos (Classe A)" } }]);
+  assert.equal(classe.classeNome, "A");
+});
+
+test("classifica pelo código IBAMA quando o SINIR não envia classe", () => {
+  const classe = classeDeResiduos([{ residuo: { resCodigoIbama: "170301(*)", resDescricao: "Misturas betuminosas contendo alcatrão (Classe D)" } }]);
+  assert.equal(classe.classeNome, "D");
 });
 
 test("criptografar/descriptografar redondos", () => {

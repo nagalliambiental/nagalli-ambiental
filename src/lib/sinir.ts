@@ -546,10 +546,10 @@ export async function consultarManifesto(
   if (!numero) throw new SinirError("Número do manifesto é obrigatório", 400);
 
   const resultado = await apiFetch(conexao, `/retornaManifesto/${encodeURIComponent(numero)}`);
-  const env = (resultado || {}) as { erro?: boolean; mensagem?: string; objeto?: unknown };
+  const env = (resultado || {}) as { erro?: boolean; mensagem?: string; objeto?: unknown; objetoResposta?: unknown };
   if (env.erro) throw new SinirError(env.mensagem || "Manifesto não encontrado no SINIR", 404);
 
-  const obj = (env.objeto || env) as Record<string, unknown>;
+  const obj = (env.objetoResposta || env.objeto || env) as Record<string, unknown>;
   const { status, certificado } = statusDeManifestoReal(obj);
 const gerador = extrairParceiro(obj.parceiroGerador || obj.gerador || obj.dadosGerador);
       const transportador = extrairParceiro(obj.parceiroTransportador || obj.transportador);
@@ -968,6 +968,9 @@ export function classeDeResiduos(residuos: unknown): ClasseIdentificada {
         resDescricao,
       };
     }
+
+    const peloIbama = classeDeCodigoIbama(resCodigoIbama, resDescricao);
+    if (peloIbama.classeNome) return peloIbama;
   }
   return { letra: "", classeNome: "", descricaoSinir: "", resCodigoIbama: "", resDescricao: "" };
 }
@@ -1284,6 +1287,7 @@ export async function gerarPdfMtrsPorClasse(
 
         const partes: string[] = [];
         partes.push(m.dataExpedicao ? `emitido em ${m.dataExpedicao.toLocaleDateString("pt-BR")}` : "data não registrada");
+        if (m.classeRisco) partes.push(`código IBAMA: ${m.classeRisco}`);
         if (m.destinadorNome) partes.push(`destinador: ${m.destinadorNome}`);
         if (m.quantidade != null) partes.push(`qtd: ${m.quantidade.toLocaleString("pt-BR")} ${m.unidade || ""}`.trim());
         if (m.resDescricao) partes.push(`resíduo: ${m.resDescricao}`);
