@@ -18,6 +18,8 @@ import { UltimaModificacao } from "@/components/UltimaModificacao";
 import CompensacaoCorteCard from "@/components/CompensacaoCorteCard";
 import ProcessoStatusSelector from "@/components/ProcessoStatusSelector";
 import LicencaPdfCard from "@/components/LicencaPdfCard";
+import { EmbargosModal } from "@/components/EmbargosModal";
+import { mascararCpfCnpj } from "@/lib/cliente-cnpj";
 import ExigenciasTab from "@/components/ExigenciasTab";
 import { TarefasProcessoTab } from "@/components/tarefas/TarefasProcessoTab";
 
@@ -81,11 +83,35 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
     where: { id: Number(id) },
     include: {
       orgao: true,
-      empreendimento: { select: { apelido: true, id: true, cliente: { select: { apelido: true } } } },
+      empreendimento: {
+        select: {
+          apelido: true,
+          id: true,
+          municipio: true,
+          cliente: {
+            select: {
+              apelido: true,
+              razaoSocial: true,
+              cnpj: true,
+              rua: true,
+              numero: true,
+              complemento: true,
+              bairro: true,
+              municipio: true,
+              uf: true,
+            },
+          },
+        },
+      },
       _count: { select: { exigencias: true, documentos: true, tarefas: true } },
     },
   });
   if (!processo) notFound();
+
+  const hojeEmbargos = new Date();
+  const mesEmbargos = hojeEmbargos
+    .toLocaleDateString("pt-BR", { month: "long" })
+    .replace(/^\w/, (c) => c.toUpperCase());
 
   const licencaPdf = await prisma.documento.findFirst({
     where: { processoId: processo.id, tipo: "licenca" },
@@ -161,12 +187,30 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
                 href={`/api/processos/${processo.id}/relatorio-condicionantes`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg border border-[var(--color-river-200)] bg-[var(--color-river-50)] px-3 py-2 text-sm font-medium text-[var(--color-river-700)] hover:bg-[var(--color-river-100)]"
+                className="focus-ring transition-brand flex items-center gap-1.5 rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]"
               >
                 <FileText size={14} />
                 Relatório de condicionantes
               </a>
             )}
+            <EmbargosModal
+              processoId={processo.id}
+              initial={{
+                razaoSocial: processo.empreendimento.cliente.razaoSocial || "",
+                cnpj: mascararCpfCnpj(processo.empreendimento.cliente.cnpj || ""),
+                rua: processo.empreendimento.cliente.rua || "",
+                numero: processo.empreendimento.cliente.numero || "",
+                complemento: processo.empreendimento.cliente.complemento || "",
+                bairro: processo.empreendimento.cliente.bairro || "",
+                municipio: processo.empreendimento.cliente.municipio || "",
+                uf: processo.empreendimento.cliente.uf || "",
+                tipoLicenca: processo.tipo || "",
+                municipioData: processo.empreendimento.cliente.municipio || processo.municipio || "",
+                dia: String(hojeEmbargos.getDate()),
+                mes: mesEmbargos,
+                ano: String(hojeEmbargos.getFullYear()),
+              }}
+            />
           </div>
         }
       />
@@ -238,7 +282,14 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
                     {processo.validade && (
                       <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
                         <Calendar size={14} />
-                        <span>Validade: <strong className="font-medium text-[var(--color-ink-900)]">{format(processo.validade, "dd/MM/yyyy", { locale: ptBR })}</strong></span>
+                        <span>Validade: <strong className="font-medium text-[var(--color-ink-900)]">{format(processo.validade, "dd/MM/yyyy", { locale: ptBR })}</strong>
+                          {(() => {
+                            const dias = differenceInDays(processo.validade, new Date());
+                            return dias < 0
+                              ? <span className="font-medium text-red-700"> (vencida há {Math.abs(dias)} dias)</span>
+                              : <span className="font-medium text-[var(--color-brand-600)]"> (faltam {dias} dias)</span>;
+                          })()}
+                        </span>
                       </div>
                     )}
                     <div className="flex items-center gap-2 text-[var(--color-ink-500)]">

@@ -26,9 +26,9 @@ const ABAS = [
 export default async function TarefasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string; responsavelId?: string }>;
+  searchParams: Promise<{ q?: string; status?: string; responsavelId?: string; prioridade?: string; ordem?: string }>;
 }) {
-  const { q, status, responsavelId } = await searchParams;
+  const { q, status, responsavelId, prioridade, ordem } = await searchParams;
 
   const [todas, responsaveis, empreendimentos, processos] = await Promise.all([
     prisma.tarefa.findMany({
@@ -61,6 +61,7 @@ export default async function TarefasPage({
   ]);
 
   const termo = q?.trim().toLowerCase();
+  const PESO_PRIORIDADE: Record<string, number> = { urgente: 0, alta: 1, media: 2, baixa: 3 };
   const filtradas = todas.filter((t) => {
     if (status) {
       if (t.status !== status) return false;
@@ -68,12 +69,23 @@ export default async function TarefasPage({
       return false;
     }
     if (responsavelId && t.responsavelId !== Number(responsavelId)) return false;
+    if (prioridade && t.prioridade !== prioridade) return false;
     if (termo) {
       const alvo = `${t.titulo} ${t.descricao ?? ""} ${t.observacoes ?? ""}`.toLowerCase();
       if (!alvo.includes(termo)) return false;
     }
     return true;
   });
+  if (ordem === "prioridade") {
+    filtradas.sort((a, b) => {
+      const pa = PESO_PRIORIDADE[a.prioridade] ?? 9;
+      const pb = PESO_PRIORIDADE[b.prioridade] ?? 9;
+      if (pa !== pb) return pa - pb;
+      const da = a.prazoFinal ? new Date(a.prazoFinal).getTime() : Number.MAX_SAFE_INTEGER;
+      const db = b.prazoFinal ? new Date(b.prazoFinal).getTime() : Number.MAX_SAFE_INTEGER;
+      return da - db;
+    });
+  }
 
   const agora = new Date();
   const contagem = (s: string) => todas.filter((t) => t.status === s).length;
@@ -91,6 +103,8 @@ export default async function TarefasPage({
     if (value) p.set("status", value);
     if (q) p.set("q", q);
     if (responsavelId) p.set("responsavelId", responsavelId);
+    if (prioridade) p.set("prioridade", prioridade);
+    if (ordem) p.set("ordem", ordem);
     const qs = p.toString();
     return `/tarefas${qs ? `?${qs}` : ""}`;
   }
@@ -170,7 +184,7 @@ export default async function TarefasPage({
             })}
           </nav>
           <div className="pb-2">
-            <FiltroTarefas responsaveis={responsaveis} responsavelAtual={responsavelId ?? ""} />
+            <FiltroTarefas responsaveis={responsaveis} responsavelAtual={responsavelId ?? ""} prioridadeAtual={prioridade ?? ""} ordemAtual={ordem ?? "prazo"} />
           </div>
         </div>
 

@@ -6,7 +6,7 @@ import { Search } from "lucide-react";
 
 type Resp = { id: number; nome: string };
 
-export function FiltroTarefas({ responsaveis, responsavelAtual }: { responsaveis: Resp[]; responsavelAtual: string }) {
+export function FiltroTarefas({ responsaveis, responsavelAtual, prioridadeAtual, ordemAtual }: { responsaveis: Resp[]; responsavelAtual: string; prioridadeAtual: string; ordemAtual: string }) {
   const router = useRouter();
   const params = useSearchParams();
   const [q, setQ] = useState(params.get("q") ?? "");
@@ -53,6 +53,27 @@ export function FiltroTarefas({ responsaveis, responsavelAtual }: { responsaveis
             {r.nome}
           </option>
         ))}
+      </select>
+      <select
+        value={prioridadeAtual}
+        onChange={(e) => navegar({ prioridade: e.target.value || null })}
+        aria-label="Filtrar por prioridade"
+        className="rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-700)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]"
+      >
+        <option value="">Todas as prioridades</option>
+        <option value="urgente">Urgente</option>
+        <option value="alta">Alta</option>
+        <option value="media">Média</option>
+        <option value="baixa">Baixa</option>
+      </select>
+      <select
+        value={ordemAtual}
+        onChange={(e) => navegar({ ordem: e.target.value === "prazo" ? null : e.target.value })}
+        aria-label="Ordenar tarefas"
+        className="rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2 text-sm text-[var(--color-ink-700)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-500)]"
+      >
+        <option value="prazo">Ordenar: prazo</option>
+        <option value="prioridade">Ordenar: prioridade</option>
       </select>
     </div>
   );
