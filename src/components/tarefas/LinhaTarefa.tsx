@@ -28,6 +28,7 @@ export type LinhaTarefaTarefa = {
   dataConclusao: string | null;
   responsavelId: number;
   responsavel: { id: number; nome: string };
+  responsaveisAdicionais: { responsavel: { id: number; nome: string } }[];
   empreendimentoId: number | null;
   empreendimento: { id: number; apelido: string } | null;
   processoId: number | null;
@@ -60,6 +61,20 @@ const STATUS_BADGE: Record<string, string> = {
   em_andamento: "bg-blue-50 text-blue-700 ring-blue-200",
   para_revisao: "bg-amber-50 text-amber-700 ring-amber-200",
   concluida: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+};
+
+const PRIORIDADE_BADGE: Record<string, string> = {
+  urgente: "bg-red-100 text-red-700 ring-red-200",
+  alta: "bg-amber-100 text-amber-800 ring-amber-200",
+  media: "bg-[var(--color-brand-50)] text-[var(--color-brand-600)]",
+  baixa: "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]",
+};
+
+const PRIORIDADE_LABEL: Record<string, string> = {
+  urgente: "Urgente",
+  alta: "Alta",
+  media: "Média",
+  baixa: "Baixa",
 };
 
 const PRIORIDADE_OPTS = [
@@ -116,6 +131,7 @@ export function LinhaTarefa({
     substatus: tarefa.substatus ?? "",
     substatusMotivo: tarefa.substatusMotivo ?? "",
     responsavelId: String(tarefa.responsavelId),
+    adicionais: (tarefa.responsaveisAdicionais ?? []).map((r) => r.responsavel.id),
     empreendimentoId: tarefa.empreendimentoId ? String(tarefa.empreendimentoId) : "",
     processoId: tarefa.processoId ? String(tarefa.processoId) : "",
     condicionanteId: tarefa.condicionanteId ? String(tarefa.condicionanteId) : "",
@@ -200,6 +216,7 @@ export function LinhaTarefa({
         substatus: form.substatus || null,
         substatusMotivo: form.substatusMotivo.trim() || null,
         responsavelId: Number(form.responsavelId),
+        responsaveisAdicionais: form.adicionais.filter((id) => id !== Number(form.responsavelId)),
         empreendimentoId: form.empreendimentoId ? Number(form.empreendimentoId) : null,
         processoId: form.processoId ? Number(form.processoId) : null,
         condicionanteId: form.condicionanteId ? Number(form.condicionanteId) : null,
@@ -234,7 +251,14 @@ export function LinhaTarefa({
             <Link href={`/tarefas/${tarefa.id}`} className="hover:text-[var(--color-brand-600)] hover:underline underline-offset-2">
               {tarefa.titulo}
             </Link>
-            <span className="font-normal text-[var(--color-ink-500)]"> — {tarefa.responsavel.nome}</span>
+            <span className="font-normal text-[var(--color-ink-500)]">
+              {" "}— {tarefa.responsavel.nome}
+              {(tarefa.responsaveisAdicionais ?? []).length > 0 && (
+                <span title={(tarefa.responsaveisAdicionais ?? []).map((r) => r.responsavel.nome).join(", ")}>
+                  {" "}(+{(tarefa.responsaveisAdicionais ?? []).length})
+                </span>
+              )}
+            </span>
             {tarefa.serie && (
               <span
                 className="ml-2 inline-flex items-center gap-1 rounded-md bg-violet-50 px-1.5 py-0.5 align-middle text-[11px] font-medium text-violet-700 ring-1 ring-violet-200"
@@ -276,6 +300,9 @@ export function LinhaTarefa({
           )}
           <span className={`hidden rounded-md px-2 py-1 text-xs font-medium ring-1 sm:inline-block ${STATUS_BADGE[tarefa.status] ?? "bg-[var(--color-paper-100)] text-[var(--color-ink-600)] ring-[var(--color-paper-200)]"}`}>
             {STATUS_OPTS.find((s) => s.value === tarefa.status)?.label ?? tarefa.status}
+          </span>
+          <span className={`hidden rounded-md px-2 py-1 text-xs font-medium ring-1 sm:inline-block ${PRIORIDADE_BADGE[tarefa.prioridade] ?? "bg-[var(--color-paper-100)] text-[var(--color-ink-600)] ring-[var(--color-paper-200)]"}`}>
+            {PRIORIDADE_LABEL[tarefa.prioridade] ?? tarefa.prioridade}
           </span>
           {tarefa.substatus && (
             <span
@@ -374,6 +401,31 @@ export function LinhaTarefa({
                     <option key={r.id} value={r.id}>{r.nome}</option>
                   ))}
                 </select>
+              </div>
+              <div>
+                <label className={labelClass}>Responsáveis adicionais</label>
+                <div className="max-h-28 space-y-1 overflow-y-auto rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2">
+                  {responsaveis
+                    .filter((r) => String(r.id) !== form.responsavelId)
+                    .map((r) => (
+                      <label key={r.id} className="flex items-center gap-2 text-sm text-[var(--color-ink-700)]">
+                        <input
+                          type="checkbox"
+                          checked={form.adicionais.includes(r.id)}
+                          onChange={(e) =>
+                            setForm((f) => ({
+                              ...f,
+                              adicionais: e.target.checked
+                                ? [...f.adicionais, r.id]
+                                : f.adicionais.filter((id) => id !== r.id),
+                            }))
+                          }
+                          className="h-4 w-4 rounded border-[var(--color-paper-200)]"
+                        />
+                        {r.nome}
+                      </label>
+                    ))}
+                </div>
               </div>
               <div>
                 <label className={labelClass}>Status</label>

@@ -30,7 +30,10 @@ export async function GET(request: Request) {
 
   const where: Prisma.TarefaWhereInput = { ativo: true };
   if (status) where.status = status;
-  if (responsavelId) where.responsavelId = Number(responsavelId);
+  if (responsavelId) {
+    const rid = Number(responsavelId);
+    where.OR = [{ responsavelId: rid }, { responsaveisAdicionais: { some: { responsavelId: rid } } }];
+  }
   if (q) {
     where.OR = [
       { titulo: { contains: q, mode: "insensitive" } },
@@ -43,6 +46,7 @@ export async function GET(request: Request) {
     where,
     include: {
       responsavel: { select: { nome: true } },
+      responsaveisAdicionais: { select: { responsavel: { select: { nome: true } } } },
       empreendimento: { select: { apelido: true } },
       processo: { select: { numProtocolo: true, numLicenca: true } },
       _count: { select: { anexos: true } },
@@ -86,7 +90,7 @@ export async function GET(request: Request) {
       { text: t.titulo, bold: true },
       ROTULO_STATUS[t.status] ?? t.status,
       ROTULO_PRIORIDADE[t.prioridade] ?? t.prioridade,
-      t.responsavel.nome,
+      [t.responsavel.nome, ...t.responsaveisAdicionais.map((r) => r.responsavel.nome)].join(", "),
       t.processo?.numLicenca || t.processo?.numProtocolo || "—",
       { text: t.prazoFinal ? formatDate(t.prazoFinal) : "—", align: "center" },
       { text: situacaoTexto, align: "center", bold: situacao === "atrasada" },

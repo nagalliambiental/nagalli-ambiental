@@ -34,9 +34,9 @@ export async function criarNotificacao(n: NotificacaoEntrada, dedupe = false): P
 }
 
 /**
- * Notifica a criação de uma tarefa: se o responsável estiver vinculado a um
- * usuário, a notificação é direcionada a ele; caso contrário, fica global.
- * O criador não recebe notificação quando ele mesmo é o responsável.
+ * Notifica a criação de uma tarefa: todos os responsáveis vinculados a um
+ * usuário são notificados (exceto o criador); se ninguém tem usuário,
+ * a notificação fica global. O criador nunca recebe notificação própria.
  */
 export async function notificarTarefaNova(tarefa: {
   id: number;
@@ -45,23 +45,44 @@ export async function notificarTarefaNova(tarefa: {
   criadoPorUsuarioId?: number | null;
 }): Promise<void> {
   try {
-    const responsavel = await prisma.responsavel.findUnique({
-      where: { id: tarefa.responsavelId },
-      select: { nome: true, usuarioId: true },
-    });
+    const [responsavel, extras] = await Promise.all([
+      prisma.responsavel.findUnique({
+        where: { id: tarefa.responsavelId },
+        select: { nome: true, usuarioId: true },
+      }),
+      prisma.tarefaResponsavel.findMany({
+        where: { tarefaId: tarefa.id },
+        select: { responsavel: { select: { nome: true, usuarioId: true } } },
+      }),
+    ]);
     if (!responsavel) return;
-    const dono = responsavel.usuarioId;
-    if (dono && tarefa.criadoPorUsuarioId && dono === tarefa.criadoPorUsuarioId) return;
-    await criarNotificacao({
-      tipo: "tarefa_nova",
-      mensagem: dono
-        ? `Nova tarefa: ${tarefa.titulo}`
-        : `Nova tarefa: ${tarefa.titulo} (para ${responsavel.nome})`,
-      url: `/tarefas/${tarefa.id}`,
-      tarefaId: tarefa.id,
-      destinatarioUsuarioId: dono,
-      dataEvento: new Date(),
-    });
+    const alvos = new Map<number, string>();
+    if (responsavel.usuarioId) alvos.set(responsavel.usuarioId, responsavel.nome);
+    for (const e of extras) {
+      if (e.responsavel.usuarioId) alvos.set(e.responsavel.usuarioId, e.responsavel.nome);
+    }
+    if (tarefa.criadoPorUsuarioId) alvos.delete(tarefa.criadoPorUsuarioId);
+    if (alvos.size === 0) {
+      await criarNotificacao({
+        tipo: "tarefa_nova",
+        mensagem: `Nova tarefa: ${tarefa.titulo} (para ${responsavel.nome})`,
+        url: `/tarefas/${tarefa.id}`,
+        tarefaId: tarefa.id,
+        destinatarioUsuarioId: null,
+        dataEvento: new Date(),
+      });
+      return;
+    }
+    for (const dono of alvos.keys()) {
+      await criarNotificacao({
+        tipo: "tarefa_nova",
+        mensagem: `Nova tarefa: ${tarefa.titulo}`,
+        url: `/tarefas/${tarefa.id}`,
+        tarefaId: tarefa.id,
+        destinatarioUsuarioId: dono,
+        dataEvento: new Date(),
+      });
+    }
   } catch (e) {
     console.error("Erro ao criar notificação de tarefa nova:", e);
   }

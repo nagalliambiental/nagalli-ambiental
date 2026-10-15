@@ -6,11 +6,13 @@ import { requerAutenticado } from "@/lib/perfil";
 import { notificarTarefaNova } from "@/lib/notificacoes";
 import { STATUS_TAREFA, PRIORIDADE_TAREFA, SUBSTATUS_TAREFA } from "@/lib/constants";
 import { criarExigenciaEspelhada, sincronizarExigenciaTarefa } from "@/lib/tarefas-exigencia";
+import { normalizarAdicionais } from "@/lib/tarefas-responsaveis";
 import { criarSerie, ehRecorrenciaValida, type PeriodoEntrada } from "@/lib/tarefas-recorrencia";
 import type { Prisma } from "@prisma/client";
 
 const INCLUIR = {
   responsavel: { select: { id: true, nome: true } },
+  responsaveisAdicionais: { select: { responsavel: { select: { id: true, nome: true } } } },
   usuario: { select: { id: true, nome: true } },
   empreendimento: { select: { id: true, apelido: true } },
   processo: { select: { id: true, numProtocolo: true, numLicenca: true } },
@@ -80,6 +82,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Responsável é obrigatório" }, { status: 400 });
     }
 
+    const adicionais = normalizarAdicionais(Number(responsavelId), data.responsaveisAdicionais);
+    if (adicionais.length > 0) {
+      const existentes = await prisma.responsavel.findMany({
+        where: { id: { in: adicionais } },
+        select: { id: true },
+      });
+      if (existentes.length !== adicionais.length) {
+        return NextResponse.json({ error: "Responsável adicional inválido" }, { status: 400 });
+      }
+    }
+
     const substatus = data.substatus ? String(data.substatus) : null;
     if (substatus && !(Object.values(SUBSTATUS_TAREFA) as string[]).includes(substatus)) {
       return NextResponse.json({ error: "Substatus inválido" }, { status: 400 });
@@ -147,6 +160,12 @@ export async function POST(request: Request) {
       },
       include: INCLUIR,
     });
+
+    if (adicionais.length > 0) {
+      await prisma.tarefaResponsavel.createMany({
+        data: adicionais.map((id) => ({ tarefaId: tarefa.id, responsavelId: id })),
+      });
+    }
 
     await logAuditoria("criar", "tarefa", tarefa.id, { titulo }, Number((authResult.user as { id: string }).id));
 

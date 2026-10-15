@@ -4,6 +4,7 @@ import { logAuditoria } from "@/lib/audit";
 import { dataInputParaDate } from "@/lib/format";
 import { requerAutenticado } from "@/lib/perfil";
 import { STATUS_TAREFA, PRIORIDADE_TAREFA, SUBSTATUS_TAREFA } from "@/lib/constants";
+import { normalizarAdicionais } from "@/lib/tarefas-responsaveis";
 import { criarExigenciaEspelhada, sincronizarExigenciaTarefa } from "@/lib/tarefas-exigencia";
 import {
   atualizarSerie,
@@ -19,6 +20,7 @@ type Params = { params: Promise<{ id: string }> };
 
 const INCLUIR = {
   responsavel: { select: { id: true, nome: true, email: true, telefone: true } },
+  responsaveisAdicionais: { select: { responsavel: { select: { id: true, nome: true } } } },
   usuario: { select: { id: true, nome: true } },
   empreendimento: { select: { id: true, apelido: true } },
   processo: { select: { id: true, numProtocolo: true, numLicenca: true, tipo: true } },
@@ -70,6 +72,25 @@ async function aplicarCorpo(
       : atual.prioridade;
 
   const titulo = body.titulo !== undefined ? String(body.titulo ?? "").trim() || atual.titulo : atual.titulo;
+
+  // Responsáveis adicionais: quando enviados, substituem a lista atual.
+  let adicionais: number[] | null = null;
+  if (body.responsaveisAdicionais !== undefined) {
+    const responsavelIdFinal =
+      body.responsavelId !== undefined && body.responsavelId !== null && body.responsavelId !== ""
+        ? Number(body.responsavelId)
+        : atual.responsavelId;
+    adicionais = normalizarAdicionais(responsavelIdFinal, body.responsaveisAdicionais);
+    if (adicionais.length > 0) {
+      const existentes = await prisma.responsavel.findMany({
+        where: { id: { in: adicionais } },
+        select: { id: true },
+      });
+      if (existentes.length !== adicionais.length) {
+        return { erro: NextResponse.json({ error: "Responsável adicional inválido" }, { status: 400 }) };
+      }
+    }
+  }
   const processoId =
     body.processoId !== undefined ? (body.processoId ? Number(body.processoId) : null) : atual.processoId;
   const condicionanteId =
@@ -207,6 +228,15 @@ async function aplicarCorpo(
     },
     include: INCLUIR,
   });
+
+  if (adicionais !== null) {
+    await prisma.tarefaResponsavel.deleteMany({ where: { tarefaId } });
+    if (adicionais.length > 0) {
+      await prisma.tarefaResponsavel.createMany({
+        data: adicionais.map((responsavelId) => ({ tarefaId, responsavelId })),
+      });
+    }
+  }
 
   await sincronizarExigenciaTarefa({ exigenciaId: tarefa.exigenciaId, status: tarefa.status });
 

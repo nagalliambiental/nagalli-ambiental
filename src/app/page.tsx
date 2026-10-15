@@ -21,6 +21,20 @@ const ROTULO_STATUS_TAREFA: Record<string, string> = {
   concluida: "Concluída",
 };
 
+const ROTULO_PRIORIDADE: Record<string, string> = {
+  urgente: "Urgente",
+  alta: "Alta",
+  media: "Média",
+  baixa: "Baixa",
+};
+
+const COR_PRIORIDADE: Record<string, string> = {
+  urgente: "bg-red-100 text-red-700",
+  alta: "bg-amber-100 text-amber-800",
+  media: "bg-[var(--color-brand-50)] text-[var(--color-brand-600)]",
+  baixa: "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]",
+};
+
 export default async function DashboardPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
@@ -66,10 +80,24 @@ export default async function DashboardPage() {
       orderBy: { validade: "asc" },
     }),
     prisma.tarefa.count({
-      where: { ativo: true, status: { not: STATUS_TAREFA.CONCLUIDA }, responsavel: { usuarioId: usuarioId ?? -1 } },
+      where: {
+        ativo: true,
+        status: { not: STATUS_TAREFA.CONCLUIDA },
+        OR: [
+          { responsavel: { usuarioId: usuarioId ?? -1 } },
+          { responsaveisAdicionais: { some: { responsavel: { usuarioId: usuarioId ?? -1 } } } },
+        ],
+      },
     }),
     prisma.tarefa.findMany({
-      where: { ativo: true, status: { not: STATUS_TAREFA.CONCLUIDA }, responsavel: { usuarioId: usuarioId ?? -1 } },
+      where: {
+        ativo: true,
+        status: { not: STATUS_TAREFA.CONCLUIDA },
+        OR: [
+          { responsavel: { usuarioId: usuarioId ?? -1 } },
+          { responsaveisAdicionais: { some: { responsavel: { usuarioId: usuarioId ?? -1 } } } },
+        ],
+      },
       orderBy: [{ prazoFinal: { sort: "asc", nulls: "last" } }, { criadoEm: "desc" }],
       take: 6,
       select: {
@@ -202,6 +230,9 @@ export default async function DashboardPage() {
                     <p className="text-xs text-[var(--color-ink-500)]">
                       {ROTULO_STATUS_TAREFA[t.status] ?? t.status}
                       {t.empreendimento ? ` · ${t.empreendimento.apelido}` : ""}
+                      <span className={`ml-1.5 rounded px-1.5 py-0.5 text-[10px] font-medium ${COR_PRIORIDADE[t.prioridade] ?? "bg-[var(--color-paper-100)] text-[var(--color-ink-500)]"}`}>
+                        {ROTULO_PRIORIDADE[t.prioridade] ?? t.prioridade}
+                      </span>
                     </p>
                   </div>
                   <div

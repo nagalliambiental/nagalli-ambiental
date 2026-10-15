@@ -57,6 +57,7 @@ export default async function TarefaDetailPage(props: { params: Promise<{ id: st
     where: { id: Number(id) },
     include: {
       responsavel: { select: { nome: true, funcao: true } },
+      responsaveisAdicionais: { select: { responsavel: { select: { nome: true } } } },
       usuario: { select: { nome: true } },
       empreendimento: { select: { apelido: true } },
       processo: { select: { id: true, numProtocolo: true, numLicenca: true, tipo: true } },
@@ -125,7 +126,11 @@ export default async function TarefaDetailPage(props: { params: Promise<{ id: st
                   </div>
                   <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
                     <User size={16} />
-                    <span>Resp.: {tarefa.responsavel.nome}</span>
+                    <span>
+                      Resp.: {tarefa.responsavel.nome}
+                      {tarefa.responsaveisAdicionais.length > 0 &&
+                        ` (+ ${tarefa.responsaveisAdicionais.map((r) => r.responsavel.nome).join(", ")})`}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2 text-[var(--color-ink-500)]">
                     <Building2 size={16} />

@@ -39,6 +39,7 @@ export interface TarefaFormInitial {
   alertaDataLimite: number;
   dataConclusao?: string | null;
   responsavelId: number;
+  responsaveisAdicionais?: number[];
   empreendimentoId: number | null;
   processoId?: number | null;
   condicionanteId?: number | null;
@@ -133,6 +134,7 @@ export default function TarefaForm({
       descricao: initial?.descricao ?? "",
       observacoes: initial?.observacoes ?? "",
       responsavelId: initial ? String(initial.responsavelId) : "",
+      adicionais: initial?.responsaveisAdicionais ?? [],
       empreendimentoId: initial?.empreendimentoId ? String(initial.empreendimentoId) : "",
       processoId: initial?.processoId ? String(initial.processoId) : url.processoId,
       condicionanteId: initial?.condicionanteId ? String(initial.condicionanteId) : url.condicionanteId,
@@ -231,6 +233,7 @@ export default function TarefaForm({
       descricao: form.descricao,
       observacoes: form.observacoes,
       responsavelId: Number(form.responsavelId),
+      responsaveisAdicionais: form.adicionais.filter((id) => id !== Number(form.responsavelId)),
       empreendimentoId: form.empreendimentoId ? Number(form.empreendimentoId) : null,
       processoId: form.processoId ? Number(form.processoId) : null,
       condicionanteId: form.condicionanteId ? Number(form.condicionanteId) : null,
@@ -290,6 +293,31 @@ export default function TarefaForm({
               <option key={r.id} value={r.id}>{r.nome}{r.funcao ? ` — ${r.funcao}` : ""}</option>
             ))}
           </select>
+        </div>
+        <div>
+          <label className={labelClass}>Responsáveis adicionais</label>
+          <div className="max-h-28 space-y-1 overflow-y-auto rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-2">
+            {responsaveis
+              .filter((r) => String(r.id) !== form.responsavelId)
+              .map((r) => (
+                <label key={r.id} className="flex items-center gap-2 text-sm text-[var(--color-ink-700)]">
+                  <input
+                    type="checkbox"
+                    checked={form.adicionais.includes(r.id)}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        adicionais: e.target.checked
+                          ? [...f.adicionais, r.id]
+                          : f.adicionais.filter((id) => id !== r.id),
+                      }))
+                    }
+                    className="h-4 w-4 rounded border-[var(--color-paper-200)]"
+                  />
+                  {r.nome}
+                </label>
+              ))}
+          </div>
         </div>
         <div>
           <label className={labelClass}>Empreendimento</label>

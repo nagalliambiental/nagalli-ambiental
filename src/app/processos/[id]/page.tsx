@@ -124,6 +124,7 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
       where: { processoId: processo.id, ativo: true },
       include: {
         responsavel: { select: { id: true, nome: true } },
+        responsaveisAdicionais: { select: { responsavel: { select: { id: true, nome: true } } } },
         usuario: { select: { id: true, nome: true } },
         empreendimento: { select: { id: true, apelido: true } },
         processo: { select: { id: true, numProtocolo: true, numLicenca: true } },

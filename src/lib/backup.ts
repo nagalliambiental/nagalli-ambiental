@@ -161,6 +161,7 @@ export async function buildBackupWorkbook() {
     prisma.tarefa.findMany({
       include: {
         responsavel: { select: { nome: true } },
+        responsaveisAdicionais: { select: { responsavel: { select: { nome: true } } } },
         usuario: { select: { nome: true } },
         empreendimento: { select: { apelido: true } },
         processo: { select: { numProtocolo: true, numLicenca: true } },
@@ -366,7 +367,7 @@ export async function buildBackupWorkbook() {
     "Dias p/ Limite": diasAte(t.dataLimite),
     "Alerta Prazo": t.alertaPrazoFinal,
     "Alerta Limite": t.alertaDataLimite,
-    Responsável: t.responsavel?.nome || "",
+    Responsável: [t.responsavel?.nome, ...(t.responsaveisAdicionais ?? []).map((r) => r.responsavel.nome)].filter(Boolean).join(", "),
     Empreendimento: t.empreendimento?.apelido || "",
     Processo: t.processo?.numLicenca || t.processo?.numProtocolo || "",
     Condicionante: t.condicionante?.titulo || "",

@@ -318,6 +318,7 @@ model Responsavel {
   processos  Processo[]
   usuario    Usuario?   @relation(fields: [usuarioId], references: [id])
   tarefas    Tarefa[]
+  tarefasSecundarias TarefaResponsavel[]
   periodos   TarefaPeriodo[]
 }
 
@@ -357,9 +358,21 @@ model Tarefa {
   serie            TarefaSerie?    @relation(fields: [serieId], references: [id], onDelete: SetNull)
   anexos           TarefaAnexo[]
   notificacoes     Notificacao[]
+  responsaveisAdicionais TarefaResponsavel[]
 
   @@index([processoId])
   @@index([status])
+}
+
+model TarefaResponsavel {
+  tarefaId      Int
+  responsavelId Int
+  criadoEm      DateTime @default(now())
+  tarefa        Tarefa     @relation(fields: [tarefaId], references: [id], onDelete: Cascade)
+  responsavel   Responsavel @relation(fields: [responsavelId], references: [id], onDelete: Cascade)
+
+  @@id([tarefaId, responsavelId])
+  @@index([responsavelId])
 }
 
 model TarefaSerie {

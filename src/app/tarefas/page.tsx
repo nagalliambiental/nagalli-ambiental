@@ -35,6 +35,7 @@ export default async function TarefasPage({
       where: { ativo: true },
       include: {
         responsavel: { select: { id: true, nome: true } },
+        responsaveisAdicionais: { select: { responsavel: { select: { id: true, nome: true } } } },
         usuario: { select: { id: true, nome: true } },
         empreendimento: { select: { id: true, apelido: true } },
         processo: { select: { id: true, numProtocolo: true, numLicenca: true } },
@@ -68,7 +69,10 @@ export default async function TarefasPage({
     } else if (t.status === STATUS_TAREFA.CONCLUIDA) {
       return false;
     }
-    if (responsavelId && t.responsavelId !== Number(responsavelId)) return false;
+    if (responsavelId) {
+      const rid = Number(responsavelId);
+      if (t.responsavelId !== rid && !t.responsaveisAdicionais?.some((r) => r.responsavel.id === rid)) return false;
+    }
     if (prioridade && t.prioridade !== prioridade) return false;
     if (termo) {
       const alvo = `${t.titulo} ${t.descricao ?? ""} ${t.observacoes ?? ""}`.toLowerCase();

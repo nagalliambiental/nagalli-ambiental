@@ -19,7 +19,10 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
   const { id } = await props.params;
   const tarefa = await prisma.tarefa.findUnique({
     where: { id: Number(id) },
-    include: { serie: { include: { periodos: { orderBy: { inicio: "asc" } } } } },
+    include: {
+      serie: { include: { periodos: { orderBy: { inicio: "asc" } } } },
+      responsaveisAdicionais: { select: { responsavelId: true } },
+    },
   });
   if (!tarefa) notFound();
 
@@ -38,6 +41,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
     alertaDataLimite: tarefa.alertaDataLimite,
     dataConclusao: tarefa.dataConclusao ? tarefa.dataConclusao.toISOString() : null,
     responsavelId: tarefa.responsavelId,
+    responsaveisAdicionais: tarefa.responsaveisAdicionais.map((r) => r.responsavelId),
     empreendimentoId: tarefa.empreendimentoId,
     processoId: tarefa.processoId,
     condicionanteId: tarefa.condicionanteId,
