@@ -47,10 +47,10 @@ export const NAV_ITEMS: NavItem[] = [
     ],
   },
   {
-    label: "SINIR", icon: Recycle,
+    label: "MTR/SINIR", icon: Recycle,
     children: [
       { label: "DMR", href: "/dmr" },
-      { label: "SINIR MTR", href: "/sinir" },
+      { label: "MTR/SINIR", href: "/sinir" },
       { label: "MTR IMA/SC", href: "/mtr-ima" },
     ],
   },

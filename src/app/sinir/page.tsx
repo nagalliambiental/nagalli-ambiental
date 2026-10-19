@@ -290,7 +290,7 @@ export default function SinirPage() {
     <div>
       <Topbar
         icon={Truck}
-        title="SINIR MTR"
+        title="MTR/SINIR"
         subtitle="Verificação de certificação de cargas (MTR) e emissão de manifestos via SINIR Nacional"
       />
 
