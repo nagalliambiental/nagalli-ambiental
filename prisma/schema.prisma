@@ -33,7 +33,7 @@ model Cliente {
   razaoSocial                               String
   cnpj                                      String              @unique
   telefone                                  String
-  email                                     String
+  email                                     String?
   respLegal                                 String
   criadoEm                                  DateTime            @default(now())
   updatedAt                                 DateTime            @updatedAt

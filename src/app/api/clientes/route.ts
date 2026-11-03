@@ -39,7 +39,7 @@ export async function POST(request: Request) {
 
     const body = await request.json();
 
-    if (!body.apelido || !body.razaoSocial || !body.cnpj || !body.telefone || !body.email || !body.respLegal) {
+    if (!body.apelido || !body.razaoSocial || !body.cnpj || !body.telefone || !body.respLegal) {
       return NextResponse.json(
         { erro: "Todos os campos obrigatórios devem ser preenchidos" },
         { status: 400 }
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
     }
 
     const perfil = (session.user as { perfil?: string }).perfil;
-    const data = { ...body };
+    const data = { ...body, email: body.email?.trim() || null };
     if (!ehPrivilegiado(perfil)) {
       data.visibilidade = "publico";
     }

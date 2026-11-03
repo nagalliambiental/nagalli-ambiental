@@ -5,6 +5,7 @@ import { ptBR } from "date-fns/locale";
 import Link from "next/link";
 import { FilterableDataTable, type Column } from "@/components/FilterableDataTable";
 import RowActions from "@/components/RowActions";
+import { abreviarTipoLicenca } from "@/lib/constants";
 
 interface ProcessoData {
   id: number;
@@ -51,7 +52,7 @@ function statusExibicao(p: ProcessoData): { label: string; color: string } {
 export function ProcessosTable({ data }: { data: ProcessoData[] }) {
   const columns: Column<ProcessoData>[] = [
     { header: "Nº Licença", sortable: true, sortKey: "numLicenca", render: (p) => <Link href={`/processos/${p.id}`} className="font-mono text-sm text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)] hover:underline"><span className="block max-w-[220px] truncate" title={p.numLicenca || p.numProtocolo}>{p.numLicenca || p.numProtocolo}</span></Link> },
-    { header: "Tipo", sortable: true, sortKey: "tipo", hideBelow: "lg", render: (p) => <span className="block max-w-[220px] truncate" title={p.tipo}>{p.tipo}</span> },
+    { header: "Tipo", sortable: true, sortKey: "tipo", hideBelow: "lg", render: (p) => <span className="block max-w-[220px] truncate" title={p.tipo}>{abreviarTipoLicenca(p.tipo)}</span> },
     { header: "Empreendimento", hideBelow: "lg", render: (p) => <Link href={`/empreendimentos/${p.empreendimento.id}`} className="hover:text-[var(--color-brand-600)] hover:underline"><span className="block max-w-[220px] truncate" title={p.empreendimento.apelido}>{p.empreendimento.apelido}</span></Link> },
     {
       header: "Status",

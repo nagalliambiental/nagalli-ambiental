@@ -30,7 +30,7 @@ interface ClienteData {
   nomeFantasia: string | null;
   cnpj: string;
   telefone: string;
-  email: string;
+  email: string | null;
   respLegal: string;
   rua: string | null;
   numero: string | null;

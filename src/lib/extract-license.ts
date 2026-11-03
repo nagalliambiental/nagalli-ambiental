@@ -130,6 +130,7 @@ export function extrairMunicipio(text: string): string | null {
 const PADROES_MODALIDADE = [
   /(licen[çc]a\s+ambiental\s+por\s+ades[ãa]o\s+e\s+compromisso)/i,
   /(licen[çc]a\s+ambiental\s+por\s+compromisso)/i,
+  /(licen[çc]a\s+ambiental\s+simplificada)/i,
   /(renova[çc][ãa]o\s+da\s+licen[çc]a\s+de\s+opera[çc][ãa]o)/i,
   /(licen[çc]a\s+pr[ée]via)/i,
   /(licen[çc]a\s+de\s+instala[çc][ãa]o)/i,

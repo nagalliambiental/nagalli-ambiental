@@ -97,6 +97,22 @@ export const VISIBILIDADE = {
 
 export type Visibilidade = (typeof VISIBILIDADE)[keyof typeof VISIBILIDADE];
 
+export const ABREVIACAO_LICENCA: Record<string, string> = {
+  "Licença Ambiental Simplificada": "LAS",
+  "Licença Ambiental por Compromisso": "LAC",
+  "Licença Ambiental por Adesão e Compromisso": "LAC",
+  "Licença Prévia": "LP",
+  "Licença de Instalação": "LI",
+  "Licença de Operação": "LO",
+  "Renovação de Licença de Operação": "RLO",
+  "Renovação de Licença de Instalação": "RLI",
+  "Renovação de Licença Ambiental Simplificada": "RLAS",
+};
+
+export function abreviarTipoLicenca(tipo: string): string {
+  return ABREVIACAO_LICENCA[tipo] || tipo;
+}
+
 export const STATUS_EXIGENCIA = {
   PENDENTE: "pendente",
   EM_ANDAMENTO: "em_andamento",

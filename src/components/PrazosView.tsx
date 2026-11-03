@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { List, Calendar as CalendarIcon, ChevronLeft, ChevronRight, ShieldCheck, Truck, Search, X } from "lucide-react";
-import { format, differenceInDays, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameDay, isSameMonth, addMonths } from "date-fns";
+import { format, differenceInDays, startOfMonth, endOfMonth, eachDayOfInterval, eachMonthOfInterval, isSameDay, isSameMonth, addMonths, addWeeks, addYears, startOfWeek, endOfWeek, startOfYear, endOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import Link from "next/link";
+import { abreviarTipoLicenca } from "@/lib/constants";
 
 /** Janela de alerta de TPP (AutorizacaoTpp não possui alertaDias). */
 const JANELA_TPP_DIAS = 30;
@@ -56,6 +57,7 @@ interface TppPrazo {
 
 export function PrazosView({ processos, exigencias, pgrs = [], tpps = [] }: { processos: ProcessoPrazo[]; exigencias: ExigenciaPrazo[]; pgrs?: PgrsPrazo[]; tpps?: TppPrazo[] }) {
   const [view, setView] = useState<"lista" | "calendario">("lista");
+  const [periodo, setPeriodo] = useState<"semana" | "mes" | "trimestre" | "semestre" | "ano">("mes");
   const [busca, setBusca] = useState("");
 
   const processoFiltrados = processos.filter((p) =>
@@ -104,12 +106,26 @@ export function PrazosView({ processos, exigencias, pgrs = [], tpps = [] }: { pr
         >
           <CalendarIcon size={14} /> Calendário
         </button>
+        {view === "calendario" && (
+          <select
+            value={periodo}
+            onChange={(e) => setPeriodo(e.target.value as typeof periodo)}
+            className="focus-ring rounded-lg border border-[var(--color-paper-200)] bg-white px-3 py-1.5 text-sm font-medium text-[var(--color-ink-700)]"
+            aria-label="Período do calendário"
+          >
+            <option value="semana">Semana</option>
+            <option value="mes">Mês</option>
+            <option value="trimestre">Trimestre</option>
+            <option value="semestre">Semestre</option>
+            <option value="ano">Ano</option>
+          </select>
+        )}
       </div>
 
       {view === "lista" ? (
         <ListView processos={processoFiltrados} exigencias={exigenciasFiltradas} pgrs={pgrsFiltrados} tpps={tppsFiltrados} />
       ) : (
-        <CalendarView processos={processoFiltrados} exigencias={exigenciasFiltradas} pgrs={pgrsFiltrados} tpps={tppsFiltrados} />
+        <CalendarView processos={processoFiltrados} exigencias={exigenciasFiltradas} pgrs={pgrsFiltrados} tpps={tppsFiltrados} periodo={periodo} />
       )}
     </div>
   );
@@ -142,7 +158,7 @@ function ListView({ processos, exigencias, pgrs, tpps }: { processos: ProcessoPr
                         {isVencido && <span className="inline-flex items-center gap-1 rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">Vencido</span>}
                         {isAlert && !isVencido && <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">Alerta</span>}
                       </div>
-                      <div className="mt-1 text-xs text-[var(--color-ink-500)]">{p.tipo} · {p.orgao.sigla} · {p.empreendimento.apelido}</div>
+                      <div className="mt-1 text-xs text-[var(--color-ink-500)]">{abreviarTipoLicenca(p.tipo)} · {p.orgao.sigla} · {p.empreendimento.apelido}</div>
                     </div>
                     <div className="flex flex-col items-end gap-1">
                       <div className={`text-right text-sm font-semibold ${isVencido ? "text-red-700" : isAlert ? "text-amber-700" : "text-[var(--color-ink-700)]"}`}>
@@ -306,89 +322,65 @@ function ListView({ processos, exigencias, pgrs, tpps }: { processos: ProcessoPr
   );
 }
 
-function CalendarView({ processos, exigencias, pgrs, tpps }: { processos: ProcessoPrazo[]; exigencias: ExigenciaPrazo[]; pgrs: PgrsPrazo[]; tpps: TppPrazo[] }) {
+function CalendarView({ processos, exigencias, pgrs, tpps, periodo }: { processos: ProcessoPrazo[]; exigencias: ExigenciaPrazo[]; pgrs: PgrsPrazo[]; tpps: TppPrazo[]; periodo: "semana" | "mes" | "trimestre" | "semestre" | "ano" }) {
   const now = new Date();
-  const [mesAtual, setMesAtual] = useState(() => startOfMonth(now));
-  const monthStart = startOfMonth(mesAtual);
-  const monthEnd = endOfMonth(mesAtual);
-  const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
-  const startDay = getDay(monthStart);
-  const isMesAtual = isSameMonth(mesAtual, now);
-
-  const allEvents: { date: Date; label: string; href: string; type: "processo" | "exigencia" | "pgrs" | "tpp"; vencido: boolean }[] = [
-    ...processos.map((p) => ({ date: new Date(p.validade), label: `Lic: ${p.numLicenca || p.numProtocolo}`, href: `/processos/${p.id}`, type: "processo" as const, vencido: differenceInDays(new Date(p.validade), now) < 0 })),
-    ...exigencias.map((e) => ({ date: new Date(e.prazo), label: `Exig: ${e.descricao.substring(0, 30)}`, href: `/processos/${e.processo.id}`, type: "exigencia" as const, vencido: differenceInDays(new Date(e.prazo), now) < 0 })),
-    ...pgrs.map((p) => ({ date: new Date(p.validade), label: `PGRS: ${p.empreendimento.apelido}`, href: `/pgrs/${p.id}`, type: "pgrs" as const, vencido: differenceInDays(new Date(p.validade), now) < 0 })),
-    ...tpps.map((t) => ({ date: new Date(t.validade), label: `TPP: ${t.numero}`, href: `/tpp`, type: "tpp" as const, vencido: differenceInDays(new Date(t.validade), now) < 0 })),
+  const [referencia, setReferencia] = useState(() => startOfMonth(now));
+  const inicio = periodo === "semana"
+    ? startOfWeek(referencia, { weekStartsOn: 0 })
+    : periodo === "mes"
+      ? startOfMonth(referencia)
+      : periodo === "trimestre"
+        ? startOfMonth(new Date(referencia.getFullYear(), Math.floor(referencia.getMonth() / 3) * 3, 1))
+        : periodo === "semestre"
+          ? startOfMonth(new Date(referencia.getFullYear(), referencia.getMonth() < 6 ? 0 : 6, 1))
+          : startOfYear(referencia);
+  const fim = periodo === "semana"
+    ? endOfWeek(referencia, { weekStartsOn: 0 })
+    : periodo === "mes"
+      ? endOfMonth(referencia)
+      : periodo === "trimestre"
+        ? endOfMonth(addMonths(inicio, 2))
+        : periodo === "semestre"
+          ? endOfMonth(addMonths(inicio, 5))
+          : endOfYear(referencia);
+  const days = eachDayOfInterval({ start: startOfWeek(inicio, { weekStartsOn: 0 }), end: endOfWeek(fim, { weekStartsOn: 0 }) });
+  const meses = eachMonthOfInterval({ start: inicio, end: fim });
+  const allEvents = [
+    ...processos.map((p) => ({ date: new Date(p.validade), label: `Lic: ${p.numLicenca || p.numProtocolo}`, href: `/processos/${p.id}`, vencido: differenceInDays(new Date(p.validade), now) < 0 })),
+    ...exigencias.map((e) => ({ date: new Date(e.prazo), label: `Exig: ${e.descricao.substring(0, 30)}`, href: `/processos/${e.processo.id}`, vencido: differenceInDays(new Date(e.prazo), now) < 0 })),
+    ...pgrs.map((p) => ({ date: new Date(p.validade), label: `PGRS: ${p.empreendimento.apelido}`, href: `/pgrs/${p.id}`, vencido: differenceInDays(new Date(p.validade), now) < 0 })),
+    ...tpps.map((t) => ({ date: new Date(t.validade), label: `TPP: ${t.numero}`, href: "/tpp", vencido: differenceInDays(new Date(t.validade), now) < 0 })),
   ];
-
-  const getEventsForDay = (day: Date) => allEvents.filter((ev) => isSameDay(ev.date, day));
-
+  const eventos = (d: Date) => allEvents.filter((e) => isSameDay(e.date, d));
+  const eventosMes = (d: Date) => allEvents.filter((e) => isSameMonth(e.date, d));
+  const deslocar = (valor: number) => setReferencia((r) => periodo === "semana" ? addWeeks(r, valor) : periodo === "ano" ? addYears(r, valor) : addMonths(r, valor * (periodo === "trimestre" ? 3 : periodo === "semestre" ? 6 : 1)));
+  const titulo = periodo === "semana" ? `${format(inicio, "dd/MM")} – ${format(fim, "dd/MM/yyyy")}` : periodo === "mes" ? format(referencia, "MMMM 'de' yyyy", { locale: ptBR }) : periodo === "trimestre" ? `${Math.floor(inicio.getMonth() / 3) + 1}º trimestre de ${inicio.getFullYear()}` : periodo === "semestre" ? `${inicio.getMonth() === 0 ? "1º" : "2º"} semestre de ${inicio.getFullYear()}` : String(inicio.getFullYear());
   const dayNames = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
   return (
     <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
       <div className="mb-4 flex items-center justify-between gap-2">
-        <button
-          type="button"
-          onClick={() => setMesAtual((m) => addMonths(m, -1))}
-          className="focus-ring transition-brand flex items-center gap-1 rounded-lg border border-[var(--color-paper-200)] px-3 py-1.5 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]"
-          title="Mês anterior"
-        >
-          <ChevronLeft size={16} />
-        </button>
-        <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] capitalize">
-          {format(mesAtual, "MMMM 'de' yyyy", { locale: ptBR })}
-        </h2>
+        <button type="button" onClick={() => deslocar(-1)} className="focus-ring rounded-lg border border-[var(--color-paper-200)] px-3 py-1.5 text-sm hover:bg-[var(--color-paper-100)]"><ChevronLeft size={16} /></button>
+        <h2 className="font-display text-base font-semibold capitalize">{titulo}</h2>
         <div className="flex items-center gap-2">
-          {!isMesAtual && (
-            <button
-              type="button"
-              onClick={() => setMesAtual(startOfMonth(now))}
-              className="focus-ring transition-brand rounded-lg border border-[var(--color-paper-200)] px-3 py-1.5 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]"
-            >
-              Hoje
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={() => setMesAtual((m) => addMonths(m, 1))}
-            className="focus-ring transition-brand flex items-center gap-1 rounded-lg border border-[var(--color-paper-200)] px-3 py-1.5 text-sm font-medium text-[var(--color-ink-700)] hover:bg-[var(--color-paper-100)]"
-            title="Próximo mês"
-          >
-            <ChevronRight size={16} />
-          </button>
+          {(inicio > now || fim < now) && <button type="button" onClick={() => setReferencia(startOfMonth(now))} className="focus-ring rounded-lg border border-[var(--color-paper-200)] px-3 py-1.5 text-sm hover:bg-[var(--color-paper-100)]">Hoje</button>}
+          <button type="button" onClick={() => deslocar(1)} className="focus-ring rounded-lg border border-[var(--color-paper-200)] px-3 py-1.5 text-sm hover:bg-[var(--color-paper-100)]"><ChevronRight size={16} /></button>
         </div>
       </div>
-      <div className="grid grid-cols-7 gap-px bg-[var(--color-paper-200)]">
-        {dayNames.map((name) => (
-          <div key={name} className="bg-[var(--color-paper-50)] p-2 text-center text-xs font-medium text-[var(--color-ink-500)]">
-            {name}
-          </div>
-        ))}
-        {Array.from({ length: startDay }).map((_, i) => (
-          <div key={`empty-${i}`} className="bg-white p-2 min-h-[80px]" />
-        ))}
-        {days.map((day) => {
-          const events = getEventsForDay(day);
-          const isToday = isSameDay(day, now);
-          return (
-            <div key={day.toISOString()} className={`bg-white p-1.5 min-h-[80px] ${isToday ? "ring-2 ring-inset ring-[var(--color-brand-500)]" : ""}`}>
-              <div className={`text-xs font-medium mb-1 ${isToday ? "text-[var(--color-brand-600)]" : "text-[var(--color-ink-500)]"}`}>
-                {format(day, "d")}
-              </div>
-              <div className="space-y-0.5">
-                {events.slice(0, 3).map((ev, idx) => (
-                  <a key={idx} href={ev.href} className={`block truncate rounded px-1 py-0.5 text-[10px] font-medium ${ev.vencido ? "bg-red-100 text-red-700" : "bg-[var(--color-brand-50)] text-[var(--color-brand-700)]"}`}>
-                    {ev.label}
-                  </a>
-                ))}
-                {events.length > 3 && <div className="text-[10px] text-[var(--color-ink-400)] px-1">+{events.length - 3} mais</div>}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+
+      {periodo === "ano" ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {meses.map((mes) => {
+            const itens = eventosMes(mes);
+            return <div key={mes.toISOString()} className="rounded-lg border border-[var(--color-paper-200)] p-3"><h3 className="mb-2 text-sm font-semibold capitalize">{format(mes, "MMMM", { locale: ptBR })}</h3>{itens.length === 0 ? <p className="text-xs text-[var(--color-ink-400)]">Sem prazos</p> : <div className="space-y-1">{itens.map((e, i) => <a key={i} href={e.href} className={`block truncate rounded px-2 py-1 text-xs ${e.vencido ? "bg-red-100 text-red-700" : "bg-[var(--color-brand-50)] text-[var(--color-brand-700)]"}`}>{format(e.date, "dd/MM")} · {e.label}</a>)}</div>}</div>;
+          })}
+        </div>
+      ) : (
+        <div className="grid grid-cols-7 gap-px bg-[var(--color-paper-200)]">
+          {dayNames.map((name) => <div key={name} className="bg-[var(--color-paper-50)] p-2 text-center text-xs font-medium">{name}</div>)}
+          {days.map((day) => { const items = eventos(day); return <div key={day.toISOString()} className={`min-h-[80px] bg-white p-1.5 ${isSameDay(day, now) ? "ring-2 ring-inset ring-[var(--color-brand-500)]" : ""}`}><div className="mb-1 text-xs font-medium">{format(day, "d")}</div>{items.slice(0, 3).map((e, i) => <a key={i} href={e.href} className={`mb-0.5 block truncate rounded px-1 py-0.5 text-[10px] ${e.vencido ? "bg-red-100 text-red-700" : "bg-[var(--color-brand-50)] text-[var(--color-brand-700)]"}`}>{e.label}</a>)}{items.length > 3 && <div className="text-[10px] text-[var(--color-ink-400)]">+{items.length - 3} mais</div>}</div>; })}
+        </div>
+      )}
     </div>
   );
 }

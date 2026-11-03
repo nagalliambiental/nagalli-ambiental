@@ -90,12 +90,14 @@ export async function PUT(
       if (field in body) data[field] = body[field];
     }
 
-    if (!data.apelido || !data.razaoSocial || !data.cnpj || !data.telefone || !data.email || !data.respLegal) {
+    if (!data.apelido || !data.razaoSocial || !data.cnpj || !data.telefone || !data.respLegal) {
       return NextResponse.json(
         { erro: "Todos os campos obrigatórios devem ser preenchidos" },
         { status: 400 }
       );
     }
+
+    if ("email" in data) data.email = String(data.email || "").trim() || null;
 
 const perfil = (session.user as { perfil?: string }).perfil;
     if (!ehPrivilegiado(perfil) && "visibilidade" in data) {

@@ -8,6 +8,7 @@ import { FolderKanban, Upload, Loader2, CheckCircle2, Search, Leaf } from "lucid
 import { dataInputParaDate } from "@/lib/format";
 
 const TIPOS = [
+  "Licença Ambiental Simplificada",
   "Licença Ambiental por Compromisso",
   "Licença Ambiental por Adesão e Compromisso",
   "Licença Prévia",

@@ -19,7 +19,9 @@ import CompensacaoCorteCard from "@/components/CompensacaoCorteCard";
 import ProcessoStatusSelector from "@/components/ProcessoStatusSelector";
 import LicencaPdfCard from "@/components/LicencaPdfCard";
 import { EmbargosModal } from "@/components/EmbargosModal";
+import { DocumentosProcessoTab } from "@/components/DocumentosProcessoTab";
 import { mascararCpfCnpj } from "@/lib/cliente-cnpj";
+import { abreviarTipoLicenca } from "@/lib/constants";
 import ExigenciasTab from "@/components/ExigenciasTab";
 import { TarefasProcessoTab } from "@/components/tarefas/TarefasProcessoTab";
 
@@ -172,7 +174,7 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
       <Topbar
         icon={ClipboardList}
         title={`Licença ${processo.numLicenca || processo.numProtocolo}`}
-        subtitle={processo.tipo}
+        subtitle={`${abreviarTipoLicenca(processo.tipo)} — ${processo.tipo}`}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Link
@@ -366,17 +368,7 @@ export default async function ProcessoDetailPage(props: { params: Promise<{ id: 
             key: "vinculados",
             label: "Itens vinculados",
             count: processo._count.documentos,
-            content: (
-              <div className="shadow-card rounded-[var(--radius-card)] border border-[var(--color-paper-200)] bg-white p-5">
-                <h2 className="font-display text-base font-semibold text-[var(--color-ink-900)] mb-3">Itens vinculados</h2>
-                <div className="space-y-2 text-sm">
-                  <Link href={`/documentos?processoId=${processo.id}`} className="flex items-center justify-between rounded-lg border border-[var(--color-paper-200)] px-3 py-2 text-[var(--color-brand-600)] hover:bg-[var(--color-paper-100)]">
-                    <span>{processo._count.documentos} documento(s)</span>
-                    <span>→</span>
-                  </Link>
-                </div>
-              </div>
-            ),
+            content: <DocumentosProcessoTab processoId={processo.id} />,
           },
         ]}
       />
