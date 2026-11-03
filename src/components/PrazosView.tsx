@@ -375,6 +375,28 @@ function CalendarView({ processos, exigencias, pgrs, tpps, periodo }: { processo
             return <div key={mes.toISOString()} className="rounded-lg border border-[var(--color-paper-200)] p-3"><h3 className="mb-2 text-sm font-semibold capitalize">{format(mes, "MMMM", { locale: ptBR })}</h3>{itens.length === 0 ? <p className="text-xs text-[var(--color-ink-400)]">Sem prazos</p> : <div className="space-y-1">{itens.map((e, i) => <a key={i} href={e.href} className={`block truncate rounded px-2 py-1 text-xs ${e.vencido ? "bg-red-100 text-red-700" : "bg-[var(--color-brand-50)] text-[var(--color-brand-700)]"}`}>{format(e.date, "dd/MM")} · {e.label}</a>)}</div>}</div>;
           })}
         </div>
+      ) : periodo === "trimestre" || periodo === "semestre" ? (
+        <div className="space-y-6">
+          {meses.map((mes) => {
+            const inicioMes = startOfMonth(mes);
+            const fimMes = endOfMonth(mes);
+            const diasMes = eachDayOfInterval({ start: startOfWeek(inicioMes, { weekStartsOn: 0 }), end: endOfWeek(fimMes, { weekStartsOn: 0 }) });
+            return (
+              <div key={mes.toISOString()}>
+                <h3 className="mb-2 border-b border-[var(--color-paper-200)] pb-2 font-display text-sm font-semibold capitalize text-[var(--color-ink-800)]">
+                  {format(mes, "MMMM 'de' yyyy", { locale: ptBR })}
+                </h3>
+                <div className="grid grid-cols-7 gap-px bg-[var(--color-paper-200)]">
+                  {dayNames.map((name) => <div key={name} className="bg-[var(--color-paper-50)] p-2 text-center text-xs font-medium">{name}</div>)}
+                  {diasMes.map((day) => {
+                    const items = eventos(day);
+                    return <div key={day.toISOString()} className={`min-h-[72px] bg-white p-1.5 ${isSameDay(day, now) ? "ring-2 ring-inset ring-[var(--color-brand-500)]" : ""}`}><div className="mb-1 text-xs font-medium">{format(day, "d")}</div>{items.slice(0, 3).map((e, i) => <a key={i} href={e.href} className={`mb-0.5 block truncate rounded px-1 py-0.5 text-[10px] ${e.vencido ? "bg-red-100 text-red-700" : "bg-[var(--color-brand-50)] text-[var(--color-brand-700)]"}`}>{e.label}</a>)}{items.length > 3 && <div className="text-[10px] text-[var(--color-ink-400)]">+{items.length - 3} mais</div>}</div>;
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       ) : (
         <div className="grid grid-cols-7 gap-px bg-[var(--color-paper-200)]">
           {dayNames.map((name) => <div key={name} className="bg-[var(--color-paper-50)] p-2 text-center text-xs font-medium">{name}</div>)}
