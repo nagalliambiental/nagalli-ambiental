@@ -77,10 +77,11 @@ test("transferência para cliente inexistente → erro e nada é alterado", asyn
     processos: new Map([[11, { empreendimentoId: 5 }]]),
     clientes: new Set([1]),
   };
-  const db = criarDbFake(estado) as unknown as PrismaClient;
+  const db = criarDbFake(estado);
+  const prismaDb = db as unknown as PrismaClient;
 
   await assert.rejects(
-    () => transferirEmpreendimento(db, { empreendimentoId: 5, clienteNovoId: 999 }),
+    () => transferirEmpreendimento(prismaDb, { empreendimentoId: 5, clienteNovoId: 999 }),
     (erro: unknown) =>
       erro instanceof TransferenciaError &&
       erro.message === "O cliente de destino não existe" &&
@@ -97,10 +98,11 @@ test("transferência para o mesmo cliente → erro", async () => {
     processos: new Map([[11, { empreendimentoId: 5 }]]),
     clientes: new Set([1, 2]),
   };
-  const db = criarDbFake(estado) as unknown as PrismaClient;
+  const db = criarDbFake(estado);
+  const prismaDb = db as unknown as PrismaClient;
 
   await assert.rejects(
-    () => transferirEmpreendimento(db, { empreendimentoId: 5, clienteNovoId: 1 }),
+    () => transferirEmpreendimento(prismaDb, { empreendimentoId: 5, clienteNovoId: 1 }),
     (erro: unknown) => erro instanceof TransferenciaError && erro.message.includes("já pertence")
   );
 
@@ -113,10 +115,11 @@ test("empreendimento inexistente → erro 404", async () => {
     processos: new Map(),
     clientes: new Set([1]),
   };
-  const db = criarDbFake(estado) as unknown as PrismaClient;
+  const db = criarDbFake(estado);
+  const prismaDb = db as unknown as PrismaClient;
 
   await assert.rejects(
-    () => transferirEmpreendimento(db, { empreendimentoId: 999, clienteNovoId: 1 }),
+    () => transferirEmpreendimento(prismaDb, { empreendimentoId: 999, clienteNovoId: 1 }),
     (erro: unknown) => erro instanceof TransferenciaError && erro.status === 404
   );
 });
@@ -130,9 +133,10 @@ test("transferência com sucesso move o empreendimento e preserva as licenças",
     ]),
     clientes: new Set([1, 2]),
   };
-  const db = criarDbFake(estado) as unknown as PrismaClient;
+  const db = criarDbFake(estado);
+  const prismaDb = db as unknown as PrismaClient;
 
-  const resultado: ResultadoTransferencia = await transferirEmpreendimento(db, {
+  const resultado: ResultadoTransferencia = await transferirEmpreendimento(prismaDb, {
     empreendimentoId: 5,
     clienteNovoId: 2,
   });

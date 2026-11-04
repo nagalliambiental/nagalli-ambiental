@@ -879,6 +879,7 @@ function MeusMtrsTab(props: {
   const [gerandoAlerta, setGerandoAlerta] = useState(false);
   const [consultando, setConsultando] = useState(false);
   const [baixandoZip, setBaixandoZip] = useState(false);
+  const [baixandoPdfUnificado, setBaixandoPdfUnificado] = useState(false);
   const [baixandoCdfZip, setBaixandoCdfZip] = useState(false);
   const [reclassificando, setReclassificando] = useState(false);
   const [lista, setLista] = useState<Manifesto[]>([]);
@@ -1046,6 +1047,24 @@ function MeusMtrsTab(props: {
     } finally {
       setBaixandoCdfZip(false);
     }
+  }
+
+  async function baixarPdfUnificado() {
+    const elegiveis = listaFiltrada.filter((m) => m.status !== "CANCELADO");
+    if (elegiveis.length === 0) {
+      toast("Nenhum MTR ativo para unificar", "warning");
+      return;
+    }
+    setBaixandoPdfUnificado(true);
+    try {
+      const res = await fetch("/api/sinir/exportar-pdf", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids: elegiveis.map((m) => m.id) }) });
+      if (!res.ok) { const data = await res.json().catch(() => null); toast(data?.error || "Falha ao gerar PDF unificado", "error"); return; }
+      const blob = await res.blob(); const url = URL.createObjectURL(blob); const a = document.createElement("a");
+      a.href = url; a.download = "mtrs-sinir-unificado.pdf"; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      const falhas = Number(res.headers.get("X-MTR-Falhas") || 0);
+      toast(`PDF unificado gerado${falhas ? ` com ${falhas} falha(s)` : ""}`, falhas ? "warning" : "success");
+    } catch { toast("Falha ao gerar PDF unificado", "error"); }
+    finally { setBaixandoPdfUnificado(false); }
   }
 
   async function reclassificarSemClasse() {
@@ -1361,8 +1380,17 @@ function MeusMtrsTab(props: {
             <span className="rounded-full bg-[var(--color-paper-100)] px-2 py-0.5 text-xs font-semibold tabular-nums text-[var(--color-ink-600)]">{listaFiltrada.length}</span>
           </h2>
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={baixarTodosZip}
+             <button
+               onClick={baixarPdfUnificado}
+               disabled={baixandoPdfUnificado || listaFiltrada.filter((m) => m.status !== "CANCELADO").length === 0}
+               className="focus-ring transition-brand flex items-center gap-2 rounded-lg border border-[var(--color-brand-500)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-brand-600)] hover:bg-[var(--color-brand-50)] disabled:opacity-50"
+               title="Unir os MTRs filtrados em um único PDF"
+             >
+               {baixandoPdfUnificado ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />}
+               {baixandoPdfUnificado ? "Unificando..." : "PDF único"}
+             </button>
+             <button
+               onClick={baixarTodosZip}
                disabled={baixandoZip || listaFiltrada.filter((m) => m.status !== "CANCELADO").length === 0}
               className="focus-ring transition-brand flex items-center gap-2 rounded-lg bg-[var(--color-brand-500)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--color-brand-600)] disabled:opacity-50"
               title="Baixar todos os MTRs ativos (exclui cancelados) em um arquivo ZIP"

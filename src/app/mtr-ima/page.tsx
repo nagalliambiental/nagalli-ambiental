@@ -353,6 +353,7 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn; onChanged: ()
   const [dataFinal, setDataFinal] = useState(() => isoHoje(new Date()));
   const [lista, setLista] = useState<Manifesto[]>([]);
   const [carregando, setCarregando] = useState(false);
+  const [baixandoPdfUnificado, setBaixandoPdfUnificado] = useState(false);
   const [toggle, setToggle] = useState("todos");
   const [busca, setBusca] = useState("");
   const [pagina, setPagina] = useState(0);
@@ -575,6 +576,21 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn; onChanged: ()
     }
   }
 
+  async function baixarPdfUnificado() {
+    const elegiveis = visiveisBusca.filter((m) => m.status !== "CANCELADO");
+    if (elegiveis.length === 0) { toast("Nenhum MTR ativo para unificar", "warning"); return; }
+    setBaixandoPdfUnificado(true);
+    try {
+      const res = await fetch("/api/mtr-ima/exportar-pdf", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids: elegiveis.map((m) => m.id) }) });
+      if (!res.ok) { const data = await res.json().catch(() => null); toast(data?.error || "Falha ao gerar PDF unificado", "error"); return; }
+      const blob = await res.blob(); const url = URL.createObjectURL(blob); const a = document.createElement("a");
+      a.href = url; a.download = "mtrs-ima-unificado.pdf"; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      const falhas = Number(res.headers.get("X-MTR-Falhas") || 0);
+      toast(`PDF unificado gerado${falhas ? ` com ${falhas} falha(s)` : ""}`, falhas ? "warning" : "success");
+    } catch { toast("Falha ao gerar PDF unificado", "error"); }
+    finally { setBaixandoPdfUnificado(false); }
+  }
+
   async function reclassificarClasses() {
     if (!conexaoEfetiva) return;
     setReclassificando(true);
@@ -723,6 +739,15 @@ function MeusMtrsTab(props: { conexoes: Conexao[]; toast: ToastFn; onChanged: ()
             >
               {reclassificando ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
               {reclassificando ? "Classificando..." : "Classificar MTRs"}
+            </button>
+            <button
+              onClick={baixarPdfUnificado}
+              disabled={carregando || baixandoPdfUnificado || visiveisBusca.filter((m) => m.status !== "CANCELADO").length === 0}
+              className="focus-ring transition-brand flex items-center gap-2 rounded-lg border border-[var(--color-brand-500)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-brand-600)] hover:bg-[var(--color-brand-50)] disabled:opacity-50"
+              title="Unir os MTRs filtrados em um único PDF"
+            >
+              {baixandoPdfUnificado ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />}
+              {baixandoPdfUnificado ? "Unificando..." : "PDF único"}
             </button>
             <button
               onClick={baixarTodosZip}
