@@ -163,7 +163,8 @@ export function DataTable<T extends { id: number }>({
       {data.length > 0 ? (
         <>
           <div className={renderMobileCard ? "hidden md:block" : ""}>
-            <table className="w-full text-sm">
+            <div className="w-full overflow-x-auto">
+            <table className="w-full min-w-[760px] text-sm">
               <colgroup>
                 <col className="w-[3%]" />
                 {columns.map((_, i) => (
@@ -219,6 +220,7 @@ export function DataTable<T extends { id: number }>({
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
 
           {renderMobileCard && (
