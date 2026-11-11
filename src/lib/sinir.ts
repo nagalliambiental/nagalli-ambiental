@@ -1277,7 +1277,17 @@ export async function gerarPdfMtrsPorClasse(
   const { embedNagalliLogo, drawNagalliTopo, drawNagalliFooter, PALETTE } = await import("./report-branding");
 
   const gruposPorLetra = new Map<string, MtrPorClasseItem[]>();
-  for (const letra of ["A (Solo)", "A", "B", "C", "D", "N"]) gruposPorLetra.set(letra, []);
+  for (const letra of [
+    "RCC Classe A (Solo)",
+    "RCC Classe A",
+    "RCC Classe B",
+    "RCC Classe C",
+    "RCC Classe D",
+    "Classe I — Perigoso",
+    "Classe II A — Não inerte",
+    "Classe II B — Inerte",
+    "N",
+  ]) gruposPorLetra.set(letra, []);
   for (const m of mtrs) {
     const valor = m.classeNome || "";
     const letra = gruposPorLetra.has(valor) ? valor : "N";
