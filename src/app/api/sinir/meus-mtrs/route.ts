@@ -89,6 +89,8 @@ export async function POST(req: NextRequest) {
 
   for (const m of manifestos) {
     let classeNome = m.classeNome;
+    let classificacaoNome = m.classificacaoNome;
+    let classificacaoOrigem = m.classificacaoOrigem;
     let classeRisco = m.classeRisco;
     let residuos = m.residuos;
 
@@ -100,6 +102,8 @@ export async function POST(req: NextRequest) {
       const classeCatalogo = classeDeCodigoIbama(classeRisco, catalogo?.resNome || "");
       if (classeCatalogo.classeNome) {
         classeNome = classeCatalogo.classeNome;
+        classificacaoNome = classeCatalogo.classificacaoNome;
+        classificacaoOrigem = classeCatalogo.classificacaoOrigem;
       }
 
       if (!classeNome || classeNome === "Não identificado") {
@@ -107,6 +111,8 @@ export async function POST(req: NextRequest) {
         const detalhe = await consultarManifestoComRetry(conexaoCompleta, m.numero);
         if (detalhe) {
           classeNome = detalhe.classeNome;
+          classificacaoNome = detalhe.classificacaoNome;
+          classificacaoOrigem = detalhe.classificacaoOrigem;
           classeRisco = detalhe.classeRisco || classeRisco;
           residuos = detalhe.residuos;
         }
@@ -140,6 +146,8 @@ export async function POST(req: NextRequest) {
         dataRecebimento: m.dataRecebimento,
         classeRisco,
         classeNome: classeNome === "Não identificado" ? null : classeNome,
+        classificacaoNome: classificacaoNome || null,
+        classificacaoOrigem: classificacaoOrigem || null,
         ...(residuos ? { residuos: residuos as never } : {}),
       },
       update: {
@@ -156,12 +164,15 @@ export async function POST(req: NextRequest) {
         dataExpedicao: m.dataExpedicao,
         dataRecebimento: m.dataRecebimento,
         ...dadosClasseUpdate,
+        ...(classificacaoNome ? { classificacaoNome, classificacaoOrigem } : {}),
         ...(residuos ? { residuos: residuos as never } : {}),
       },
     });
     itens.push({
       ...m,
       classeNome: salvo.classeNome || classeNome || "Não identificado",
+      classificacaoNome: salvo.classificacaoNome || classificacaoNome || "Não identificada",
+      classificacaoOrigem: salvo.classificacaoOrigem || classificacaoOrigem || "",
       classeRisco: classeRisco || salvo.classeRisco || "",
       cdfNumero: m.cdfNumero || salvo.cdfNumero || undefined,
       id: salvo.id,

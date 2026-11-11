@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
     ultimoUsoEm: conexao.ultimoUsoEm,
   };
 
-  const atualizados: { id: number; numero: string; classeNome: string }[] = [];
+  const atualizados: { id: number; numero: string; classeNome: string; classificacaoNome: string }[] = [];
   const falhas: { id: number; numero: string; erro: string }[] = [];
   let catalogos: Awaited<ReturnType<typeof listarCatalogos>> | null = null;
   try {
@@ -52,9 +52,9 @@ export async function POST(req: NextRequest) {
       if (classeCatalogo.classeNome) {
         await prisma.sinirManifesto.update({
           where: { id: m.id },
-          data: { classeNome: classeCatalogo.classeNome, classeRisco: m.classeRisco },
+          data: { classeNome: classeCatalogo.classeNome, classificacaoNome: classeCatalogo.classificacaoNome, classificacaoOrigem: classeCatalogo.classificacaoOrigem, classeRisco: m.classeRisco },
         });
-        atualizados.push({ id: m.id, numero: m.numero, classeNome: classeCatalogo.classeNome });
+        atualizados.push({ id: m.id, numero: m.numero, classeNome: classeCatalogo.classeNome, classificacaoNome: classeCatalogo.classificacaoNome });
         continue;
       }
 
@@ -72,11 +72,13 @@ export async function POST(req: NextRequest) {
         where: { id: m.id },
         data: {
           classeNome: classe.classeNome,
+          classificacaoNome: classe.classificacaoNome,
+          classificacaoOrigem: classe.classificacaoOrigem,
           classeRisco: classe.resCodigoIbama || null,
           residuos: detalhe.residuos as never,
         },
       });
-      atualizados.push({ id: m.id, numero: m.numero, classeNome: classe.classeNome });
+      atualizados.push({ id: m.id, numero: m.numero, classeNome: classe.classeNome, classificacaoNome: classe.classificacaoNome });
     } catch (erro) {
       falhas.push({ id: m.id, numero: m.numero, erro: erro instanceof Error ? erro.message : "Erro ao consultar SINIR" });
     }

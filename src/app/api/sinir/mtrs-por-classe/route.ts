@@ -104,7 +104,7 @@ export async function GET(req: NextRequest) {
       const catalogo = catalogos?.residuos.find((item) => item.resCodigoIbama.replace(/\D/g, "") === String(m.classeRisco || "").replace(/\D/g, ""));
       ident = classeDeCodigoIbama(m.classeRisco, catalogo?.resNome || "");
     }
-    const classeNome = ident.classeNome || "N";
+    const classeNome = ident.classificacaoNome || "Não identificada";
     const descSinir = ident.descricaoSinir
       ? `${classeNome} (${ident.descricaoSinir})`
       : "Não identificada";

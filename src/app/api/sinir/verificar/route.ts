@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
   for (const m of manifestos) {
     const ident = classeDeResiduos(m.residuos);
     const dadosClasse = ident.classeNome
-      ? { classeNome: ident.classeNome, classeRisco: ident.resCodigoIbama || m.classeRisco || null }
+      ? { classeNome: ident.classeNome, classificacaoNome: ident.classificacaoNome, classificacaoOrigem: ident.classificacaoOrigem, classeRisco: ident.resCodigoIbama || m.classeRisco || null }
       : {};
     await prisma.sinirManifesto.upsert({
       where: { conexaoId_numero: { conexaoId: conexao.id, numero: m.numero } },

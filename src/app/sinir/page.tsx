@@ -58,6 +58,8 @@ interface Manifesto {
   dataExpedicao: string | null;
   dataRecebimento: string | null;
   classeNome: string | null;
+  classificacaoNome: string | null;
+  classificacaoOrigem: string | null;
   conexao: { id: number; nome: string; modo: string };
 }
 
@@ -861,6 +863,18 @@ function tipoClasse(classe: string | null | undefined): string {
   return letraClasse(classe) || "Não identificada";
 }
 
+function classificacaoMtr(m: Manifesto): string {
+  return m.classificacaoNome || tipoClasse(m.classeNome);
+}
+
+function classeBadgeKey(classificacao: string): string {
+  if (classificacao.includes("Classe I") || classificacao.includes("Classe D")) return "D";
+  if (classificacao.includes("II A") || classificacao.includes("Classe B")) return "B";
+  if (classificacao.includes("II B") || classificacao.includes("Classe C")) return "C";
+  if (classificacao.includes("Classe A")) return "A";
+  return letraClasse(classificacao);
+}
+
 // Rótulo do trimestre corrente (período de referência do SINIR)
 function rotuloTrimestre(ref = new Date()) {
   return `${Math.floor(ref.getMonth() / 3) + 1}º trimestre de ${ref.getFullYear()}`;
@@ -905,16 +919,16 @@ function MeusMtrsTab(props: {
   );
   const emAtraso = salvos.filter((m) => diasEmSalvo(m) > limiteDias);
   const listaPorStatus = filtro === "pendentes" ? salvos : lista;
-  const classeContagens = { "A (Solo)": 0, A: 0, B: 0, C: 0, D: 0, "Não identificada": 0 };
+  const classeContagens: Record<string, number> = {};
   for (const m of listaPorStatus) {
-    const classe = tipoClasse(m.classeNome) as keyof typeof classeContagens;
-    if (classe && classe in classeContagens) classeContagens[classe]++;
+    const classe = classificacaoMtr(m);
+    classeContagens[classe] = (classeContagens[classe] || 0) + 1;
   }
-  const listaFiltrada = listaPorStatus.filter((m) => classeFiltro === "todas" || tipoClasse(m.classeNome) === classeFiltro);
+  const listaFiltrada = listaPorStatus.filter((m) => classeFiltro === "todas" || classificacaoMtr(m) === classeFiltro);
   const totalPaginasL = Math.max(1, Math.ceil(listaFiltrada.length / POR_PAGINA));
   const paginaL = Math.min(paginaLista, totalPaginasL - 1);
   const visiveisL = listaFiltrada.slice(paginaL * POR_PAGINA, paginaL * POR_PAGINA + POR_PAGINA);
-  const semClasse = lista.filter((m) => tipoClasse(m.classeNome) === "Não identificada");
+  const semClasse = lista.filter((m) => classificacaoMtr(m) === "Não identificada");
 
   async function consultarSinir(idConexao?: string) {
     const conexaoUsar = idConexao || conexaoEfetiva;
@@ -1111,8 +1125,8 @@ function MeusMtrsTab(props: {
   }
 
   function renderClasse(m: Manifesto) {
-    const tipo = tipoClasse(m.classeNome);
-    const letra = letraClasse(tipo);
+    const tipo = classificacaoMtr(m);
+    const letra = classeBadgeKey(tipo);
     if (tipo !== "Não identificada") {
       return <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-bold ${CLASSE_BADGE[letra]}`}>{tipo}</span>;
     }
@@ -1124,11 +1138,14 @@ function MeusMtrsTab(props: {
         title="Definir classe manualmente"
       >
         <option value="">Definir classe</option>
-        <option value="A (Solo)">A (Solo)</option>
-        <option value="A">A</option>
-        <option value="B">B</option>
-        <option value="C">C</option>
-        <option value="D">D</option>
+        <option value="RCC Classe A (Solo)">RCC Classe A (Solo)</option>
+        <option value="RCC Classe A">RCC Classe A</option>
+        <option value="RCC Classe B">RCC Classe B</option>
+        <option value="RCC Classe C">RCC Classe C</option>
+        <option value="RCC Classe D">RCC Classe D</option>
+        <option value="Classe I — Perigoso">Classe I — Perigoso</option>
+        <option value="Classe II A — Não inerte">Classe II A — Não inerte</option>
+        <option value="Classe II B — Inerte">Classe II B — Inerte</option>
       </select>
     );
   }

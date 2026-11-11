@@ -745,6 +745,8 @@ model SinirManifesto {
   dataCancelamento DateTime?
   classeRisco   String?
   classeNome    String?
+  classificacaoNome   String?
+  classificacaoOrigem String?
   residuos      Json?
   criadoEm      DateTime @default(now())
   atualizadoEm  DateTime @updatedAt
