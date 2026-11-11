@@ -859,6 +859,7 @@ function letraClasse(classe: string | null | undefined): string {
 
 function tipoClasse(classe: string | null | undefined): string {
   const valor = String(classe || "").toUpperCase();
+  if (!valor || /N.?O IDENTIFICAD/.test(valor)) return "Não identificada";
   if (valor === "A (SOLO)") return "A (Solo)";
   return letraClasse(classe) || "Não identificada";
 }
