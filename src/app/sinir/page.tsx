@@ -1096,8 +1096,8 @@ function MeusMtrsTab(props: {
         toast(data?.error || "Falha ao reclassificar MTRs", "error");
         return;
       }
-      const atualizados = new Map<number, string>((data.itens || []).map((item: { id: number; classeNome: string }) => [item.id, item.classeNome]));
-      setLista((atual) => atual.map((m) => atualizados.has(m.id) ? { ...m, classeNome: atualizados.get(m.id)! } : m));
+      const atualizados = new Map<number, { classeNome: string; classificacaoNome: string }>((data.itens || []).map((item: { id: number; classeNome: string; classificacaoNome: string }) => [item.id, { classeNome: item.classeNome, classificacaoNome: item.classificacaoNome }]));
+      setLista((atual) => atual.map((m) => atualizados.has(m.id) ? { ...m, classeNome: atualizados.get(m.id)!.classeNome, classificacaoNome: atualizados.get(m.id)!.classificacaoNome } : m));
       toast(`${data.atualizados} MTR(s) reclassificado(s); ${data.falhas} sem classificação`, data.falhas ? "warning" : "success");
     } catch {
       toast("Falha ao reclassificar MTRs", "error");
@@ -1118,7 +1118,7 @@ function MeusMtrsTab(props: {
         toast(data?.error || "Falha ao salvar a classe", "error");
         return;
       }
-      setLista((atual) => atual.map((item) => item.id === m.id ? { ...item, classeNome: data.classeNome } : item));
+      setLista((atual) => atual.map((item) => item.id === m.id ? { ...item, classeNome: data.classeNome, classificacaoNome: data.classificacaoNome } : item));
       toast(`MTR ${m.numero} classificado como ${classeNome}`, "success");
     } catch {
       toast("Falha ao salvar a classe", "error");
@@ -1128,17 +1128,18 @@ function MeusMtrsTab(props: {
   function renderClasse(m: Manifesto) {
     const tipo = classificacaoMtr(m);
     const letra = classeBadgeKey(tipo);
-    if (tipo !== "Não identificada") {
-      return <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-bold ${CLASSE_BADGE[letra]}`}>{tipo}</span>;
+    const semClasse = tipo === "Não identificada" || tipo === "Não identificado";
+    if (!semClasse) {
+      return <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-bold ${CLASSE_BADGE[letra]}`} title={m.classificacaoOrigem || undefined}>{tipo}</span>;
     }
     return (
       <select
         defaultValue=""
         onChange={(e) => { if (e.target.value) void salvarClasseManual(m, e.target.value); }}
-        className="rounded border border-amber-300 bg-amber-50 px-1.5 py-1 text-xs text-amber-800"
-        title="Definir classe manualmente"
+        className={`rounded border px-1.5 py-1 text-xs ${tipo === "Não identificado" ? "border-orange-300 bg-orange-50 text-orange-800" : "border-amber-300 bg-amber-50 text-amber-800"}`}
+        title={tipo === "Não identificado" ? "Código fora da Lista IBAMA — defina a classe manualmente" : "Definir classe manualmente"}
       >
-        <option value="">Definir classe</option>
+        <option value="">{tipo === "Não identificado" ? "Fora da lista" : "Definir classe"}</option>
         <option value="RCC Classe A (Solo)">RCC Classe A (Solo)</option>
         <option value="RCC Classe A">RCC Classe A</option>
         <option value="RCC Classe B">RCC Classe B</option>

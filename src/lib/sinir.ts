@@ -1,6 +1,7 @@
 import { prisma } from "./prisma";
 import { descriptografar } from "./crypto";
 import { rgb } from "pdf-lib";
+import { buscarNaLista } from "./lista-residuos";
 
 export const SINIR_API_BASE = "https://admin.sinir.gov.br/api";
 
@@ -865,30 +866,11 @@ export function trimestreCorrente(ref = new Date()) {
 
 // ---------- Identificação de Classe a partir dos resíduos do manifesto ----------
 
-// Tabela oficial de classes do SINIR (claCodigo -> classe do relatório).
-// Correlação adotada na operação: perigosos (NBR Classe I, RCC Classe D,
-// RSS e códigos IBAMA com (*)) = D; RCC A/B/C = A/B/C (solo 170504 = A (Solo));
-// NBR Classe II A = B; NBR Classe II B = C.
-const MAPA_CLASSE_LETRA: Record<number, string> = {
-  1: "D", // CLASSE I - Perigosos (NBR 10.004)
-  2: "D", // OUTROS
-  11: "A", // CLASSE A (RCC)
-  12: "B", // CLASSE B (RCC)
-  13: "C", // CLASSE C (RCC)
-  14: "D", // CLASSE D (RCC - perigosos)
-  21: "D", // GRUPO A1 (RSS - infectantes)
-  22: "D", // GRUPO A2 (RSS - infectantes)
-  23: "D", // GRUPO A3 (RSS - infectantes)
-  24: "D", // GRUPO A4 (RSS - infectantes)
-  25: "D", // GRUPO A5 (RSS - infectantes)
-  32: "D", // GRUPO B (RSS - químicos)
-  33: "D", // GRUPO C (RSS - radioativos)
-  34: "D", // GRUPO D (RSS)
-  35: "D", // GRUPO E (RSS - perfurocortantes)
-  41: "D", // GRUPO A (RSS - infectantes)
-  42: "C", // CLASSE II B - Inertes (NBR 10.004)
-  43: "B", // CLASSE II A - Não inertes (NBR 10.004)
-};
+// Tabela oficial de classes do SINIR (claCodigo). Mantida apenas como
+// documentação — a classificação usa a Lista IBAMA × CONAMA 307 (ver
+// classificarPorLista) e, fora dela, periculosidade NBR/descrição oficial.
+// (O antigo MAPA_CLASSE_LETRA do catálogo SINIR foi aposentado: ele forcava
+// Classe II A/B e RSS em letras A-D, o que conflitava com a Lista do cliente.)
 
 export interface ClasseIdentificada {
   letra: string;
@@ -900,50 +882,128 @@ export interface ClasseIdentificada {
   resDescricao: string;
 }
 
+/**
+ * Classifica pelo código IBAMA usando a Lista Brasileira de Resíduos
+ * (IN IBAMA 13/2012 × CONAMA 307/02), fonte primária do enquadramento.
+ * - (*) na Lista = perigoso → "Classe I — Perigoso";
+ * - Classe D sem (*) = enquadramento por cautela → "RCC Classe D";
+ * - A/B/C → "RCC Classe A/B/C" (170504 = "RCC Classe A (Solo)").
+ */
+function classificarPorLista(
+  resCodigoIbama: string,
+  resDescricao: string,
+  claDescricaoSinir: string
+): ClasseIdentificada | null {
+  const entrada = buscarNaLista(resCodigoIbama);
+  if (!entrada) return null;
+  const solo =
+    entrada.classe === "A" &&
+    (entrada.codigo === "170504" || /^\s*(?:solo|terra)\b/i.test(resDescricao));
+  const perigoso = entrada.classe === "D" && entrada.perigoso;
+  return {
+    letra: entrada.classe,
+    classeNome: solo ? "A (Solo)" : entrada.classe,
+    classificacaoNome: solo
+      ? "RCC Classe A (Solo)"
+      : perigoso
+        ? "Classe I — Perigoso"
+        : entrada.classe === "A"
+          ? "RCC Classe A"
+          : entrada.classe === "B"
+            ? "RCC Classe B"
+            : entrada.classe === "C"
+              ? "RCC Classe C"
+              : "RCC Classe D",
+    classificacaoOrigem: perigoso ? "IBAMA/NBR" : "IBAMA/CONAMA 307",
+    descricaoSinir: claDescricaoSinir || entrada.descricao || "Sem descrição",
+    resCodigoIbama,
+    resDescricao,
+  };
+}
+
+function classificarPorClasseSinir(
+  claCodigo: number | null,
+  claDescricao: string,
+  resCodigoIbama: string,
+  resDescricao: string
+): ClasseIdentificada | null {
+  const d = claDescricao.toUpperCase();
+  let classificacaoNome = "";
+  let letra = "N";
+
+  if (claCodigo === 1 || /CLASSE\s+I\b/.test(d)) {
+    classificacaoNome = "Classe I — Perigoso";
+    letra = "D";
+  } else if ([21, 22, 23, 24, 25, 32, 33, 34, 35, 41].includes(claCodigo ?? -1) || /GRUPO\s+[ABCDE]/.test(d)) {
+    classificacaoNome = `RSS ${claDescricao || "Grupo"}`;
+    letra = "D";
+  } else if (claCodigo === 11 || /CLASSE\s+A\b/.test(d)) {
+    classificacaoNome = "RCC Classe A";
+    letra = "A";
+  } else if (claCodigo === 12 || /CLASSE\s+B\b/.test(d)) {
+    classificacaoNome = "RCC Classe B";
+    letra = "B";
+  } else if (claCodigo === 13 || /CLASSE\s+C\b/.test(d)) {
+    classificacaoNome = "RCC Classe C";
+    letra = "C";
+  } else if (claCodigo === 14 || /CLASSE\s+D\b/.test(d)) {
+    classificacaoNome = "RCC Classe D";
+    letra = "D";
+  } else if (claCodigo === 42 || /CLASSE\s+II\s*-?\s*B\b/.test(d)) {
+    classificacaoNome = "Classe II B — Inerte";
+    letra = "C";
+  } else if (claCodigo === 43 || /CLASSE\s+II\s*-?\s*A\b/.test(d)) {
+    classificacaoNome = "Classe II A — Não inerte";
+    letra = "B";
+  } else if (claCodigo === 2 || /OUTROS/.test(d)) {
+    classificacaoNome = "Outros — SINIR";
+    letra = "N";
+  }
+
+  if (!classificacaoNome) return null;
+  return {
+    letra,
+    classeNome: letra,
+    classificacaoNome,
+    classificacaoOrigem: "SINIR",
+    descricaoSinir: claDescricao || resDescricao || "Sem descrição",
+    resCodigoIbama,
+    resDescricao,
+  };
+}
+
 export function classeDeCodigoIbama(codigo: string | null | undefined, descricao = ""): ClasseIdentificada {
   const original = String(codigo || "").trim();
   const normalizado = original.replace(/\D/g, "");
   const texto = descricao.toUpperCase();
-  let letra = "";
 
-  if (/CLASSE\s+II\s*-?\s*B\b/.test(texto)) letra = "C";
-  else if (/CLASSE\s+II\s*-?\s*A\b/.test(texto)) letra = "B";
-  else if (/CLASSE\s+D\b/.test(texto)) letra = "D";
-  else if (/CLASSE\s+C\b/.test(texto)) letra = "C";
-  else if (/CLASSE\s+B\b/.test(texto)) letra = "B";
-  else if (/CLASSE\s+A\b/.test(texto)) letra = "A";
-  else if (/CLASSE\s+I\b/.test(texto) || /PERIGOS[OA]S?/.test(texto) || original.includes("*")) letra = "D";
-  else if (/GRUPO\s+[ABCDE]/.test(texto)) letra = "D";
-  else if (normalizado === "170504") letra = "A";
-  else if (/OUTROS/.test(texto)) letra = "D";
+  // Fonte primária: Lista Brasileira de Resíduos × CONAMA 307/02.
+  const pelaLista = classificarPorLista(normalizado, descricao, "");
+  if (pelaLista) return pelaLista;
 
-  if (!letra) return { letra: "", classeNome: "", classificacaoNome: "", classificacaoOrigem: "", descricaoSinir: "", resCodigoIbama: original, resDescricao: descricao };
+  // A descrição oficial do resíduo (IN IBAMA 13/2012) pode indicar a classe CONAMA.
+  if (/CLASSE\s+D\b/.test(texto)) {
+    return { letra: "D", classeNome: "D", classificacaoNome: "RCC Classe D", classificacaoOrigem: "IBAMA/CONAMA 307", descricaoSinir: descricao || "Sem descrição", resCodigoIbama: original, resDescricao: descricao };
+  }
+  if (/CLASSE\s+C\b/.test(texto)) {
+    return { letra: "C", classeNome: "C", classificacaoNome: "RCC Classe C", classificacaoOrigem: "IBAMA/CONAMA 307", descricaoSinir: descricao || "Sem descrição", resCodigoIbama: original, resDescricao: descricao };
+  }
+  if (/CLASSE\s+B\b/.test(texto)) {
+    return { letra: "B", classeNome: "B", classificacaoNome: "RCC Classe B", classificacaoOrigem: "IBAMA/CONAMA 307", descricaoSinir: descricao || "Sem descrição", resCodigoIbama: original, resDescricao: descricao };
+  }
+  if (/CLASSE\s+A\b/.test(texto)) {
+    const solo = normalizado === "170504" || /^\s*(?:solo|terra)\b/.test(texto);
+    return { letra: "A", classeNome: solo ? "A (Solo)" : "A", classificacaoNome: solo ? "RCC Classe A (Solo)" : "RCC Classe A", classificacaoOrigem: "IBAMA/CONAMA 307", descricaoSinir: descricao || "Sem descrição", resCodigoIbama: original, resDescricao: descricao };
+  }
 
-  const solo = letra === "A" && (normalizado === "170504" || /^\s*SOLOS?\b/.test(texto) || /^\s*TERRA\b/.test(texto));
-  const perigoso = letra === "D" && (original.includes("*") || /CLASSE\s+I\b|PERIGOS[OA]S?/.test(texto));
-  const origem = /RCC|CONAMA\s+307|1705\d{2}/.test(texto) || /^17\d{4}/.test(normalizado)
-    ? "RCC/CONAMA 307"
-    : perigoso
-      ? "IBAMA/NBR"
-      : "SINIR";
-  const classificacaoNome = solo
-    ? "RCC Classe A (Solo)"
-    : perigoso
-      ? "Classe I — Perigoso"
-      : letra === "B"
-        ? "Classe II A — Não inerte"
-        : letra === "C"
-          ? "Classe II B — Inerte"
-          : `RCC Classe ${letra}`;
-  return {
-    letra,
-    classeNome: solo ? "A (Solo)" : letra,
-    classificacaoNome,
-    classificacaoOrigem: origem,
-    descricaoSinir: descricao || "Sem descrição",
-    resCodigoIbama: original,
-    resDescricao: descricao,
-  };
+  // Periculosidade NBR 10.004 (exigida em MTR — nota 9 da Lista): código com (*)
+  // ou Classe I. Não é substituída pela CONAMA 307.
+  if (original.includes("*") || /CLASSE\s+I\b/.test(texto) || /PERIGOS[OA]S?/.test(texto)) {
+    return { letra: "D", classeNome: "D", classificacaoNome: "Classe I — Perigoso", classificacaoOrigem: "IBAMA/NBR", descricaoSinir: descricao || "Sem descrição", resCodigoIbama: original, resDescricao: descricao };
+  }
+
+  // Código fora da Lista enviada e sem classe na descrição oficial.
+  return { letra: "N", classeNome: "N", classificacaoNome: "Não identificado", classificacaoOrigem: "fora_da_lista_ibama", descricaoSinir: descricao || "Sem descrição", resCodigoIbama: original, resDescricao: descricao };
 }
 
 // Extrai o número do CDF emitido (código > 0 indica CDF existente)
@@ -973,58 +1033,64 @@ export function classeDeResiduos(residuos: unknown): ClasseIdentificada {
     const resCodigoIbama = String(residuo.resCodigoIbama || "").trim();
     const resDescricao = String(residuo.resDescricao || "").trim();
 
-    let letra = "";
-    if (claCodigo != null && MAPA_CLASSE_LETRA[claCodigo]) letra = MAPA_CLASSE_LETRA[claCodigo];
-    else {
-      const d = claDescricao.toUpperCase();
-      if (/(?:CLASSE\s+)?II\s*-?\s*B\b/.test(d)) letra = "C";
-      else if (/(?:CLASSE\s+)?II\s*-?\s*A\b/.test(d)) letra = "B";
-      else if (/CLASSE\s+D\b/.test(d)) letra = "D";
-      else if (/CLASSE\s+C\b/.test(d)) letra = "C";
-      else if (/CLASSE\s+B\b/.test(d)) letra = "B";
-      else if (/CLASSE\s+A\b/.test(d)) letra = "A";
-      else if (/CLASSE\s+I\b/.test(d)) letra = "D";
-      else if (/GRUPO\s+[ABCDE]/.test(d)) letra = "D";
-      else if (/OUTROS/.test(d)) letra = "D";
-    }
+    // Se o SINIR trouxe a classe, ela é a fonte primária. A lista enviada
+    // serve apenas para resíduos sem classificação SINIR suficiente.
+    const peloSinir = classificarPorClasseSinir(claCodigo, claDescricao, resCodigoIbama, resDescricao);
+    if (peloSinir) return peloSinir;
 
-    if (letra) {
-      const codigoIbama = resCodigoIbama.replace(/\D/g, "");
-      const solo = letra === "A" &&
-        (codigoIbama === "170504" || /^\s*(?:solo|terra)\b/i.test(resDescricao));
-      const perigoso = letra === "D" && (resCodigoIbama.includes("*") || claCodigo === 1 || /CLASSE\s+I\b|PERIGOS[OA]S?/.test(resDescricao.toUpperCase()));
-      const rss = claCodigo != null && [21, 22, 23, 24, 25, 32, 33, 34, 35, 41].includes(claCodigo);
-      const classificacaoNome = solo
-        ? "RCC Classe A (Solo)"
-        : rss
-          ? `RSS ${claDescricao || "Grupo"}`
-        : perigoso
-          ? "Classe I — Perigoso"
-          : letra === "B"
-            ? "Classe II A — Não inerte"
-            : letra === "C"
-              ? "Classe II B — Inerte"
-              : `RCC Classe ${letra}`;
-      const classificacaoOrigem = [11, 12, 13, 14].includes(claCodigo || 0)
-        ? "RCC/CONAMA 307"
-        : rss
-          ? "RSS"
-        : perigoso
-          ? "IBAMA/NBR"
-          : "SINIR";
+    const pelaLista = classificarPorLista(resCodigoIbama, resDescricao, claDescricao);
+    if (pelaLista) return pelaLista;
+
+    // Fora da Lista: periculosidade NBR 10.004 (obrigatória em MTR) tem prioridade.
+    const perigoso =
+      resCodigoIbama.includes("*") ||
+      claCodigo === 1 ||
+      /CLASSE\s+I\b/.test(claDescricao.toUpperCase()) ||
+      /PERIGOS[OA]S?/.test(resDescricao.toUpperCase());
+    if (perigoso) {
       return {
-        letra,
-        classeNome: solo ? "A (Solo)" : letra,
-        classificacaoNome,
-        classificacaoOrigem,
-        descricaoSinir: claDescricao || "Sem descrição",
+        letra: "D",
+        classeNome: "D",
+        classificacaoNome: "Classe I — Perigoso",
+        classificacaoOrigem: "IBAMA/NBR",
+        descricaoSinir: claDescricao || resDescricao || "Sem descrição",
         resCodigoIbama,
         resDescricao,
       };
     }
 
-    const peloIbama = classeDeCodigoIbama(resCodigoIbama, resDescricao);
-    if (peloIbama.classeNome) return peloIbama;
+    // Classe indicada na descrição oficial do resíduo (IN IBAMA 13/2012).
+    const textoResiduo = resDescricao.toUpperCase();
+    const porDescricao: Record<string, string> = { D: "RCC Classe D", C: "RCC Classe C", B: "RCC Classe B", A: "RCC Classe A" };
+    for (const letra of ["D", "C", "B", "A"]) {
+      // "CLASSE B CONFORME..." — espaço antes da letra evita casar "CLASSE II A".
+      if (textoResiduo.includes(`CLASSE ${letra} `) || textoResiduo.includes(`CLASSE ${letra})`)) {
+        const solo = letra === "A" && (resCodigoIbama.replace(/\D/g, "") === "170504" || /^\s*(?:solo|terra)\b/i.test(resDescricao));
+        return {
+          letra,
+          classeNome: solo ? "A (Solo)" : letra,
+          classificacaoNome: solo ? "RCC Classe A (Solo)" : porDescricao[letra],
+          classificacaoOrigem: "IBAMA/CONAMA 307",
+          descricaoSinir: claDescricao || resDescricao || "Sem descrição",
+          resCodigoIbama,
+          resDescricao,
+        };
+      }
+    }
+
+    // Tem código/classe do SINIR, mas não está na Lista enviada e sem enquadramento.
+    if (claCodigo != null || claDescricao || resCodigoIbama || resDescricao) {
+      return {
+        letra: "N",
+        classeNome: "N",
+        classificacaoNome: "Não identificado",
+        classificacaoOrigem: "fora_da_lista_ibama",
+        descricaoSinir: claDescricao || resDescricao || "Sem descrição",
+        resCodigoIbama,
+        resDescricao,
+      };
+    }
+    // Item sem nenhuma informação — tenta o próximo resíduo.
   }
   return { letra: "", classeNome: "", classificacaoNome: "", classificacaoOrigem: "", descricaoSinir: "", resCodigoIbama: "", resDescricao: "" };
 }
@@ -1264,6 +1330,7 @@ const SECOES_CLASSE: { letra: string; titulo: string; subtitulo: string }[] = [
   { letra: "Classe I — Perigoso", titulo: "CLASSE I — PERIGOSO", subtitulo: "Classe I (NBR 10.004) e códigos IBAMA perigosos" },
   { letra: "Classe II A — Não inerte", titulo: "CLASSE II A — NÃO INERTE", subtitulo: "Classe II A (NBR 10.004)" },
   { letra: "Classe II B — Inerte", titulo: "CLASSE II B — INERTE", subtitulo: "Classe II B (NBR 10.004)" },
+  { letra: "Não identificado", titulo: "NÃO IDENTIFICADO", subtitulo: "Código de resíduo fora da Lista Brasileira enviada (IN IBAMA 13/2012)" },
   { letra: "N", titulo: "NÃO IDENTIFICADA", subtitulo: "MTR sem classe de resíduo disponível no detalhe do SINIR" },
 ];
 
@@ -1286,6 +1353,7 @@ export async function gerarPdfMtrsPorClasse(
     "Classe I — Perigoso",
     "Classe II A — Não inerte",
     "Classe II B — Inerte",
+    "Não identificado",
     "N",
   ]) gruposPorLetra.set(letra, []);
   for (const m of mtrs) {

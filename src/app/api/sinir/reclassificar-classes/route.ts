@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   const mtrs = await prisma.sinirManifesto.findMany({
     where: {
       conexaoId,
-      OR: [{ classeNome: null }, { classeNome: "" }, { classeNome: "Não identificada" }, { classeNome: "Não identificado" }],
+      OR: [{ classeNome: null }, { classeNome: "" }, { classeNome: "Não identificada" }],
     },
     orderBy: { dataExpedicao: "desc" },
     select: { id: true, numero: true, classeRisco: true },

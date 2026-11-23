@@ -14,9 +14,9 @@ test("ehPrivilegiado só aceita socio/admin", () => {
   assert.equal(ehPrivilegiado(""), false);
 });
 
-test("classifica RCC Classe A solo pelo código IBAMA", () => {
+test("SINIR Classe A prevalece sobre a tabela quando o código tem classificação SINIR", () => {
   const classe = classeDeResiduos([{ classe: { claCodigo: 11 }, residuo: { resCodigoIbama: "170504", resDescricao: "Solos e rochas" } }]);
-  assert.equal(classe.classeNome, "A (Solo)");
+  assert.equal(classe.classificacaoNome, "RCC Classe A");
 });
 
 test("classifica RCC Classe A não solo", () => {
@@ -34,16 +34,17 @@ test("NBR Classe I (perigoso) classifica como D — caso ELEPOL 160303(*)", () =
   assert.equal(classe.classeNome, "D");
 });
 
-test("RSS Grupo A (infectantes) classifica como D", () => {
+test("SINIR RSS Grupo A prevalece como classificação SINIR", () => {
   const classe = classeDeResiduos([{ classe: { claCodigo: 21, claDescricao: "GRUPO A1 (RSS)" }, residuo: { resCodigoIbama: "180104", resDescricao: "Resíduos de serviços de saúde" } }]);
-  assert.equal(classe.classeNome, "D");
+  assert.equal(classe.classificacaoNome, "RSS GRUPO A1 (RSS)");
+  assert.equal(classe.classificacaoOrigem, "SINIR");
 });
 
-test("NBR Classe II A classifica como B e II B como C", () => {
+test("classificação SINIR II A/II B prevalece sobre a Lista", () => {
   const b = classeDeResiduos([{ classe: { claCodigo: 43, claDescricao: "CLASSE II A" }, residuo: { resCodigoIbama: "x", resDescricao: "y" } }]);
   const c = classeDeResiduos([{ classe: { claDescricao: "CLASSE II B" }, residuo: { resCodigoIbama: "x", resDescricao: "y" } }]);
-  assert.equal(b.classeNome, "B");
-  assert.equal(c.classeNome, "C");
+  assert.equal(b.classificacaoNome, "Classe II A — Não inerte");
+  assert.equal(c.classificacaoNome, "Classe II B — Inerte");
 });
 
 test("extrai classe nativa do PDF MTR-IMA colada ao estado físico", () => {
