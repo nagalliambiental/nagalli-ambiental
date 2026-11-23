@@ -1033,13 +1033,13 @@ export function classeDeResiduos(residuos: unknown): ClasseIdentificada {
     const resCodigoIbama = String(residuo.resCodigoIbama || "").trim();
     const resDescricao = String(residuo.resDescricao || "").trim();
 
-    // Se o SINIR trouxe a classe, ela é a fonte primária. A lista enviada
-    // serve apenas para resíduos sem classificação SINIR suficiente.
-    const peloSinir = classificarPorClasseSinir(claCodigo, claDescricao, resCodigoIbama, resDescricao);
-    if (peloSinir) return peloSinir;
-
+    // Código presente na lista fornecida tem prioridade sobre o catálogo SINIR.
     const pelaLista = classificarPorLista(resCodigoIbama, resDescricao, claDescricao);
     if (pelaLista) return pelaLista;
+
+    // Código fora da lista: preserva a classificação oficial do SINIR.
+    const peloSinir = classificarPorClasseSinir(claCodigo, claDescricao, resCodigoIbama, resDescricao);
+    if (peloSinir) return peloSinir;
 
     // Fora da Lista: periculosidade NBR 10.004 (obrigatória em MTR) tem prioridade.
     const perigoso =

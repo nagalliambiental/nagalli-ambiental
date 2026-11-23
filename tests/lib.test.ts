@@ -14,9 +14,9 @@ test("ehPrivilegiado só aceita socio/admin", () => {
   assert.equal(ehPrivilegiado(""), false);
 });
 
-test("SINIR Classe A prevalece sobre a tabela quando o código tem classificação SINIR", () => {
+test("código presente na tabela prevalece sobre o SINIR", () => {
   const classe = classeDeResiduos([{ classe: { claCodigo: 11 }, residuo: { resCodigoIbama: "170504", resDescricao: "Solos e rochas" } }]);
-  assert.equal(classe.classificacaoNome, "RCC Classe A");
+  assert.equal(classe.classificacaoNome, "RCC Classe A (Solo)");
 });
 
 test("classifica RCC Classe A não solo", () => {
